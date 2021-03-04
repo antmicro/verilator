@@ -3,7 +3,7 @@
 	url = https://github.com/alainmarcel/Surelog.git
 [submodule "uhdm-integration"]
 	path = uhdm-integration
-	url = https://github.com/alainmarcel/uhdm-integration.git
+	url = https://github.com/antmicro/uhdm-integration.git
 [submodule "vcddiff"]
 	path = vcddiff
 	url = https://github.com/veripool/vcddiff.git

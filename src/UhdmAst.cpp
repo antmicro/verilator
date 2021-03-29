@@ -1640,7 +1640,7 @@ AstNode* visit_object(vpiHandle obj_h, UhdmShared& shared) {
         return new AstAlways(new FileLine("uhdm"), alwaysType, senTree, body);
     }
     case vpiEventControl: {
-        AstSenItem* senItemRoot;
+        AstSenItem* senItemRoot = nullptr;
         AstNode* body = nullptr;
         AstSenTree* senTree = nullptr;
         visit_one_to_one({vpiCondition}, obj_h, shared, [&](AstNode* node) {

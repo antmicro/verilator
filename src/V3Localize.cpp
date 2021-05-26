@@ -178,14 +178,16 @@ private:
     }
 
     void visit(AstVarRef* nodep) override {
-        UASSERT_OBJ(m_cfuncp, nodep, "AstVarRef not under function");
+        // UASSERT_OBJ(m_cfuncp, nodep, "AstVarRef not under function");
 
         AstVarScope* const varScopep = nodep->varScopep();
-        // Remember this function accesses this VarScope (we always need this as we might optimize
-        // this VarScope into a local, even if it's not assigned. See 'isOptimizable')
-        m_accessors(varScopep).emplace(m_cfuncp);
-        // Remember the reference so we can fix it up later (we always need this as well)
-        m_references(m_cfuncp).emplace(varScopep, nodep);
+        if (m_cfuncp) {
+            // Remember this function accesses this VarScope (we always need this as we might
+            // optimize this VarScope into a local, even if it's not assigned. See 'isOptimizable')
+            m_accessors(varScopep).emplace(m_cfuncp);
+            // Remember the reference so we can fix it up later (we always need this as well)
+            m_references(m_cfuncp).emplace(varScopep, nodep);
+        }
 
         // Check if already marked as not optimizable
         if (!varScopep->user1()) {

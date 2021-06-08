@@ -180,7 +180,7 @@ void V3Number::V3NumberCreate(AstNode* nodep, const char* sourcep, FileLine* fl)
     }
     // Otherwise...
     else if (!m_sized) {
-        width(32, false);  // Says IEEE 1800-2012 5.7.1
+        width(32, false);  // Says IEEE 1800-2012 5.7.1 XXX temporarily set to 128
         if (unbased) isSigned(true);  // Also says the spec.
     }
 

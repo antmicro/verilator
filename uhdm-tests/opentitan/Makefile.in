@@ -86,7 +86,6 @@ prim_pkg.sv \
 prim_util_pkg.sv \
 prim_gf_mult.sv \
 prim_generic_pad_wrapper.sv \
-prim_generic_buf.sv \
 prim_otp_pkg.sv \
 prim_dom_and_2share.sv \
 prim_xilinx_buf.sv \
@@ -98,12 +97,9 @@ prim_xilinx_pad_wrapper.sv \
 prim_pad_wrapper.sv \
 prim_generic_clock_buf.sv \
 prim_clock_buf.sv \
-prim_generic_clock_mux2.sv \
-prim_buf.sv \
 prim_alert_pkg.sv \
 prim_arbiter_fixed.sv \
 prim_esc_pkg.sv \
-prim_diff_decode.sv \
 gpiodpi.sv \
 spidpi.sv \
 uartdpi.sv \
@@ -111,9 +107,6 @@ prim_slicer.sv \
 prim_gate_gen.sv \
 prim_pulse_sync.sv \
 prim_filter_ctr.sv \
-prim_subreg_arb.sv \
-prim_subreg_ext.sv \
-prim_intr_hw.sv \
 pins_if.sv \
 dmidpi.sv \
 jtagdpi.sv \
@@ -142,11 +135,81 @@ uart_rx.sv \
 uart_tx.sv \
 usbdev_flop_2syncpulse.sv \
 jtag_mux.sv \
-usbdpi.sv'
+usbdpi.sv \
+tlul_pkg.sv \
+sram2tlul.sv \
+prim_esc_sender.sv \
+lc_ctrl_pkg.sv \
+lc_ctrl_state_pkg.sv \
+pwrmgr_pkg.sv \
+pwrmgr_reg_pkg.sv \
+otp_ctrl_pkg.sv \
+otp_ctrl_reg_pkg.sv \
+otp_ctrl_dai.sv \
+otp_ctrl_kdi.sv \
+otp_ctrl_lfsr_timer.sv \
+otp_ctrl_part_pkg.sv \
+otp_ctrl_part_unbuf.sv \
+otp_ctrl_scrmbl.sv \
+otp_ctrl_token_const.sv \
+otp_ctrl_ecc_reg.sv \
+otp_ctrl_lci.sv \
+otp_ctrl_part_buf.sv \
+otp_ctrl_reg_top.sv \
+otp_ctrl.sv \
+prim_lc_sender.sv \
+lc_ctrl_state_transition.sv \
+lc_ctrl_state_decode.sv \
+alert_pkg.sv \
+alert_handler_reg_pkg.sv \
+alert_handler.sv \
+alert_handler_accu.sv \
+alert_handler_class.sv \
+alert_handler_esc_timer.sv \
+alert_handler_ping_timer.sv \
+alert_handler_reg_top.sv \
+alert_handler_reg_wrap.sv'
+
+# Files that are needed both by Verilator and Surelog
+# (usually parametrized modules)
+SURELOG_AND_VERILATOR_FILE_LIST=' prim_subreg_arb.sv \
+prim_subreg_ext.sv \
+prim_subreg_shadow.sv \
+prim_subreg.sv \
+prim_alert_receiver.sv \
+prim_packer_fifo.sv \
+prim_sync_reqack.sv \
+prim_sync_reqack_data.sv \
+lc_ctrl_signal_decode.sv \
+lc_ctrl_fsm.sv \
+prim_edn_req.sv \
+prim_intr_hw.sv \
+prim_generic_buf.sv \
+prim_buf.sv \
+prim_diff_decode.sv \
+prim_generic_flop.sv \
+prim_flop.sv \
+prim_flop_2sync.sv \
+prim_generic_clock_mux2.sv \
+prim_clock_mux2.sv \
+prim_lc_sync.sv \
+prim_lfsr.sv \
+prim_arbiter_fixed.sv \
+prim_arbiter_tree.sv \
+prim_present.sv \
+prim_fifo_sync.sv \
+prim_otp.sv \
+tlul_err.sv \
+tlul_adapter_sram.sv \
+tlul_adapter_reg.sv'
+
+TO_SURELOG_ONLY = \
+	$(shell \
+		echo \'${SURELOG_FILE_LIST}\' | sed 's/\s/\\|/g' )
 
 TO_SURELOG = \
 	$(shell \
-		echo \'${SURELOG_FILE_LIST}\' | sed 's/\s/\\|/g' )
+		echo \'${SURELOG_FILE_LIST}${SURELOG_AND_VERILATOR_FILE_LIST}\' | sed 's/\s/\\|/g' )
 
 # Need to readd this to .vc file due to double matching 'ibex_pkg.sv'
 READD='../src/lowrisc_ip_rv_core_ibex_pkg_0.1/rtl/rv_core_ibex_pkg.sv'
@@ -161,12 +224,12 @@ OPEN_TITAN_SOURCES = \
 	$(shell \
 		cat ${OPEN_TITAN_BUILD}/sim-verilator/lowrisc_systems_top_earlgrey_verilator_0.1.vc | \
 		grep -F .sv | grep ${TO_SURELOG} | \
-		sed 's@^..@${OPEN_TITAN_BUILD}@')
+		sed 's@^..@${OPEN_TITAN_BUILD}@') \
 
 OPEN_TITAN_SOURCES_DELETE = \
         $(shell \
 		cat ${OPEN_TITAN_BUILD}/sim-verilator/lowrisc_systems_top_earlgrey_verilator_0.1.vc | \
-		grep -F .sv | grep ${TO_SURELOG}  | sed "s/.*\///")
+		grep -F .sv | grep ${TO_SURELOG_ONLY}  | sed "s/.*\///")
 
 OPEN_TITAN_SOURCES_DELETE_OR = \
 	$(shell \

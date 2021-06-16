@@ -1375,12 +1375,21 @@ AstNode* visit_object(vpiHandle obj_h, UhdmShared& shared) {
                 = new AstPackageImport(new FileLine("uhdm"), packagep, symbol_name);
             shared.m_symp->importItem(packagep, symbol_name);
             return package_import;
+        } else {
+            v3error("Tried to import unknown package: " << objectName);
+            return nullptr;
         }
+
     }
     case vpiModule: {
 
-        std::string modType = vpi_get_str(vpiDefName, obj_h);
-        sanitize_str(modType);
+        std::string modType;
+        if (auto s = vpi_get_str(vpiDefName, obj_h)) {
+            modType = s;
+            sanitize_str(modType);
+        } else {
+            v3error( "Failed to get DefType for module " << objectName << std::endl);
+        }
 
         std::string name = objectName;
         AstModule* module;

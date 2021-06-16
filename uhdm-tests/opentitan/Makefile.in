@@ -1,10 +1,11 @@
 curr_dir:=$(dir $(lastword $(MAKEFILE_LIST)))
 OPEN_TITAN = ${curr_dir}/opentitan
+TOP_TARGET_NAME = chip_earlgrey_verilator
 
 ################################
 #### verilator - simulation ####
 ################################
-OPEN_TITAN_BUILD = ${root_dir}/build/lowrisc_systems_top_earlgrey_verilator_0.1
+OPEN_TITAN_BUILD = ${root_dir}/build/lowrisc_systems_$(TOP_TARGET_NAME)_0.1
 
 OPEN_TITAN_INCLUDE = \
 	-I$(OPEN_TITAN_BUILD)/src/lowrisc_prim_assert_0.1/rtl \
@@ -186,13 +187,13 @@ SURELOG_PARAMETERS = -PPMPNumRegions=16 \
 
 OPEN_TITAN_SOURCES = \
 	$(shell \
-		cat ${OPEN_TITAN_BUILD}/sim-verilator/lowrisc_systems_top_earlgrey_verilator_0.1.vc | \
+		cat ${OPEN_TITAN_BUILD}/sim-verilator/lowrisc_systems_$(TOP_TARGET_NAME)_0.1.vc | \
 		grep -F .sv | grep ${TO_SURELOG} | \
 		sed 's@^..@${OPEN_TITAN_BUILD}@')
 
 OPEN_TITAN_SOURCES_DELETE = \
         $(shell \
-		cat ${OPEN_TITAN_BUILD}/sim-verilator/lowrisc_systems_top_earlgrey_verilator_0.1.vc | \
+		cat ${OPEN_TITAN_BUILD}/sim-verilator/lowrisc_systems_$(TOP_TARGET_NAME)_0.1.vc | \
 		grep -F .sv | grep ${TO_SURELOG}  | sed "s/.*\///")
 
 OPEN_TITAN_SOURCES_DELETE_OR = \
@@ -207,8 +208,8 @@ prepare-sources:
 		. ${root_dir}/venv-opentitan/bin/activate && \
 		pip install -r ${OPEN_TITAN}/python-requirements.txt && \
 		pip install git+https://github.com/antmicro/edalize@surelog && \
-		fusesoc --cores-root=${OPEN_TITAN} run --flag=fileset_top --target=sim --setup lowrisc:systems:top_earlgrey_verilator \
 		--verilator_options '--threads ${CPU_COUNT}')
+		fusesoc --cores-root=${OPEN_TITAN} run --flag=fileset_top --target=sim --setup lowrisc:systems:$(TOP_TARGET_NAME) \
 
 uhdm/verilator/opentitan: clean-build | prepare-sources
 	(export PATH=${root_dir}/../image/bin:${PATH} && \
@@ -221,10 +222,10 @@ uhdm/verilator/opentitan: clean-build | prepare-sources
 		cp ${root_dir}/build/slpp_all/surelog.uhdm ${root_dir}/build/ibex_core.uhdm && \
 		cd ${OPEN_TITAN_BUILD}/sim-verilator/ && \
 		sed 's/-Wall -DVM_TRACE_FMT_FST/-DVM_TRACE_FMT_FST/g' -i config.mk && \
-		sed '/--cc/a --uhdm-ast-sv' -i lowrisc_systems_top_earlgrey_verilator_0.1.vc && \
-		sed '/--uhdm-ast-sv/a ${root_dir}/build/ibex_core.uhdm' -i lowrisc_systems_top_earlgrey_verilator_0.1.vc && \
-		sed '/${OPEN_TITAN_SOURCES_DELETE_OR}/d' -i lowrisc_systems_top_earlgrey_verilator_0.1.vc && \
 		sed '/usbdev_pkg.sv/i ${READD}' -i lowrisc_systems_top_earlgrey_verilator_0.1.vc && \
+		sed '/--cc/a --uhdm-ast-sv' -i lowrisc_systems_$(TOP_TARGET_NAME)_0.1.vc && \
+		sed '/--uhdm-ast-sv/a ${root_dir}/build/ibex_core.uhdm' -i lowrisc_systems_$(TOP_TARGET_NAME)_0.1.vc && \
+		sed '/${OPEN_TITAN_SOURCES_DELETE_OR}/d' -i lowrisc_systems_$(TOP_TARGET_NAME)_0.1.vc && \
 		$(MAKE))
 
 verilator/opentitan: clean-build | prepare-sources

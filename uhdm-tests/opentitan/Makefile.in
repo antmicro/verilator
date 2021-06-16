@@ -27,11 +27,15 @@ kmac_reg_pkg.sv \
 pattgen_reg_pkg.sv \
 pinmux_reg_pkg.sv \
 usbdev_reg_pkg.sv \
+lc_ctrl_state_pkg.sv \
+lc_ctrl_pkg.sv \
 sensor_ctrl_reg_pkg.sv \
 rv_timer_reg_pkg.sv \
 rstmgr_reg_pkg.sv \
 pwrmgr_reg_pkg.sv \
 alert_handler_reg_pkg.sv \
+prim_pad_wrapper_pkg.sv \
+prim_ram_2p_pkg.sv \
 keymgr_reg_pkg.sv \
 rstmgr_pkg.sv \
 pinmux_pkg.sv \
@@ -143,7 +147,6 @@ usb_fs_tx.sv \
 usb_fs_tx_mux.sv \
 debug_rom.sv \
 debug_rom_one_scratch.sv \
-aes_reg_status.sv \
 entropy_src_watermark_reg.sv \
 entropy_src_cntr_reg.sv \
 entropy_src_repcnt_ht.sv \
@@ -166,10 +169,6 @@ tlul_assert_multiple.sv \
 tlul_assert.sv \
 prim_generic_ram_2p.sv \
 prim_ram_2p.sv \
-pwrmgr_wake_info.sv \
-padring.sv \
-prim_ram_2p_async_adv.sv \
-pwrmgr_slow_fsm.sv \
 usbdpi.sv'
 
 TO_SURELOG = \
@@ -177,7 +176,6 @@ TO_SURELOG = \
 		echo \'${SURELOG_FILE_LIST}\' | sed 's/\s/\\|/g' )
 
 # Need to readd this to .vc file due to double matching 'ibex_pkg.sv'
-READD='../src/lowrisc_ip_rv_core_ibex_pkg_0.1/rtl/rv_core_ibex_pkg.sv'
 
 # Top-level parameters in skipped modules that need to be known to Surelog
 SURELOG_PARAMETERS = -PPMPNumRegions=16 \
@@ -222,7 +220,6 @@ uhdm/verilator/opentitan: clean-build | prepare-sources
 		cp ${root_dir}/build/slpp_all/surelog.uhdm ${root_dir}/build/ibex_core.uhdm && \
 		cd ${OPEN_TITAN_BUILD}/sim-verilator/ && \
 		sed 's/-Wall -DVM_TRACE_FMT_FST/-DVM_TRACE_FMT_FST/g' -i config.mk && \
-		sed '/usbdev_pkg.sv/i ${READD}' -i lowrisc_systems_top_earlgrey_verilator_0.1.vc && \
 		sed '/--cc/a --uhdm-ast-sv' -i lowrisc_systems_$(TOP_TARGET_NAME)_0.1.vc && \
 		sed '/--uhdm-ast-sv/a ${root_dir}/build/ibex_core.uhdm' -i lowrisc_systems_$(TOP_TARGET_NAME)_0.1.vc && \
 		sed '/${OPEN_TITAN_SOURCES_DELETE_OR}/d' -i lowrisc_systems_$(TOP_TARGET_NAME)_0.1.vc && \

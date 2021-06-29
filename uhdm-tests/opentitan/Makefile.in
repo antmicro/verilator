@@ -254,7 +254,7 @@ prepare-sources:
 		pip install -r ${OPEN_TITAN}/python-requirements.txt && \
 		pip install git+https://github.com/antmicro/edalize@surelog && \
 		fusesoc --cores-root=${OPEN_TITAN} run --flag=fileset_top --target=sim --setup lowrisc:systems:top_earlgrey_verilator \
-		--verilator_options '--threads ${CPU_COUNT}')
+		--verilator_options '--threads 2')
 
 uhdm/verilator/opentitan: clean-build | prepare-sources
 	(export PATH=${root_dir}/../image/bin:${PATH} && \
@@ -278,3 +278,13 @@ verilator/opentitan: clean-build | prepare-sources
 		. ${root_dir}/venv-opentitan/bin/activate && \
 		cd ${OPEN_TITAN_BUILD}/sim-verilator/ && \
 		$(MAKE))
+
+ALL_SV_FILES = \
+	$(shell \
+		cat ${OPEN_TITAN_BUILD}/sim-verilator/lowrisc_systems_top_earlgrey_verilator_0.1.vc | \
+		grep -F .sv | xargs -n 1 basename)
+
+SURELOG_FILES = $(subst /, ,$(subst ', ,$(SURELOG_FILE_LIST)))
+
+uhdm/verilator/opentitan/get_not_surelog_modules: clean-build | prepare-sources
+	echo $(filter-out $(SURELOG_FILES),$(ALL_SV_FILES)) | tr " " "\n" > filtered_names.txt

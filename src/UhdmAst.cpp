@@ -273,7 +273,13 @@ AstNode* get_value_as_node(vpiHandle obj_h, bool need_decompile = false) {
                         else valStr = "'d" + valStr;
                         valStr = std::to_string(size) + valStr;
                     }
-                valueNodep = new AstConst(make_fileline(obj_h), AstConst::StringToParse(), valStr.c_str());
+                auto* constp = new AstConst(make_fileline(obj_h), AstConst::StringToParse(), valStr.c_str());
+                auto& num = constp->num();
+                if (num.width() > 32 && num.widthMin() <= 32) {
+                    num.width(32, false);
+                    constp->dtypeSetLogicUnsized(32, 0, VSigning::fromBool(num.isSigned()));
+                }
+                valueNodep = constp;
             }
             return valueNodep;
         }
@@ -300,7 +306,13 @@ AstNode* get_value_as_node(vpiHandle obj_h, bool need_decompile = false) {
             break;
         }
 
-        valueNodep = new AstConst(make_fileline(obj_h), AstConst::StringToParse(), valStr.c_str());
+        if (int size = vpi_get(vpiSize, obj_h))
+            valStr = std::to_string(size) + "'d" + valStr;
+        auto* constp = new AstConst(make_fileline(obj_h), AstConst::StringToParse(), valStr.c_str());
+        auto& num = constp->num();
+        num.width(num.width(), false);
+        constp->dtypeSetLogicUnsized(num.width(), 0, VSigning::fromBool(num.isSigned()));
+        valueNodep = constp;
         break;
     }
     case vpiRealVal: {
@@ -329,7 +341,8 @@ AstNode* get_value_as_node(vpiHandle obj_h, bool need_decompile = false) {
             valStr = "'h" + std::string(val.value.str);
         if (int size = vpi_get(vpiSize, obj_h))
             valStr = std::to_string(size) + valStr;
-        valueNodep = new AstConst(make_fileline(obj_h), AstConst::StringToParse(), valStr.c_str());
+        auto* constp = new AstConst(make_fileline(obj_h), AstConst::StringToParse(), valStr.c_str());
+        valueNodep = constp;
         break;
     }
     case vpiStringVal: {

@@ -138,7 +138,6 @@ prim_pulse_sync.sv \
 prim_filter_ctr.sv \
 prim_subreg_arb.sv \
 prim_subreg_ext.sv \
-prim_intr_hw.sv \
 pins_if.sv \
 dmidpi.sv \
 jtagdpi.sv \
@@ -210,11 +209,27 @@ flash_phy_erase.sv \
 otbn_alu_base.sv \
 otbn_mac_bignum.sv \
 tlul_err.sv \
+entropy_src_ack_sm.sv \
+entropy_src_main_sm.sv \
+entropy_src_core.sv \
+tlul_pkg.sv \
 usbdpi.sv'
+
+# Working set of Opentitan files
+SURELOG_AND_VERILATOR_FILE_LIST='${SURELOG_FILE_LIST} prim_lfsr.sv \
+prim_flop.sv \
+prim_generic_flop.sv \
+prim_intr_hw.sv \
+prim_packer_fifo.sv \
+prim_fifo_sync.sv'
+
+TO_SURELOG_ONLY = \
+	$(shell \
+		echo \'${SURELOG_FILE_LIST}\' | sed 's/\s/\\|/g' )
 
 TO_SURELOG = \
 	$(shell \
-		echo \'${SURELOG_FILE_LIST}\' | sed 's/\s/\\|/g' )
+		echo \'${SURELOG_AND_VERILATOR_FILE_LIST}\' | sed 's/\s/\\|/g' )
 
 # Need to readd this to .vc file due to double matching 'ibex_pkg.sv'
 READD='../src/lowrisc_ip_rv_core_ibex_pkg_0.1/rtl/rv_core_ibex_pkg.sv'
@@ -234,7 +249,7 @@ OPEN_TITAN_SOURCES = \
 OPEN_TITAN_SOURCES_DELETE = \
         $(shell \
 		cat ${OPEN_TITAN_BUILD}/sim-verilator/lowrisc_systems_top_earlgrey_verilator_0.1.vc | \
-		grep -F .sv | grep ${TO_SURELOG}  | sed "s/.*\///")
+		grep -F .sv | grep ${TO_SURELOG_ONLY}  | sed "s/.*\///")
 
 OPEN_TITAN_SOURCES_DELETE_OR = \
 	$(shell \

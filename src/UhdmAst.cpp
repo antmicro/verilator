@@ -54,6 +54,13 @@ void sanitize_str(std::string& s) {
     }
 }
 
+void remove_last_sanitized_index(std::string& s) {
+    if (s.size() > 7 && s.substr(s.size() - 7) == "__KET__") {
+        auto pos = s.rfind("__BRA__");
+        s = s.substr(0, pos);
+    }
+}
+
 std::string get_object_name(vpiHandle obj_h, const std::vector<int>& name_fields = {vpiName}) {
     std::string objectName;
     for (auto name : name_fields) {
@@ -2182,7 +2189,10 @@ AstNode* visit_object(vpiHandle obj_h, UhdmShared& shared) {
         return get_value_as_node(obj_h, true);
     }
     case vpiBitSelect: {
+        remove_last_sanitized_index(objectName);
+
         auto* fromp = get_referenceNode(make_fileline(obj_h), objectName, shared);
+
         AstNode* bitp = nullptr;
         visit_one_to_one({vpiIndex}, obj_h, shared, [&](AstNode* item) {
             if (item) { bitp = item; }

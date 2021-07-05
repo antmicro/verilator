@@ -356,6 +356,45 @@ AstNode* get_value_as_node(vpiHandle obj_h, bool need_decompile = false) {
     return valueNodep;
 }
 
+AstRefDType* get_type_reference(FileLine* fl, std::string objectName, std::string fullTypeName,
+                                UhdmShared& shared) {
+    AstRefDType* refp = nullptr;
+    size_t delimiter_pos = fullTypeName.rfind("::");
+    size_t prefix_pos = fullTypeName.find("::");
+    if (delimiter_pos == string::npos) {
+        UINFO(7, "No package prefix found, creating ref" << std::endl);
+        refp = new AstRefDType(fl, fullTypeName);
+    } else {
+        std::string classpackageName = "";
+        if (prefix_pos < delimiter_pos) {
+            // "Nested" packages - package importing package
+            // Last one is where definition is located
+            classpackageName = fullTypeName.substr(prefix_pos + 2, delimiter_pos - prefix_pos - 2);
+        } else {
+            // Simple package reference
+            classpackageName = fullTypeName.substr(0, delimiter_pos);
+        }
+
+        UINFO(7, "Found package prefix: " << classpackageName << std::endl);
+        // If we are in the same package - do not create reference,
+        // as it will confuse Verilator
+        if (classpackageName
+            == shared.package_prefix.substr(0, shared.package_prefix.length() - 2)) {
+            UINFO(7, "In the same package, creating simple ref" << std::endl);
+            refp = new AstRefDType(fl, objectName);
+        } else {
+            UINFO(7, "Creating ClassOrPackageRef" << std::endl);
+            AstPackage* classpackagep = nullptr;
+            auto it = shared.package_map.find(classpackageName);
+            if (it != shared.package_map.end()) { classpackagep = it->second; }
+            AstNode* classpackageref
+                = new AstClassOrPackageRef(fl, classpackageName, classpackagep, nullptr);
+            shared.m_symp->nextId(classpackagep);
+            refp = new AstRefDType(fl, objectName, classpackageref, nullptr);
+        }
+    }
+    return refp;
+}
 AstBasicDTypeKwd get_kwd_for_type(int vpi_var_type) {
     switch (vpi_var_type) {
     case vpiLogicTypespec:
@@ -588,10 +627,7 @@ AstNodeDType* getDType(FileLine* fl, vpiHandle obj_h, UhdmShared& shared) {
     case vpiEnumNet:
     case vpiStructNet:
     case vpiEnumVar:
-    case vpiEnumTypespec:
-    case vpiStructTypespec:
-    case vpiStructVar:
-    case vpiUnionTypespec: {
+    case vpiStructVar: {
         std::string type_string;
         const uhdm_handle* const handle = (const uhdm_handle*)obj_h;
         const UHDM::BaseClass* const object = (const UHDM::BaseClass*)handle->object;
@@ -602,42 +638,7 @@ AstNodeDType* getDType(FileLine* fl, vpiHandle obj_h, UhdmShared& shared) {
 
         if (shared.visited_types.find(object) != shared.visited_types.end()) {
             type_string = shared.visited_types[object];
-            size_t delimiter_pos = type_string.rfind("::");
-            size_t prefix_pos = type_string.find("::");
-            if (delimiter_pos == string::npos) {
-                UINFO(7, "No package prefix found, creating ref" << std::endl);
-                dtypep = new AstRefDType(fl, type_string);
-            } else {
-                std::string classpackageName = "";
-                if (prefix_pos < delimiter_pos) {
-                    // "Nested" packages - package importing package
-                    // Last one is where definition is located
-                    classpackageName
-                        = type_string.substr(prefix_pos + 2, delimiter_pos - prefix_pos - 2);
-                } else {
-                    // Simple package reference
-                    classpackageName = type_string.substr(0, delimiter_pos);
-                }
-                // Nested or not, type is named after last package
-                auto type_name = type_string.substr(delimiter_pos + 2, type_string.length());
-                UINFO(7, "Found package prefix: " << classpackageName << std::endl);
-                // If we are in the same package - do not create reference,
-                // as it will confuse Verilator
-                if (classpackageName
-                    == shared.package_prefix.substr(0, shared.package_prefix.length() - 2)) {
-                    UINFO(7, "In the same package, creating simple ref" << std::endl);
-                    dtypep = new AstRefDType(fl, type_name);
-                } else {
-                    UINFO(7, "Creating ClassOrPackageRef" << std::endl);
-                    AstPackage* classpackagep = nullptr;
-                    auto it = shared.package_map.find(classpackageName);
-                    if (it != shared.package_map.end()) { classpackagep = it->second; }
-                    AstNode* classpackageref
-                        = new AstClassOrPackageRef(fl, classpackageName, classpackagep, nullptr);
-                    shared.m_symp->nextId(classpackagep);
-                    dtypep = new AstRefDType(fl, type_name, classpackageref, nullptr);
-                }
-            }
+            dtypep = get_type_reference(fl, type_name, type_string, shared);
         } else if (type_name != "") {
             // Type not found or object pointer mismatch, but let's try to create a reference
             // to be resolved later
@@ -651,6 +652,19 @@ AstNodeDType* getDType(FileLine* fl, vpiHandle obj_h, UhdmShared& shared) {
             AstNode* typespec_p = visit_object(obj_h, shared);
             dtypep = typespec_p->getChildDTypep()->cloneTree(false);
         }
+        break;
+    }
+    case vpiStructTypespec:
+    case vpiEnumTypespec:
+    case vpiUnionTypespec: {
+        std::string nameWithRef = get_object_name(obj_h);
+        std::string typeName;
+        auto pos = nameWithRef.rfind("::");
+        if (pos != std::string::npos)
+            typeName = nameWithRef.substr(pos + 2);
+        else
+            typeName = nameWithRef;
+        dtypep = get_type_reference(fl, typeName, nameWithRef, shared);
         break;
     }
     case vpiPackedArrayNet:

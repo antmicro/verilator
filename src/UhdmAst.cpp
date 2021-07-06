@@ -639,18 +639,12 @@ AstNodeDType* getDType(FileLine* fl, vpiHandle obj_h, UhdmShared& shared) {
         if (shared.visited_types.find(object) != shared.visited_types.end()) {
             type_string = shared.visited_types[object];
             dtypep = get_type_reference(fl, type_name, type_string, shared);
-        } else if (type_name != "") {
+        } else {
             // Type not found or object pointer mismatch, but let's try to create a reference
             // to be resolved later
             // Simple reference only, prefix is not stored in name
             UINFO(7, "No match found, creating ref to name" << type_name << std::endl);
             dtypep = new AstRefDType(fl, type_name);
-        } else {
-            // Typedefed types were visited earlier, probably anonymous struct
-            // Get the typespec here
-            UINFO(7, "Encountered anonymous struct");
-            AstNode* typespec_p = visit_object(obj_h, shared);
-            dtypep = typespec_p->getChildDTypep()->cloneTree(false);
         }
         break;
     }
@@ -664,7 +658,15 @@ AstNodeDType* getDType(FileLine* fl, vpiHandle obj_h, UhdmShared& shared) {
             typeName = nameWithRef.substr(pos + 2);
         else
             typeName = nameWithRef;
-        dtypep = get_type_reference(fl, typeName, nameWithRef, shared);
+        if (typeName != "") {
+            dtypep = get_type_reference(fl, typeName, nameWithRef, shared);
+        } else {
+            // Typedefed types were visited earlier, probably anonymous struct
+            // Get the typespec here
+            UINFO(7, "Encountered anonymous struct");
+            AstNode* typespec_p = process_typespec(obj_h, shared);
+            dtypep = typespec_p->getChildDTypep()->cloneTree(false);
+        }
         break;
     }
     case vpiPackedArrayNet:

@@ -29,6 +29,9 @@ struct UhdmShared {
     std::map<std::string, AstNodeModule*> top_nodes;
 };
 
+// Parse vpi*Typespec nodes
+AstNode* process_typespec(vpiHandle obj_h, UhdmShared& shared);
+
 // Visits single VPI object and creates proper AST node
 AstNode* visit_object(vpiHandle obj_h, UhdmShared& shared);
 

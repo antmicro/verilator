@@ -62,7 +62,7 @@ jobs:
       - name: Generate matrix
         id: generate-matrix
         run: |
-          matrix="$(cd uhdm-integration && python list.py -d tests -s ibex synthesis OneClass hello-uvm OneThis array-copy assignment-pattern StreamOp opentitan hier_path TypedefAlias)"
+          matrix="$(cd uhdm-integration && python list.py -d tests -s ibex synthesis OneClass hello-uvm OneThis assignment-pattern StreamOp opentitan hier_path TypedefAlias)"
           echo "::set-output name=matrix::$matrix"
           echo "Matrix: $matrix"
 
@@ -410,7 +410,7 @@ jobs:
       - name: Generate matrix (vcddiff)
         id: generate-matrix-vcddiff
         run: |
-          matrix="$(cd uhdm-integration && python list.py -d tests -s ibex synthesis OneClass hello-uvm OneThis array-copy assignment-pattern MultiplePrints OneNetInterf OneNetRange StreamOp opentitan hier_path genscope_cells DpiChandle ArrayInit PutC conditional_if_else conditional_if CellNamedLikeModule ConstSizes PackageCast TypedefAlias 2DFunctionArg 2DUnpackedArray FunctionColonReference IndexedPartSelectOfMember PkgParamAsFunctionArg ParameterColonReference TypedefEnum xor_assignment CastLogic CastSize CastExpression CastStruct CastStructArray PartSelectOfMember)"
+          matrix="$(cd uhdm-integration && python list.py -d tests -s ibex synthesis OneClass hello-uvm OneThis array-copy assignment-pattern MultiplePrints OneNetInterf OneNetRange StreamOp opentitan hier_path genscope_cells DpiChandle ArrayInit PutC conditional_if_else conditional_if CellNamedLikeModule ConstSizes PackageCast TypedefAlias 2DFunctionArg 2DUnpackedArray FunctionColonReference IndexedPartSelectOfMember PkgParamAsFunctionArg ParameterColonReference TypedefEnum xor_assignment CastLogic CastSize CastExpression CastStruct CastStructArray PartSelectOfMember EnumConcatenatedConst)"
           echo "::set-output name=matrix::$matrix"
           echo "matrix vcddiff: $matrix"
 

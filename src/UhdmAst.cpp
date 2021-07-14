@@ -1055,25 +1055,14 @@ AstNode* process_assignment(vpiHandle obj_h, UhdmShared& shared) {
 
 AstNode* process_function(vpiHandle obj_h, UhdmShared& shared) {
     AstNode* statementsp = nullptr;
-    AstNode* functionVarsp = nullptr;
+    AstNodeDType* functionReturnDTypep = nullptr;
     AstNodeFTask* taskFuncp = nullptr;
-    shared.isFunction = false;
+    shared.isFunction = true;
 
     std::string objectName = get_object_name(obj_h);
 
     auto return_h = vpi_handle(vpiReturn, obj_h);
-    if (return_h) {
-        AstNodeDType* dtypep = getDType(make_fileline(obj_h), return_h, shared);
-        // Implicit return type is always logic.
-        // If we see another type here, it must be a function.
-        // If not, we will check for vpiReturn when visiting statements below.
-        if (auto basicp = dtypep->basicp()) {
-            if (basicp->keyword() != AstBasicDTypeKwd::LOGIC || basicp->rangep() != nullptr) {
-                shared.isFunction = true;
-            }
-        }
-        functionVarsp = dtypep;
-    }
+    if (return_h) functionReturnDTypep = getDType(make_fileline(obj_h), return_h, shared);
 
     visit_one_to_many({vpiIODecl, vpiVariables}, obj_h, shared, [&](AstNode* itemp) {
         if (itemp) {
@@ -1093,7 +1082,8 @@ AstNode* process_function(vpiHandle obj_h, UhdmShared& shared) {
     });
 
     if (shared.isFunction) {
-        taskFuncp = new AstFunc(make_fileline(obj_h), objectName, statementsp, functionVarsp);
+        taskFuncp
+            = new AstFunc(make_fileline(obj_h), objectName, statementsp, functionReturnDTypep);
     } else {
         taskFuncp = new AstTask(make_fileline(obj_h), objectName, statementsp);
     }
@@ -2254,12 +2244,16 @@ AstNode* visit_object(vpiHandle obj_h, UhdmShared& shared) {
     }
     case vpiReturn:
     case vpiReturnStmt: {
-        AstNode* condition = nullptr;
-        visit_one_to_one({vpiCondition}, obj_h, shared, [&](AstNode* item) {
-            if (item) { condition = item; }
+        AstNode* conditionp = nullptr;
+        visit_one_to_one({vpiCondition}, obj_h, shared, [&](AstNode* itemp) {
+            if (itemp) { conditionp = itemp; }
         });
-        if (condition) shared.isFunction = true;
-        return new AstReturn(make_fileline(obj_h), condition);
+        if (conditionp) {
+            return new AstReturn(make_fileline(obj_h), conditionp);
+        } else {
+            shared.isFunction = false;
+            return new AstReturn(make_fileline(obj_h));
+        }
     }
     case vpiFuncCall: {
         AstNode* func_refp = nullptr;

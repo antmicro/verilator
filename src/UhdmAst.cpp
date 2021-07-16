@@ -1055,25 +1055,14 @@ AstNode* process_assignment(vpiHandle obj_h, UhdmShared& shared) {
 
 AstNode* process_function(vpiHandle obj_h, UhdmShared& shared) {
     AstNode* statementsp = nullptr;
-    AstNode* functionVarsp = nullptr;
+    AstNodeDType* functionReturnDTypep = nullptr;
     AstNodeFTask* taskFuncp = nullptr;
-    shared.isFunction = false;
+    shared.isFunction = true;
 
     std::string objectName = get_object_name(obj_h);
 
     auto return_h = vpi_handle(vpiReturn, obj_h);
-    if (return_h) {
-        AstNodeDType* dtypep = getDType(make_fileline(obj_h), return_h, shared);
-        // Implicit return type is always logic.
-        // If we see another type here, it must be a function.
-        // If not, we will check for vpiReturn when visiting statements below.
-        if (auto basicp = dtypep->basicp()) {
-            if (basicp->keyword() != AstBasicDTypeKwd::LOGIC || basicp->rangep() != nullptr) {
-                shared.isFunction = true;
-            }
-        }
-        functionVarsp = dtypep;
-    }
+    if (return_h) functionReturnDTypep = getDType(make_fileline(obj_h), return_h, shared);
 
     visit_one_to_many({vpiIODecl, vpiVariables}, obj_h, shared, [&](AstNode* itemp) {
         if (itemp) {
@@ -1093,7 +1082,8 @@ AstNode* process_function(vpiHandle obj_h, UhdmShared& shared) {
     });
 
     if (shared.isFunction) {
-        taskFuncp = new AstFunc(make_fileline(obj_h), objectName, statementsp, functionVarsp);
+        taskFuncp
+            = new AstFunc(make_fileline(obj_h), objectName, statementsp, functionReturnDTypep);
     } else {
         taskFuncp = new AstTask(make_fileline(obj_h), objectName, statementsp);
     }
@@ -2224,45 +2214,44 @@ AstNode* visit_object(vpiHandle obj_h, UhdmShared& shared) {
         return selectp;
     }
     case vpiTask: {
-        AstNode* statements = nullptr;
-        visit_one_to_many({vpiIODecl}, obj_h, shared, [&](AstNode* item) {
-            if (item) {
-                // Overwrite direction for arguments
-                auto* io = reinterpret_cast<AstVar*>(item);
-                io->direction(VDirection::INPUT);
-                if (statements)
-                    statements->addNextNull(item);
+        AstNode* statementsp = nullptr;
+        visit_one_to_many({vpiIODecl, vpiVariables}, obj_h, shared, [&](AstNode* itemp) {
+            if (itemp) {
+                if (statementsp)
+                    statementsp->addNextNull(itemp);
                 else
-                    statements = item;
+                    statementsp = itemp;
             }
         });
-        visit_one_to_one({vpiStmt}, obj_h, shared, [&](AstNode* item) {
-            if (item) {
-                if (statements)
-                    statements->addNextNull(item);
+        visit_one_to_one({vpiStmt}, obj_h, shared, [&](AstNode* itemp) {
+            if (itemp) {
+                if (statementsp)
+                    statementsp->addNextNull(itemp);
                 else
-                    statements = item;
+                    statementsp = itemp;
             }
         });
-        return new AstTask(make_fileline(obj_h), objectName, statements);
-    }
-    case vpiTaskCall: {
-        return new AstTaskRef(make_fileline(obj_h), objectName, nullptr);
+        return new AstTask(make_fileline(obj_h), objectName, statementsp);
     }
     case vpiFunction: {
         return process_function(obj_h, shared);
     }
     case vpiReturn:
     case vpiReturnStmt: {
-        AstNode* condition = nullptr;
-        visit_one_to_one({vpiCondition}, obj_h, shared, [&](AstNode* item) {
-            if (item) { condition = item; }
+        AstNode* conditionp = nullptr;
+        visit_one_to_one({vpiCondition}, obj_h, shared, [&](AstNode* itemp) {
+            if (itemp) { conditionp = itemp; }
         });
-        if (condition) shared.isFunction = true;
-        return new AstReturn(make_fileline(obj_h), condition);
+        if (conditionp) {
+            return new AstReturn(make_fileline(obj_h), conditionp);
+        } else {
+            shared.isFunction = false;
+            return new AstReturn(make_fileline(obj_h));
+        }
     }
+    case vpiTaskCall:
     case vpiFuncCall: {
-        AstNode* func_refp = nullptr;
+        AstNode* func_task_refp = nullptr;
         AstNode* arguments = nullptr;
         visit_one_to_many({vpiArgument}, obj_h, shared, [&](AstNode* item) {
             if (item) {
@@ -2284,18 +2273,18 @@ AstNode* visit_object(vpiHandle obj_h, UhdmShared& shared) {
             std::string lhs = objectName.substr(0, dot_pos);
             std::string rhs = objectName.substr(dot_pos + 1, objectName.length());
             AstNode* from = get_referenceNode(make_fileline(obj_h), lhs, shared);
-            func_refp = new AstMethodCall(make_fileline(obj_h), from, rhs, arguments);
+            func_task_refp = new AstMethodCall(make_fileline(obj_h), from, rhs, arguments);
         } else {
             // Functions can be called as tasks, depending on context
             bool inExpression = is_expr_context(obj_h);
 
             if (inExpression)
-                func_refp = new AstFuncRef(make_fileline(obj_h), objectName, arguments);
+                func_task_refp = new AstFuncRef(make_fileline(obj_h), objectName, arguments);
             else
-                func_refp = new AstTaskRef(make_fileline(obj_h), objectName, arguments);
+                func_task_refp = new AstTaskRef(make_fileline(obj_h), objectName, arguments);
         }
 
-        return AstDot::newIfPkg(make_fileline(obj_h), refp, func_refp);
+        return AstDot::newIfPkg(make_fileline(obj_h), refp, func_task_refp);
     }
     case vpiSysFuncCall: {
         std::vector<AstNode*> arguments;

@@ -2214,27 +2214,24 @@ AstNode* visit_object(vpiHandle obj_h, UhdmShared& shared) {
         return selectp;
     }
     case vpiTask: {
-        AstNode* statements = nullptr;
-        visit_one_to_many({vpiIODecl}, obj_h, shared, [&](AstNode* item) {
-            if (item) {
-                // Overwrite direction for arguments
-                auto* io = reinterpret_cast<AstVar*>(item);
-                io->direction(VDirection::INPUT);
-                if (statements)
-                    statements->addNextNull(item);
+        AstNode* statementsp = nullptr;
+        visit_one_to_many({vpiIODecl, vpiVariables}, obj_h, shared, [&](AstNode* itemp) {
+            if (itemp) {
+                if (statementsp)
+                    statementsp->addNextNull(itemp);
                 else
-                    statements = item;
+                    statementsp = itemp;
             }
         });
-        visit_one_to_one({vpiStmt}, obj_h, shared, [&](AstNode* item) {
-            if (item) {
-                if (statements)
-                    statements->addNextNull(item);
+        visit_one_to_one({vpiStmt}, obj_h, shared, [&](AstNode* itemp) {
+            if (itemp) {
+                if (statementsp)
+                    statementsp->addNextNull(itemp);
                 else
-                    statements = item;
+                    statementsp = itemp;
             }
         });
-        return new AstTask(make_fileline(obj_h), objectName, statements);
+        return new AstTask(make_fileline(obj_h), objectName, statementsp);
     }
     case vpiFunction: {
         return process_function(obj_h, shared);

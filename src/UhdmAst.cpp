@@ -2236,9 +2236,6 @@ AstNode* visit_object(vpiHandle obj_h, UhdmShared& shared) {
         });
         return new AstTask(make_fileline(obj_h), objectName, statements);
     }
-    case vpiTaskCall: {
-        return new AstTaskRef(make_fileline(obj_h), objectName, nullptr);
-    }
     case vpiFunction: {
         return process_function(obj_h, shared);
     }
@@ -2255,8 +2252,9 @@ AstNode* visit_object(vpiHandle obj_h, UhdmShared& shared) {
             return new AstReturn(make_fileline(obj_h));
         }
     }
+    case vpiTaskCall:
     case vpiFuncCall: {
-        AstNode* func_refp = nullptr;
+        AstNode* func_task_refp = nullptr;
         AstNode* arguments = nullptr;
         visit_one_to_many({vpiArgument}, obj_h, shared, [&](AstNode* item) {
             if (item) {
@@ -2278,18 +2276,18 @@ AstNode* visit_object(vpiHandle obj_h, UhdmShared& shared) {
             std::string lhs = objectName.substr(0, dot_pos);
             std::string rhs = objectName.substr(dot_pos + 1, objectName.length());
             AstNode* from = get_referenceNode(make_fileline(obj_h), lhs, shared);
-            func_refp = new AstMethodCall(make_fileline(obj_h), from, rhs, arguments);
+            func_task_refp = new AstMethodCall(make_fileline(obj_h), from, rhs, arguments);
         } else {
             // Functions can be called as tasks, depending on context
             bool inExpression = is_expr_context(obj_h);
 
             if (inExpression)
-                func_refp = new AstFuncRef(make_fileline(obj_h), objectName, arguments);
+                func_task_refp = new AstFuncRef(make_fileline(obj_h), objectName, arguments);
             else
-                func_refp = new AstTaskRef(make_fileline(obj_h), objectName, arguments);
+                func_task_refp = new AstTaskRef(make_fileline(obj_h), objectName, arguments);
         }
 
-        return AstDot::newIfPkg(make_fileline(obj_h), refp, func_refp);
+        return AstDot::newIfPkg(make_fileline(obj_h), refp, func_task_refp);
     }
     case vpiSysFuncCall: {
         std::vector<AstNode*> arguments;

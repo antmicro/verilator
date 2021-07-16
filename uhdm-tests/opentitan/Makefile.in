@@ -260,7 +260,7 @@ uhdm/verilator/opentitan: clean-build | prepare-sources
 	(export PATH=${root_dir}/../image/bin:${PATH} && \
 		. ${root_dir}/venv-opentitan/bin/activate && \
 		cd ${root_dir}/build && \
-		${root_dir}/../image/bin/surelog -nobuiltin -parse -sverilog +define+VERILATOR \
+		${root_dir}/../image/bin/surelog -nobuiltin -parse -sverilog -elabuhdm +define+VERILATOR \
 			${SURELOG_PARAMETERS} \
 			$(OPEN_TITAN_INCLUDE) \
 			$(OPEN_TITAN_SOURCES) && \

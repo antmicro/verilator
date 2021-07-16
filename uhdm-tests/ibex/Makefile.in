@@ -60,7 +60,7 @@ uhdm/verilator/simple-system: clean-build | prepare-sources
 	(export PATH=${root_dir}/../image/bin:${PATH} && \
 		. ${root_dir}/venv-ibex/bin/activate && \
 		cd ${root_dir}/build && \
-		${root_dir}/../image/bin/surelog -parse -sverilog +define+VERILATOR \
+		${root_dir}/../image/bin/surelog -parse -sverilog -elabuhdm +define+VERILATOR \
 			${SURELOG_PARAMETERS} \
 			$(IBEX_INCLUDE) \
 			$(IBEX_SOURCES) && \

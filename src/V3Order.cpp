@@ -421,8 +421,7 @@ class OrderBuildVisitor final : public AstNVisitor {
         // This should only find the global AstSenTrees under the AstTopScope, which we ignore
         // here. We visit AstSenTrees separately when encountering the AstActive that references
         // them.
-        // UASSERT_OBJ(!m_scopep, nodep, "AstSenTrees should have been made global in
-        // V3ActiveTop");
+        UASSERT_OBJ(!m_scopep, nodep, "AstSenTrees should have been made global in V3ActiveTop");
     }
     virtual void visit(AstScope* nodep) override {
         UASSERT_OBJ(!m_scopep, nodep, "Should not nest");
@@ -430,6 +429,7 @@ class OrderBuildVisitor final : public AstNVisitor {
         iterateChildren(nodep);
         m_scopep = nullptr;
     }
+    virtual void visit(AstTimingControl* nodep) override {}
     virtual void visit(AstActive* nodep) override {
         UASSERT_OBJ(!nodep->sensesStorep(), nodep,
                     "AstSenTrees should have been made global in V3ActiveTop");

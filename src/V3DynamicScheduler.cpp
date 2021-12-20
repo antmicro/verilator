@@ -567,6 +567,7 @@ private:
     using VarMap = std::map<const std::pair<AstNodeModule*, string>, AstVar*>;
     VarMap m_modVarMap;  // Table of new var names created under module
     size_t m_count = 0;
+    AstTopScope* m_topScopep = nullptr;  // Current top scope
 
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
@@ -593,6 +594,10 @@ private:
     }
 
     // VISITORS
+    virtual void visit(AstTopScope* nodep) override {
+        m_topScopep = nodep;
+        iterateChildren(nodep);
+    }
     virtual void visit(AstNodeAssign* nodep) override {
         if (nodep->user2SetOnce()) return;
         if (auto* varrefp = VN_CAST(nodep->lhsp(), VarRef)) {
@@ -668,7 +673,7 @@ private:
                                                           ? VEdgeType::ET_BOTHEDGE
                                                           : edgeType,
                                                       new AstVarRef{fl, nodep, VAccess::READ}}}};
-                    activep->sensesStorep(activep->sensesp());
+                    m_topScopep->addSenTreep(activep->sensesp());
                     auto* ifp = new AstIf{
                         fl, new AstLogNot{fl, new AstVarRef{fl, eventp, VAccess::READ}},
                         new AstEventTrigger{fl, new AstVarRef{fl, eventp, VAccess::WRITE}}};

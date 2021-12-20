@@ -95,10 +95,8 @@ private:
         if (vscp->user1p()) return static_cast<AstVarScope*>(vscp->user1p());
         const AstVar* const varp = vscp->varp();
         if (!varp->width1()) {
-            // TODO psagan
-            //  varp->v3warn(E_UNSUPPORTED, "Unsupported: Clock edge on non-single bit signal: "
-            //                                  << varp->prettyNameQ());
-            // return vscp;
+            varp->v3warn(E_UNSUPPORTED, "Unsupported: Clock edge on non-single bit signal: "
+                                            << varp->prettyNameQ());
         }
         const string newvarname
             = (string("__Vclklast__") + vscp->scopep()->nameDotless() + "__" + varp->name());
@@ -167,12 +165,6 @@ private:
         } else if (nodep->edgeType() == VEdgeType::ET_LOWEDGE) {
             newp = new AstNot(nodep->fileline(),
                               new AstVarRef(nodep->fileline(), clkvscp, VAccess::READ));
-        } else if (nodep->edgeType() == VEdgeType::ET_ANYEDGE) {
-            AstVarScope* lastVscp = getCreateLastClk(clkvscp);
-            newp = new AstXor(
-                nodep->fileline(),
-                new AstVarRef(nodep->fileline(), nodep->varrefp()->varScopep(), VAccess::READ),
-                new AstVarRef(nodep->fileline(), lastVscp, VAccess::READ));
         } else {
             nodep->v3fatalSrc("Bad edge type");
         }
@@ -265,8 +257,22 @@ private:
         m_settleFuncp = makeTopFunction("_eval_settle", /* slow: */ true);
         m_postponedFuncp = makeTopFunction("_eval_postponed");
         m_finalFuncp = makeTopFunction("_final", /* slow: */ true);
+
+        m_evalFuncp->addStmtsp(new AstCStmt{
+            m_evalFuncp->fileline(), "vlSymsp->__Vm_delayedQueue.activate(VL_TIME_D());\n"});
+
         // Process the activates
         iterateChildren(nodep);
+
+        for (auto* nodep = m_topScopep->scopep()->varsp(); nodep;
+             nodep = VN_CAST(nodep->nextp(), VarScope))
+            if (nodep->varp()->name() == "__VdlyEvent__")
+                m_evalFuncp->addStmtsp(new AstEventTrigger{
+                    m_evalFuncp->fileline(),
+                    new AstVarRef{m_evalFuncp->fileline(), nodep, VAccess::WRITE}});
+        m_evalFuncp->addStmtsp(new AstCStmt{
+            m_evalFuncp->fileline(), "vlSymsp->__Vm_eventDispatcher.resumeAllTriggered();\n"});
+
         UINFO(4, " TOPSCOPE iter done " << nodep << endl);
         // Clear the DPI export trigger flag at the end of eval
         if (AstVarScope* const dpiExportTriggerp = v3Global.rootp()->dpiExportTriggerp()) {
@@ -426,7 +432,6 @@ private:
                 // Move statements to function
                 addToEvalLoop(stmtsp);
             }
-            if (nodep->sensesp() == nodep->sensesStorep()) clearLastSen();
             VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
         }
     }

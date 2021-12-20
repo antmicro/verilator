@@ -5407,10 +5407,6 @@ private:
                 = underp;  // Need FINAL on children; otherwise splice would block it
             underp = spliceCvtString(underp);
             underp = userIterateSubtreeReturnEdits(oldp, WidthVP(SELF, FINAL).p());
-        } else if (VN_IS(nodep, AssignW) && VN_IS(VN_CAST(nodep, AssignW)->lhsp(), VarRef)
-                   && VN_CAST(VN_CAST(nodep, AssignW)->lhsp(), VarRef)->varp()->varType()
-                          == AstVarType::MODULETEMP) {
-            // Don't verify width in assignments to temporary variables
         } else {
             const AstBasicDType* const expBasicp = expDTypep->basicp();
             const AstBasicDType* const underBasicp = underp->dtypep()->basicp();

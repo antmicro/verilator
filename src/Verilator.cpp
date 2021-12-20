@@ -246,6 +246,10 @@ static void process() {
         }
     }
 
+    if (!v3Global.opt.xmlOnly() && !v3Global.opt.lintOnly()) {
+        V3DynamicScheduler::handleAnyedge(v3Global.rootp());
+    }
+
     //--PRE-FLAT OPTIMIZATIONS------------------
 
     // Initial const/dead to reduce work for ordering code
@@ -298,7 +302,9 @@ static void process() {
     }
 
     // Wrap statements in processes into blocks so they won't get split
-    V3DynamicScheduler::wrapProcesses(v3Global.rootp());
+    if (!v3Global.opt.xmlOnly() && !v3Global.opt.lintOnly()) {
+        V3DynamicScheduler::transformProcesses(v3Global.rootp());
+    }
 
     if (!v3Global.opt.xmlOnly()) {
         // Add __PVT's
@@ -369,6 +375,10 @@ static void process() {
         // This creates lots of duplicate ACTIVES so ActiveTop needs to be after this step
         V3Delayed::delayedAll(v3Global.rootp());
 
+        if (!v3Global.opt.xmlOnly() && !v3Global.opt.lintOnly()) {
+            V3DynamicScheduler::prepareEvents(v3Global.rootp());
+        }
+
         // Make Active's on the top level.
         // Differs from V3Active, because identical clocks may be pushed
         // down to a module and now be identical
@@ -379,8 +389,6 @@ static void process() {
 
         // Order the code; form SBLOCKs and BLOCKCALLs
         V3Order::orderAll(v3Global.rootp());
-
-        V3DynamicScheduler::prepEvents(v3Global.rootp());
 
         // Change generated clocks to look at delayed signals
         V3GenClk::genClkAll(v3Global.rootp());

@@ -1918,6 +1918,7 @@ private:
     VLifetime m_lifetime;  // Lifetime
     VVarAttrClocker m_attrClocker;
     MTaskIdSet m_mtaskIds;  // MTaskID's that read or write this var
+    std::map<VEdgeType, AstVarScope*> m_edgeEvents;
     int m_pinNum = 0;  // For XML, if non-zero the connection pin number
     bool m_ansi : 1;  // ANSI port list variable (for dedup check)
     bool m_declTyped : 1;  // Declared as type (for dedup check)
@@ -2218,6 +2219,14 @@ public:
     bool attrSplitVar() const { return m_attrSplitVar; }
     bool attrIsolateAssign() const { return m_attrIsolateAssign; }
     VVarAttrClocker attrClocker() const { return m_attrClocker; }
+    void edgeEvent(VEdgeType edgeType, AstVarScope* varscp) {
+        m_edgeEvents.insert(std::make_pair(edgeType, varscp));
+    }
+    AstVarScope* edgeEvent(VEdgeType edgeType) {
+        auto it = m_edgeEvents.find(edgeType);
+        if (it != m_edgeEvents.end()) return it->second;
+        return nullptr;
+    }
     virtual string verilogKwd() const override;
     void lifetime(const VLifetime& flag) { m_lifetime = flag; }
     VLifetime lifetime() const { return m_lifetime; }

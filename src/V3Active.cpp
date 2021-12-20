@@ -522,7 +522,11 @@ private:
         bool sequent = m_itemSequent;
 
         if (!combo && !sequent) combo = true;  // If no list, Verilog 2000: always @ (*)
-        if (combo && sequent) { sequent = false; }
+        if (combo && sequent) {
+            nodep->v3warn(E_UNSUPPORTED, "Unsupported: Mixed edge (pos/negedge) and activity "
+                                         "(no edge) sensitive activity list");
+            sequent = false;
+        }
 
         AstActive* wantactivep = nullptr;
         if (combo && !sequent) {
@@ -588,6 +592,7 @@ private:
         // if (debug() >= 9) nodep->dumpTree(cout, "  Alw: ");
         visitAlways(nodep, nodep->sensesp(), VAlwaysKwd::ALWAYS);
     }
+    virtual void visit(AstTimingControl* nodep) override {}
     virtual void visit(AstSenItem* nodep) override {
         if (nodep->varrefp()) {
             if (const AstBasicDType* const basicp = nodep->varrefp()->dtypep()->basicp()) {
@@ -599,20 +604,18 @@ private:
                 }
             }
         }
-        if ((!nodep->varrefp() || nodep->varrefp()->dtypep()->isWide())
-            && nodep->edgeType() == VEdgeType::ET_ANYEDGE) {
+        if (nodep->edgeType() == VEdgeType::ET_ANYEDGE) {
             m_itemCombo = true;
             // Delete the sensitivity
             // We'll add it as a generic COMBO SenItem in a moment.
             VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
         } else if (nodep->varrefp()) {
             // V3LinkResolve should have cleaned most of these up
-            // if (!nodep->varrefp()->width1()) {
-            //     nodep->v3warn(E_UNSUPPORTED,
-            //                   "Unsupported: Non-single bit wide signal pos/negedge sensitivity:
-            //                   "
-            //                       << nodep->varrefp()->prettyNameQ());
-            // }
+            if (!nodep->varrefp()->width1()) {
+                nodep->v3warn(E_UNSUPPORTED,
+                              "Unsupported: Non-single bit wide signal pos/negedge sensitivity: "
+                                  << nodep->varrefp()->prettyNameQ());
+            }
             m_itemSequent = true;
             nodep->varrefp()->varp()->usedClock(true);
         }

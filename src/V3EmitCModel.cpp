@@ -352,7 +352,6 @@ class EmitCModel final : public EmitCFunc {
             puts("if (VL_UNLIKELY(" + recName + ")) " + recName + "->endRecord(VL_RDTSC_Q());\n");
         }
 
-        puts("vlSymsp->__Vm_eventDispatcher.resumeTriggered();\n");
         puts(topModNameProtected + "__" + protect("_eval_postponed") + "(&(vlSymsp->TOP));\n");
 
         if (v3Global.rootp()->changeRequest()) {
@@ -399,6 +398,7 @@ class EmitCModel final : public EmitCFunc {
         puts("void " + topModNameProtected + "__" + protect("_eval_settle") + selfDecl + ";\n");
         puts("void " + topModNameProtected + "__" + protect("_eval_postponed") + selfDecl + ";\n");
         puts("void " + topModNameProtected + "__" + protect("_eval") + selfDecl + ";\n");
+        puts("void " + topModNameProtected + "__" + protect("_eval_anyedge") + selfDecl + ";\n");
         if (v3Global.rootp()->changeRequest()) {
             puts("QData " + topModNameProtected + "__" + protect("_change_request") + selfDecl
                  + ";\n");
@@ -414,6 +414,7 @@ class EmitCModel final : public EmitCFunc {
              + " {\n");
         puts("vlSymsp->__Vm_didInit = true;\n");
         puts(topModNameProtected + "__" + protect("_eval_initial") + "(&(vlSymsp->TOP));\n");
+        puts(topModNameProtected + "__" + protect("_eval_anyedge") + "(&(vlSymsp->TOP));\n");
         emitSettleLoop(modp, /* initial: */ true);
         ensureNewLine();
         puts("}\n");
@@ -442,7 +443,6 @@ class EmitCModel final : public EmitCFunc {
                 puts("vlSymsp->TOP." + nodep->nameProtect() + " = 0;\n");
             }
         }
-        puts("vlSymsp->__Vm_delayedQueue.activate(VL_TIME_D());\n");
 
         if (v3Global.opt.threads() == 1) {
             const uint32_t mtaskId = 0;

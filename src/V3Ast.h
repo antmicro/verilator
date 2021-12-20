@@ -272,7 +272,7 @@ public:
     enum en m_e;
     bool clockedStmt() const {
         static const bool clocked[]
-            = {false, true, true, true, true, true, true, false, false, false, false};
+            = {false, false, true, true, true, true, true, false, false, false, false};
         return clocked[m_e];
     }
     VEdgeType invert() const {

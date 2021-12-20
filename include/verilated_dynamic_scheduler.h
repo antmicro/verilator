@@ -135,6 +135,10 @@ struct EventDispatcher {
         for (auto event : queue) resume(event);
     }
 
+    void resumeAllTriggered() {
+        while (!triggeredQueue.empty()) resumeTriggered();
+    }
+
     void trigger(Event event) {
         if (wasTriggered(event)) resumeTriggered();
         *event = 1;

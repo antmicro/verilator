@@ -15,12 +15,15 @@ compile();
 if ($Self->{vlt_all}) {
     # The word 'this' (but only the whole word 'this' should have been replaced
     # in the contents.
-    my $file = glob_one("$Self->{obj_dir}/$Self->{VM_PREFIX}___024root__DepSet_*__0.cpp");
-    my $text = file_contents($file);
-    error("$file has 'this->clk'") if ($text =~ m/\bthis->clk\b/);
-    error("$file does not have 'xthis'") if ($text !~ m/\bxthis\b/);
-    error("$file does not have 'thisx'") if ($text !~ m/\bthisx\b/);
-    error("$file does not have 'xthisx'") if ($text !~ m/\bxthisx\b/);
+    foreach my $file (glob_all("$Self->{obj_dir}/$Self->{VM_PREFIX}___024root__DepSet_*__0.cpp")) {
+        my $text = file_contents($file);
+        if ($text =~ m/\b\$c statement\b/) {
+            error("$file has 'this->clk'") if ($text =~ m/\bthis->clk\b/);
+            error("$file does not have 'xthis'") if ($text !~ m/\bxthis\b/);
+            error("$file does not have 'thisx'") if ($text !~ m/\bthisx\b/);
+            error("$file does not have 'xthisx'") if ($text !~ m/\bxthisx\b/);
+        }
+    }
 }
 
 ok(1);

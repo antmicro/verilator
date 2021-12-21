@@ -881,13 +881,6 @@ bool AstSenTree::hasCombo() const {
     }
     return false;
 }
-bool AstSenTree::hasPostponed() const {
-    UASSERT_OBJ(sensesp(), this, "SENTREE without any SENITEMs under it");
-    for (AstSenItem* senp = sensesp(); senp; senp = VN_CAST(senp->nextp(), SenItem)) {
-        if (senp->isPostponed()) return true;
-    }
-    return false;
-}
 
 AstTypeTable::AstTypeTable(FileLine* fl)
     : ASTGEN_SUPER_TypeTable(fl) {

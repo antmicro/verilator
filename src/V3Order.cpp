@@ -645,11 +645,7 @@ class OrderBuildVisitor final : public AstNVisitor {
     virtual void visit(AstInitial* nodep) override {  //
         iterateLogic(nodep);
     }
-    virtual void visit(AstAlways* nodep) override {
-        VL_RESTORER(m_inPostponed);
-        if (nodep->sensesp() && nodep->sensesp()->hasPostponed()) m_inPostponed = true;
-        iterateLogic(nodep);
-    }
+    virtual void visit(AstAlways* nodep) override { iterateLogic(nodep); }
     virtual void visit(AstAlwaysPost* nodep) override {
         UASSERT_OBJ(!m_inPost, nodep, "Should not nest");
         m_inPost = true;
@@ -1102,16 +1098,13 @@ class OrderProcess final : AstNDeleter {
                      AstNode* forWhatp) {
         modp->user3Inc();
         const int funcnum = modp->user3();
-        string name
-            = (domainp->hasCombo()
-                   ? "_combo"
-                   : (domainp->hasInitial()
-                          ? "_initial"
-                          : (domainp->hasSettle()
-                                 ? "_settle"
-                                 : (domainp->hasPostponed()
-                                        ? "_postponed"
-                                        : (domainp->isMulti() ? "_multiclk" : "_sequent")))));
+        string name = (domainp->hasCombo()
+                           ? "_combo"
+                           : (domainp->hasInitial()
+                                  ? "_initial"
+                                  : (domainp->hasSettle()
+                                         ? "_settle"
+                                         : (domainp->isMulti() ? "_multiclk" : "_sequent"))));
         name = name + "__" + scopep->nameDotless() + "__" + cvtToStr(funcnum);
         if (v3Global.opt.profCFuncs()) {
             name += "__PROF__" + forWhatp->fileline()->profileFuncname();

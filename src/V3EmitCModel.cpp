@@ -352,8 +352,6 @@ class EmitCModel final : public EmitCFunc {
             puts("if (VL_UNLIKELY(" + recName + ")) " + recName + "->endRecord(VL_RDTSC_Q());\n");
         }
 
-        puts(topModNameProtected + "__" + protect("_eval_postponed") + "(&(vlSymsp->TOP));\n");
-
         if (v3Global.rootp()->changeRequest()) {
             puts("if (VL_UNLIKELY(++__VclockLoop > " + cvtToStr(v3Global.opt.convergeLimit())
                  + ")) {\n");
@@ -396,9 +394,7 @@ class EmitCModel final : public EmitCFunc {
         puts("\n");
         puts("void " + topModNameProtected + "__" + protect("_eval_initial") + selfDecl + ";\n");
         puts("void " + topModNameProtected + "__" + protect("_eval_settle") + selfDecl + ";\n");
-        puts("void " + topModNameProtected + "__" + protect("_eval_postponed") + selfDecl + ";\n");
         puts("void " + topModNameProtected + "__" + protect("_eval") + selfDecl + ";\n");
-        puts("void " + topModNameProtected + "__" + protect("_eval_anyedge") + selfDecl + ";\n");
         if (v3Global.rootp()->changeRequest()) {
             puts("QData " + topModNameProtected + "__" + protect("_change_request") + selfDecl
                  + ";\n");
@@ -414,7 +410,6 @@ class EmitCModel final : public EmitCFunc {
              + " {\n");
         puts("vlSymsp->__Vm_didInit = true;\n");
         puts(topModNameProtected + "__" + protect("_eval_initial") + "(&(vlSymsp->TOP));\n");
-        puts(topModNameProtected + "__" + protect("_eval_anyedge") + "(&(vlSymsp->TOP));\n");
         emitSettleLoop(modp, /* initial: */ true);
         ensureNewLine();
         puts("}\n");

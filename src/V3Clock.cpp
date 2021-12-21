@@ -83,7 +83,6 @@ private:
     AstCFunc* m_initFuncp = nullptr;  // Top initial function we are creating
     AstCFunc* m_finalFuncp = nullptr;  // Top final function we are creating
     AstCFunc* m_settleFuncp = nullptr;  // Top settlement function we are creating
-    AstCFunc* m_postponedFuncp = nullptr;
     AstSenTree* m_lastSenp = nullptr;  // Last sensitivity match, so we can detect duplicates.
     AstIf* m_lastIfp = nullptr;  // Last sensitivity if active to add more under
     AstMTaskBody* m_mtaskBodyp = nullptr;  // Current mtask body
@@ -255,7 +254,6 @@ private:
         m_evalFuncp = makeTopFunction("_eval");
         m_initFuncp = makeTopFunction("_eval_initial", /* slow: */ true);
         m_settleFuncp = makeTopFunction("_eval_settle", /* slow: */ true);
-        m_postponedFuncp = makeTopFunction("_eval_postponed");
         m_finalFuncp = makeTopFunction("_final", /* slow: */ true);
 
         m_evalFuncp->addStmtsp(new AstCStmt{
@@ -359,9 +357,6 @@ private:
     void addToInitial(AstNode* stmtsp) {
         m_initFuncp->addStmtsp(stmtsp);  // add to top level function
     }
-    void addToPostponed(AstNode* stmtsp) {
-        m_postponedFuncp->addStmtsp(stmtsp);  // add to top level function
-    }
     virtual void visit(AstTimingControl* nodep) override {
         // Do not iterate to keep sentree in place
     }
@@ -424,8 +419,6 @@ private:
                 // Don't need to: clearLastSen();, as we're adding it to different cfunc
                 // Move statements to function
                 addToSettleLoop(stmtsp);
-            } else if (nodep->hasPostponed()) {
-                addToPostponed(stmtsp);
             } else {
                 // Combo
                 clearLastSen();

@@ -266,13 +266,12 @@ public:
         ET_COMBO,  // Sensitive to all combo inputs to this block
         ET_INITIAL,  // User initial statements
         ET_SETTLE,  // Like combo but for initial wire resolutions after initial statement
-        ET_POSTPONED,
         ET_NEVER  // Never occurs (optimized away)
     };
     enum en m_e;
     bool clockedStmt() const {
         static const bool clocked[]
-            = {false, false, true, true, true, true, true, false, false, false, false};
+            = {false, false, true, true, true, true, true, false, false, false};
         return clocked[m_e];
     }
     VEdgeType invert() const {
@@ -289,14 +288,14 @@ public:
     }
     const char* ascii() const {
         static const char* const names[]
-            = {"%E-edge", "ANY",   "BOTH",    "POS",    "NEG",       "HIGH",
-               "LOW",     "COMBO", "INITIAL", "SETTLE", "POSTPONED", "NEVER"};
+            = {"%E-edge", "ANY",   "BOTH",    "POS",    "NEG",  "HIGH",
+               "LOW",     "COMBO", "INITIAL", "SETTLE", "NEVER"};
         return names[m_e];
     }
     const char* verilogKwd() const {
         static const char* const names[]
-            = {"%E-edge", "[any]", "edge",      "posedge",  "negedge",     "[high]",
-               "[low]",   "*",     "[initial]", "[settle]", "[postponed]", "[never]"};
+            = {"%E-edge", "[any]", "edge",      "posedge",  "negedge", "[high]",
+               "[low]",   "*",     "[initial]", "[settle]", "[never]"};
         return names[m_e];
     }
     // Return true iff this and the other have mutually exclusive transitions

@@ -402,14 +402,12 @@ private:
             nodep->replaceWith(newsetp);
             // Add "always_comb if (__Vstrobe) begin $display(...); __Vstrobe = '0; end"
             AstNode* const stmtsp = nodep;
-            stmtsp->addNext(new AstAssign{fl, new AstVarRef{fl, varp, VAccess::WRITE},
-                                          new AstConst{fl, AstConst::BitFalse{}}});
             AstIf* const ifp
                 = new AstIf{fl, new AstVarRef{fl, varp, VAccess::READ}, stmtsp, nullptr};
             ifp->branchPred(VBranchPred::BP_UNLIKELY);
-            AstNode* const newp = new AstAlways{
-                fl, VAlwaysKwd::ALWAYS,
-                new AstSenTree{fl, new AstSenItem{fl, AstSenItem::Postponed()}}, ifp};
+            AstNode* const newp = new AstAlwaysPostponed{fl, ifp};
+            stmtsp->addNext(new AstAssign{fl, new AstVarRef{fl, varp, VAccess::WRITE},
+                                          new AstConst{fl, AstConst::BitFalse{}}});
             m_modp->addStmtp(newp);
         }
     }

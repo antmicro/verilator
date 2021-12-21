@@ -315,7 +315,6 @@ private:
 
     // STATE
     AstScope* m_scopep = nullptr;
-    AstCFunc* m_anyedgeFuncp = nullptr;
     size_t m_count = 0;
 
     // METHODS
@@ -335,11 +334,6 @@ private:
     }
 
     // VISITORS
-    virtual void visit(AstTopScope* nodep) override {
-        m_scopep = nodep->scopep();
-        m_anyedgeFuncp = makeTopFunction("_eval_anyedge", /* slow: */ true);
-        iterateChildren(nodep);
-    }
     virtual void visit(AstScope* nodep) override {
         m_scopep = nodep;
         iterateChildren(nodep);
@@ -371,7 +365,8 @@ private:
             newFuncpr->addStmtsp(whilep);
             whilep->fileline()->warnOff(V3ErrorCode::INFINITELOOP, true);
             AstCCall* const callp = new AstCCall(nodep->fileline(), newFuncpr);
-            m_anyedgeFuncp->addStmtsp(callp);
+            auto* initialp = new AstInitial{nodep->fileline(), callp};
+            m_scopep->addActivep(initialp);
             nodep->unlinkFrBack();
             VL_DO_DANGLING(nodep->deleteTree(), nodep);
             newFuncpr->user1(true);

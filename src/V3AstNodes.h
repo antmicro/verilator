@@ -3268,7 +3268,6 @@ public:
     class Illegal {};  // for creator type-overload selection
     class Initial {};  // for creator type-overload selection
     class Settle {};  // for creator type-overload selection
-    class Postponed {};  // for creator type-overload selection
     class Never {};  // for creator type-overload selection
     AstSenItem(FileLine* fl, VEdgeType edgeType, AstNode* varrefp)
         : ASTGEN_SUPER_SenItem(fl)
@@ -3287,9 +3286,6 @@ public:
     AstSenItem(FileLine* fl, Settle)
         : ASTGEN_SUPER_SenItem(fl)
         , m_edgeType{VEdgeType::ET_SETTLE} {}
-    AstSenItem(FileLine* fl, Postponed)
-        : ASTGEN_SUPER_SenItem(fl)
-        , m_edgeType{VEdgeType::ET_POSTPONED} {}
     AstSenItem(FileLine* fl, Never)
         : ASTGEN_SUPER_SenItem(fl)
         , m_edgeType{VEdgeType::ET_NEVER} {}
@@ -3313,11 +3309,8 @@ public:
     bool isInitial() const { return edgeType() == VEdgeType::ET_INITIAL; }
     bool isIllegal() const { return edgeType() == VEdgeType::ET_ILLEGAL; }
     bool isSettle() const { return edgeType() == VEdgeType::ET_SETTLE; }
-    bool isPostponed() const { return edgeType() == VEdgeType::ET_POSTPONED; }
     bool isNever() const { return edgeType() == VEdgeType::ET_NEVER; }
-    bool hasVar() const {
-        return !(isCombo() || isInitial() || isSettle() || isPostponed() || isNever());
-    }
+    bool hasVar() const { return !(isCombo() || isInitial() || isSettle() || isNever()); }
 };
 
 class AstSenTree final : public AstNode {
@@ -3344,7 +3337,6 @@ public:
     bool hasSettle() const;  // Includes a SETTLE SenItem
     bool hasInitial() const;  // Includes a INITIAL SenItem
     bool hasCombo() const;  // Includes a COMBO SenItem
-    bool hasPostponed() const;  // Includes a POSTPONED SenItem
 };
 
 class AstFinal final : public AstNodeProcedure {
@@ -5383,7 +5375,6 @@ public:
     bool hasInitial() const { return m_sensesp->hasInitial(); }
     bool hasSettle() const { return m_sensesp->hasSettle(); }
     bool hasClocked() const { return m_sensesp->hasClocked(); }
-    bool hasPostponed() const { return m_sensesp->hasPostponed(); }
 };
 
 class AstAttrOf final : public AstNode {

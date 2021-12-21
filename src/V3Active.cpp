@@ -210,7 +210,6 @@ private:
     AstScope* m_scopep = nullptr;  // Current scope to add statement to
     AstActive* m_iActivep = nullptr;  // For current scope, the IActive we're building
     AstActive* m_cActivep = nullptr;  // For current scope, the SActive(combo) we're building
-    AstActive* m_pActivep = nullptr;
 
     SenTreeSet m_activeSens;  // Sen lists for each active we've made
     using ActiveMap = std::unordered_map<AstSenTree*, AstActive*>;
@@ -226,7 +225,6 @@ private:
         m_scopep = nodep;
         m_iActivep = nullptr;
         m_cActivep = nullptr;
-        m_pActivep = nullptr;
         m_activeSens.clear();
         m_activeMap.clear();
         iterateChildren(nodep);
@@ -243,15 +241,6 @@ private:
 public:
     // METHODS
     AstScope* scopep() { return m_scopep; }
-    AstActive* getPActive(FileLine* fl) {
-        if (!m_pActivep) {
-            m_pActivep = new AstActive(
-                fl, "postponed", new AstSenTree(fl, new AstSenItem(fl, AstSenItem::Postponed())));
-            m_pActivep->sensesStorep(m_pActivep->sensesp());
-            addActive(m_pActivep);
-        }
-        return m_pActivep;
-    }
     AstActive* getCActive(FileLine* fl) {
         if (!m_cActivep) {
             m_cActivep = new AstActive(
@@ -506,11 +495,6 @@ private:
             UASSERT_OBJ(!oldsensesp->sensesp()->nextp(), nodep,
                         "Never senitem should be alone, else the never should be eliminated.");
             VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
-            return;
-        }
-        if (oldsensesp && oldsensesp->sensesp() && oldsensesp->hasPostponed()) {
-            auto* activep = m_namer.getPActive(nodep->fileline());
-            activep->addStmtsp(nodep->unlinkFrBack());
             return;
         }
 

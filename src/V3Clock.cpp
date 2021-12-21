@@ -256,6 +256,16 @@ private:
         m_settleFuncp = makeTopFunction("_eval_settle", /* slow: */ true);
         m_finalFuncp = makeTopFunction("_final", /* slow: */ true);
 
+        for (auto* nodep = m_topScopep->scopep()->varsp(); nodep;
+             nodep = VN_CAST(nodep->nextp(), VarScope)) {
+            if (nodep->varp()->dtypep()->basicp()
+                && nodep->varp()->dtypep()->basicp()->isEventValue()) {
+                m_evalFuncp->addFinalsp(
+                    new AstAssign{m_evalFuncp->fileline(),
+                                  new AstVarRef{m_evalFuncp->fileline(), nodep, VAccess::WRITE},
+                                  new AstConst{m_evalFuncp->fileline(), AstConst::BitFalse{}}});
+            }
+        }
         m_evalFuncp->addStmtsp(new AstCStmt{
             m_evalFuncp->fileline(), "vlSymsp->__Vm_delayedQueue.activate(VL_TIME_D());\n"});
 

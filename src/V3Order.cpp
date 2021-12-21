@@ -645,7 +645,9 @@ class OrderBuildVisitor final : public AstNVisitor {
     virtual void visit(AstInitial* nodep) override {  //
         iterateLogic(nodep);
     }
-    virtual void visit(AstAlways* nodep) override { iterateLogic(nodep); }
+    virtual void visit(AstAlways* nodep) override {  //
+        iterateLogic(nodep);
+    }
     virtual void visit(AstAlwaysPost* nodep) override {
         UASSERT_OBJ(!m_inPost, nodep, "Should not nest");
         m_inPost = true;

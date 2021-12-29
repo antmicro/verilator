@@ -393,6 +393,10 @@ class OrderBuildVisitor final : public AstNVisitor {
     bool m_inPre = false;  // Underneath AstAssignPre
     bool m_inPost = false;  // Underneath AstAssignPost/AstAlwaysPost
     bool m_inPostponed = false;  // Underneath AstAlwaysPostponed
+    bool m_inDelayed = false;  // Underneath AstAlwaysDelayed
+
+    OrderEitherVertex* m_postDly = nullptr;
+    OrderEitherVertex* m_prePostponed = nullptr;
 
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
@@ -425,9 +429,14 @@ class OrderBuildVisitor final : public AstNVisitor {
     }
     virtual void visit(AstScope* nodep) override {
         UASSERT_OBJ(!m_scopep, nodep, "Should not nest");
+        m_postDly = new OrderDynamicSchedulingVertex(m_graphp, m_scopep, "POST Dly");
+        m_prePostponed = new OrderDynamicSchedulingVertex(m_graphp, m_scopep, "PRE Postponed");
+        new OrderEdge(m_graphp, m_postDly, m_prePostponed, WEIGHT_NORMAL);
         m_scopep = nodep;
         iterateChildren(nodep);
         m_scopep = nullptr;
+        m_postDly = nullptr;
+        m_prePostponed = nullptr;
     }
     virtual void visit(AstTimingControl* nodep) override {}
     virtual void visit(AstActive* nodep) override {
@@ -452,7 +461,12 @@ class OrderBuildVisitor final : public AstNVisitor {
 
         // Ignore the sensitivity domain for combinational logic. We will assign combinational
         // logic to a domain later, based on the domains of incoming variables.
-        if (!nodep->sensesp()->hasCombo()) m_domainp = nodep->sensesp();
+        if (!nodep->sensesp()->hasCombo()) {
+            m_domainp = nodep->sensesp();
+        } else {
+            for (auto* stmtp = nodep->stmtsp(); stmtp; stmtp = stmtp->nextp())
+                if (VN_IS(stmtp, AlwaysDelayed)) m_domainp = nodep->sensesp();
+        }
 
         // Analyze logic underneath
         iterateChildren(nodep);
@@ -640,6 +654,18 @@ class OrderBuildVisitor final : public AstNVisitor {
         }
         iterateChildren(nodep);
     }
+    virtual void visit(AstNodeStmt* nodep) override {
+        if (m_logicVxp) {
+            if (m_inDelayed) {
+                new OrderEdge(m_graphp, m_postDly, m_logicVxp, WEIGHT_NORMAL);
+                new OrderEdge(m_graphp, m_logicVxp, m_prePostponed, WEIGHT_NORMAL);
+            } else if (m_inPostponed)
+                new OrderEdge(m_graphp, m_prePostponed, m_logicVxp, WEIGHT_NORMAL);
+            else
+                new OrderEdge(m_graphp, m_logicVxp, m_postDly, WEIGHT_NORMAL);
+        }
+        iterateChildren(nodep);
+    }
 
     //--- Logic akin to SystemVerilog Processes (AstNodeProcedure)
     virtual void visit(AstInitial* nodep) override {  //
@@ -653,6 +679,12 @@ class OrderBuildVisitor final : public AstNVisitor {
         m_inPost = true;
         iterateLogic(nodep);
         m_inPost = false;
+    }
+    virtual void visit(AstAlwaysDelayed* nodep) override {
+        UASSERT_OBJ(!m_inDelayed, nodep, "Should not nest");
+        m_inDelayed = true;
+        iterateLogic(nodep);
+        m_inDelayed = false;
     }
     virtual void visit(AstAlwaysPostponed* nodep) override {
         UASSERT_OBJ(!m_inPostponed, nodep, "Should not nest");

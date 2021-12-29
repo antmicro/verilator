@@ -408,6 +408,10 @@ private:
         m_scopep->modp()->addStmtp(newvarp);
         auto* newvscp = new AstVarScope(m_scopep->fileline(), m_scopep, newvarp);
         m_scopep->addVarp(newvscp);
+        auto* triggerp = new AstEventTrigger{
+            m_scopep->fileline(), new AstVarRef{m_scopep->fileline(), newvscp, VAccess::WRITE}};
+        auto* activep = new AstAlwaysDelayed(m_scopep->fileline(), triggerp);
+        m_scopep->addActivep(activep);
         return m_dlyEvent = newvscp;
     }
 

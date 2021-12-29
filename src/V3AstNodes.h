@@ -3379,6 +3379,15 @@ public:
     ASTNODE_NODE_FUNCS(AlwaysPostponed)
 };
 
+class AstAlwaysDelayed final : public AstNodeProcedure {
+    // Like always but delayed scheduling region
+
+public:
+    AstAlwaysDelayed(FileLine* fl, AstNode* bodysp)
+        : ASTGEN_SUPER_AlwaysDelayed(fl, bodysp) {}
+    ASTNODE_NODE_FUNCS(AlwaysDelayed)
+};
+
 class AstAlwaysPost final : public AstNodeProcedure {
     // Like always but post assignments for memory assignment IFs
 public:

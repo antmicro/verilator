@@ -518,4 +518,26 @@ public:
     virtual bool followComboConnected() const override { return false; }
 };
 
+class OrderDynamicSchedulingVertex final : public OrderEitherVertex {
+    std::string m_name;
+
+    OrderDynamicSchedulingVertex(V3Graph* graphp, const OrderDynamicSchedulingVertex& old)
+        : OrderEitherVertex{graphp, old}
+        , m_name(old.m_name) {}
+
+public:
+    OrderDynamicSchedulingVertex(V3Graph* graphp, AstScope* scopep, const std::string& name)
+        : OrderEitherVertex{graphp, scopep, nullptr}
+        , m_name(name) {}
+    virtual ~OrderDynamicSchedulingVertex() override {}
+    virtual OrderDynamicSchedulingVertex* clone(V3Graph* graphp) const override {
+        return new OrderDynamicSchedulingVertex(graphp, *this);
+    }
+    virtual OrderVEdgeType type() const override { return OrderVEdgeType::VERTEX_LOGIC; }
+    virtual string name() const override { return m_name; }
+    virtual string dotColor() const override { return "purple"; }
+    virtual string dotName() const override { return ""; }
+    virtual bool domainMatters() override { return false; }
+};
+
 #endif  // Guard

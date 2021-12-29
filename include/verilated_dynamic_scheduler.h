@@ -107,10 +107,13 @@ struct EventDispatcher {
     std::vector<Event> triggeredQueue;
 
     void insert(const EventSet& events, std::coroutine_handle<> coro) {
-        for (auto event : events) {
-            if (wasTriggered(event)) {
-                resumeTriggered();
-                break;
+        auto range = eventSetsToCoros.equal_range(events);
+        if (range.first != range.second) {
+            for (auto event : events) {
+                if (wasTriggered(event)) {
+                    resumeTriggered();
+                    break;
+                }
             }
         }
         for (auto event : events) eventsToEventSets.insert(std::make_pair(event, events));

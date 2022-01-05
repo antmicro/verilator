@@ -221,7 +221,10 @@ private:
         m_dynamic = false;
     }
     virtual void visit(AstVarRef* nodep) override {
-        if (nodep->access().isWriteOrRW()) { nodep->varp()->user1(m_dynamic); }
+        if (nodep->access().isWriteOrRW()) {
+            nodep->varp()->user1(m_dynamic);
+            nodep->varp()->isDynamic(m_dynamic);
+        }
     }
 
     //--------------------
@@ -341,8 +344,10 @@ private:
     }
     virtual void visit(AstTopScope* nodep) override {
         iterateChildren(nodep);
-        auto* activep = new AstAlwaysDelayed{nodep->fileline(),
-                new AstCStmt{nodep->fileline(), "vlSymsp->__Vm_eventDispatcher.resumeAllTriggered();\n"}};
+        auto* activep = new AstAlwaysDelayed{
+            nodep->fileline(),
+            new AstCStmt{nodep->fileline(),
+                         "vlSymsp->__Vm_eventDispatcher.resumeAllTriggered();\n"}};
         nodep->scopep()->addActivep(activep);
     }
     virtual void visit(AstAlways* nodep) override {

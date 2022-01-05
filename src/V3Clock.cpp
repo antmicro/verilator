@@ -262,9 +262,6 @@ private:
         // Process the activates
         iterateChildren(nodep);
 
-        m_evalFuncp->addStmtsp(new AstCStmt{
-            m_evalFuncp->fileline(), "vlSymsp->__Vm_eventDispatcher.resumeAllTriggered();\n"});
-
         UINFO(4, " TOPSCOPE iter done " << nodep << endl);
         // Clear the DPI export trigger flag at the end of eval
         if (AstVarScope* const dpiExportTriggerp = v3Global.rootp()->dpiExportTriggerp()) {

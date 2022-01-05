@@ -515,10 +515,6 @@ private:
                     nodep, "Concat on LHS of assignment; V3Const should have deleted it");
         iterateChildren(nodep);
     }
-    virtual void visit(AstDelay* nodep) VL_OVERRIDE {
-        iterateChildren(nodep);
-        m_logicVertexp->setConsumed("delay");
-    }
     virtual void visit(AstAlwaysDelayed* nodep) VL_OVERRIDE {
         iterateNewStmt(nodep, nullptr, "alwaysDelayed");
     }

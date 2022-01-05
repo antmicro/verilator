@@ -395,6 +395,8 @@ class OrderBuildVisitor final : public AstNVisitor {
     bool m_inPostponed = false;  // Underneath AstAlwaysPostponed
     bool m_inDelayed = false;  // Underneath AstAlwaysDelayed
 
+    SenTreeFinder m_finder;
+
     OrderEitherVertex* m_postDly = nullptr;
     OrderEitherVertex* m_prePostponed = nullptr;
 
@@ -464,8 +466,8 @@ class OrderBuildVisitor final : public AstNVisitor {
         if (!nodep->sensesp()->hasCombo()) {
             m_domainp = nodep->sensesp();
         } else {
-            for (auto* stmtp = nodep->stmtsp(); stmtp; stmtp = stmtp->nextp())
-                if (VN_IS(stmtp, AlwaysDelayed)) m_domainp = nodep->sensesp();
+            //for (auto* stmtp = nodep->stmtsp(); stmtp; stmtp = stmtp->nextp())
+            //    if (VN_IS(stmtp, AlwaysDelayed)) m_domainp = nodep->sensesp();
         }
 
         // Analyze logic underneath
@@ -683,7 +685,9 @@ class OrderBuildVisitor final : public AstNVisitor {
     virtual void visit(AstAlwaysDelayed* nodep) override {
         UASSERT_OBJ(!m_inDelayed, nodep, "Should not nest");
         m_inDelayed = true;
+        m_domainp = m_finder.getComb();
         iterateLogic(nodep);
+        m_domainp = nullptr;
         m_inDelayed = false;
     }
     virtual void visit(AstAlwaysPostponed* nodep) override {
@@ -749,7 +753,8 @@ class OrderBuildVisitor final : public AstNVisitor {
     virtual void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
     // CONSTRUCTOR
-    OrderBuildVisitor(AstNetlist* nodep) {
+    OrderBuildVisitor(AstNetlist* nodep)
+        : m_finder{nodep} {
         // Enable debugging (3 is default if global debug; we want acyc debugging)
         if (debug()) m_graphp->debug(5);
 
@@ -1552,9 +1557,11 @@ void OrderProcess::processDomainsIterate(OrderEitherVertex* vertexp) {
     if (vertexp->domainp()) return;  // Already processed, or sequential logic
     UINFO(5, "    pdi: " << vertexp << endl);
     OrderVarVertex* const vvertexp = dynamic_cast<OrderVarVertex*>(vertexp);
+    OrderLogicVertex* const lvertexp = dynamic_cast<OrderLogicVertex*>(vertexp);
     AstSenTree* domainp = nullptr;
     if (vvertexp && vvertexp->varScp()->varp()->isNonOutput()) domainp = m_comboDomainp;
     if (vvertexp && vvertexp->varScp()->isCircular()) domainp = m_comboDomainp;
+    //if (lvertexp && VN_IS(lvertexp->nodep(), AlwaysDelayed)) domainp = m_comboDomainp;
     if (!domainp) {
         for (V3GraphEdge* edgep = vertexp->inBeginp(); edgep; edgep = edgep->inNextp()) {
             OrderEitherVertex* const fromVertexp = static_cast<OrderEitherVertex*>(edgep->fromp());
@@ -1565,6 +1572,7 @@ void OrderProcess::processDomainsIterate(OrderEitherVertex* vertexp) {
                     || domainp->hasSettle()  // or, we can ignore being in the settle domain
                     || domainp->hasInitial()) {
                     domainp = fromVertexp->domainp();
+                    if (lvertexp && VN_IS(lvertexp->nodep(), AlwaysPostponed) && domainp->hasInitial()) domainp = m_comboDomainp;
                 } else if (domainp->hasCombo()) {
                     // Once in combo, keep in combo; already as severe as we can get
                 } else if (fromVertexp->domainp()->hasCombo()) {
@@ -1610,7 +1618,7 @@ void OrderProcess::processDomainsIterate(OrderEitherVertex* vertexp) {
         // This is a node which has only constant inputs, or is otherwise indeterminate.
         // It should have already been copied into the settle domain.  Presumably it has
         // inputs which we never trigger, or nothing it's sensitive to, so we can rip it out.
-        if (!domainp && vertexp->scopep()) domainp = m_deleteDomainp;
+        if (!domainp && vertexp->scopep()) domainp = m_comboDomainp;
     }
     //
     vertexp->domainp(domainp);

@@ -10,13 +10,17 @@ if (!$::Driver) { use FindBin; exec("$FindBin::Bin/bootstrap.pl", @ARGV, $0); di
 
 scenarios(vlt => 1);
 
-top_filename("t/t_delay.v");
+if ($Self->{dynamic_scheduler}) {
+    skip("Test not supported with the dynamic scheduler");
+} else {
+    top_filename("t/t_delay.v");
 
-lint(
-    verilator_flags2 => ['-Wall -Wno-DECLFILENAME'],
-    fails => 1,
-    expect_filename => $Self->{golden_filename},
-    );
+    lint(
+        verilator_flags2 => ['-Wall -Wno-DECLFILENAME'],
+        fails => 1,
+        expect_filename => $Self->{golden_filename},
+        );
+}
 
 ok(1);
 1;

@@ -88,6 +88,7 @@ my $opt_stop;
 my $opt_trace;
 my $opt_verbose;
 my $Opt_Verilated_Debug;
+my $Opt_Dynamic_Scheduler;
 our $Opt_Unsupported;
 our $Opt_Verilation = 1;
 our @Opt_Driver_Verilator_Flags;
@@ -117,6 +118,7 @@ if (! GetOptions(
           "verbose!"    => \$opt_verbose,
           "verilation!"         => \$Opt_Verilation,  # Undocumented debugging
           "verilated-debug!"    => \$Opt_Verilated_Debug,
+          "dynamic-scheduler!"  => \$Opt_Dynamic_Scheduler,
           #W               see parameter()
           # Scenarios
           "atsim|athdl!"=> sub { $opt_scenarios{atsim} = $_[1]; },
@@ -669,6 +671,7 @@ sub new {
         verilator_make_gmake => 1,
         verilator_make_cmake => 0,
         verilated_debug => $Opt_Verilated_Debug,
+        dynamic_scheduler => $Opt_Dynamic_Scheduler,
         stdout_filename => undef,  # Redirect stdout
         %$self};
     bless $self, $class;

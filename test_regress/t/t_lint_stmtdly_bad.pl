@@ -10,20 +10,24 @@ if (!$::Driver) { use FindBin; exec("$FindBin::Bin/bootstrap.pl", @ARGV, $0); di
 
 scenarios(vlt => 1);
 
-compile(
-    fails => 1,
-    expect_filename => $Self->{golden_filename},
-    );
+if ($Self->{dynamic_scheduler}) {
+    skip("Test not supported with the dynamic scheduler");
+} else {
+    compile(
+        fails => 1,
+        expect_filename => $Self->{golden_filename},
+        );
 
-extract(
-    in => $Self->{top_filename},
-    out => "../docs/gen/ex_STMTDLY_faulty.rst",
-    lines => "10");
+    extract(
+        in => $Self->{top_filename},
+        out => "../docs/gen/ex_STMTDLY_faulty.rst",
+        lines => "10");
 
-extract(
-    in => $Self->{golden_filename},
-    out => "../docs/gen/ex_STMTDLY_msg.rst",
-    lines => "1");
+    extract(
+        in => $Self->{golden_filename},
+        out => "../docs/gen/ex_STMTDLY_msg.rst",
+        lines => "1");
+}
 
 ok(1);
 1;

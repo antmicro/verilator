@@ -394,6 +394,11 @@ class OrderBuildVisitor final : public AstNVisitor {
     bool m_inPost = false;  // Underneath AstAssignPost/AstAlwaysPost
     bool m_inPostponed = false;  // Underneath AstAlwaysPostponed
 
+    SenTreeFinder m_finder;
+
+    OrderEitherVertex* m_dlyVxp = nullptr;
+    OrderEitherVertex* m_postponedVxp = nullptr;
+
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
 
@@ -406,6 +411,10 @@ class OrderBuildVisitor final : public AstNVisitor {
         // If this logic has a clocked activation, add a link from the sensitivity list LogicVertex
         // to this LogicVertex.
         if (m_activeSenVxp) new OrderEdge(m_graphp, m_activeSenVxp, m_logicVxp, WEIGHT_NORMAL);
+        if (m_inPostponed)
+            new OrderEdge(m_graphp, m_postponedVxp, m_logicVxp, WEIGHT_NORMAL);
+        else
+            new OrderEdge(m_graphp, m_logicVxp, m_dlyVxp, WEIGHT_NORMAL);
         // Gather variable dependencies based on usage
         iterateChildren(nodep);
         // Finished with this logic
@@ -421,15 +430,23 @@ class OrderBuildVisitor final : public AstNVisitor {
         // This should only find the global AstSenTrees under the AstTopScope, which we ignore
         // here. We visit AstSenTrees separately when encountering the AstActive that references
         // them.
-        UASSERT_OBJ(!m_scopep, nodep, "AstSenTrees should have been made global in V3ActiveTop");
+        if (VN_IS(nodep->backp(), TimingControl))
+            iterateChildren(nodep);
+        else
+            UASSERT_OBJ(!m_scopep, nodep,
+                        "AstSenTrees should have been made global in V3ActiveTop");
     }
     virtual void visit(AstScope* nodep) override {
         UASSERT_OBJ(!m_scopep, nodep, "Should not nest");
+        m_dlyVxp = new OrderDynamicSchedulingVertex(m_graphp, m_scopep, "Dly");
+        m_postponedVxp = new OrderDynamicSchedulingVertex(m_graphp, m_scopep, "PRE Postponed");
+        new OrderEdge(m_graphp, m_dlyVxp, m_postponedVxp, WEIGHT_NORMAL);
         m_scopep = nodep;
         iterateChildren(nodep);
         m_scopep = nullptr;
+        m_dlyVxp = nullptr;
+        m_postponedVxp = nullptr;
     }
-    virtual void visit(AstTimingControl* nodep) override {}
     virtual void visit(AstActive* nodep) override {
         UASSERT_OBJ(!nodep->sensesStorep(), nodep,
                     "AstSenTrees should have been made global in V3ActiveTop");
@@ -654,6 +671,20 @@ class OrderBuildVisitor final : public AstNVisitor {
         iterateLogic(nodep);
         m_inPost = false;
     }
+    virtual void visit(AstAlwaysDelayed* nodep) override {
+        UASSERT_OBJ(!m_logicVxp, nodep, "Should not nest");
+        // Reset VarUsage
+        AstNode::user2ClearTree();
+        // Create LogicVertex for this logic node
+        auto* comboDomainp = m_finder.getComb();
+        m_logicVxp = new OrderLogicVertex(m_graphp, m_scopep, comboDomainp, nodep);
+        new OrderEdge(m_graphp, m_dlyVxp, m_logicVxp, WEIGHT_NORMAL);
+        new OrderEdge(m_graphp, m_logicVxp, m_postponedVxp, WEIGHT_NORMAL);
+        // Gather variable dependencies based on usage
+        iterateChildren(nodep);
+        // Finished with this logic
+        m_logicVxp = nullptr;
+    }
     virtual void visit(AstAlwaysPostponed* nodep) override {
         UASSERT_OBJ(!m_inPostponed, nodep, "Should not nest");
         m_inPostponed = true;
@@ -717,7 +748,8 @@ class OrderBuildVisitor final : public AstNVisitor {
     virtual void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
     // CONSTRUCTOR
-    OrderBuildVisitor(AstNetlist* nodep) {
+    OrderBuildVisitor(AstNetlist* nodep)
+        : m_finder{nodep} {
         // Enable debugging (3 is default if global debug; we want acyc debugging)
         if (debug()) m_graphp->debug(5);
 
@@ -1522,6 +1554,7 @@ void OrderProcess::processDomainsIterate(OrderEitherVertex* vertexp) {
     OrderVarVertex* const vvertexp = dynamic_cast<OrderVarVertex*>(vertexp);
     AstSenTree* domainp = nullptr;
     if (vvertexp && vvertexp->varScp()->varp()->isNonOutput()) domainp = m_comboDomainp;
+    if (vvertexp && vvertexp->varScp()->varp()->isDynamic()) domainp = m_comboDomainp;
     if (vvertexp && vvertexp->varScp()->isCircular()) domainp = m_comboDomainp;
     if (!domainp) {
         for (V3GraphEdge* edgep = vertexp->inBeginp(); edgep; edgep = edgep->inNextp()) {

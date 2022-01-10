@@ -1385,6 +1385,14 @@
           </begin>
         </if>
       </cfunc>
+      <cfunc fl="d10" loc="d,10,8,10,9" name="_combo__TOP__3">
+        <cstmt fl="d10" loc="d,10,8,10,9">
+          <text fl="d10" loc="d,10,8,10,9"/>
+        </cstmt>
+        <cstmt fl="d10" loc="d,10,8,10,9">
+          <text fl="d10" loc="d,10,8,10,9"/>
+        </cstmt>
+      </cfunc>
       <cfunc fl="d10" loc="d,10,8,10,9" name="_eval">
         <cstmt fl="d10" loc="d,10,8,10,9">
           <text fl="d10" loc="d,10,8,10,9"/>
@@ -1404,9 +1412,7 @@
             <ccall fl="d60" loc="d,60,4,60,10" func="_sequent__TOP__1"/>
           </begin>
         </if>
-        <cstmt fl="d10" loc="d,10,8,10,9">
-          <text fl="d10" loc="d,10,8,10,9"/>
-        </cstmt>
+        <ccall fl="d10" loc="d,10,8,10,9" func="_combo__TOP__3"/>
         <assign fl="d14" loc="d,14,10,14,13" dtype_id="8">
           <varref fl="d14" loc="d,14,10,14,13" name="clk" dtype_id="8"/>
           <varref fl="d14" loc="d,14,10,14,13" name="__Vclklast__TOP__clk" dtype_id="8"/>

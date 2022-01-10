@@ -570,6 +570,14 @@ private:
         }
         visitAlways(nodep, nullptr, VAlwaysKwd::ALWAYS);
     }
+    virtual void visit(AstAlwaysDelayed* nodep) override {
+        UINFO(4, "    ALW   " << nodep << endl);
+        if (!nodep->bodysp()) {
+            VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
+            return;
+        }
+        visitAlways(nodep, nullptr, VAlwaysKwd::ALWAYS);
+    }
     virtual void visit(AstAlwaysPublic* nodep) override {
         // Move always to appropriate ACTIVE based on its sense list
         UINFO(4, "    ALWPub   " << nodep << endl);

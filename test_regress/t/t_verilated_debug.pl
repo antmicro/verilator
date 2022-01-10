@@ -21,7 +21,7 @@ execute(
     );
 
 if (!$Self->{vltmt}) {  # vltmt output may vary between thread exec order
-    files_identical("$Self->{obj_dir}/vlt_sim.log", $Self->{golden_filename}, "logfile");
+    files_identical("$Self->{obj_dir}/vlt_sim.log", $Self->{dynamic_scheduler} ? $Self->{golden_filename} =~ s/\.out$/_dsched.out/r : $Self->{golden_filename}, "logfile");
 }
 
 ok(1);

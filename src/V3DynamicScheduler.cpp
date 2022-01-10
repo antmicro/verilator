@@ -108,8 +108,8 @@ static AstVarScope* getCreateEvent(AstVarScope* vscp, VEdgeType edgeType) {
 class DynamicSchedulerMarkDynamicVisitor final : public AstNVisitor {
 private:
     // NODE STATE
-    // AstNode::user1()      -> bool.  Set true if process/function uses constructs like delays,
-    // timing controls, waits, forks
+    //  AstNode::user1()      -> bool.  Set true if process/function uses constructs like delays,
+    //                                  timing controls, waits, forks
     AstUser1InUse m_inuser1;
 
     // STATE
@@ -194,9 +194,9 @@ public:
 class DynamicSchedulerMarkVariablesVisitor final : public AstNVisitor {
 private:
     // NODE STATE
-    // AstVar::user1()      -> bool.  Set true if variable is written to from a 'dynamic'
-    // process/function AstUser1InUse    m_inuser1;      (Allocated for use in
-    // DynamicSchedulerMarkDynamicVisitor)
+    //  AstVar::user1()      -> bool.  True if variable is written to from a 'dynamic'
+    //                                 process/function
+    //  AstUser1InUse    m_inuser1;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
 
     // STATE
     bool m_dynamic = false;
@@ -221,7 +221,10 @@ private:
         m_dynamic = false;
     }
     virtual void visit(AstVarRef* nodep) override {
-        if (nodep->access().isWriteOrRW()) { nodep->varp()->user1(m_dynamic); }
+        if (nodep->access().isWriteOrRW()) {
+            nodep->varp()->user1(m_dynamic);
+            nodep->varp()->isDynamic(m_dynamic);
+        }
     }
 
     //--------------------
@@ -339,6 +342,14 @@ private:
         iterateChildren(nodep);
         m_scopep = nullptr;
     }
+    virtual void visit(AstTopScope* nodep) override {
+        iterateChildren(nodep);
+        auto* activep = new AstAlwaysDelayed{
+            nodep->fileline(),
+            new AstCStmt{nodep->fileline(),
+                         "vlSymsp->__Vm_eventDispatcher.resumeAllTriggered();\n"}};
+        nodep->scopep()->addActivep(activep);
+    }
     virtual void visit(AstAlways* nodep) override {
         auto* sensesp = nodep->sensesp();
         if (sensesp && sensesp->sensesp()
@@ -408,6 +419,10 @@ private:
         m_scopep->modp()->addStmtp(newvarp);
         auto* newvscp = new AstVarScope(m_scopep->fileline(), m_scopep, newvarp);
         m_scopep->addVarp(newvscp);
+        auto* triggerp = new AstEventTrigger{
+            m_scopep->fileline(), new AstVarRef{m_scopep->fileline(), newvscp, VAccess::WRITE}};
+        auto* activep = new AstAlwaysDelayed(m_scopep->fileline(), triggerp);
+        m_scopep->addActivep(activep);
         return m_dlyEvent = newvscp;
     }
 

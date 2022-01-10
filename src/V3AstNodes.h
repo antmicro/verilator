@@ -1956,6 +1956,7 @@ private:
     bool m_overridenParam : 1;  // Overridden parameter by #(...) or defparam
     bool m_trace : 1;  // Trace this variable
     bool m_isLatched : 1;  // Not assigned in all control paths of combo always
+    bool m_isDynamic : 1;  // Assigned to by a dynamic process
 
     void init() {
         m_ansi = false;
@@ -1994,6 +1995,7 @@ private:
         m_overridenParam = false;
         m_trace = false;
         m_isLatched = false;
+        m_isDynamic = false;
         m_attrClocker = VVarAttrClocker::CLOCKER_UNKNOWN;
     }
 
@@ -2154,6 +2156,7 @@ public:
     bool overriddenParam() const { return m_overridenParam; }
     void trace(bool flag) { m_trace = flag; }
     void isLatched(bool flag) { m_isLatched = flag; }
+    void isDynamic(bool flag) { m_isDynamic = flag; }
     // METHODS
     virtual void name(const string& name) override { m_name = name; }
     virtual void tag(const string& text) override { m_tag = text; }
@@ -2207,6 +2210,7 @@ public:
     bool isConst() const { return m_isConst; }
     bool isStatic() const { return m_isStatic; }
     bool isLatched() const { return m_isLatched; }
+    bool isDynamic() const { return m_isDynamic; }
     bool isFuncLocal() const { return m_funcLocal; }
     bool isFuncReturn() const { return m_funcReturn; }
     bool isPullup() const { return m_isPullup; }
@@ -3379,6 +3383,15 @@ public:
     ASTNODE_NODE_FUNCS(AlwaysPostponed)
 };
 
+class AstAlwaysDelayed final : public AstNodeProcedure {
+    // Like always but delayed scheduling region
+
+public:
+    AstAlwaysDelayed(FileLine* fl, AstNode* bodysp)
+        : ASTGEN_SUPER_AlwaysDelayed(fl, bodysp) {}
+    ASTNODE_NODE_FUNCS(AlwaysDelayed)
+};
+
 class AstAlwaysPost final : public AstNodeProcedure {
     // Like always but post assignments for memory assignment IFs
 public:
@@ -3734,6 +3747,7 @@ public:
     AstNode* lhsp() const { return op1p(); }  // op2 = Statements to evaluate
     void lhsp(AstNode* nodep) { setOp1p(nodep); }
     AstNode* stmtsp() const { return op2p(); }
+    virtual bool isGateOptimizable() const override { return false; }
 };
 
 class AstGenCase final : public AstNodeCase {

@@ -261,16 +261,6 @@ private:
 
         // Process the activates
         iterateChildren(nodep);
-
-        for (auto* nodep = m_topScopep->scopep()->varsp(); nodep;
-             nodep = VN_CAST(nodep->nextp(), VarScope))
-            if (nodep->varp()->name() == "__VdlyEvent__")
-                m_evalFuncp->addStmtsp(new AstEventTrigger{
-                    m_evalFuncp->fileline(),
-                    new AstVarRef{m_evalFuncp->fileline(), nodep, VAccess::WRITE}});
-        m_evalFuncp->addStmtsp(new AstCStmt{
-            m_evalFuncp->fileline(), "vlSymsp->__Vm_eventDispatcher.resumeAllTriggered();\n"});
-
         UINFO(4, " TOPSCOPE iter done " << nodep << endl);
         // Clear the DPI export trigger flag at the end of eval
         if (AstVarScope* const dpiExportTriggerp = v3Global.rootp()->dpiExportTriggerp()) {

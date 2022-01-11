@@ -3423,8 +3423,8 @@ public:
 
 class AstAssign final : public AstNodeAssign {
 public:
-    AstAssign(FileLine* fl, AstNode* lhsp, AstNode* rhsp)
-        : ASTGEN_SUPER_Assign(fl, lhsp, rhsp) {
+    AstAssign(FileLine* fl, AstNode* lhsp, AstNode* rhsp, AstNode* delayp = nullptr)
+        : ASTGEN_SUPER_Assign(fl, lhsp, rhsp, delayp) {
         dtypeFrom(lhsp);
     }
     ASTNODE_NODE_FUNCS(Assign)
@@ -3449,8 +3449,8 @@ public:
 
 class AstAssignDly final : public AstNodeAssign {
 public:
-    AstAssignDly(FileLine* fl, AstNode* lhsp, AstNode* rhsp)
-        : ASTGEN_SUPER_AssignDly(fl, lhsp, rhsp) {}
+    AstAssignDly(FileLine* fl, AstNode* lhsp, AstNode* rhsp, AstNode* delayp = nullptr)
+        : ASTGEN_SUPER_AssignDly(fl, lhsp, rhsp, delayp) {}
     ASTNODE_NODE_FUNCS(AssignDly)
     virtual AstNode* cloneType(AstNode* lhsp, AstNode* rhsp) override {
         return new AstAssignDly(this->fileline(), lhsp, rhsp);
@@ -3746,6 +3746,7 @@ public:
     //
     AstNode* lhsp() const { return op1p(); }  // op2 = Statements to evaluate
     void lhsp(AstNode* nodep) { setOp1p(nodep); }
+    void stmtsp(AstNode* nodep) { setOp2p(nodep); }
     AstNode* stmtsp() const { return op2p(); }
     virtual bool isGateOptimizable() const override { return false; }
 };

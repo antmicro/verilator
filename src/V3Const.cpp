@@ -3073,6 +3073,10 @@ private:
         iterateChildren(nodep);
         m_hasJumpDelay = true;
     }
+    virtual void visit(AstTimingControl* nodep) override {
+        iterateChildren(nodep);
+        m_hasJumpDelay = true;
+    }
     virtual void visit(AstJumpGo* nodep) override {
         iterateChildren(nodep);
         // Jump to label where label immediately follows label is not useful

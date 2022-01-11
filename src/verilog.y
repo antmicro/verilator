@@ -3081,11 +3081,13 @@ statement_item<nodep>:		// IEEE: statement_item
 	|	fexprLvalue '=' dynamic_array_new ';'	{ $$ = new AstAssign($2, $1, $3); }
 	//
 	//			// IEEE: nonblocking_assignment
-	|	fexprLvalue yP_LTE delayE expr ';'	{ $$ = new AstAssignDly($2,$1,$4); }
+	|	fexprLvalue yP_LTE expr ';'	{ $$ = new AstAssignDly($2,$1,$3); }
+	|	fexprLvalue yP_LTE delay_control expr ';'	{ $$ = new AstAssignDly($2,$1,$4,$3); }
 	//UNSUP	fexprLvalue yP_LTE delay_or_event_controlE expr ';'	{ UNSUP }
 	//
 	//			// IEEE: procedural_continuous_assignment
-	|	yASSIGN idClassSel '=' delayE expr ';'	{ $$ = new AstAssign($1,$2,$5); }
+	|	yASSIGN idClassSel '=' expr ';'	{ $$ = new AstAssign($1,$2,$4); }
+	|	yASSIGN idClassSel '=' delay_control expr ';'	{ $$ = new AstAssign($1,$2,$5,$4); }
 	//UNSUP:			delay_or_event_controlE above
 	|	yDEASSIGN variable_lvalue ';'
 			{ $$ = nullptr; BBUNSUP($1, "Unsupported: Verilog 1995 deassign"); }
@@ -3165,8 +3167,7 @@ statement_item<nodep>:		// IEEE: statement_item
 	//UNSUP	yP_MINUSGTGT delay_or_event_controlE hierarchical_identifier/*event*/ ';'	{ UNSUP }
 	//			// IEEE remove below
 	|	yP_MINUSGTGT delayE idDotted/*hierarchical_identifier-event*/ ';'
-			{ $$ = new AstAssign($1, $3, new AstConst($1, AstConst::BitTrue()));
-			  $$->addNext(new AstEventTrigger($1, $3->cloneTree(false))); }
+			{ $$ = new AstEventTrigger($1, $3); }
 	//
 	//			// IEEE: loop_statement
 	|	yFOREVER stmtBlock			{ $$ = new AstWhile($1,new AstConst($1, AstConst::BitTrue()), $2); }
@@ -3259,7 +3260,8 @@ statementVerilatorPragmas<nodep>:
 //UNSUP	;
 
 foperator_assignment<nodep>:	// IEEE: operator_assignment (for first part of expression)
-		fexprLvalue '=' delayE expr	{ $$ = new AstAssign($2,$1,$4); }
+		fexprLvalue '=' expr	{ $$ = new AstAssign($2,$1,$3); }
+	|   fexprLvalue '=' delay_control expr	{ $$ = new AstAssign($2,$1,$4,$3); }
 	|	fexprLvalue '=' yD_FOPEN '(' expr ')'		{ $$ = new AstFOpenMcd($3,$1,$5); }
 	|	fexprLvalue '=' yD_FOPEN '(' expr ',' expr ')'	{ $$ = new AstFOpen($3,$1,$5,$7); }
 	//

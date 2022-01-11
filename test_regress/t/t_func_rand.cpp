@@ -9,7 +9,8 @@
 #include <verilated.h>
 #include "Vt_func_rand.h"
 
-double sc_time_stamp() { return 0; }
+double simTime = 0;
+double sc_time_stamp() { return simTime; }
 
 int main(int argc, char* argv[]) {
     Vt_func_rand* topp = new Vt_func_rand;
@@ -17,11 +18,17 @@ int main(int argc, char* argv[]) {
     Verilated::debug(0);
 
     printf("\nTesting\n");
+    topp->clk = 0;
     for (int i = 0; i < 10; i++) {
-        topp->clk = 0;
         topp->eval();
-        topp->clk = 1;
-        topp->eval();
+        auto newTime = topp->timeSlotsEarliestTime();
+        if (newTime - simTime <= 0 ||
+            newTime - floorf(newTime) == 0) {
+            topp->clk = !topp->clk;
+            simTime += 1;
+        } else {
+            simTime = topp->timeSlotsEarliestTime();
+        }
     }
     if (topp->Rand != 0xfeed0fad) {
         vl_fatal(__FILE__, __LINE__, "top", "Unexpected value for Rand output\n");

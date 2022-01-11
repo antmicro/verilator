@@ -1885,7 +1885,23 @@ sub _make_main {
 
     if ($delayed_queue) {
         print $fh "        ${set}eval();\n";
-        print $fh "        contextp->time(topp->timeSlotsEarliestTime());\n";
+        if ($self->{trace} && !$self->sc) {
+            $fh->print("#if VM_TRACE\n");
+            $fh->print("        if (tfp) tfp->dump(contextp->time());\n");
+            $fh->print("#endif  // VM_TRACE\n");
+        }
+        if ($self->{inputs}{clk}) {
+            print $fh "        auto newTime = topp->timeSlotsEarliestTime();\n";
+            print $fh "        if (newTime - contextp->time() <= 0 ||\n";
+            print $fh "            newTime - floorf(newTime) == 0) {\n";
+            print $fh "            ${set}clk = !${set}clk;\n";
+            print $fh "            contextp->timeInc(MAIN_TIME_MULTIPLIER);\n";
+            print $fh "        } else {\n";
+            print $fh "            contextp->time(topp->timeSlotsEarliestTime());\n";
+            print $fh "        }\n";
+        } else {
+            print $fh "        contextp->time(topp->timeSlotsEarliestTime());\n";
+        }
     } else {
         for (my $i = 0; $i < 5; $i++) {
             my $action = 0;

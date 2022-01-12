@@ -86,6 +86,7 @@
 #include "V3Global.h"
 #include "V3DynamicScheduler.h"
 #include "V3Ast.h"
+#include <algorithm>
 
 static AstVarScope* getCreateEvent(AstVarScope* vscp, VEdgeType edgeType) {
     UASSERT_OBJ(vscp->scopep(), vscp, "Var unscoped");
@@ -156,6 +157,9 @@ private:
     virtual void visit(AstDelay* nodep) override {
         if (m_proc) m_proc->user1(true);
     }
+    virtual void visit(AstNodeAssign* nodep) override {
+        if (nodep->delayp() && m_proc) m_proc->user1(true);
+    }
     virtual void visit(AstTimingControl* nodep) override {
         if (m_proc) m_proc->user1(true);
     }
@@ -164,6 +168,7 @@ private:
     }
     virtual void visit(AstFork* nodep) override {
         if (m_proc) m_proc->user1(m_proc->user1() || !nodep->joinType().joinNone());
+        iterateChildren(nodep);
     }
     virtual void visit(AstNodeFTaskRef* nodep) override {
         if (m_proc && nodep->taskp()->user1()) m_proc->user1(true);
@@ -206,19 +211,24 @@ private:
 
     // VISITORS
     virtual void visit(AstNodeProcedure* nodep) override {
+        VL_RESTORER(m_dynamic);
         m_dynamic = nodep->user1();
-        if (m_dynamic) iterateChildren(nodep);
-        m_dynamic = false;
+        iterateChildren(nodep);
     }
     virtual void visit(AstNodeFTask* nodep) override {
+        VL_RESTORER(m_dynamic);
         m_dynamic = nodep->user1();
-        if (m_dynamic) iterateChildren(nodep);
-        m_dynamic = false;
+        iterateChildren(nodep);
     }
     virtual void visit(AstCFunc* nodep) override {
+        VL_RESTORER(m_dynamic);
         m_dynamic = nodep->user1();
-        if (m_dynamic) iterateChildren(nodep);
-        m_dynamic = false;
+        iterateChildren(nodep);
+    }
+    virtual void visit(AstFork* nodep) override {
+        VL_RESTORER(m_dynamic);
+        m_dynamic = true;
+        iterateChildren(nodep);
     }
     virtual void visit(AstVarRef* nodep) override {
         if (m_dynamic && nodep->access().isWriteOrRW()) { nodep->varp()->isDynamic(true); }
@@ -392,19 +402,6 @@ private:
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
 
-    AstCFunc* makeTopFunction(const string& name, bool slow = false) {
-        AstCFunc* const funcp = new AstCFunc{m_scopep->fileline(), name, m_scopep};
-        funcp->dontCombine(true);
-        funcp->isStatic(false);
-        funcp->isLoose(true);
-        funcp->entryPoint(true);
-        funcp->slow(slow);
-        funcp->isConst(false);
-        funcp->declPrivate(true);
-        m_scopep->addActivep(funcp);
-        return funcp;
-    }
-
     // VISITORS
     virtual void visit(AstScope* nodep) override {
         m_scopep = nodep;
@@ -463,6 +460,114 @@ public:
 
 //######################################################################
 
+class DynamicSchedulerForkVisitor final : public AstNVisitor {
+private:
+    // NODE STATE
+    //  AstNode::user1()      -> bool.  Set true if process/function uses constructs like delays,
+    //                                  timing controls, waits, forks
+    // AstUser1InUse    m_inuser1;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
+
+    // STATE
+    AstScope* m_scopep = nullptr;
+    std::map<AstVarScope*, AstVarScope*> m_locals;
+    size_t m_count = 0;
+    enum {
+        NONE,
+        GATHER,
+        REPLACE
+    } m_mode = NONE;
+
+    // METHODS
+    VL_DEBUG_FUNC;  // Declare debug()
+
+    // VISITORS
+    virtual void visit(AstScope* nodep) override {
+        m_scopep = nodep;
+        iterateChildren(nodep);
+        m_scopep = nullptr;
+    }
+    virtual void visit(AstVarRef* nodep) override {
+        if (m_mode == GATHER) {
+            if (nodep->varp()->varType() == AstVarType::BLOCKTEMP)
+                m_locals.insert(std::make_pair(nodep->varScopep(), nullptr));
+        } else if (m_mode == REPLACE) {
+            if (auto* newvscp = m_locals[nodep->varScopep()]) {
+                nodep->varScopep(newvscp);
+                nodep->varp(newvscp->varp());
+            }
+        }
+    }
+    virtual void visit(AstFork* nodep) override {
+        if (nodep->user2SetOnce()) return;
+        VL_RESTORER(m_mode);
+        auto stmtp = nodep->stmtsp();
+        size_t procCount = 0;
+        while (stmtp) {
+            procCount++;
+            m_locals.clear();
+            m_mode = GATHER;
+            iterateChildren(stmtp);
+
+            AstCFunc* const cfuncp
+                = new AstCFunc(stmtp->fileline(), "__Vfork__" + std::to_string(m_count++), m_scopep,
+                               "CoroutineTask");
+            m_scopep->addActivep(cfuncp);
+            cfuncp->user1(true);
+            
+            // Create list of arguments and move to function
+            AstNode* argsp = nullptr;
+            for (auto& p : m_locals) {
+                auto* varscp = p.first;
+                auto* varp = varscp->varp()->cloneTree(false);
+                varp->funcLocal(true);
+                varp->direction(VDirection::INPUT);
+                cfuncp->addArgsp(varp);
+                AstVarScope* const newvscp
+                    = new AstVarScope{varp->fileline(), m_scopep, varp};
+                m_scopep->addVarp(newvscp);
+                p.second = newvscp;
+                argsp = AstNode::addNext(argsp, new AstVarRef{stmtp->fileline(), varscp, VAccess::READ});
+            }
+            auto* ccallp = new AstCCall{stmtp->fileline(), cfuncp, argsp};
+            stmtp->replaceWith(ccallp);
+            if (!nodep->joinType().joinNone()) {
+                cfuncp->argTypes("std::shared_ptr<Join> __Vfork_join");
+                ccallp->argTypes("__Vfork_join");
+                //stmtp->addNext(new AstCStmt{stmtp->fileline(), "--__Vfork_join->counter;\nvlSymsp->__Vm_eventDispatcher.trigger(&__Vfork_join->event);\n"});
+                stmtp->addNext(new AstCStmt{stmtp->fileline(), "--__Vfork_join->counter;\n"});
+                stmtp->addNext(new AstEventTrigger{stmtp->fileline(), new AstCStmt{stmtp->fileline(), "__Vfork_join->event"}});
+                
+            }
+            cfuncp->addStmtsp(stmtp);
+            m_mode = REPLACE;
+            iterateChildren(cfuncp);
+            stmtp = ccallp->nextp();
+        }
+        if (!nodep->joinType().joinNone()) {
+            if (nodep->joinType().joinAny())
+                procCount = 1;
+            nodep->addHereThisAsNext(new AstCStmt{nodep->fileline(), "{\nauto __Vfork_join = std::make_shared<Join>(" + cvtToStr(procCount) + ");\n"});
+            nodep->addNextHere(new AstCStmt{nodep->fileline(), "}\n"});
+            nodep->addNextHere(new AstWhile{nodep->fileline(),
+                    new AstCStmt{nodep->fileline(), "__Vfork_join->counter"},
+                    new AstTimingControl{nodep->fileline(),
+                            new AstSenTree{nodep->fileline(),
+                                    new AstSenItem{nodep->fileline(), VEdgeType::ET_ANYEDGE, new AstCStmt{nodep->fileline(), "__Vfork_join->event"}}},
+                            nullptr}});
+        }
+    }
+
+    //--------------------
+    virtual void visit(AstNode* nodep) override { iterateChildren(nodep); }
+
+public:
+    // CONSTRUCTORS
+    explicit DynamicSchedulerForkVisitor(AstNetlist* nodep) { iterate(nodep); }
+    virtual ~DynamicSchedulerForkVisitor() override {}
+};
+
+//######################################################################
+
 class DynamicSchedulerAssignDlyVisitor final : public AstNVisitor {
 private:
     // NODE STATE
@@ -474,6 +579,7 @@ private:
     AstVarScope* m_dlyEvent = nullptr;
     AstScope* m_scopep = nullptr;
     bool m_dynamic = false;
+    bool m_inFork = false;
 
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
@@ -501,19 +607,31 @@ private:
         m_scopep = nullptr;
     }
     virtual void visit(AstNodeProcedure* nodep) override {
+        VL_RESTORER(m_dynamic);
         m_dynamic = nodep->user1();
-        if (m_dynamic) iterateChildren(nodep);
-        m_dynamic = false;
+        iterateChildren(nodep);
     }
     virtual void visit(AstNodeFTask* nodep) override {
+        VL_RESTORER(m_dynamic);
         m_dynamic = nodep->user1();
-        if (m_dynamic) iterateChildren(nodep);
-        m_dynamic = false;
+        iterateChildren(nodep);
     }
     virtual void visit(AstCFunc* nodep) override {
+        VL_RESTORER(m_dynamic);
         m_dynamic = nodep->user1();
-        if (m_dynamic) iterateChildren(nodep);
-        m_dynamic = false;
+        iterateChildren(nodep);
+    }
+    virtual void visit(AstFork* nodep) override {
+        VL_RESTORER(m_dynamic);
+        m_dynamic = true;
+        VL_RESTORER(m_inFork);
+        m_inFork = true;
+        iterateChildren(nodep);
+    }
+    virtual void visit(AstBegin* nodep) override {
+        VL_RESTORER(m_inFork);
+        m_inFork = false;
+        iterateChildren(nodep);
     }
     virtual void visit(AstAssignDly* nodep) override {
         if (!m_dynamic) return;
@@ -526,9 +644,14 @@ private:
             new AstSenTree{fl, new AstSenItem{fl, VEdgeType::ET_ANYEDGE,
                                               new AstVarRef{fl, eventp, VAccess::READ}}},
             assignp};
-        auto* forkp = new AstFork{nodep->fileline(), "", timingControlp};
-        forkp->joinType(VJoinType::JOIN_NONE);
-        nodep->replaceWith(forkp);
+        if (m_inFork) {
+            nodep->replaceWith(timingControlp);
+        } else {
+            auto* forkp = new AstFork{nodep->fileline(), "", timingControlp};
+            forkp->joinType(VJoinType::JOIN_NONE);
+            nodep->replaceWith(forkp);
+        }
+        VL_DO_DANGLING(delete nodep, nodep);
     }
 
     //--------------------
@@ -790,6 +913,8 @@ void V3DynamicScheduler::transformProcesses(AstNetlist* nodep) {
     { DynamicSchedulerAlwaysVisitor visitor(nodep); }
     V3Global::dumpCheckGlobalTree("dsch_always", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
     { DynamicSchedulerAssignDlyVisitor visitor(nodep); }
+    V3Global::dumpCheckGlobalTree("dsch_dly", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
+    { DynamicSchedulerForkVisitor visitor(nodep); }
     V3Global::dumpCheckGlobalTree("dsch_proc", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 3);
 }
 

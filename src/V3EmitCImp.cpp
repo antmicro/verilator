@@ -452,9 +452,9 @@ class EmitCImp final : EmitCFunc {
                 emitCtorImp(modp);
                 emitConfigureImp(modp);
                 emitDestructorImp(modp);
+                emitSavableImp(modp);
+                emitCoverageImp();
             }
-            emitSavableImp(modp);
-            emitCoverageImp();
         } else {
             // From `systemc_implementation
             emitTextSection(modp, AstType::atScImp);

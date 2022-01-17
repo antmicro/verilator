@@ -397,7 +397,7 @@ class OrderBuildVisitor final : public AstNVisitor {
     SenTreeFinder m_finder;
 
     OrderEitherVertex* m_dlyVxp = nullptr;
-    OrderEitherVertex* m_postponedVxp = nullptr;
+    OrderEitherVertex* m_postVxp = nullptr;
 
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
@@ -411,10 +411,10 @@ class OrderBuildVisitor final : public AstNVisitor {
         // If this logic has a clocked activation, add a link from the sensitivity list LogicVertex
         // to this LogicVertex.
         if (m_activeSenVxp) new OrderEdge(m_graphp, m_activeSenVxp, m_logicVxp, WEIGHT_NORMAL);
-        if (m_inPostponed)
-            new OrderEdge(m_graphp, m_postponedVxp, m_logicVxp, WEIGHT_NORMAL);
-        else
-            new OrderEdge(m_graphp, m_logicVxp, m_dlyVxp, WEIGHT_NORMAL);
+        if (m_inPost || m_inPostponed)
+            new OrderEdge(m_graphp, m_postVxp, m_logicVxp, WEIGHT_COMBO, OrderEdge::CUTABLE);
+        else if (m_inClocked)
+            new OrderEdge(m_graphp, m_logicVxp, m_dlyVxp, WEIGHT_COMBO, OrderEdge::CUTABLE);
         // Gather variable dependencies based on usage
         iterateChildren(nodep);
         // Finished with this logic
@@ -439,13 +439,13 @@ class OrderBuildVisitor final : public AstNVisitor {
     virtual void visit(AstScope* nodep) override {
         UASSERT_OBJ(!m_scopep, nodep, "Should not nest");
         m_dlyVxp = new OrderDynamicSchedulingVertex(m_graphp, m_scopep, "Dly");
-        m_postponedVxp = new OrderDynamicSchedulingVertex(m_graphp, m_scopep, "PRE Postponed");
-        new OrderEdge(m_graphp, m_dlyVxp, m_postponedVxp, WEIGHT_NORMAL);
+        m_postVxp = new OrderDynamicSchedulingVertex(m_graphp, m_scopep, "PRE Postponed");
+        new OrderEdge(m_graphp, m_dlyVxp, m_postVxp, WEIGHT_NORMAL);
         m_scopep = nodep;
         iterateChildren(nodep);
         m_scopep = nullptr;
         m_dlyVxp = nullptr;
-        m_postponedVxp = nullptr;
+        m_postVxp = nullptr;
     }
     virtual void visit(AstActive* nodep) override {
         UASSERT_OBJ(!nodep->sensesStorep(), nodep,
@@ -679,7 +679,7 @@ class OrderBuildVisitor final : public AstNVisitor {
         auto* comboDomainp = m_finder.getComb();
         m_logicVxp = new OrderLogicVertex(m_graphp, m_scopep, comboDomainp, nodep);
         new OrderEdge(m_graphp, m_dlyVxp, m_logicVxp, WEIGHT_NORMAL);
-        new OrderEdge(m_graphp, m_logicVxp, m_postponedVxp, WEIGHT_NORMAL);
+        new OrderEdge(m_graphp, m_logicVxp, m_postVxp, WEIGHT_NORMAL);
         // Gather variable dependencies based on usage
         iterateChildren(nodep);
         // Finished with this logic

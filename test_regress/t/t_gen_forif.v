@@ -65,7 +65,7 @@ module Test (clk, Value, Result);
    assign Result = Internal ^ clk;
 
    always @(posedge clk)
-     Internal <= #1 Value;
+     Internal = #1 Value;
 endmodule
 
 module Test_wrap1 (clk, Value, Result);

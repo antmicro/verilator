@@ -589,7 +589,10 @@ private:
     }
     virtual void visit(AstTimingControl* nodep) override { iterateChildren(nodep); }
     virtual void visit(AstEventTrigger* nodep) override {
-        nodep->varrefp()->access(VAccess::WRITE);
+        auto* varrefp = VN_CAST(nodep->trigp(), VarRef);
+        if (auto* memberSelp = VN_CAST(nodep->trigp(), MemberSel))
+            varrefp = VN_CAST(memberSelp->fromp(), VarRef);
+        if (varrefp) varrefp->access(VAccess::WRITE);
         iterateChildren(nodep);
     }
     virtual void visit(AstFork* nodep) override {

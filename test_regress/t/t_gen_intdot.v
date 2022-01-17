@@ -60,7 +60,7 @@ module Generate (clk, value, result);
    assign result = Internal ^ clk;
 
    always @(posedge clk)
-     Internal <= #1 value;
+     Internal = #1 value;
 endmodule
 
 module Checker (clk, value);

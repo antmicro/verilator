@@ -31,6 +31,7 @@
   <map from="PSBUJ6" to="_eval_settle"/>
   <map from="PSAsei" to="_final"/>
   <map from="PSV5uq" to="_sequent__TOP__1"/>
+  <map from="PSn10K" to="_sequent__TOP__3"/>
   <map from="PS8sdG" to="_sequent__TOP__t__DOT__secret_inst__1"/>
   <map from="PScyq8" to="clk"/>
   <map from="PSnRoO" to="secret_inst"/>

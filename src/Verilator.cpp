@@ -439,7 +439,7 @@ static void process() {
         V3Descope::descopeAll(v3Global.rootp());
 
         // Icache packing; combine common code in each module's functions into subroutines
-        if (v3Global.opt.oCombine()) V3Combine::combineAll(v3Global.rootp());
+        //if (v3Global.opt.oCombine()) V3Combine::combineAll(v3Global.rootp());
     }
 
     V3Error::abortIfErrors();

@@ -2653,8 +2653,8 @@ private:
                    && (VN_IS(nodep->sensp(), EnumItemRef) || VN_IS(nodep->sensp(), Const))) {
         } else if (nodep->isIllegal()) {  // Deal with later
         } else {
-            //UASSERT_OBJ(!(nodep->hasVar() && !nodep->varrefp()), nodep,
-            //            "Null sensitivity variable");
+            UASSERT_OBJ(!(nodep->hasVar() && !nodep->varrefp()), nodep,
+                        "Null sensitivity variable");
         }
     }
 

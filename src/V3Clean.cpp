@@ -106,7 +106,6 @@ private:
         const CleanState clstate = getCleanState(nodep);
         if (clstate == CS_CLEAN) return true;
         if (clstate == CS_DIRTY) return false;
-        return true;
         nodep->v3fatalSrc("Unknown clean state on node: " + nodep->prettyTypeName());
         return false;
     }
@@ -275,7 +274,7 @@ private:
     }
     virtual void visit(AstCStmt* nodep) override {
         iterateChildren(nodep);
-        ensureCleanAndNext(nodep->bodysp());
+        setClean(nodep, true);
     }
     virtual void visit(AstUCStmt* nodep) override {
         iterateChildren(nodep);

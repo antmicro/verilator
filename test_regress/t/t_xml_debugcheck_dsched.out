@@ -18,6 +18,12 @@
   <cells>
     <cell fl="a0" loc="a,0,0,0,0" name="$unit" submodname="$unit" hier="$unit"/>
   </cells>
+  <cells>
+    <cell fl="a0" loc="a,0,0,0,0" name="Join__Vclpkg" submodname="Join__Vclpkg" hier="Join__Vclpkg"/>
+  </cells>
+  <cells>
+    <cell fl="a0" loc="a,0,0,0,0" name="Join" submodname="Join" hier="Join"/>
+  </cells>
   <netlist>
     <module fl="d10" loc="d,10,8,10,9" name="$root" origName="$root" topModule="1" public="true">
       <var fl="d14" loc="d,14,10,14,13" name="clk" dtype_id="1" dir="input" pinIndex="1" vartype="logic" origName="clk" clocker="true" public="true"/>
@@ -1529,12 +1535,62 @@
         </creset>
       </cfunc>
     </package>
+    <classpackage fl="a0" loc="a,0,0,0,0" name="Join__Vclpkg" origName="Join__Vclpkg">
+      <cfunc fl="a0" loc="a,0,0,0,0" name="_ctor_var_reset"/>
+    </classpackage>
+    <class fl="a0" loc="a,0,0,0,0" name="Join" origName="Join">
+      <var fl="a0" loc="a,0,0,0,0" name="wakeEvent" dtype_id="14" vartype="event" origName="wakeEvent"/>
+      <var fl="a0" loc="a,0,0,0,0" name="counter" dtype_id="3" vartype="integer" origName="counter"/>
+      <scope fl="a0" loc="a,0,0,0,0" name="TOP"/>
+      <cfunc fl="a0" loc="a,0,0,0,0" name="new"/>
+      <cfunc fl="a0" loc="a,0,0,0,0" name="_ctor_var_reset">
+        <cstmt fl="a0" loc="a,0,0,0,0">
+          <text fl="a0" loc="a,0,0,0,0"/>
+        </cstmt>
+        <creset fl="a0" loc="a,0,0,0,0">
+          <varref fl="a0" loc="a,0,0,0,0" name="wakeEvent" dtype_id="14"/>
+        </creset>
+        <creset fl="a0" loc="a,0,0,0,0">
+          <varref fl="a0" loc="a,0,0,0,0" name="counter" dtype_id="3"/>
+        </creset>
+      </cfunc>
+      <cfunc fl="a0" loc="a,0,0,0,0" name="~"/>
+      <cfunc fl="a0" loc="a,0,0,0,0" name="VL_TO_STRING">
+        <creturn fl="a0" loc="a,0,0,0,0">
+          <cmath fl="a0" loc="a,0,0,0,0" dtype_id="4">
+            <text fl="a0" loc="a,0,0,0,0"/>
+          </cmath>
+        </creturn>
+      </cfunc>
+      <cfunc fl="a0" loc="a,0,0,0,0" name="to_string">
+        <creturn fl="a0" loc="a,0,0,0,0">
+          <cmath fl="a0" loc="a,0,0,0,0" dtype_id="4">
+            <text fl="a0" loc="a,0,0,0,0"/>
+          </cmath>
+        </creturn>
+      </cfunc>
+      <cfunc fl="a0" loc="a,0,0,0,0" name="to_string_middle">
+        <cstmt fl="a0" loc="a,0,0,0,0">
+          <text fl="a0" loc="a,0,0,0,0"/>
+        </cstmt>
+        <cstmt fl="a0" loc="a,0,0,0,0">
+          <text fl="a0" loc="a,0,0,0,0"/>
+        </cstmt>
+        <cstmt fl="a0" loc="a,0,0,0,0">
+          <text fl="a0" loc="a,0,0,0,0"/>
+        </cstmt>
+        <cstmt fl="a0" loc="a,0,0,0,0">
+          <text fl="a0" loc="a,0,0,0,0"/>
+        </cstmt>
+      </cfunc>
+    </class>
     <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck__Syms.cpp"/>
     <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck__Syms.h"/>
     <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck.h"/>
     <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck.cpp"/>
     <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_$root.h"/>
     <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_$unit.h"/>
+    <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_Join__Vclpkg.h"/>
     <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_$root__Slow.cpp"/>
     <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_$root__DepSet_h########__0__Slow.cpp"/>
     <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_$root__DepSet_h########__0__Slow.cpp"/>
@@ -1542,11 +1598,15 @@
     <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_$root__DepSet_h########__0.cpp"/>
     <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_$unit__Slow.cpp"/>
     <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_$unit__DepSet_h########__0__Slow.cpp"/>
+    <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_Join__Vclpkg__Slow.cpp"/>
+    <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_Join__Vclpkg__DepSet_h########__0__Slow.cpp"/>
+    <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_Join__Vclpkg__DepSet_h########__0.cpp"/>
+    <cfile fl="a0" loc="a,0,0,0,0" name="obj_vlt/t_xml_debugcheck/Vt_xml_debugcheck_Join__Vclpkg__DepSet_h########__0.cpp"/>
     <typetable fl="a0" loc="a,0,0,0,0">
       <basicdtype fl="d32" loc="d,32,24,32,27" id="1" name="logic"/>
       <basicdtype fl="d52" loc="d,52,9,52,10" id="6" name="logic" left="31" right="0"/>
       <basicdtype fl="d16" loc="d,16,17,16,18" id="2" name="logic" left="3" right="0"/>
-      <enumdtype fl="d16" loc="d,16,12,16,16" id="14" name="t.my_t" sub_dtype_id="2">
+      <enumdtype fl="d16" loc="d,16,12,16,16" id="15" name="t.my_t" sub_dtype_id="2">
         <enumitem fl="d17" loc="d,17,10,17,13" name="E01" dtype_id="5">
           <const fl="d17" loc="d,17,16,17,17" name="4&apos;h1" dtype_id="5"/>
         </enumitem>
@@ -1558,7 +1618,7 @@
         </enumitem>
       </enumdtype>
       <basicdtype fl="d22" loc="d,22,4,22,11" id="3" name="integer" left="31" right="0" signed="true"/>
-      <refdtype fl="d23" loc="d,23,4,23,8" id="15" name="my_t" sub_dtype_id="2"/>
+      <refdtype fl="d23" loc="d,23,4,23,8" id="16" name="my_t" sub_dtype_id="2"/>
       <basicdtype fl="d27" loc="d,27,4,27,10" id="4" name="string"/>
       <unpackarraydtype fl="d16" loc="d,16,12,16,16" id="11" sub_dtype_id="2">
         <range fl="d16" loc="d,16,12,16,16">
@@ -1578,8 +1638,9 @@
           <const fl="d16" loc="d,16,12,16,16" name="32&apos;h0" dtype_id="6"/>
         </range>
       </unpackarraydtype>
-      <refdtype fl="d51" loc="d,51,12,51,16" id="16" name="my_t" sub_dtype_id="2"/>
+      <refdtype fl="d51" loc="d,51,12,51,16" id="17" name="my_t" sub_dtype_id="2"/>
       <basicdtype fl="d22" loc="d,22,19,22,20" id="7" name="logic" left="31" right="0" signed="true"/>
+      <basicdtype fl="a0" loc="a,0,0,0,0" id="14" name="event"/>
       <basicdtype fl="d64" loc="d,64,3,64,4" id="5" name="logic" left="31" right="0"/>
       <basicdtype fl="d62" loc="d,62,14,62,16" id="8" name="logic" left="31" right="0"/>
       <basicdtype fl="d67" loc="d,67,13,67,17" id="10" name="logic" left="31" right="0"/>

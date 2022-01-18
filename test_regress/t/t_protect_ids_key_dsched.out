@@ -1,16 +1,20 @@
 <?xml version="1.0" ?>
 <!-- DESCRIPTION: Verilator output: XML representation of netlist -->
 <verilator_id_map>
+  <map from="PSM7Xl" to="Join"/>
+  <map from="PST4r5" to="Join__Vclpkg"/>
   <map from="TOP" to="TOP"/>
   <map from="PSlhR1" to="TOP__t__DOT__secret_inst"/>
   <map from="PS5Fdb" to="Vt_protect_ids_key__Vcb_dpix_a_func_t"/>
   <map from="PSlYpp" to="Vt_protect_ids_key__Vcb_dpix_a_task_t"/>
   <map from="PSOAAo" to="_Syms"/>
   <map from="PS9tBB" to="__024root"/>
+  <map from="PSMGoE" to="__PVT__counter"/>
   <map from="PSm6SZ" to="__PVT__secret_cyc"/>
   <map from="PSfqIT" to="__PVT__secret_cyc_r"/>
   <map from="PStVCQ" to="__PVT__secret_r"/>
   <map from="PSfqS0" to="__PVT__t__DOT__secret_inst"/>
+  <map from="PSSnu0" to="__PVT__wakeEvent"/>
   <map from="PS8pOJ" to="__Vclklast__TOP__clk"/>
   <map from="PSx9Nt" to="__Vconfigure"/>
   <map from="PSrjMj" to="__Vdly__secret_cyc"/>
@@ -34,6 +38,8 @@
   <map from="PSn10K" to="_sequent__TOP__3"/>
   <map from="PS8sdG" to="_sequent__TOP__t__DOT__secret_inst__1"/>
   <map from="PScyq8" to="clk"/>
+  <map from="PSTC68" to="counter"/>
+  <map from="PSIAXC" to="new"/>
   <map from="PSnRoO" to="secret_inst"/>
   <map from="PSS3Gk" to="secret_sub"/>
   <map from="PSxvlA" to="t"/>
@@ -42,4 +48,6 @@
   <map from="this" to="this"/>
   <map from="vlSelf" to="vlSelf"/>
   <map from="vlSymsp" to="vlSymsp"/>
+  <map from="PSLLW2" to="wakeEvent"/>
+  <map from="PScB8G" to="~"/>
 </verilator_id_map>

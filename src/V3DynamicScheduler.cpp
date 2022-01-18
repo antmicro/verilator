@@ -314,7 +314,7 @@ public:
 
 //######################################################################
 
-class DynamicSchedulerIntraAssignVisitor final : public AstNVisitor {
+class DynamicSchedulerIntraAssignDelayVisitor final : public AstNVisitor {
 private:
     // STATE
     using VarMap = std::map<const std::pair<AstNodeModule*, string>, AstVar*>;
@@ -382,8 +382,8 @@ private:
 
 public:
     // CONSTRUCTORS
-    explicit DynamicSchedulerIntraAssignVisitor(AstNetlist* nodep) { iterate(nodep); }
-    virtual ~DynamicSchedulerIntraAssignVisitor() override {}
+    explicit DynamicSchedulerIntraAssignDelayVisitor(AstNetlist* nodep) { iterate(nodep); }
+    virtual ~DynamicSchedulerIntraAssignDelayVisitor() override {}
 };
 
 //######################################################################
@@ -476,11 +476,7 @@ private:
     AstClassRefDType* m_joinDTypep;
     AstCFunc* m_joinNewp;
 
-    enum {
-        FORK,
-        GATHER,
-        REPLACE
-    } m_mode = FORK;
+    enum { FORK, GATHER, REPLACE } m_mode = FORK;
 
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
@@ -511,7 +507,9 @@ private:
 
         AstVarScope* joinVscp = nullptr;
         if (!nodep->joinType().joinNone()) {
-            auto* joinVarp = new AstVar(nodep->fileline(), AstVarType::BLOCKTEMP, "__Vfork__" + std::to_string(m_count) + "__join", m_joinDTypep);
+            auto* joinVarp
+                = new AstVar{nodep->fileline(), AstVarType::BLOCKTEMP,
+                             "__Vfork__" + std::to_string(m_count) + "__join", m_joinDTypep};
             joinVarp->funcLocal(true);
             joinVscp = new AstVarScope{joinVarp->fileline(), m_scopep, joinVarp};
             m_scopep->addVarp(joinVscp);
@@ -525,15 +523,15 @@ private:
             m_locals.clear();
             m_mode = GATHER;
             iterateChildren(stmtp);
-            if (joinVscp)
-                m_locals.insert(std::make_pair(joinVscp, nullptr));
+            if (joinVscp) m_locals.insert(std::make_pair(joinVscp, nullptr));
 
-            AstCFunc* const cfuncp
-                = new AstCFunc(stmtp->fileline(), "__Vfork__" + std::to_string(m_count++) + "__" + std::to_string(procCount++), m_scopep,
-                               "CoroutineTask");
+            AstCFunc* const cfuncp = new AstCFunc{stmtp->fileline(),
+                                                  "__Vfork__" + std::to_string(m_count++) + "__"
+                                                      + std::to_string(procCount++),
+                                                  m_scopep, "CoroutineTask"};
             m_scopep->addActivep(cfuncp);
             cfuncp->user1(true);
-            
+
             // Create list of arguments and move to function
             AstNode* argsp = nullptr;
             for (auto& p : m_locals) {
@@ -542,22 +540,29 @@ private:
                 varp->funcLocal(true);
                 varp->direction(VDirection::INPUT);
                 cfuncp->addArgsp(varp);
-                AstVarScope* const newvscp
-                    = new AstVarScope{varp->fileline(), m_scopep, varp};
+                AstVarScope* const newvscp = new AstVarScope{varp->fileline(), m_scopep, varp};
                 m_scopep->addVarp(newvscp);
                 p.second = newvscp;
-                argsp = AstNode::addNext(argsp, new AstVarRef{stmtp->fileline(), varscp, VAccess::READ});
+                argsp = AstNode::addNext(argsp,
+                                         new AstVarRef{stmtp->fileline(), varscp, VAccess::READ});
             }
             auto* ccallp = new AstCCall{stmtp->fileline(), cfuncp, argsp};
             stmtp->replaceWith(ccallp);
 
             if (joinVscp) {
-                auto* counterSelp = new AstMemberSel(nodep->fileline(), new AstVarRef(nodep->fileline(), joinVscp, VAccess::WRITE), m_joinCounterp->dtypep());
+                auto* counterSelp = new AstMemberSel{
+                    nodep->fileline(), new AstVarRef{nodep->fileline(), joinVscp, VAccess::WRITE},
+                    m_joinCounterp->dtypep()};
                 counterSelp->varp(m_joinCounterp);
-                stmtp->addNext(new AstAssign(nodep->fileline(), counterSelp, new AstSub(nodep->fileline(), counterSelp->cloneTree(false), new AstConst(nodep->fileline(), 1))));
-                auto* eventSelp = new AstMemberSel(nodep->fileline(), new AstVarRef(nodep->fileline(), joinVscp, VAccess::WRITE), m_joinEventp->dtypep());
+                stmtp->addNext(
+                    new AstAssign{nodep->fileline(), counterSelp,
+                                  new AstSub{nodep->fileline(), counterSelp->cloneTree(false),
+                                             new AstConst{nodep->fileline(), 1}}});
+                auto* eventSelp = new AstMemberSel{
+                    nodep->fileline(), new AstVarRef{nodep->fileline(), joinVscp, VAccess::WRITE},
+                    m_joinEventp->dtypep()};
                 eventSelp->varp(m_joinEventp);
-                stmtp->addNext(new AstEventTrigger(nodep->fileline(), eventSelp));               
+                stmtp->addNext(new AstEventTrigger{nodep->fileline(), eventSelp});
             }
 
             cfuncp->addStmtsp(stmtp);
@@ -567,26 +572,39 @@ private:
         }
 
         if (joinVscp) {
-            auto* cnewp = new AstCNew(nodep->fileline(), m_joinNewp, nullptr);
+            auto* cnewp = new AstCNew{nodep->fileline(), m_joinNewp, nullptr};
             cnewp->dtypep(m_joinDTypep);
-            auto* assignp = new AstAssign(nodep->fileline(), new AstVarRef(nodep->fileline(), joinVscp, VAccess::WRITE), cnewp);
+            auto* assignp
+                = new AstAssign{nodep->fileline(),
+                                new AstVarRef{nodep->fileline(), joinVscp, VAccess::WRITE}, cnewp};
             nodep->addHereThisAsNext(assignp);
 
-            auto* counterSelp = new AstMemberSel(nodep->fileline(), new AstVarRef(nodep->fileline(), joinVscp, VAccess::WRITE), m_joinCounterp->dtypep());
+            auto* counterSelp = new AstMemberSel{
+                nodep->fileline(), new AstVarRef{nodep->fileline(), joinVscp, VAccess::WRITE},
+                m_joinCounterp->dtypep()};
             counterSelp->varp(m_joinCounterp);
-            assignp = new AstAssign(nodep->fileline(), counterSelp, new AstConst(nodep->fileline(), nodep->joinType().joinAny() ? 1 : procCount));
+            assignp = new AstAssign{
+                nodep->fileline(), counterSelp,
+                new AstConst{nodep->fileline(), nodep->joinType().joinAny() ? 1 : procCount}};
             nodep->addHereThisAsNext(assignp);
 
-            counterSelp = new AstMemberSel(nodep->fileline(), new AstVarRef(nodep->fileline(), joinVscp, VAccess::READ), m_joinCounterp->dtypep());
+            counterSelp = new AstMemberSel{
+                nodep->fileline(), new AstVarRef{nodep->fileline(), joinVscp, VAccess::READ},
+                m_joinCounterp->dtypep()};
             counterSelp->varp(m_joinCounterp);
-            auto* eventSelp = new AstMemberSel(nodep->fileline(), new AstVarRef(nodep->fileline(), joinVscp, VAccess::READ), m_joinEventp->dtypep());
+            auto* eventSelp = new AstMemberSel{
+                nodep->fileline(), new AstVarRef{nodep->fileline(), joinVscp, VAccess::READ},
+                m_joinEventp->dtypep()};
             eventSelp->varp(m_joinEventp);
-            nodep->addNextHere(new AstWhile{nodep->fileline(),
-                    new AstGt(nodep->fileline(), counterSelp, new AstConst(nodep->fileline(), 0)),
-                    new AstTimingControl{nodep->fileline(),
-                            new AstSenTree{nodep->fileline(),
-                                    new AstSenItem{nodep->fileline(), VEdgeType::ET_ANYEDGE, eventSelp}},
-                            nullptr}});
+            nodep->addNextHere(new AstWhile{
+                nodep->fileline(),
+                new AstGt{nodep->fileline(), counterSelp, new AstConst{nodep->fileline(), 0}},
+                new AstTimingControl{
+                    nodep->fileline(),
+                    new AstSenTree{
+                        nodep->fileline(),
+                        new AstSenItem{nodep->fileline(), VEdgeType::ET_ANYEDGE, eventSelp}},
+                    nullptr}});
         }
     }
 
@@ -596,27 +614,33 @@ private:
 public:
     // CONSTRUCTORS
     explicit DynamicSchedulerForkVisitor(AstNetlist* nodep) {
-        auto* joinClassp = new AstClass(nodep->fileline(), "Join");
-        auto* joinClassPackagep = new AstClassPackage(nodep->fileline(), "Join__Vclpkg");
+        auto* joinClassp = new AstClass{nodep->fileline(), "Join"};
+        auto* joinClassPackagep = new AstClassPackage{nodep->fileline(), "Join__Vclpkg"};
         joinClassp->classOrPackagep(joinClassPackagep);
         joinClassPackagep->classp(joinClassp);
         nodep->addModulep(joinClassPackagep);
         nodep->addModulep(joinClassp);
-        AstCell* const cellp
-            = new AstCell(joinClassPackagep->fileline(), joinClassPackagep->fileline(), joinClassPackagep->name(),
-                          joinClassPackagep->name(), nullptr, nullptr, nullptr);
+        AstCell* const cellp = new AstCell{joinClassPackagep->fileline(),
+                                           joinClassPackagep->fileline(),
+                                           joinClassPackagep->name(),
+                                           joinClassPackagep->name(),
+                                           nullptr,
+                                           nullptr,
+                                           nullptr};
         cellp->modp(joinClassPackagep);
         v3Global.rootp()->topModulep()->addStmtp(cellp);
-        auto* joinScopep = new AstScope(nodep->fileline(), joinClassp, "Join", nullptr, nullptr);
+        auto* joinScopep = new AstScope{nodep->fileline(), joinClassp, "Join", nullptr, nullptr};
         joinClassp->addMembersp(joinScopep);
-        m_joinEventp = new AstVar(nodep->fileline(), AstVarType::MEMBER, "wakeEvent", nodep->findBasicDType(AstBasicDTypeKwd::EVENTVALUE));
+        m_joinEventp = new AstVar{nodep->fileline(), AstVarType::MEMBER, "wakeEvent",
+                                  nodep->findBasicDType(AstBasicDTypeKwd::EVENTVALUE)};
         joinClassp->addMembersp(m_joinEventp);
-        m_joinCounterp = new AstVar(nodep->fileline(), AstVarType::MEMBER, "counter", nodep->findSigned32DType());
+        m_joinCounterp = new AstVar{nodep->fileline(), AstVarType::MEMBER, "counter",
+                                    nodep->findSigned32DType()};
         joinClassp->addMembersp(m_joinCounterp);
-        m_joinDTypep = new AstClassRefDType(nodep->fileline(), joinClassp, nullptr);
+        m_joinDTypep = new AstClassRefDType{nodep->fileline(), joinClassp, nullptr};
         m_joinDTypep->dtypep(m_joinDTypep);
         nodep->typeTablep()->addTypesp(m_joinDTypep);
-        m_joinNewp = new AstCFunc(nodep->fileline(), "new", joinScopep, "");
+        m_joinNewp = new AstCFunc{nodep->fileline(), "new", joinScopep, ""};
         m_joinNewp->argTypes(EmitCBaseVisitor::symClassVar());
         m_joinNewp->isConstructor(true);
         joinScopep->addActivep(m_joinNewp);
@@ -809,7 +833,10 @@ private:
             if (!nodep->varp()->dtypep()->basicp()->isEventValue()) {
                 nodep->varp()->user1(true);
                 auto edgeType = VN_CAST(nodep->backp(), SenItem)->edgeType();
-                nodep->replaceWith(new AstVarRef(nodep->fileline(), getCreateEvent(VN_CAST(nodep->fromp(), VarRef)->varScopep(), edgeType), VAccess::READ));
+                nodep->replaceWith(new AstVarRef(
+                    nodep->fileline(),
+                    getCreateEvent(VN_CAST(nodep->fromp(), VarRef)->varScopep(), edgeType),
+                    VAccess::READ));
                 VL_DO_DANGLING(nodep->deleteTree(), nodep);
             }
         }
@@ -972,20 +999,26 @@ public:
 void V3DynamicScheduler::handleAnyedge(AstNetlist* nodep) {
     DynamicSchedulerMarkDynamicVisitor visitor(nodep);
     { DynamicSchedulerMarkVariablesVisitor visitor(nodep); }
+    UINFO(2, "  Handle Anyedge Sensitivity...\n");
     { DynamicSchedulerAnyedgeVisitor visitor(nodep); }
     V3Global::dumpCheckGlobalTree("dsch_anyedge", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 3);
 }
 
 void V3DynamicScheduler::transformProcesses(AstNetlist* nodep) {
-    { DynamicSchedulerIntraAssignVisitor visitor(nodep); }
+    UINFO(2, "  Transform Intra Assign Delays...\n");
+    { DynamicSchedulerIntraAssignDelayVisitor visitor(nodep); }
     DynamicSchedulerMarkDynamicVisitor visitor(nodep);
+    { DynamicSchedulerMarkVariablesVisitor visitor(nodep); }
+    UINFO(2, "  Wrap Processes...\n");
     { DynamicSchedulerWrapProcessVisitor visitor(nodep); }
     V3Global::dumpCheckGlobalTree("dsch_wrap", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
-    { DynamicSchedulerMarkVariablesVisitor visitor(nodep); }
+    UINFO(2, "  Transform Dynamically Triggered Processes...\n");
     { DynamicSchedulerAlwaysVisitor visitor(nodep); }
     V3Global::dumpCheckGlobalTree("dsch_always", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
+    UINFO(2, "  Transform AssignDlys in Suspendable Processes...\n");
     { DynamicSchedulerAssignDlyVisitor visitor(nodep); }
     V3Global::dumpCheckGlobalTree("dsch_dly", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
+    UINFO(2, "  Move Forked Processes to New Functions...\n");
     { DynamicSchedulerForkVisitor visitor(nodep); }
     V3Global::dumpCheckGlobalTree("dsch_proc", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 3);
 }

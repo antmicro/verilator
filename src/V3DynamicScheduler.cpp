@@ -47,6 +47,10 @@
 //              Transform into:
 //                  fork @__VdlyEvent__ lhsp = rhsp; join_none
 //
+//      Each Fork:
+//          Move each statement to a new function
+//          Add call to new function in place of moved statement
+//
 //      Each TimingControl, Wait:
 //          Create event variables for triggering those.
 //          For Wait:

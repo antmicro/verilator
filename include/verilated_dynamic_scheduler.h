@@ -190,21 +190,21 @@ private:
     std::vector<VerilatedEvent*> m_triggeredEvents;  // Events triggered in the current time slot
     VerilatedEventSet m_eventsToReset;  // Events to be reset at the start of a time slot
     VerilatedCoroutineArray
-        m_primedCoros;  // Coroutines primed for resumption in the current time slot
-    VerilatedMutex m_mutex;  // Protects m_eventSetsToCoros, m_triggeredEvents, and m_primedCoros
+        m_readyCoros;  // Coroutines ready for resumption in the current time slot
+    VerilatedMutex m_mutex;  // Protects m_eventSetsToCoros, m_triggeredEvents, m_eventsToCoros, and m_readyCoros
 
     // METHODS
-    // Move coroutines waiting on events from m_triggeredEvents to m_primedCoros
-    void primeTriggered() {
+    // Move coroutines waiting on events from m_triggeredEvents to m_readyCoros
+    void readyTriggered() {
         VerilatedLockGuard guard{m_mutex};
         std::vector<VerilatedEvent*> queue = std::move(m_triggeredEvents);
-        for (auto event : queue) m_eventsToCoros.move(event, m_primedCoros);
+        for (auto event : queue) m_eventsToCoros.move(event, m_readyCoros);
     }
 
-    // Are there no primed coroutines?
-    bool primedEmpty() {
+    // Are there no ready coroutines?
+    bool readyEmpty() {
         const VerilatedLockGuard guard{m_mutex};
-        return m_primedCoros.empty();
+        return m_readyCoros.empty();
     }
 
     // Are there coroutines waiting on this set of events? (wrapper for thread safety)
@@ -216,7 +216,7 @@ private:
 public:
     // Insert the specified coroutine waiting on the given set of events
     void insert(const VerilatedEventSet& events, std::coroutine_handle<> coro) {
-        if (isSetWaitedOn(events)) { primeTriggered(); }
+        if (isSetWaitedOn(events)) { readyTriggered(); }
         VerilatedLockGuard guard{m_mutex};
         m_eventsToCoros.insert(events, coro);
     }
@@ -227,20 +227,20 @@ public:
         do {
             resumeTriggered();
             trigger(dlyEvent);
-            primeTriggered();
-        } while (!primedEmpty());
+            readyTriggered();
+        } while (!readyEmpty());
     }
 
     // Resume coroutines waiting on all triggered events (and keep doing it until no events get
     // triggered)
     void resumeTriggered() {
-        primeTriggered();
-        while (!primedEmpty()) {
+        readyTriggered();
+        while (!readyEmpty()) {
             m_mutex.lock();
-            VerilatedCoroutineArray queue = std::move(m_primedCoros);
+            VerilatedCoroutineArray queue = std::move(m_readyCoros);
             m_mutex.unlock();
             for (auto coro : queue) coro();
-            primeTriggered();
+            readyTriggered();
         }
     }
 

@@ -197,7 +197,8 @@ private:
     VerilatedEventSet m_eventsToReset;  // Events to be reset at the start of a time slot
     VerilatedCoroutineArray
         m_readyCoros;  // Coroutines ready for resumption in the current time slot
-    VerilatedMutex m_mutex;  // Protects m_eventSetsToCoros, m_triggeredEvents, m_eventsToCoros, and m_readyCoros
+    VerilatedMutex m_mutex;  // Protects m_eventSetsToCoros, m_triggeredEvents, m_eventsToCoros,
+                             // and m_readyCoros
 
     // METHODS
     // Move coroutines waiting on events from m_triggeredEvents to m_readyCoros

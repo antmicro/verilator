@@ -595,8 +595,30 @@ private:
             VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
             return;
         }
-        nodep->v3warn(STMTDLY, "Unsupported: Ignoring delay on this delayed statement.");
-        VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
+        userIterate(nodep->lhsp(), WidthVP(nullptr, BOTH).p());
+        iterateNull(nodep->stmtsp());
+        if (!v3Global.opt.dynamicScheduler()) {
+            nodep->v3warn(STMTDLY, "Unsupported: Ignoring delay on this delayed statement.");
+            VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
+        }
+    }
+    virtual void visit(AstEventTrigger* nodep) override {
+        auto* varrefp = VN_CAST(nodep->trigp(), VarRef);
+        if (auto* memberSelp = VN_CAST(nodep->trigp(), MemberSel))
+            varrefp = VN_CAST(memberSelp->fromp(), VarRef);
+        else if (auto* selp = VN_CAST(nodep->trigp(), NodeSel))
+            varrefp = VN_CAST(selp->fromp(), VarRef);
+        else if (auto* selp = VN_CAST(nodep->trigp(), NodePreSel))
+            varrefp = VN_CAST(selp->fromp(), VarRef);
+        if (varrefp) varrefp->access(VAccess::WRITE);
+        if (v3Global.opt.dynamicScheduler()) {
+            userIterateChildren(nodep, WidthVP(nullptr, BOTH).p());
+        } else {
+            auto* assignp = new AstAssignDly{nodep->fileline(), nodep->trigp()->unlinkFrBack(),
+                                             new AstConst{nodep->fileline(), AstConst::BitTrue()}};
+            nodep->replaceWith(assignp);
+            VL_DO_DANGLING(pushDeletep(nodep), nodep);
+        }
     }
     virtual void visit(AstFork* nodep) override {
         if (VN_IS(m_ftaskp, Func) && !nodep->joinType().joinNone()) {
@@ -605,11 +627,13 @@ private:
             VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
             return;
         }
-        if (v3Global.opt.bboxUnsup()
-            // With no statements, begin is identical
-            || !nodep->stmtsp()
-            // With one statement, a begin block does as good as a fork/join or join_any
-            || (!nodep->stmtsp()->nextp() && !nodep->joinType().joinNone())) {
+        if (v3Global.opt.dynamicScheduler()) {
+            iterateChildren(nodep);
+        } else if (v3Global.opt.bboxUnsup()
+                   // With no statements, begin is identical
+                   || !nodep->stmtsp()
+                   // With one statement, a begin block does as good as a fork/join or join_any
+                   || (!nodep->stmtsp()->nextp() && !nodep->joinType().joinNone())) {
             AstNode* stmtsp = nullptr;
             if (nodep->stmtsp()) stmtsp = nodep->stmtsp()->unlinkFrBack();
             AstBegin* const newp = new AstBegin{nodep->fileline(), nodep->name(), stmtsp};
@@ -1323,7 +1347,14 @@ private:
         nodep->replaceWith(newp);
         VL_DO_DANGLING(nodep->deleteTree(), nodep);
     }
+    virtual void visit(AstSenItem* nodep) override {
+        userIterateChildren(nodep, WidthVP(nullptr, BOTH).p());
+    }
     virtual void visit(AstTimingControl* nodep) override {
+        if (v3Global.opt.dynamicScheduler()) {
+            iterateChildren(nodep);
+            return;
+        }
         nodep->v3warn(E_UNSUPPORTED, "Unsupported: timing control statement in this location\n"
                                          << nodep->warnMore()
                                          << "... Suggest have one timing control statement "
@@ -3982,6 +4013,7 @@ private:
             iterateCheckAssign(nodep, "Assign RHS", nodep->rhsp(), FINAL, lhsDTypep);
             // if (debug()) nodep->dumpTree(cout, "  AssignOut: ");
         }
+        iterateNull(nodep->delayp());
         if (const AstBasicDType* const basicp = nodep->rhsp()->dtypep()->basicp()) {
             if (basicp->isEventValue()) {
                 // see t_event_copy.v for commentary on the mess involved
@@ -4826,6 +4858,9 @@ private:
                 "Visit function missing? Widthed function missing for math node: " << nodep);
         }
         userIterateChildren(nodep, nullptr);
+    }
+    virtual void visit(AstWait* nodep) override {
+        userIterateChildren(nodep, WidthVP(SELF, PRELIM).p());
     }
     virtual void visit(AstNode* nodep) override {
         // Default: Just iterate

@@ -323,6 +323,10 @@ private:
         // Don't treat as normal assign; V3Life doesn't understand time sense
         iterateChildren(nodep);
     }
+    virtual void visit(AstNodeProcedure* nodep) override {
+        // Ignore dynamic processes; V3Life doesn't understand time sense
+        if (!nodep->isDynamic()) iterateChildren(nodep);
+    }
 
     //---- Track control flow changes
     virtual void visit(AstNodeIf* nodep) override {
@@ -412,6 +416,7 @@ private:
     virtual void visit(AstCFunc* nodep) override {
         // UINFO(4, "  CFUNC " << nodep << endl);
         if (!m_tracingCall && !nodep->entryPoint()) return;
+        if (nodep->isCoroutine()) return;
         m_tracingCall = false;
         if (nodep->dpiImportPrototype() && !nodep->pure()) {
             m_sideEffect = true;  // If appears on assign RHS, don't ever delete the assignment

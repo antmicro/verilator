@@ -13,6 +13,7 @@ scenarios(vlt => 1);
 # This doesn't use the general compile rule as we want to make sure we form
 # prefix properly using post-escaped identifiers
 run(cmd => ["../bin/verilator",
+            ($Self->{dynamic_scheduler} ? '--dynamic-scheduler' : ''),
             "--cc",
             "--Mdir obj_vlt/t_mod_dollar",
             "--exe --build --main",

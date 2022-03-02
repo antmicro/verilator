@@ -67,6 +67,7 @@ private:
     string m_namedScope;  // Name of begin blocks above us
     string m_unnamedScope;  // Name of begin blocks, including unnamed blocks
     int m_ifDepth = 0;  // Current if depth
+    bool m_inFork = false;  // True if statement is directly under a fork
 
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
@@ -74,6 +75,29 @@ private:
     string dot(const string& a, const string& b) {
         if (a == "") return b;
         return a + "__DOT__" + b;
+    }
+    void dotNames(AstNodeBlock* nodep, const std::string& blkName) {
+        UINFO(8, "nname " << m_namedScope << endl);
+        if (nodep->name() != "") {  // Else unneeded unnamed block
+            // Create data for dotted variable resolution
+            string dottedname = nodep->name() + "__DOT__";  // So always found
+            string::size_type pos;
+            while ((pos = dottedname.find("__DOT__")) != string::npos) {
+                const string ident = dottedname.substr(0, pos);
+                dottedname = dottedname.substr(pos + strlen("__DOT__"));
+                if (nodep->name() != "") {
+                    m_displayScope = dot(m_displayScope, ident);
+                    m_namedScope = dot(m_namedScope, ident);
+                }
+                m_unnamedScope = dot(m_unnamedScope, ident);
+                // Create CellInline for dotted var resolution
+                if (!m_ftaskp) {
+                    AstCellInline* const inlinep = new AstCellInline(
+                        nodep->fileline(), m_unnamedScope, "__BEGIN__", m_modp->timeunit());
+                    m_modp->addInlinesp(inlinep);  // Must be parsed before any AstCells
+                }
+            }
+        }
     }
 
     void liftNode(AstNode* nodep) {
@@ -92,6 +116,13 @@ private:
     }
 
     // VISITORS
+    virtual void visit(AstFork* nodep) override {
+        VL_RESTORER(m_inFork);
+        m_inFork = true;
+        dotNames(nodep, "__FORK__");
+        iterateAndNextNull(nodep->stmtsp());
+        nodep->name("");
+    }
     virtual void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         {
@@ -141,33 +172,21 @@ private:
         VL_RESTORER(m_namedScope);
         VL_RESTORER(m_unnamedScope);
         {
-            UINFO(8, "nname " << m_namedScope << endl);
-            if (nodep->name() != "") {  // Else unneeded unnamed block
-                // Create data for dotted variable resolution
-                string dottedname = nodep->name() + "__DOT__";  // So always found
-                string::size_type pos;
-                while ((pos = dottedname.find("__DOT__")) != string::npos) {
-                    const string ident = dottedname.substr(0, pos);
-                    dottedname = dottedname.substr(pos + strlen("__DOT__"));
-                    if (nodep->name() != "") {
-                        m_displayScope = dot(m_displayScope, ident);
-                        m_namedScope = dot(m_namedScope, ident);
-                    }
-                    m_unnamedScope = dot(m_unnamedScope, ident);
-                    // Create CellInline for dotted var resolution
-                    if (!m_ftaskp) {
-                        AstCellInline* const inlinep = new AstCellInline(
-                            nodep->fileline(), m_unnamedScope, "__BEGIN__", m_modp->timeunit());
-                        m_modp->addInlinesp(inlinep);  // Must be parsed before any AstCells
-                    }
-                }
+            {
+                VL_RESTORER(m_inFork);
+                m_inFork = false;
+                dotNames(nodep, "__BEGIN__");
+
+                // Remap var names and replace lower Begins
+                iterateAndNextNull(nodep->stmtsp());
+                UASSERT_OBJ(!nodep->genforp(), nodep, "GENFORs should have been expanded earlier");
             }
 
-            // Remap var names and replace lower Begins
-            iterateAndNextNull(nodep->stmtsp());
-            UASSERT_OBJ(!nodep->genforp(), nodep, "GENFORs should have been expanded earlier");
-
             // Cleanup
+            if (m_inFork) {
+                nodep->name("");
+                return;
+            }
             AstNode* addsp = nullptr;
             if (AstNode* const stmtsp = nodep->stmtsp()) {
                 stmtsp->unlinkFrBackWithNext();

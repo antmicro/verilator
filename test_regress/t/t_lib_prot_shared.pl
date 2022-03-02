@@ -32,6 +32,7 @@ while (1) {
         cmd => ["perl",
                 "$ENV{VERILATOR_ROOT}/bin/verilator",
                 ($Self->{vltmt} ? ' --threads 6' : ''),
+                ($Self->{dynamic_scheduler} ? '--dynamic-scheduler' : ''),
                 "--prefix",
                 "Vt_lib_prot_secret",
                 "-cc",

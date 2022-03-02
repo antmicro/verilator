@@ -175,6 +175,10 @@ private:
         VL_DO_DANGLING(nodep->deleteTree(), nodep);
     }
     virtual void visit(AstWait* nodep) override {
+        if (v3Global.opt.dynamicScheduler()) {
+            iterateChildren(nodep);
+            return;
+        }
         nodep->v3warn(E_UNSUPPORTED, "Unsupported: wait statements");
         // Statements we'll just execute immediately; equivalent to if they followed this
         if (AstNode* const bodysp = nodep->bodysp()) {

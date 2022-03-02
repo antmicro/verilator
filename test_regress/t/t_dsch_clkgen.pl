@@ -8,20 +8,19 @@ if (!$::Driver) { use FindBin; exec("$FindBin::Bin/bootstrap.pl", @ARGV, $0); di
 # Version 2.0.
 # SPDX-License-Identifier: LGPL-3.0-only OR Artistic-2.0
 
-scenarios(vlt => 1);
+scenarios(simulator => 1);
 
 if ($Self->{dynamic_scheduler}) {
     compile(
+        delayed_queue => 1,
         );
 
     execute(
         check_finished => 1,
-        );
-} else {
-    lint(
-        fails => 1,
         expect_filename => $Self->{golden_filename},
         );
+} else {
+    skip("Test not supported without the dynamic scheduler");
 }
 
 ok(1);

@@ -21,7 +21,7 @@ compile(
     make_main => 0,
     );
 
-files_identical("$out_filename", $Self->{golden_filename}, 'logfile');
+files_identical("$out_filename", $Self->{dynamic_scheduler} ? $Self->{golden_filename} =~ s/\.out$/_dsched.out/r : $Self->{golden_filename}, 'logfile');
 
 # make sure that certain tags are present in --debug-check
 # that would not be present in --xml-only

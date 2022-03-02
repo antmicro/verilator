@@ -15,7 +15,7 @@ top_filename("t/t_order_clkinst.v");
 compile(
     v_flags2 => ["-Wwarn-IMPERFECTSCH"],
     fails => 1,
-    expect_filename => $Self->{golden_filename},
+    expect_filename => $Self->{dynamic_scheduler} ? $Self->{golden_filename} =~ s/\.out$/_dsched.out/r : $Self->{golden_filename},
     );
 
 ok(1);

@@ -2183,7 +2183,8 @@ void ThreadSchedule::dumpDotFile(const string& filename) const {
         const double x = mtaskXPos(mtaskp, nodeWidth);
         const int y = -thread;
         const string label = "label=\"" + mtaskp->name() + " (" + cvtToStr(startTime(mtaskp)) + ":"
-                             + std::to_string(endTime(mtaskp)) + ")" + "\"";
+                             + std::to_string(endTime(mtaskp)) + ")"
+                             + (mtaskp->exclusive() ? " [EXCL]" : "") + "\"";
         *logp << "  " << mtaskp->name() << " [" << label << " width=" << nodeWidth << " pos=\""
               << x << "," << y << "!\"]\n";
     };
@@ -2294,8 +2295,57 @@ private:
     }
 
 public:
+    void handleExclusivity(V3Graph& mtaskGraph, ThreadSchedule& schedule) {
+        const auto moveBy = [&](ExecMTask* mtaskp, uint32_t shift) {
+            mtaskp->predictStart(mtaskp->predictStart() + shift);
+            schedule.mtaskState[mtaskp].completionTime += shift;
+        };
+
+        const auto moveAfter = [&](ExecMTask* firstMtaskp, ExecMTask* secondMtaskp) {
+            if (schedule.mtaskState[firstMtaskp].completionTime > secondMtaskp->predictStart()) {
+                uint32_t shift = schedule.mtaskState[firstMtaskp].completionTime
+                                 - secondMtaskp->predictStart();
+                moveBy(secondMtaskp, shift);
+                for (V3GraphVertex* vxp = secondMtaskp->verticesNextp(); vxp;
+                     vxp = vxp->verticesNextp()) {
+                    ExecMTask* mtaskp = dynamic_cast<ExecMTask*>(vxp);
+                    moveBy(mtaskp, shift);
+                }
+            }
+            new V3GraphEdge(&mtaskGraph, firstMtaskp, secondMtaskp, 1);
+        };
+
+        for (V3GraphVertex* vxp = mtaskGraph.verticesBeginp(); vxp; vxp = vxp->verticesNextp()) {
+            ExecMTask* mtaskp = dynamic_cast<ExecMTask*>(vxp);
+            if (!mtaskp->exclusive()) continue;
+            std::vector<ExecMTask*> prevMTasks(m_nThreads, nullptr);
+            std::vector<ExecMTask*> nextMTasks(m_nThreads, nullptr);
+            for (V3GraphVertex* vxp = mtaskGraph.verticesBeginp(); vxp;
+                 vxp = vxp->verticesNextp()) {
+                ExecMTask* otherMtaskp = dynamic_cast<ExecMTask*>(vxp);
+                if (mtaskp == otherMtaskp) continue;
+                auto threadId = schedule.threadId(otherMtaskp);
+                if (schedule.threadId(mtaskp) == threadId) continue;
+                if (mtaskp->predictStart() <= otherMtaskp->predictStart()) {
+                    if (!nextMTasks[threadId]
+                        || otherMtaskp->predictStart() < nextMTasks[threadId]->predictStart())
+                        nextMTasks[threadId] = otherMtaskp;
+                } else {
+                    if (!prevMTasks[threadId]
+                        || otherMtaskp->predictStart() > prevMTasks[threadId]->predictStart())
+                        prevMTasks[threadId] = otherMtaskp;
+                }
+            }
+            for (auto* otherMtaskp : prevMTasks)
+                if (otherMtaskp) moveAfter(otherMtaskp, mtaskp);
+            for (auto* otherMtaskp : nextMTasks)
+                if (otherMtaskp) moveAfter(mtaskp, otherMtaskp);
+        }
+
+        mtaskGraph.removeTransitiveEdges();
+    }
     // Pack an MTasks from given graph into m_nThreads threads, return the schedule.
-    const ThreadSchedule pack(const V3Graph& mtaskGraph) {
+    ThreadSchedule pack(const V3Graph& mtaskGraph) {
         // The result
         ThreadSchedule schedule(m_nThreads);
 
@@ -2381,9 +2431,12 @@ public:
                 }
             }
         }
-
+        return schedule;
+    }
+    ThreadSchedule prepareSchedule(V3Graph& mtaskGraph) {
+        auto schedule = pack(mtaskGraph);
+        handleExclusivity(mtaskGraph, schedule);
         if (debug() >= 4) schedule.dumpDotFilePrefixedAlways("schedule");
-
         return schedule;
     }
 
@@ -3052,7 +3105,8 @@ static void implementExecGraph(AstExecGraph* const execGraphp) {
 
     // Schedule the mtasks: statically associate each mtask with a thread,
     // and determine the order in which each thread will runs its mtasks.
-    const ThreadSchedule& schedule = PartPackMTasks().pack(*execGraphp->mutableDepGraphp());
+    const ThreadSchedule& schedule
+        = PartPackMTasks().prepareSchedule(*execGraphp->mutableDepGraphp());
 
     // Create a function to be run by each thread. Note this moves all AstMTaskBody nodes form the
     // AstExecGrap into the AstCFunc created

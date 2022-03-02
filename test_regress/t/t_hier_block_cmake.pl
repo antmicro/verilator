@@ -19,7 +19,8 @@ if (!$Self->have_cmake) {
     run(logfile => "$Self->{obj_dir}/cmake.log",
         cmd => ['cd "' . $Self->{obj_dir} . '" && cmake ' . $Self->{t_dir} . '/t_hier_block_cmake',
             "-DCMAKE_PREFIX_PATH=$ENV{VERILATOR_ROOT}",
-            ($Self->{vltmt} ? '-DTEST_THREADS=6' : '')
+            ($Self->{vltmt} ? '-DTEST_THREADS=6' : ''),
+            ($Self->{dynamic_scheduler} ? '-DTEST_DYNAMIC_SCHEDULER=1' : '')
         ]);
 
     run(logfile => "$Self->{obj_dir}/build.log",

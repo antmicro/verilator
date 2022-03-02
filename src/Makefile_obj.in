@@ -182,6 +182,7 @@ RAW_OBJS = \
 	V3DepthBlock.o \
 	V3Descope.o \
 	V3DupFinder.o \
+	V3DynamicScheduler.o \
 	V3EmitCBase.o \
 	V3EmitCConstPool.o \
 	V3EmitCFunc.o \

@@ -71,7 +71,7 @@ private:
             return;
         }
         // Copy combo tree to settlement tree with duplicated statements
-        if (sensesp->hasCombo()) {
+        if (sensesp->hasCombo() && !VN_IS(nodep->stmtsp(), ResumeTriggered)) {
             AstSenTree* const newsentreep = new AstSenTree(
                 nodep->fileline(), new AstSenItem(nodep->fileline(), AstSenItem::Settle()));
             AstActive* const newp = new AstActive(nodep->fileline(), "settle", newsentreep);

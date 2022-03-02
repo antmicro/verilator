@@ -14,7 +14,8 @@ compile(
     verilator_flags2 => ['--expand-limit 1 --stats'],
     );
 
-file_grep($Self->{stats}, qr/Optimizations, expand limited\s+(\d+)/i, 4);
+file_grep($Self->{stats}, qr/Optimizations, expand limited\s+(\d+)/i,
+          ($Self->{dynamic_scheduler} ? 8 : 4));
 
 ok(1);
 1;

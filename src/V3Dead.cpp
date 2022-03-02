@@ -279,6 +279,7 @@ private:
             } else {  // Track like any other statement
                 iterateAndNextNull(nodep->lhsp());
             }
+            iterateNull(nodep->delayp());
         }
     }
 

@@ -307,15 +307,15 @@ extern vluint64_t vl_time_stamp64() VL_ATTR_WEAK;
 // On MSVC++ weak symbols are not supported so must be declared, or define
 // VL_TIME_CONTEXT.
 extern double sc_time_stamp() VL_ATTR_WEAK;  // Verilator 4.032 and newer
-inline vluint64_t vl_time_stamp64() {
+inline double vl_time_stamp64() {
     // clang9.0.1 requires & although we really do want the weak symbol value
-    return VL_LIKELY(&sc_time_stamp) ? static_cast<vluint64_t>(sc_time_stamp()) : 0;
+    return VL_LIKELY(&sc_time_stamp) ? sc_time_stamp() : 0;
 }
 #  endif
 # endif
 #endif
 
-inline vluint64_t VerilatedContext::time() const VL_MT_SAFE {
+inline double VerilatedContext::time() const VL_MT_SAFE {
     // When using non-default context, fastest path is return time
     if (VL_LIKELY(m_s.m_time)) return m_s.m_time;
 #if defined(SYSTEMC_VERSION) || (!defined(VL_TIME_CONTEXT) && !defined(VL_NO_LEGACY))
@@ -328,8 +328,8 @@ inline vluint64_t VerilatedContext::time() const VL_MT_SAFE {
     return 0;
 }
 
-#define VL_TIME_Q() (Verilated::threadContextp()->time())
-#define VL_TIME_D() (static_cast<double>(VL_TIME_Q()))
+#define VL_TIME_D() (Verilated::threadContextp()->time())
+#define VL_TIME_Q() (static_cast<vluint64_t>(VL_TIME_D()))
 
 // Time scaled from 1-per-precision into a module's time units ("Unit"-ed, not "United")
 // Optimized assuming scale is always constant.

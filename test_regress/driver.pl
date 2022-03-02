@@ -88,6 +88,7 @@ my $opt_stop;
 my $opt_trace;
 my $opt_verbose;
 my $Opt_Verilated_Debug;
+my $Opt_Dynamic_Scheduler;
 our $Opt_Unsupported;
 our $Opt_Verilation = 1;
 our @Opt_Driver_Verilator_Flags;
@@ -117,6 +118,7 @@ if (! GetOptions(
           "verbose!"    => \$opt_verbose,
           "verilation!"         => \$Opt_Verilation,  # Undocumented debugging
           "verilated-debug!"    => \$Opt_Verilated_Debug,
+          "dynamic-scheduler!"  => sub { $Opt_Dynamic_Scheduler = 1; push @Opt_Driver_Verilator_Flags, "--dynamic-scheduler"; },
           #W               see parameter()
           # Scenarios
           "atsim|athdl!"=> sub { $opt_scenarios{atsim} = $_[1]; },
@@ -669,6 +671,7 @@ sub new {
         verilator_make_gmake => 1,
         verilator_make_cmake => 0,
         verilated_debug => $Opt_Verilated_Debug,
+        dynamic_scheduler => $Opt_Dynamic_Scheduler,
         stdout_filename => undef,  # Redirect stdout
         %$self};
     bless $self, $class;
@@ -1137,7 +1140,7 @@ sub compile {
         }
 
         if (!$param{fails} && $param{make_main}) {
-            $self->_make_main();
+            $self->_make_main($param{delayed_queue});
         }
 
         if ($param{verilator_make_gmake}
@@ -1743,6 +1746,7 @@ sub _try_regex {
 
 sub _make_main {
     my $self = shift;
+    my $delayed_queue = shift;
 
     if ($self->vhdl) {
         $self->_read_inputs_vhdl();
@@ -1870,32 +1874,60 @@ sub _make_main {
     }
     print $fh "        ${set}fastclk = false;\n" if $self->{inputs}{fastclk};
     print $fh "        ${set}clk = false;\n" if $self->{inputs}{clk};
-    _print_advance_time($self, $fh, 10);
+    if (!$delayed_queue) {
+        _print_advance_time($self, $fh, 10);
+    }
     print $fh "    }\n";
 
     my $time = $self->sc ? "sc_time_stamp()" : "contextp->time()";
 
-    print $fh "    while ((${time} < sim_time * MAIN_TIME_MULTIPLIER)\n";
+    print $fh "    while (";
+    if ($delayed_queue && !$self->{inputs}{clk}) {
+        print $fh "topp->eventsPending()\n";
+    } else {
+        print $fh "(${time} < sim_time * MAIN_TIME_MULTIPLIER)\n";
+    }
     print $fh "           && !contextp->gotFinish()) {\n";
 
-    for (my $i = 0; $i < 5; $i++) {
-        my $action = 0;
-        if ($self->{inputs}{fastclk}) {
-            print $fh "        ${set}fastclk = !${set}fastclk;\n";
-            $action = 1;
+    if ($delayed_queue) {
+        print $fh "        ${set}eval();\n";
+        if ($self->{trace} && !$self->sc) {
+            $fh->print("#if VM_TRACE\n");
+            $fh->print("        if (tfp) tfp->dump(contextp->time());\n");
+            $fh->print("#endif  // VM_TRACE\n");
         }
-        if ($i == 0 && $self->{inputs}{clk}) {
-            print $fh "        ${set}clk = !${set}clk;\n";
-            $action = 1;
+        if ($self->{inputs}{clk}) {
+            print $fh "        auto newTime = topp->nextTimeSlot();\n";
+            print $fh "        if (newTime - contextp->time() <= 0 ||\n";
+            print $fh "            newTime - floorf(newTime) == 0) {\n";
+            print $fh "            ${set}clk = !${set}clk;\n";
+            print $fh "            contextp->timeInc(MAIN_TIME_MULTIPLIER);\n";
+            print $fh "        } else {\n";
+            print $fh "            contextp->time(newTime);\n";
+            print $fh "        }\n";
+        } else {
+            print $fh "        contextp->time(topp->nextTimeSlot());\n";
         }
-        if ($self->{savable}) {
-            $fh->print("        if (save_time && ${time} == save_time) {\n");
-            $fh->print("            save_model(\"$self->{obj_dir}/saved.vltsv\");\n");
-            $fh->print("            printf(\"Exiting after save_model\\n\");\n");
-            $fh->print("            return 0;\n");
-            $fh->print("        }\n");
+    } else {
+        for (my $i = 0; $i < 5; $i++) {
+            my $action = 0;
+            if ($self->{inputs}{fastclk}) {
+                print $fh "        ${set}fastclk = !${set}fastclk;\n";
+                $action = 1;
+            }
+            if ($i == 0 && $self->{inputs}{clk}) {
+                print $fh "        ${set}clk = !${set}clk;\n";
+                $action = 1;
+            }
+            if ($self->{savable}) {
+                $fh->print("        if (save_time && ${time} == save_time) {\n");
+                $fh->print("            save_model(\"$self->{obj_dir}/saved.vltsv\");\n");
+                $fh->print("            printf(\"Exiting after save_model\\n\");\n");
+                $fh->print("            return 0;\n");
+                $fh->print("        }\n");
+            }
+            _print_advance_time($self, $fh, 1, $action);
         }
-        _print_advance_time($self, $fh, 1, $action);
     }
     if ($self->{benchmarksim}) {
         $fh->print("        if (VL_UNLIKELY(!warm)) {\n");

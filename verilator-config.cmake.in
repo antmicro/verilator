@@ -90,6 +90,12 @@ define_property(TARGET
 )
 
 define_property(TARGET
+  PROPERTY VERILATOR_DYNAMIC_SCHEDULER
+  BRIEF_DOCS "Verilator dynamic scheduler enabled"
+  FULL_DOCS "Verilator dynamic scheduler enabled"
+)
+
+define_property(TARGET
   PROPERTY VERILATOR_COVERAGE
   BRIEF_DOCS "Verilator coverage enabled"
   FULL_DOCS "Verilator coverage enabled"
@@ -151,6 +157,10 @@ function(verilate TARGET)
 
   if (VERILATE_TRACE_THREADS)
     list(APPEND VERILATOR_ARGS --trace-threads ${VERILATE_TRACE_THREADS})
+  endif()
+
+  if (VERILATE_DYNAMIC_SCHEDULER)
+    list(APPEND VERILATOR_ARGS --dynamic-scheduler)
   endif()
 
   if (VERILATE_COVERAGE)
@@ -266,6 +276,11 @@ function(verilate TARGET)
     set_property(TARGET ${TARGET} PROPERTY VERILATOR_TRACE_THREADED ON)
   endif()
 
+  if (${VERILATE_PREFIX}_DYNAMIC_SCHEDULER)
+    # If any verilate() call specifies DYNAMIC_SCHEDULER, define VL_DYNAMIC_SCHEDULER in the final build
+    set_property(TARGET ${TARGET} PROPERTY VERILATOR_DYNAMIC_SCHEDULER ON)
+  endif()
+
   if (${VERILATE_PREFIX}_COVERAGE)
     # If any verilate() call specifies COVERAGE, define VM_COVERAGE in the final build
     set_property(TARGET ${TARGET} PROPERTY VERILATOR_COVERAGE ON)
@@ -327,6 +342,7 @@ function(verilate TARGET)
     VM_SC=$<BOOL:$<TARGET_PROPERTY:VERILATOR_SYSTEMC>>
     $<$<BOOL:$<TARGET_PROPERTY:VERILATOR_THREADED>>:VL_THREADED>
     $<$<BOOL:$<TARGET_PROPERTY:VERILATOR_TRACE_THREADED>>:VL_TRACE_THREADED>
+    $<$<BOOL:$<TARGET_PROPERTY:VERILATOR_DYNAMIC_SCHEDULER>>:VL_DYNAMIC_SCHEDULER>
     VM_TRACE=$<BOOL:$<TARGET_PROPERTY:VERILATOR_TRACE>>
     VM_TRACE_VCD=$<BOOL:$<TARGET_PROPERTY:VERILATOR_TRACE_VCD>>
     VM_TRACE_FST=$<BOOL:$<TARGET_PROPERTY:VERILATOR_TRACE_FST>>
@@ -338,6 +354,12 @@ function(verilate TARGET)
   )
 
   target_compile_features(${TARGET} PRIVATE cxx_std_11)
+
+  if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
+    target_compile_options(${TARGET} PRIVATE $<$<BOOL:$<TARGET_PROPERTY:VERILATOR_DYNAMIC_SCHEDULER>>:-fcoroutines>)
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
+    target_compile_options(${TARGET} PRIVATE $<$<BOOL:$<TARGET_PROPERTY:VERILATOR_DYNAMIC_SCHEDULER>>:-fcoroutines-ts>)
+  endif()
 endfunction()
 
 function(_verilator_find_systemc)

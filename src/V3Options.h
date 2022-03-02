@@ -237,6 +237,7 @@ private:
     bool m_dpiHdrOnly = false;      // main switch: --dpi-hdr-only
     bool m_dumpDefines = false;     // main switch: --dump-defines
     bool m_dumpTreeAddrids = false; // main switch: --dump-tree-addrids
+    bool m_dynamicScheduler = false; // main switch: --dynamic-scheduler
     bool m_exe = false;             // main switch: --exe
     bool m_flatten = false;         // main switch: --flatten
     bool m_hierarchical = false;    // main switch: --hierarchical
@@ -486,6 +487,7 @@ public:
     int coverageMaxWidth() const { return m_coverageMaxWidth; }
     int dumpTree() const { return m_dumpTree; }
     bool dumpTreeAddrids() const { return m_dumpTreeAddrids; }
+    bool dynamicScheduler() const { return m_dynamicScheduler; }
     int expandLimit() const { return m_expandLimit; }
     int gateStmts() const { return m_gateStmts; }
     int ifDepth() const { return m_ifDepth; }

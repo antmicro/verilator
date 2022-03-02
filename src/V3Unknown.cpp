@@ -481,6 +481,11 @@ private:
             }
         }
     }
+
+    // NOPs
+    virtual void visit(AstSenItem* nodep) override {}
+    virtual void visit(AstEventTrigger* nodep) override {}
+
     //--------------------
     virtual void visit(AstNode* nodep) override { iterateChildren(nodep); }
 

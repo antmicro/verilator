@@ -188,6 +188,7 @@ private:
 
     // NOPs
     virtual void visit(AstVar*) override {}
+    virtual void visit(AstSenItem*) override {}
 
     //--------------------
     virtual void visit(AstNode* nodep) override { iterateChildren(nodep); }

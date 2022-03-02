@@ -2617,8 +2617,7 @@ private:
                    && (VN_IS(nodep->sensp(), EnumItemRef) || VN_IS(nodep->sensp(), Const))) {
         } else if (nodep->isIllegal()) {  // Deal with later
         } else {
-            UASSERT_OBJ(!(nodep->hasVar() && !nodep->varrefp()), nodep,
-                        "Null sensitivity variable");
+            UASSERT_OBJ(!(nodep->hasVar() && !nodep->varp()), nodep, "Null sensitivity variable");
         }
     }
 
@@ -3046,6 +3045,10 @@ private:
     // Jump elimination
 
     virtual void visit(AstDelay* nodep) override {
+        iterateChildren(nodep);
+        m_hasJumpDelay = true;
+    }
+    virtual void visit(AstTimingControl* nodep) override {
         iterateChildren(nodep);
         m_hasJumpDelay = true;
     }

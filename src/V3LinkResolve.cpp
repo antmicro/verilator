@@ -53,6 +53,7 @@ private:
     AstNodeCoverOrAssert* m_assertp = nullptr;  // Current assertion
     int m_senitemCvtNum = 0;  // Temporary signal counter
     bool m_underGenerate = false;  // Under GenFor/GenIf
+    bool m_inAlwaysSens = false;  // Under always sensitivity
 
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
@@ -144,7 +145,11 @@ private:
             nodep->scopeNamep(new AstScopeName{nodep->fileline(), false});
         }
     }
-
+    virtual void visit(AstSenTree* nodep) override {
+        VL_RESTORER(m_inAlwaysSens);
+        m_inAlwaysSens = VN_IS(nodep->backp(), Always);
+        iterateChildren(nodep);
+    }
     virtual void visit(AstSenItem* nodep) override {
         // Remove bit selects, and bark if it's not a simple variable
         iterateChildren(nodep);
@@ -180,7 +185,7 @@ private:
                     sensp);
                 addwherep->addNext(assignp);
             }
-        } else {  // Old V1995 sensitivity list; we'll probably mostly ignore
+        } else if (m_inAlwaysSens) {  // Old V1995 sensitivity list; we'll probably mostly ignore
             bool did = true;
             while (did) {
                 did = false;
@@ -205,7 +210,7 @@ private:
                 }
             }
         }
-        if (!VN_IS(nodep->sensp(), NodeVarRef)
+        if (!v3Global.opt.dynamicScheduler() && !VN_IS(nodep->sensp(), NodeVarRef)
             && !VN_IS(nodep->sensp(), EnumItemRef)  // V3Const will cleanup
             && !nodep->isIllegal()) {
             if (debug()) nodep->dumpTree(cout, "-tree: ");

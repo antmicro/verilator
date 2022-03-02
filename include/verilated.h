@@ -318,7 +318,7 @@ protected:
         bool m_fatalOnVpiError = true;  // Fatal on vpi error/unsupported
         bool m_gotError = false;  // A $finish statement executed
         bool m_gotFinish = false;  // A $finish or $stop statement executed
-        vluint64_t m_time = 0;  // Current $time (unscaled), 0=at zero, or legacy
+        double m_time = 0;  // Current $time (unscaled), 0=at zero, or legacy
         // Slow path
         vlsint8_t m_timeunit;  // Time unit as 0..15
         vlsint8_t m_timeprecision;  // Time precision as 0..15
@@ -471,11 +471,11 @@ public:
     ///
     /// * Else, time comes from the legacy 'double sc_time_stamp()' which
     /// must be a function defined by the user's wrapper.
-    vluint64_t time() const VL_MT_SAFE;
+    double time() const VL_MT_SAFE;
     /// Set current simulation time. See time() for side effect details
-    void time(vluint64_t value) VL_MT_SAFE { m_s.m_time = value; }
+    void time(double value) VL_MT_SAFE { m_s.m_time = value; }
     /// Advance current simulation time. See time() for side effect details
-    void timeInc(vluint64_t add) VL_MT_UNSAFE { m_s.m_time += add; }
+    void timeInc(double add) VL_MT_UNSAFE { m_s.m_time += add; }
     /// Return time units as power-of-ten
     int timeunit() const VL_MT_SAFE { return -m_s.m_timeunit; }
     /// Set time units as power-of-ten
@@ -758,11 +758,11 @@ public:
     /// Return VerilatedContext::randSeed using current thread's VerilatedContext
     static int randSeed() VL_MT_SAFE { return Verilated::threadContextp()->randSeed(); }
     /// Call VerilatedContext::time using current thread's VerilatedContext
-    static void time(vluint64_t val) VL_MT_SAFE { Verilated::threadContextp()->time(val); }
+    static void time(double val) VL_MT_SAFE { Verilated::threadContextp()->time(val); }
     /// Return VerilatedContext::time using current thread's VerilatedContext
-    static vluint64_t time() VL_MT_SAFE { return Verilated::threadContextp()->time(); }
+    static double time() VL_MT_SAFE { return Verilated::threadContextp()->time(); }
     /// Call VerilatedContext::timeInc using current thread's VerilatedContext
-    static void timeInc(vluint64_t add) VL_MT_UNSAFE { Verilated::threadContextp()->timeInc(add); }
+    static void timeInc(double add) VL_MT_UNSAFE { Verilated::threadContextp()->timeInc(add); }
     // Deprecated
     static int timeunit() VL_MT_SAFE { return Verilated::threadContextp()->timeunit(); }
     static int timeprecision() VL_MT_SAFE { return Verilated::threadContextp()->timeprecision(); }
@@ -879,6 +879,13 @@ inline int VerilatedContext::debug() VL_MT_SAFE { return Verilated::debug(); }
 // Functions
 
 #include "verilated_funcs.h"
+
+//=========================================================================
+// Dynamic scheduler
+
+#ifdef VL_DYNAMIC_SCHEDULER
+#include "verilated_dynamic_scheduler.h"
+#endif
 
 //======================================================================
 

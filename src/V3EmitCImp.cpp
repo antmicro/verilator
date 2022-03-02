@@ -122,6 +122,26 @@ class EmitCGatherDependencies final : VNVisitor {
         }
         iterateChildrenConst(nodep);
     }
+    virtual void visit(AstFork* nodep) override {
+        addSymsDependency();
+        iterateChildrenConst(nodep);
+    }
+    virtual void visit(AstEventTrigger* nodep) override {
+        addSymsDependency();
+        iterateChildrenConst(nodep);
+    }
+    virtual void visit(AstResumeTriggered* nodep) override {
+        addSymsDependency();
+        iterateChildrenConst(nodep);
+    }
+    virtual void visit(AstTimingControl* nodep) override {
+        addSymsDependency();
+        iterateChildrenConst(nodep);
+    }
+    virtual void visit(AstDelay* nodep) override {
+        addSymsDependency();
+        iterateChildrenConst(nodep);
+    }
     virtual void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }
 
     // CONSTRUCTOR
@@ -436,9 +456,9 @@ class EmitCImp final : EmitCFunc {
                 emitCtorImp(modp);
                 emitConfigureImp(modp);
                 emitDestructorImp(modp);
+                emitSavableImp(modp);
+                emitCoverageImp();
             }
-            emitSavableImp(modp);
-            emitCoverageImp();
         } else {
             // From `systemc_implementation
             emitTextSection(modp, VNType::atScImp);

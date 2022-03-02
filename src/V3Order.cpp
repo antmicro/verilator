@@ -393,6 +393,9 @@ class OrderBuildVisitor final : public VNVisitor {
     bool m_inPost = false;  // Underneath AstAssignPost/AstAlwaysPost
     bool m_inPostponed = false;  // Underneath AstAlwaysPostponed
 
+    OrderEitherVertex* m_eventTriggerVxp = nullptr;
+    OrderEitherVertex* m_postponedVxp = nullptr;
+
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
 
@@ -405,6 +408,7 @@ class OrderBuildVisitor final : public VNVisitor {
         // If this logic has a clocked activation, add a link from the sensitivity list LogicVertex
         // to this LogicVertex.
         if (m_activeSenVxp) new OrderEdge(m_graphp, m_activeSenVxp, m_logicVxp, WEIGHT_NORMAL);
+        if (m_inPostponed) new OrderEdge(m_graphp, m_postponedVxp, m_logicVxp, WEIGHT_NORMAL);
         // Gather variable dependencies based on usage
         iterateChildren(nodep);
         // Finished with this logic
@@ -420,13 +424,22 @@ class OrderBuildVisitor final : public VNVisitor {
         // This should only find the global AstSenTrees under the AstTopScope, which we ignore
         // here. We visit AstSenTrees separately when encountering the AstActive that references
         // them.
-        UASSERT_OBJ(!m_scopep, nodep, "AstSenTrees should have been made global in V3ActiveTop");
+        if (VN_IS(nodep->backp(), TimingControl))
+            iterateChildren(nodep);
+        else
+            UASSERT_OBJ(!m_scopep, nodep,
+                        "AstSenTrees should have been made global in V3ActiveTop");
     }
     virtual void visit(AstScope* nodep) override {
         UASSERT_OBJ(!m_scopep, nodep, "Should not nest");
+        m_eventTriggerVxp
+            = new OrderDynamicSchedulingVertex(m_graphp, m_scopep, "POST Event Triggers");
+        m_postponedVxp = new OrderDynamicSchedulingVertex(m_graphp, m_scopep, "PRE Postponed");
         m_scopep = nodep;
         iterateChildren(nodep);
         m_scopep = nullptr;
+        m_eventTriggerVxp = nullptr;
+        m_postponedVxp = nullptr;
     }
     virtual void visit(AstActive* nodep) override {
         UASSERT_OBJ(!nodep->sensesStorep(), nodep,
@@ -450,7 +463,8 @@ class OrderBuildVisitor final : public VNVisitor {
 
         // Ignore the sensitivity domain for combinational logic. We will assign combinational
         // logic to a domain later, based on the domains of incoming variables.
-        if (!nodep->sensesp()->hasCombo()) m_domainp = nodep->sensesp();
+        if (!nodep->sensesp()->hasCombo() || VN_IS(nodep->stmtsp(), ResumeTriggered))
+            m_domainp = nodep->sensesp();
 
         // Analyze logic underneath
         iterateChildren(nodep);
@@ -629,8 +643,8 @@ class OrderBuildVisitor final : public VNVisitor {
                     OrderVarVertex* const preVxp = getVarVertex(varscp, VarVertexType::PRE);
                     new OrderEdge(m_graphp, m_logicVxp, preVxp, WEIGHT_NORMAL);
                     // Add edge from consuming LogicVertex -> to consumed VarPostVertex
-                    OrderVarVertex* const postVxp = getVarVertex(varscp, VarVertexType::POST);
-                    new OrderEdge(m_graphp, m_logicVxp, postVxp, WEIGHT_POST);
+                    OrderVarVertex* const postponedVxp = getVarVertex(varscp, VarVertexType::POST);
+                    new OrderEdge(m_graphp, m_logicVxp, postponedVxp, WEIGHT_POST);
                 }
             }
         }
@@ -662,14 +676,29 @@ class OrderBuildVisitor final : public VNVisitor {
     virtual void visit(AstInitialAutomatic* nodep) override {  //
         iterateLogic(nodep);
     }
-    virtual void visit(AstAlways* nodep) override {  //
-        iterateLogic(nodep);
-    }
+    virtual void visit(AstAlways* nodep) override { iterateLogic(nodep); }
     virtual void visit(AstAlwaysPost* nodep) override {
         UASSERT_OBJ(!m_inPost, nodep, "Should not nest");
         m_inPost = true;
         iterateLogic(nodep);
         m_inPost = false;
+    }
+    virtual void visit(AstResumeTriggered* nodep) override {
+        UASSERT_OBJ(!m_logicVxp, nodep, "Should not nest");
+        // Reset VarUsage
+        AstNode::user2ClearTree();
+        // Create LogicVertex for this logic node
+        m_logicVxp = new OrderLogicVertex(m_graphp, m_scopep, m_domainp, nodep);
+        new OrderEdge(m_graphp, m_eventTriggerVxp, m_logicVxp, WEIGHT_NORMAL);
+        new OrderEdge(m_graphp, m_logicVxp, m_postponedVxp, WEIGHT_NORMAL);
+        // Gather variable dependencies based on usage
+        iterateChildren(nodep);
+        // Finished with this logic
+        m_logicVxp = nullptr;
+    }
+    virtual void visit(AstEventTrigger* nodep) override {
+        new OrderEdge(m_graphp, m_logicVxp, m_eventTriggerVxp, WEIGHT_NORMAL);
+        iterateChildren(nodep);
     }
     virtual void visit(AstAlwaysPostponed* nodep) override {
         UASSERT_OBJ(!m_inPostponed, nodep, "Should not nest");
@@ -1538,6 +1567,7 @@ void OrderProcess::processDomainsIterate(OrderEitherVertex* vertexp) {
     OrderVarVertex* const vvertexp = dynamic_cast<OrderVarVertex*>(vertexp);
     AstSenTree* domainp = nullptr;
     if (vvertexp && vvertexp->varScp()->varp()->isNonOutput()) domainp = m_comboDomainp;
+    if (vvertexp && vvertexp->varScp()->varp()->isDynamic()) domainp = m_comboDomainp;
     if (vvertexp && vvertexp->varScp()->isCircular()) domainp = m_comboDomainp;
     if (!domainp) {
         for (V3GraphEdge* edgep = vertexp->inBeginp(); edgep; edgep = edgep->inNextp()) {
@@ -1799,10 +1829,14 @@ AstActive* OrderProcess::processMoveOneLogic(const OrderLogicVertex* lvertexp,
         // Process procedures per statement (unless profCFuncs), so we can split CFuncs within
         // procedures. Everything else is handled in one go
         AstNodeProcedure* const procp = VN_CAST(nodep, NodeProcedure);
+        bool dynamicScheduling = false;
         if (procp && !v3Global.opt.profCFuncs()) {
+            dynamicScheduling = procp->isDynamic();
             nodep = procp->bodysp();
             pushDeletep(procp);
         }
+
+        if (dynamicScheduling) newFuncpr = nullptr;  // Split separate processes
 
         while (nodep) {
             // Make or borrow a CFunc to contain the new statements
@@ -1815,7 +1849,8 @@ AstActive* OrderProcess::processMoveOneLogic(const OrderLogicVertex* lvertexp,
             }
             if (!newFuncpr && domainp != m_deleteDomainp) {
                 const string name = cfuncName(modp, domainp, scopep, nodep);
-                newFuncpr = new AstCFunc(nodep->fileline(), name, scopep);
+                newFuncpr = new AstCFunc(nodep->fileline(), name, scopep,
+                                         dynamicScheduling ? "VerilatedCoroutine" : "");
                 newFuncpr->isStatic(false);
                 newFuncpr->isLoose(true);
                 newStmtsr = 0;
@@ -1851,6 +1886,7 @@ AstActive* OrderProcess::processMoveOneLogic(const OrderLogicVertex* lvertexp,
 
             nodep = nextp;
         }
+        if (dynamicScheduling) newFuncpr = nullptr;  // Split separate processes
     }
     return activep;
 }
@@ -1975,7 +2011,9 @@ void OrderProcess::processMTasks() {
         const AstSenTree* last_domainp = nullptr;
         AstCFunc* leafCFuncp = nullptr;
         int leafStmts = 0;
+        bool exclusive = false;
         for (const OrderLogicVertex* logicp : state.m_logics) {
+            if (VN_IS(logicp->nodep(), ResumeTriggered)) exclusive = true;
             if (logicp->domainp() != last_domainp) {
                 // Start a new leaf function.
                 leafCFuncp = nullptr;
@@ -1995,6 +2033,7 @@ void OrderProcess::processMTasks() {
         // - The ExecMTask graph and the AstMTaskBody's produced here
         //   persist until code generation time.
         state.m_execMTaskp = new ExecMTask(execGraphp->mutableDepGraphp(), bodyp, mtaskp->id());
+        state.m_execMTaskp->exclusive(exclusive);
         // Cross-link each ExecMTask and MTaskBody
         //  Q: Why even have two objects?
         //  A: One is an AstNode, the other is a GraphVertex,

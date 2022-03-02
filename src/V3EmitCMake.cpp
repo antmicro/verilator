@@ -111,6 +111,9 @@ class CMakeEmitter final {
         cmake_set_raw(*of, name + "_SC", v3Global.opt.systemC() ? "1" : "0");
         *of << "# Coverage output mode?  0/1 (from --coverage)\n";
         cmake_set_raw(*of, name + "_COVERAGE", v3Global.opt.coverage() ? "1" : "0");
+        *of << "# Dynamic scheduler mode?  0/1 (from --dynamic-scheduler)\n";
+        cmake_set_raw(*of, name + "_DYNAMIC_SCHEDULER",
+                      v3Global.opt.dynamicScheduler() ? "1" : "0");
         *of << "# Threaded output mode?  0/1/N threads (from --threads)\n";
         cmake_set_raw(*of, name + "_THREADS", cvtToStr(v3Global.opt.threads()));
         *of << "# Threaded tracing output mode?  0/1/N threads (from --trace-threads)\n";

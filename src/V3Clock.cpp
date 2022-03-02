@@ -135,8 +135,8 @@ private:
                           "Unsupported: Complicated event expression in sensitive activity list");
             return nullptr;
         }
-        UASSERT_OBJ(nodep->varrefp(), nodep, "No clock found on sense item");
-        AstVarScope* const clkvscp = nodep->varrefp()->varScopep();
+        UASSERT_OBJ(nodep->varp(), nodep, "No clock found on sense item");
+        AstVarScope* const clkvscp = nodep->varScopep();
         if (nodep->edgeType() == VEdgeType::ET_POSEDGE) {
             AstVarScope* const lastVscp = getCreateLastClk(clkvscp);
             newp = new AstAnd(
@@ -159,7 +159,8 @@ private:
                 new AstVarRef(nodep->fileline(), nodep->varrefp()->varScopep(), VAccess::READ),
                 new AstVarRef(nodep->fileline(), lastVscp, VAccess::READ));
         } else if (nodep->edgeType() == VEdgeType::ET_HIGHEDGE) {
-            newp = new AstVarRef(nodep->fileline(), clkvscp, VAccess::READ);
+            // Clone sensp in order to support complex
+            newp = nodep->sensp()->cloneTree(false);
         } else if (nodep->edgeType() == VEdgeType::ET_LOWEDGE) {
             newp = new AstNot(nodep->fileline(),
                               new AstVarRef(nodep->fileline(), clkvscp, VAccess::READ));
@@ -341,6 +342,9 @@ private:
     }
     void addToInitial(AstNode* stmtsp) {
         m_initFuncp->addStmtsp(stmtsp);  // add to top level function
+    }
+    virtual void visit(AstTimingControl* nodep) override {
+        // Do not iterate to keep sentree in place
     }
     virtual void visit(AstActive* nodep) override {
         // Careful if adding variables here, ACTIVES can be under other ACTIVES

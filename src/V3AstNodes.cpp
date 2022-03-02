@@ -691,6 +691,8 @@ AstNodeDType::CTypeRecursed AstNodeDType::cTypeRecurse(bool compound) const {
             info.m_type = "const char*";
         } else if (bdtypep->keyword() == VBasicDTypeKwd::SCOPEPTR) {
             info.m_type = "const VerilatedScope*";
+        } else if (bdtypep->keyword() == VBasicDTypeKwd::SYMSPTR) {
+            info.m_type = EmitCBaseVisitor::symClassName() + "*";
         } else if (bdtypep->keyword().isDouble()) {
             info.m_type = "double";
         } else if (bdtypep->keyword().isString()) {

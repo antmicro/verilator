@@ -125,6 +125,7 @@ private:
 protected:
     EmitCLazyDecls m_lazyDecls;  // Visitor for emitting lazy declarations
     bool m_useSelfForThis = false;  // Replace "this" with "vlSelf"
+    bool m_awaitCoroutines = false;  // co_await on coroutine calls
     const AstNodeModule* m_modp = nullptr;  // Current module being emitted
     const AstCFunc* m_cfuncp = nullptr;  // Current function being emitted
 
@@ -192,6 +193,8 @@ public:
     virtual void visit(AstCFunc* nodep) override {
         VL_RESTORER(m_useSelfForThis);
         VL_RESTORER(m_cfuncp);
+        VL_RESTORER(m_awaitCoroutines);
+        if (nodep->isCoroutine()) m_awaitCoroutines = true;
         m_cfuncp = nodep;
 
         m_blkChangeDetVec.clear();
@@ -252,6 +255,8 @@ public:
         }
 
         if (!m_blkChangeDetVec.empty()) puts("return __req;\n");
+
+        if (nodep->isCoroutine()) puts("co_return;\n");
 
         puts("}\n");
         if (nodep->ifdef() != "") puts("#endif  // " + nodep->ifdef() + "\n");
@@ -360,6 +365,7 @@ public:
     virtual void visit(AstCCall* nodep) override {
         const AstCFunc* const funcp = nodep->funcp();
         const AstNodeModule* const funcModp = EmitCParentModule::get(funcp);
+        if (funcp->isCoroutine() && m_awaitCoroutines) puts("co_await ");
         if (funcp->dpiImportPrototype()) {
             // Calling DPI import
             puts(funcp->name());
@@ -386,6 +392,7 @@ public:
     virtual void visit(AstCMethodCall* nodep) override {
         const AstCFunc* const funcp = nodep->funcp();
         UASSERT_OBJ(!funcp->isLoose(), nodep, "Loose method called via AstCMethodCall");
+        if (funcp->isCoroutine() && m_awaitCoroutines) puts("co_await ");
         iterate(nodep->fromp());
         putbs("->");
         puts(funcp->nameProtect());
@@ -790,6 +797,42 @@ public:
     }
     virtual void visit(AstJumpLabel* nodep) override {
         puts("__Vlabel" + cvtToStr(nodep->blockp()->labelNum()) + ": ;\n");
+    }
+    virtual void visit(AstDelay* nodep) override {
+        puts("co_await vlSymsp->__Vm_delayedQueue[VL_TIME_D() + ");
+        iterateAndNextNull(nodep->lhsp());
+        puts("];\n");
+        iterateAndNextNull(nodep->stmtsp());
+    }
+    virtual void visit(AstTimingControl* nodep) override {
+        puts("co_await vlSymsp->__Vm_eventDispatcher[{");
+        iterateAndNextNull(nodep->sensesp());
+        puts("}];\n");
+        iterateAndNextNull(nodep->stmtsp());
+    }
+    virtual void visit(AstBegin* nodep) override { iterateAndNextNull(nodep->stmtsp()); }
+    virtual void visit(AstFork* nodep) override {
+        VL_RESTORER(m_awaitCoroutines);
+        m_awaitCoroutines = false;
+        iterateChildren(nodep);
+    }
+    virtual void visit(AstSenTree* nodep) override {
+        for (auto* itemp = nodep->sensesp(); itemp; itemp = VN_CAST(itemp->nextp(), SenItem)) {
+            puts("&");
+            visit(itemp);
+            if (itemp->nextp()) puts(", ");
+        }
+    }
+    virtual void visit(AstSenItem* nodep) override { iterateAndNextNull(nodep->sensp()); }
+    virtual void visit(AstEventTrigger* nodep) override {
+        puts("vlSymsp->__Vm_eventDispatcher.trigger(");
+        iterateNull(nodep->trigp());
+        puts(");\n");
+    }
+    virtual void visit(AstResumeTriggered* nodep) override {
+        puts("vlSymsp->__Vm_eventDispatcher.resumeTriggered(");
+        iterateNull(nodep->dlyEventVarscp());
+        puts(");\n");
     }
     virtual void visit(AstWhile* nodep) override {
         iterateAndNextNull(nodep->precondsp());

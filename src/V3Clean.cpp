@@ -272,6 +272,10 @@ private:
         ensureCleanAndNext(nodep->exprsp());
         setClean(nodep, true);  // generates a string, so not relevant
     }
+    virtual void visit(AstCStmt* nodep) override {
+        iterateChildren(nodep);
+        setClean(nodep, true);
+    }
     virtual void visit(AstUCStmt* nodep) override {
         iterateChildren(nodep);
         ensureCleanAndNext(nodep->bodysp());

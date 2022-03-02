@@ -43,6 +43,7 @@
 #include "V3Depth.h"
 #include "V3DepthBlock.h"
 #include "V3Descope.h"
+#include "V3DynamicScheduler.h"
 #include "V3EmitC.h"
 #include "V3EmitCMain.h"
 #include "V3EmitCMake.h"
@@ -296,6 +297,10 @@ static void process() {
         V3Task::taskAll(v3Global.rootp());
     }
 
+    if (v3Global.opt.dynamicScheduler() && !v3Global.opt.xmlOnly() && !v3Global.opt.lintOnly()) {
+        V3DynamicScheduler::processes(v3Global.rootp());
+    }
+
     if (!v3Global.opt.xmlOnly()) {
         // Add __PVT's
         // After V3Task so task internal variables will get renamed
@@ -346,6 +351,11 @@ static void process() {
         } else {
             v3info("Command Line disabled gate optimization with -Og/-O0.  "
                    "This may cause ordering problems.");
+        }
+
+        if (v3Global.opt.dynamicScheduler() && !v3Global.opt.xmlOnly()
+            && !v3Global.opt.lintOnly()) {
+            V3DynamicScheduler::events(v3Global.rootp());
         }
 
         // Combine COVERINCs with duplicate terms
@@ -496,6 +506,10 @@ static void process() {
     V3Error::abortIfErrors();
     if (!v3Global.opt.lintOnly() && !v3Global.opt.xmlOnly()) {  //
         V3CCtors::cctorsAll();
+    }
+
+    if (v3Global.opt.dynamicScheduler() && !v3Global.opt.xmlOnly() && !v3Global.opt.lintOnly()) {
+        V3DynamicScheduler::classes(v3Global.rootp());
     }
 
     if (!v3Global.opt.xmlOnly() && v3Global.opt.mtasks()) {

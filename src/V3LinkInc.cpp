@@ -145,6 +145,8 @@ private:
         iterateChildren(nodep);
         m_insStmtp = nullptr;  // Next thing should be new statement
     }
+    virtual void visit(AstDelay* nodep) override { iterateChildren(nodep); }
+    virtual void visit(AstTimingControl* nodep) override { iterateChildren(nodep); }
     void unsupported_visit(AstNode* nodep) {
         m_unsupportedHere = true;
         UINFO(9, "Marking unsupported " << nodep << endl);

@@ -49,6 +49,10 @@ public:
         of.puts("\n### Switches...\n");
         of.puts("# C11 constructs required?  0/1 (always on now)\n");
         of.puts("VM_C11 = 1\n");
+        of.puts("# Dynamic scheduler enabled?  0/1\n");
+        of.puts("VM_DYNAMIC_SCHEDULER = ");
+        of.puts(v3Global.opt.dynamicScheduler() ? "1" : "0");
+        of.puts("\n");
         of.puts("# Coverage output mode?  0/1 (from --coverage)\n");
         of.puts("VM_COVERAGE = ");
         of.puts(v3Global.opt.coverage() ? "1" : "0");

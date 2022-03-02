@@ -13,7 +13,7 @@ scenarios(linter => 1);
 lint(
     verilator_flags2 => ['--lint-only'],
     fails => 1,
-    expect_filename => $Self->{golden_filename},
+    expect_filename => $Self->{dynamic_scheduler} ? $Self->{golden_filename} =~ s/\.out$/_dsched.out/r : $Self->{golden_filename},
     );
 
 ok(1);

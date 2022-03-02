@@ -22,7 +22,7 @@ execute(
     );
 
 # Since using a named key, we can check for always identical map
-files_identical("$Self->{obj_dir}/$Self->{VM_PREFIX}__idmap.xml", $Self->{golden_filename});
+files_identical("$Self->{obj_dir}/$Self->{VM_PREFIX}__idmap.xml", $Self->{dynamic_scheduler} ? $Self->{golden_filename} =~ s/\.out$/_dsched.out/r : $Self->{golden_filename});
 
 ok(1);
 1;

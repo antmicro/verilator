@@ -18,7 +18,9 @@ execute(
     check_finished => 1,
     );
 
-file_grep(glob_one("$Self->{obj_dir}/$Self->{VM_PREFIX}___024root__DepSet_*__0__Slow.cpp"), qr/VL_RAND_RESET/);
+if (!$Self->{dynamic_scheduler}) {
+    file_grep(glob_one("$Self->{obj_dir}/$Self->{VM_PREFIX}___024root__DepSet_*__0__Slow.cpp"), qr/VL_RAND_RESET/);
+}
 
 ok(1);
 1;

@@ -1059,6 +1059,8 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc, char
         setDumpTreeLevel(optp, std::atoi(valp));
     });
 
+    DECL_OPTION("-dynamic-scheduler", OnOff, &m_dynamicScheduler);
+
     DECL_OPTION("-E", Set, &m_preprocOnly);
     DECL_OPTION("-error-limit", CbVal, static_cast<void (*)(int)>(&V3Error::errorLimit));
     DECL_OPTION("-exe", OnOff, &m_exe);

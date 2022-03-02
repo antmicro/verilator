@@ -183,6 +183,13 @@ class EmitCModel final : public EmitCFunc {
         ofp()->putsPrivate(false);  // public:
         puts("void final();\n");
 
+        if (v3Global.opt.dynamicScheduler()) {
+            puts("/// Returns true if no more timed work to do\n");
+            puts("bool eventsPending();\n");
+            puts("/// Returns time at next time slot (current time if no pending events)\n");
+            puts("double nextTimeSlot();\n");
+        }
+
         if (v3Global.opt.trace()) {
             puts("/// Trace signals in the model; called by application code\n");
             puts("void trace(" + v3Global.opt.traceClassBase()
@@ -427,6 +434,11 @@ class EmitCModel final : public EmitCFunc {
         puts("if (VL_UNLIKELY(!vlSymsp->__Vm_didInit)) " + protect("_eval_initial_loop")
              + "(vlSymsp);\n");
 
+        if (v3Global.opt.dynamicScheduler()) {
+            puts("vlSymsp->__Vm_eventDispatcher.resetTriggered();\n");
+            puts("vlSymsp->__Vm_delayedQueue.resume(VL_TIME_D());\n");
+        }
+
         if (v3Global.opt.threads() == 1) {
             const uint32_t mtaskId = 0;
             putsDecoration("// MTask " + cvtToStr(mtaskId) + " start\n");
@@ -519,6 +531,15 @@ class EmitCModel final : public EmitCFunc {
             puts("if (VL_UNLIKELY(vlSymsp->__Vm_dumping)) vlSymsp->_traceDump();\n");
             puts("#endif  // VM_TRACE\n");
             puts("}\n");
+        }
+
+        if (v3Global.opt.dynamicScheduler()) {
+            putSectionDelimiter("Dynamic scheduler");
+            puts("bool " + topClassName()
+                 + "::eventsPending() { return !vlSymsp->__Vm_delayedQueue.empty(); }\n");
+            puts("double " + topClassName()
+                 + "::nextTimeSlot() { return "
+                   "vlSymsp->__Vm_delayedQueue.nextTimeSlot(); }\n");
         }
 
         putSectionDelimiter("Utilities");

@@ -1962,6 +1962,7 @@ private:
     VLifetime m_lifetime;  // Lifetime
     VVarAttrClocker m_attrClocker;
     MTaskIdSet m_mtaskIds;  // MTaskID's that read or write this var
+    std::map<VEdgeType, AstVarScope*> m_edgeEvents;
     int m_pinNum = 0;  // For XML, if non-zero the connection pin number
     bool m_ansi : 1;  // ANSI port list variable (for dedup check)
     bool m_declTyped : 1;  // Declared as type (for dedup check)
@@ -2001,6 +2002,7 @@ private:
     bool m_trace : 1;  // Trace this variable
     bool m_isLatched : 1;  // Not assigned in all control paths of combo always
     bool m_isForceable : 1;  // May be forced/released externally from user C code
+    bool m_isDynamic : 1;  // Assigned to by a dynamically scheduled process
 
     void init() {
         m_ansi = false;
@@ -2041,6 +2043,7 @@ private:
         m_trace = false;
         m_isLatched = false;
         m_isForceable = false;
+        m_isDynamic = false;
         m_attrClocker = VVarAttrClocker::CLOCKER_UNKNOWN;
     }
 
@@ -2204,6 +2207,7 @@ public:
     void isLatched(bool flag) { m_isLatched = flag; }
     bool isForceable() const { return m_isForceable; }
     void setForceable() { m_isForceable = true; }
+    void isDynamic(bool flag) { m_isDynamic = flag; }
     // METHODS
     virtual void name(const string& name) override { m_name = name; }
     virtual void tag(const string& text) override { m_tag = text; }
@@ -2258,6 +2262,7 @@ public:
     bool isConst() const { return m_isConst; }
     bool isStatic() const { return m_isStatic; }
     bool isLatched() const { return m_isLatched; }
+    bool isDynamic() const { return m_isDynamic; }
     bool isFuncLocal() const { return m_funcLocal; }
     bool isFuncReturn() const { return m_funcReturn; }
     bool isPullup() const { return m_isPullup; }
@@ -2270,6 +2275,16 @@ public:
     bool attrSplitVar() const { return m_attrSplitVar; }
     bool attrIsolateAssign() const { return m_attrIsolateAssign; }
     VVarAttrClocker attrClocker() const { return m_attrClocker; }
+    void edgeEvent(VEdgeType edgeType, AstVarScope* varscp) {
+        m_edgeEvents.insert(std::make_pair(edgeType, varscp));
+    }
+    AstVarScope* edgeEvent(VEdgeType edgeType) const {
+        auto it = m_edgeEvents.find(edgeType);
+        if (it != m_edgeEvents.end()) return it->second;
+        return nullptr;
+    }
+    bool hasEdgeEvents() const { return !m_edgeEvents.empty(); }
+    bool isEventValue() const { return basicp() && basicp()->isEventValue(); }
     virtual string verilogKwd() const override;
     void lifetime(const VLifetime& flag) { m_lifetime = flag; }
     VLifetime lifetime() const { return m_lifetime; }
@@ -3356,6 +3371,32 @@ public:
     AstNodeVarRef* varrefp() const {
         return VN_CAST(op1p(), NodeVarRef);
     }  // op1 = Signal sensitized
+    AstVar* varp() const {
+        auto* nodep = sensp();
+        while (nodep != nullptr && !VN_IS(nodep, Var)) {
+            if (auto* memberSelp = VN_CAST(nodep, MemberSel))
+                nodep = memberSelp->varp();
+            else if (auto* selp = VN_CAST(nodep, NodeSel))
+                nodep = selp->fromp();
+            else if (auto* varrefp = VN_CAST(nodep, NodeVarRef))
+                nodep = varrefp->varp();
+            else
+                nodep = nullptr;
+        }
+        return VN_CAST(nodep, Var);
+    }
+    AstVarScope* varScopep() const {
+        auto* nodep = sensp();
+        while (nodep != nullptr && !VN_IS(nodep, NodeVarRef)) {
+            if (auto* memberSelp = VN_CAST(nodep, MemberSel))
+                nodep = memberSelp->fromp();
+            else if (auto* selp = VN_CAST(nodep, NodeSel))
+                nodep = selp->fromp();
+            else
+                nodep = nullptr;
+        }
+        return VN_CAST(nodep, NodeVarRef)->varScopep();
+    }
     //
     bool isClocked() const { return edgeType().clockedStmt(); }
     bool isCombo() const { return edgeType() == VEdgeType::ET_COMBO; }
@@ -3472,8 +3513,8 @@ public:
 
 class AstAssign final : public AstNodeAssign {
 public:
-    AstAssign(FileLine* fl, AstNode* lhsp, AstNode* rhsp)
-        : ASTGEN_SUPER_Assign(fl, lhsp, rhsp) {
+    AstAssign(FileLine* fl, AstNode* lhsp, AstNode* rhsp, AstNode* delayp = nullptr)
+        : ASTGEN_SUPER_Assign(fl, lhsp, rhsp, delayp) {
         dtypeFrom(lhsp);
     }
     ASTNODE_NODE_FUNCS(Assign)
@@ -3498,8 +3539,8 @@ public:
 
 class AstAssignDly final : public AstNodeAssign {
 public:
-    AstAssignDly(FileLine* fl, AstNode* lhsp, AstNode* rhsp)
-        : ASTGEN_SUPER_AssignDly(fl, lhsp, rhsp) {}
+    AstAssignDly(FileLine* fl, AstNode* lhsp, AstNode* rhsp, AstNode* delayp = nullptr)
+        : ASTGEN_SUPER_AssignDly(fl, lhsp, rhsp, delayp) {}
     ASTNODE_NODE_FUNCS(AssignDly)
     virtual AstNode* cloneType(AstNode* lhsp, AstNode* rhsp) override {
         return new AstAssignDly(this->fileline(), lhsp, rhsp);
@@ -3808,15 +3849,19 @@ public:
 class AstDelay final : public AstNodeStmt {
     // Delay statement
 public:
-    AstDelay(FileLine* fl, AstNode* lhsp)
+    AstDelay(FileLine* fl, AstNode* lhsp, AstNode* stmtsp)
         : ASTGEN_SUPER_Delay(fl) {
         setOp1p(lhsp);
+        setNOp2p(stmtsp);
     }
     ASTNODE_NODE_FUNCS(Delay)
     virtual bool same(const AstNode* samep) const override { return true; }
     //
     AstNode* lhsp() const { return op1p(); }  // op2 = Statements to evaluate
     void lhsp(AstNode* nodep) { setOp1p(nodep); }
+    void stmtsp(AstNode* nodep) { setOp2p(nodep); }
+    AstNode* stmtsp() const { return op2p(); }
+    virtual bool isGateOptimizable() const override { return false; }
 };
 
 class AstGenCase final : public AstNodeCase {
@@ -4605,7 +4650,8 @@ public:
         addNOp3p(bodysp);
     }
     ASTNODE_NODE_FUNCS(Wait)
-    AstNode* bodysp() const { return op3p(); }  // op3 = body of loop
+    AstNode* condp() const { return op2p(); }
+    AstNode* bodysp() const { return op3p(); }
 };
 
 class AstWhile final : public AstNodeStmt {
@@ -4699,6 +4745,29 @@ public:
     virtual bool isBrancher() const override {
         return true;  // SPECIAL: We don't process code after breaks
     }
+};
+
+class AstEventTrigger final : public AstNodeStmt {
+public:
+    explicit AstEventTrigger(FileLine* fl, AstNode* trigp = nullptr)
+        : ASTGEN_SUPER_EventTrigger(fl) {
+        setOp1p(trigp);
+    }
+    ASTNODE_NODE_FUNCS(EventTrigger)
+    AstNode* trigp() const { return op1p(); }
+};
+
+class AstResumeTriggered final : public AstNodeStmt {
+public:
+    explicit AstResumeTriggered(FileLine* fl, AstNode* dlyEventVarscp)
+        : ASTGEN_SUPER_ResumeTriggered(fl) {
+        setNOp1p(dlyEventVarscp);
+    }
+    ASTNODE_NODE_FUNCS(ResumeTriggered)
+    AstNode* dlyEventVarscp() const { return op1p(); }
+    virtual bool isGateOptimizable() const override { return false; }
+    virtual bool isPredictOptimizable() const override { return false; }
+    virtual bool isSubstOptimizable() const override { return false; }
 };
 
 class AstGenIf final : public AstNodeIf {
@@ -8956,7 +9025,8 @@ public:
     AstScope* scopep() const { return m_scopep; }
     void scopep(AstScope* nodep) { m_scopep = nodep; }
     string rtnTypeVoid() const { return ((m_rtnType == "") ? "void" : m_rtnType); }
-    bool dontCombine() const { return m_dontCombine || isTrace() || entryPoint(); }
+    void rtnType(const string& rtnType) { m_rtnType = rtnType; }
+    bool dontCombine() const { return m_dontCombine || isTrace() || entryPoint() || isConstructor(); }
     void dontCombine(bool flag) { m_dontCombine = flag; }
     bool dontInline() const { return dontCombine() || slow() || funcPublic(); }
     bool declPrivate() const { return m_declPrivate; }
@@ -9002,6 +9072,7 @@ public:
     void dpiImportWrapper(bool flag) { m_dpiImportWrapper = flag; }
     void dpiTraceInit(bool flag) { m_dpiTraceInit = flag; }
     bool dpiTraceInit() const { return m_dpiTraceInit; }
+    bool isCoroutine() const { return rtnTypeVoid() == "VerilatedCoroutine"; }
     //
     // If adding node accessors, see below emptyBody
     AstNode* argsp() const { return op1p(); }

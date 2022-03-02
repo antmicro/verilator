@@ -21,6 +21,7 @@ while (1) {
     run(logfile => "$secret_dir/vlt_compile.log",
         cmd => ["perl",
                 "$ENV{VERILATOR_ROOT}/bin/verilator",
+                ($Self->{dynamic_scheduler} ? '--dynamic-scheduler' : ''),
                 "-cc",
                 "--hierarchical",
                 "-Mdir",

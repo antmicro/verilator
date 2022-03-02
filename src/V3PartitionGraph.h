@@ -64,6 +64,7 @@ private:
                           // abstract time units as priority().
     uint64_t m_predictStart = 0;  // Predicted start time of task
     uint64_t m_profilerId = 0;  // VerilatedCounter number for profiling
+    bool m_exclusive = false;  // If exclusive, other tasks can't run concurrently to it
     VL_UNCOPYABLE(ExecMTask);
 
 public:
@@ -81,6 +82,8 @@ public:
     vluint64_t predictStart() const { return m_predictStart; }
     void profilerId(vluint64_t id) { m_profilerId = id; }
     vluint64_t profilerId() const { return m_profilerId; }
+    void exclusive(bool flag) { m_exclusive = flag; }
+    bool exclusive() const { return m_exclusive; }
     string cFuncName() const {
         // If this MTask maps to a C function, this should be the name
         return string("__Vmtask") + "__" + cvtToStr(m_id);
@@ -91,6 +94,7 @@ public:
     void dump(std::ostream& str) const {
         str << name() << "." << cvtToHex(this);
         if (priority() || cost()) str << " [pr=" << priority() << " c=" << cvtToStr(cost()) << "]";
+        if (exclusive()) str << " [EXCL]";
     }
 };
 inline std::ostream& operator<<(std::ostream& os, const ExecMTask& rhs) {

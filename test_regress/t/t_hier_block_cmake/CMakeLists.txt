@@ -20,6 +20,9 @@ add_executable(t_hier_block_cmake  main.cpp ../t_hier_block.cpp)
 if(TEST_THREADS)
     set(VERILATOR_OPTIONS "${VERILATOR_OPTIONS}" --threads ${TEST_THREADS})
 endif()
+if(TEST_DYNAMIC_SCHEDULER)
+    set(VERILATOR_OPTIONS "${VERILATOR_OPTIONS}" --dynamic-scheduler)
+endif()
 set(VERILATOR_OPTIONS "${VERILATOR_OPTIONS}" --hierarchical --stats --CFLAGS "-pipe -DCPP_MACRO=cplusplus")
 
 verilate(t_hier_block_cmake VERILATOR_ARGS ${VERILATOR_OPTIONS} SOURCES

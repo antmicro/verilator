@@ -183,6 +183,12 @@ public:
 //=============================================================================
 // VerilatedEventDispatcher
 // Object that manages event variables and suspended coroutines waiting on those event vars.
+// When an event gets triggered, the corresponding coroutine isn't resumed immediately. This is to
+// allow for all processes to get to their timing controls, so that order of execution of processes
+// doesn't matter as much. Coroutines are resumed later by the 'resumeTriggered` function. The only
+// exception to this is when an event gets triggered twice – then all coroutines up to the first
+// trigger get resumed. This is neccessary so we don't lose track of events getting triggered and
+// the order they're triggered in.
 class VerilatedEventDispatcher final {
 private:
     // MEMBERS

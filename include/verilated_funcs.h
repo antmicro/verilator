@@ -317,7 +317,7 @@ inline double vl_time_stamp64() {
 
 inline double VerilatedContext::time() const VL_MT_SAFE {
     // When using non-default context, fastest path is return time
-    if (VL_LIKELY(m_s.m_time)) return m_s.m_time;
+    if (VL_LIKELY(m_s.m_time > 0)) return m_s.m_time;
 #if defined(SYSTEMC_VERSION) || (!defined(VL_TIME_CONTEXT) && !defined(VL_NO_LEGACY))
     // Zero time could mean really at zero, or using callback
     // clang9.0.1 requires & although we really do want the weak symbol value

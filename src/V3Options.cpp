@@ -1058,7 +1058,6 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc, char
     DECL_OPTION("-dump-treei-", CbPartialMatchVal, [this](const char* optp, const char* valp) {
         setDumpTreeLevel(optp, std::atoi(valp));
     });
-
     DECL_OPTION("-dynamic-scheduler", OnOff, &m_dynamicScheduler);
 
     DECL_OPTION("-E", Set, &m_preprocOnly);

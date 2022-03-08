@@ -15,7 +15,7 @@
 //*************************************************************************
 
 #ifndef _V3DYNAMIC_SCHEDULER_H_
-#define _V3DYNAMIC_SCHEDULER_H_ 1
+#define _V3DYNAMIC_SCHEDULER_H_
 
 #include "config_build.h"
 #include "verilatedos.h"

@@ -251,6 +251,7 @@ public:
         }
         // this->lifeDump();
     }
+    void clear() { m_map.clear(); }
     // DEBUG
     void lifeDump() {
         UINFO(5, "  LifeMap:" << endl);
@@ -322,10 +323,6 @@ private:
     virtual void visit(AstAssignDly* nodep) override {
         // Don't treat as normal assign; V3Life doesn't understand time sense
         iterateChildren(nodep);
-    }
-    virtual void visit(AstNodeProcedure* nodep) override {
-        // Ignore dynamic processes; V3Life doesn't understand time sense
-        if (!nodep->isDynamic()) iterateChildren(nodep);
     }
 
     //---- Track control flow changes
@@ -403,6 +400,18 @@ private:
         bodyLifep->lifeToAbove();
         VL_DO_DANGLING(delete bodyLifep, bodyLifep);
     }
+    virtual void visit(AstDelay* nodep) override {
+        // V3Life doesn't understand time sense - don't optimize
+        m_lifep->clear();
+        m_noopt = true;
+        iterateChildren(nodep);
+    }
+    virtual void visit(AstTimingControl* nodep) override {
+        // V3Life doesn't understand time sense - don't optimize
+        m_lifep->clear();
+        m_noopt = true;
+        iterateChildren(nodep);
+    }
     virtual void visit(AstNodeCCall* nodep) override {
         // UINFO(4, "  CCALL " << nodep << endl);
         iterateChildren(nodep);
@@ -416,7 +425,6 @@ private:
     virtual void visit(AstCFunc* nodep) override {
         // UINFO(4, "  CFUNC " << nodep << endl);
         if (!m_tracingCall && !nodep->entryPoint()) return;
-        if (nodep->isCoroutine()) return;
         m_tracingCall = false;
         if (nodep->dpiImportPrototype() && !nodep->pure()) {
             m_sideEffect = true;  // If appears on assign RHS, don't ever delete the assignment

@@ -2377,7 +2377,7 @@ public:
 class AstNodeProcedure VL_NOT_FINAL : public AstNode {
     // IEEE procedure: initial, final, always
 private:
-    bool m_dynamic = false;  // Is dynamically scheduled
+    bool m_suspendable = false;  // Is suspendable by a Delay, TimingControl, etc.
 
 protected:
     AstNodeProcedure(VNType t, FileLine* fl, AstNode* bodysp)
@@ -2392,8 +2392,8 @@ public:
     AstNode* bodysp() const { return op2p(); }  // op2 = Statements to evaluate
     void addStmtp(AstNode* nodep) { addOp2p(nodep); }
     bool isJustOneBodyStmt() const { return bodysp() && !bodysp()->nextp(); }
-    bool isDynamic() const { return m_dynamic; }
-    void isDynamic(bool flag) { m_dynamic = flag; }
+    bool isSuspendable() const { return m_suspendable; }
+    void isSuspendable(bool flag) { m_suspendable = flag; }
 };
 
 class AstNodeStmt VL_NOT_FINAL : public AstNode {

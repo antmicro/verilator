@@ -1831,14 +1831,13 @@ AstActive* OrderProcess::processMoveOneLogic(const OrderLogicVertex* lvertexp,
         // Process procedures per statement (unless profCFuncs), so we can split CFuncs within
         // procedures. Everything else is handled in one go
         AstNodeProcedure* const procp = VN_CAST(nodep, NodeProcedure);
-        bool dynamicScheduling = false;
+        bool suspendable = procp ? procp->isSuspendable() : false;
         if (procp && !v3Global.opt.profCFuncs()) {
-            dynamicScheduling = procp->isDynamic();
             nodep = procp->bodysp();
             pushDeletep(procp);
         }
 
-        if (dynamicScheduling) newFuncpr = nullptr;  // Split separate processes
+        if (suspendable) newFuncpr = nullptr;  // Split separate processes
 
         while (nodep) {
             // Make or borrow a CFunc to contain the new statements
@@ -1852,7 +1851,7 @@ AstActive* OrderProcess::processMoveOneLogic(const OrderLogicVertex* lvertexp,
             if (!newFuncpr && domainp != m_deleteDomainp) {
                 const string name = cfuncName(modp, domainp, scopep, nodep);
                 newFuncpr = new AstCFunc(nodep->fileline(), name, scopep,
-                                         dynamicScheduling ? "VerilatedCoroutine" : "");
+                                         suspendable ? "VerilatedCoroutine" : "");
                 newFuncpr->isStatic(false);
                 newFuncpr->isLoose(true);
                 newStmtsr = 0;
@@ -1888,7 +1887,7 @@ AstActive* OrderProcess::processMoveOneLogic(const OrderLogicVertex* lvertexp,
 
             nodep = nextp;
         }
-        if (dynamicScheduling) newFuncpr = nullptr;  // Split separate processes
+        if (suspendable) newFuncpr = nullptr;  // Split separate processes
     }
     return activep;
 }

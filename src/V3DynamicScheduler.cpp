@@ -26,31 +26,31 @@
 //             join_none
 //
 //      Each Delay, TimingControl, Wait:
-//          Mark containing task for dynamic scheduling
-//          Mark containing process for dynamic scheduling
+//          Mark containing task/process as suspendable
+//          Each TimingControl, Wait:
+//              Mark containing task/process as dynamically scheduled
 //      Each CFunc:
 //          If it's virtual and any overriding/overridden func is marked, mark it
 //      Each CFunc calling a marked CFunc:
-//          Mark it for dynamic scheduling
+//          Mark it as suspendable/dynamically scheduled
 //      Each process calling a marked CFunc:
-//          Mark it for dynamic scheduling
-//      Each variable written to in a marked process/task:
-//          Mark it for dynamic scheduling
+//          Mark it as suspendable/dynamically scheduled
+//      Each variable written to in a dynamically scheduled process/task:
+//          Mark it as dynamic
 //      Each always process:
-//          If marked and has no sentree:
+//          If suspendable and has no sentree:
 //              Transform process into an initial process with a body like this:
 //                  forever
 //                      process_body;
-//          If waiting on a marked variable:
+//          If waiting on a dynamic variable:
 //              Transform process into an initial process with a body like this:
 //                  forever
 //                      @(sensp) begin
 //                          process_body;
 //                      end
-//              Mark it
-//
+//              Mark it as dynamically scheduled
 //      Each AssignDly:
-//          If in marked process:
+//          If in a suspendable process:
 //              Transform into:
 //                  fork @__VdlyEvent__ lhsp = rhsp; join_none
 //
@@ -137,24 +137,44 @@ private:
     };
 
     // NODE STATE
-    //  AstCFunc::user1()      -> bool.  Set true if node has been processed
+    //  AstNode::user1()       -> bool.  Set true if process/function/task is suspendable
+    //  AstNode::user2()       -> bool.  Set true if process/function/task is dynamically scheduled
+    //                                   (should vars written to in process/function/task spread
+    //                                   the 'dynamic' status?)
     VNUser1InUse m_inuser1;
+    VNUser2InUse m_inuser2;
 
     // STATE
     std::unordered_map<AstCFunc*, Overrides>
         m_overrides;  // Maps CFuncs to CFuncs overriding them/overridden by them
     AstClass* m_classp = nullptr;  // Current class
-    bool m_dynamic = false;  // Are we in a dynamically scheduled process/function?
+    AstScope* m_scopep = nullptr;  // Current scope
+    AstVarScope* m_dlyEvent = nullptr;  // Event used for triggering delayed assignments
+    AstNode* m_proc = nullptr;  // NodeProcedure/CFunc/Fork we're under
     bool m_repeat = false;  // Re-run this visitor?
+    bool m_underFork = false;  // Are we directly under a fork?
 
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
 
-    // If we mark the current process/function as dynamically scheduled, we will need to repeat the
-    // whole process
-    void setDynamic() {
-        if (!m_dynamic) m_repeat = true;
-        m_dynamic = true;
+    AstVarScope* getCreateDlyEvent() {
+        if (m_dlyEvent) return m_dlyEvent;
+        string newvarname = "__VdlyEvent__";
+        auto fl = new FileLine{m_scopep->fileline()};
+        fl->warnOff(V3ErrorCode::UNOPTFLAT, true);
+        auto* newvarp = new AstVar{fl, VVarType::MODULETEMP, newvarname,
+                                   m_scopep->findBasicDType(VBasicDTypeKwd::EVENTVALUE)};
+        m_scopep->modp()->addStmtp(newvarp);
+        auto* newvscp = new AstVarScope{fl, m_scopep, newvarp};
+        m_scopep->addVarp(newvscp);
+        return m_dlyEvent = newvscp;
+    }
+
+    // Mark the current process/function as suspendable. We will need to repeat the whole process
+    void setSuspendable(bool dynamic = true) {
+        if (!m_proc->user1()) m_repeat = true;
+        m_proc->user1(true);
+        m_proc->user2(m_proc->user2() || dynamic);  // dynamically scheduled?
     }
     // Extract class member of a given name (it's needed as this is after V3Class, methods are
     // under scope)
@@ -171,21 +191,26 @@ private:
     }
 
     // VISITORS
+    virtual void visit(AstScope* nodep) override {
+        m_scopep = nodep;
+        iterateChildren(nodep);
+        m_scopep = nullptr;
+    }
     virtual void visit(AstClass* nodep) override {
         VL_RESTORER(m_classp);
         m_classp = nodep;
         iterateChildren(nodep);
     }
     virtual void visit(AstNodeProcedure* nodep) override {
-        VL_RESTORER(m_dynamic);
-        m_dynamic = nodep->isDynamic();
+        VL_RESTORER(m_proc);
+        m_proc = nodep;
         iterateChildren(nodep);
-        nodep->isDynamic(m_dynamic);
+        nodep->isSuspendable(nodep->user1());
     }
     virtual void visit(AstAlways* nodep) override {
         auto* sensesp = nodep->sensesp();
-        // Transform if the process is marked and has no sentree
-        bool transform = !sensesp && nodep->bodysp() && nodep->isDynamic();
+        // Transform if the process is suspendable and has no sentree
+        bool transform = !sensesp && nodep->bodysp() && nodep->isSuspendable();
         // Transform if the process is waiting on a dynamic var
         if (!transform)
             transform = sensesp && sensesp->sensesp() && sensesp->sensesp()->varp()
@@ -221,8 +246,8 @@ private:
         }
     }
     virtual void visit(AstCFunc* nodep) override {
-        VL_RESTORER(m_dynamic);
-        m_dynamic = nodep->isCoroutine();
+        VL_RESTORER(m_proc);
+        m_proc = nodep;
         iterateChildren(nodep);
         if (nodep->isVirtual() && !nodep->user1SetOnce()) {
             for (auto* cextp = m_classp->extendsp(); cextp;
@@ -233,8 +258,10 @@ private:
                 m_overrides[cfuncp].insert(nodep);
             }
         }
-        if (!m_dynamic) return;
-        nodep->rtnType("VerilatedCoroutine");
+        if (nodep->user1())
+            nodep->rtnType("VerilatedCoroutine");
+        else
+            return;
         for (auto cfuncp : m_overrides[nodep]) {
             if (cfuncp->isCoroutine()) continue;
             cfuncp->rtnType("VerilatedCoroutine");
@@ -242,38 +269,73 @@ private:
         }
     }
     virtual void visit(AstDelay* nodep) override {
-        setDynamic();
+        setSuspendable(false);
         iterateChildren(nodep);
     }
     virtual void visit(AstNodeAssign* nodep) override {
-        if (nodep->delayp()) setDynamic();
+        if (nodep->delayp()) setSuspendable(false);
         iterateChildren(nodep);
     }
     virtual void visit(AstTimingControl* nodep) override {
-        setDynamic();
+        setSuspendable();
         iterateChildren(nodep);
     }
     virtual void visit(AstWait* nodep) override {
-        setDynamic();
+        setSuspendable();
         iterateChildren(nodep);
     }
     virtual void visit(AstFork* nodep) override {
-        // If we're waiting for child processes, we're dynamic
-        if (!nodep->joinType().joinNone()) setDynamic();
+        {
+            VL_RESTORER(m_proc);
+            VL_RESTORER(m_underFork);
+            m_proc = nodep;
+            m_underFork = true;
+            iterateChildren(nodep);
+        }
+        if (nodep->user1() && !nodep->joinType().joinNone()) setSuspendable();
+    }
+    virtual void visit(AstBegin* nodep) override {
+        VL_RESTORER(m_underFork);
+        m_underFork = false;
         iterateChildren(nodep);
     }
     virtual void visit(AstNodeCCall* nodep) override {
-        if (nodep->funcp()->isCoroutine()) setDynamic();
+        if (nodep->funcp()->isCoroutine()) setSuspendable(nodep->funcp()->user2());
         iterateChildren(nodep);
     }
     virtual void visit(AstVarRef* nodep) override {
-        if (m_dynamic && nodep->access().isWriteOrRW()) { nodep->varp()->isDynamic(true); }
+        if (m_proc && m_proc->user2() && nodep->access().isWriteOrRW()) {
+            nodep->varp()->isDynamic(true);
+        }
+    }
+    virtual void visit(AstAssignDly* nodep) override {
+        if (!m_proc->user1() && !m_underFork) return;
+        setSuspendable();
+        auto fl = nodep->fileline();
+        auto* eventp = getCreateDlyEvent();
+        auto* assignp
+            = new AstAssign{fl, nodep->lhsp()->unlinkFrBack(), nodep->rhsp()->unlinkFrBack()};
+        auto* timingControlp = new AstTimingControl{
+            fl,
+            new AstSenTree{fl, new AstSenItem{fl, VEdgeType::ET_ANYEDGE,
+                                              new AstVarRef{fl, eventp, VAccess::READ}}},
+            assignp};
+        if (m_underFork) {
+            nodep->replaceWith(timingControlp);
+        } else {
+            auto* forkp = new AstFork{nodep->fileline(), "", timingControlp};
+            forkp->joinType(VJoinType::JOIN_NONE);
+            nodep->replaceWith(forkp);
+        }
+        VL_DO_DANGLING(delete nodep, nodep);
     }
 
     //--------------------
     virtual void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
 public:
+    AstVarScope* getDlyEvent() { return m_dlyEvent; }
+
     // CONSTRUCTORS
     explicit DynamicSchedulerMarkDynamicVisitor(AstNetlist* nodep) {
         do {
@@ -364,8 +426,10 @@ public:
 class DynamicSchedulerForkVisitor final : public VNVisitor {
 private:
     // NODE STATE
-    //  AstFork::user1()      -> bool.  Set true if node has been processed
-    VNUser1InUse m_inuser1;
+    //  AstFork::user3()      -> bool.  Set true if node has been processed
+    // VNUser1InUse    m_inuser1;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
+    // VNUser2InUse    m_inuser2;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
+    VNUser3InUse m_inuser3;
 
     // STATE
     AstScope* m_scopep = nullptr;
@@ -403,10 +467,10 @@ private:
             iterateChildren(nodep);
             return;
         }
-        if (nodep->user1SetOnce()) return;
+        if (nodep->user3SetOnce()) return;
 
         AstVarScope* joinVscp = nullptr;
-        if (!nodep->joinType().joinNone()) {
+        if (nodep->user1() && !nodep->joinType().joinNone()) {
             auto* joinVarp
                 = new AstVar{nodep->fileline(), VVarType::BLOCKTEMP,
                              "__Vfork__" + std::to_string(m_count++) + "__join", m_joinDTypep};
@@ -546,94 +610,6 @@ public:
         iterate(nodep);
     }
     virtual ~DynamicSchedulerForkVisitor() override {}
-};
-
-//######################################################################
-// Transform delayed/non-blocking assignments
-
-class DynamicSchedulerAssignDlyVisitor final : public VNVisitor {
-private:
-    // STATE
-    AstVarScope* m_dlyEvent = nullptr;
-    AstScope* m_scopep = nullptr;
-    bool m_dynamic = false;
-    bool m_inFork = false;
-
-    // METHODS
-    VL_DEBUG_FUNC;  // Declare debug()
-
-    AstVarScope* getCreateDlyEvent() {
-        if (m_dlyEvent) return m_dlyEvent;
-        string newvarname = "__VdlyEvent__";
-        auto fl = new FileLine{m_scopep->fileline()};
-        fl->warnOff(V3ErrorCode::UNOPTFLAT, true);
-        auto* newvarp = new AstVar{fl, VVarType::MODULETEMP, newvarname,
-                                   m_scopep->findBasicDType(VBasicDTypeKwd::EVENTVALUE)};
-        m_scopep->modp()->addStmtp(newvarp);
-        auto* newvscp = new AstVarScope{fl, m_scopep, newvarp};
-        m_scopep->addVarp(newvscp);
-        return m_dlyEvent = newvscp;
-    }
-
-    // VISITORS
-    virtual void visit(AstScope* nodep) override {
-        m_scopep = nodep;
-        iterateChildren(nodep);
-        m_scopep = nullptr;
-    }
-    virtual void visit(AstNodeProcedure* nodep) override {
-        VL_RESTORER(m_dynamic);
-        m_dynamic = nodep->isDynamic();
-        iterateChildren(nodep);
-    }
-    virtual void visit(AstCFunc* nodep) override {
-        VL_RESTORER(m_dynamic);
-        m_dynamic = nodep->isCoroutine();
-        iterateChildren(nodep);
-    }
-    virtual void visit(AstFork* nodep) override {
-        VL_RESTORER(m_dynamic);
-        m_dynamic = true;
-        VL_RESTORER(m_inFork);
-        m_inFork = true;
-        iterateChildren(nodep);
-    }
-    virtual void visit(AstBegin* nodep) override {
-        VL_RESTORER(m_inFork);
-        m_inFork = false;
-        iterateChildren(nodep);
-    }
-    virtual void visit(AstAssignDly* nodep) override {
-        if (!m_dynamic) return;
-        auto fl = nodep->fileline();
-        auto* eventp = getCreateDlyEvent();
-        auto* assignp
-            = new AstAssign{fl, nodep->lhsp()->unlinkFrBack(), nodep->rhsp()->unlinkFrBack()};
-        auto* timingControlp = new AstTimingControl{
-            fl,
-            new AstSenTree{fl, new AstSenItem{fl, VEdgeType::ET_ANYEDGE,
-                                              new AstVarRef{fl, eventp, VAccess::READ}}},
-            assignp};
-        if (m_inFork) {
-            nodep->replaceWith(timingControlp);
-        } else {
-            auto* forkp = new AstFork{nodep->fileline(), "", timingControlp};
-            forkp->joinType(VJoinType::JOIN_NONE);
-            nodep->replaceWith(forkp);
-        }
-        VL_DO_DANGLING(delete nodep, nodep);
-    }
-
-    //--------------------
-    virtual void visit(AstNode* nodep) override { iterateChildren(nodep); }
-
-public:
-    // METHODS
-    AstVarScope* getDlyEvent() { return m_dlyEvent; }
-
-    // CONSTRUCTORS
-    explicit DynamicSchedulerAssignDlyVisitor(AstNetlist* nodep) { iterate(nodep); }
-    virtual ~DynamicSchedulerAssignDlyVisitor() override {}
 };
 
 //######################################################################
@@ -938,22 +914,17 @@ void V3DynamicScheduler::processes(AstNetlist* nodep) {
     V3Global::dumpCheckGlobalTree("dsch_transf_intra", 0,
                                   v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
     UINFO(2, "  Mark Dynamic...\n");
-    { DynamicSchedulerMarkDynamicVisitor visitor(nodep); }
+    DynamicSchedulerMarkDynamicVisitor visitor(nodep);
     V3Global::dumpCheckGlobalTree("dsch_mark_dyn", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
-    UINFO(2, "  Transform AssignDlys in Suspendable Processes...\n");
-    {
-        DynamicSchedulerAssignDlyVisitor visitor(nodep);
-        UINFO(2, "  Add AstResumeTriggered...\n");
-        auto fl = nodep->fileline();
-        auto* activep = new AstActive{fl, "resumeTriggered",
-                                      new AstSenTree{fl, new AstSenItem{fl, AstSenItem::Combo()}}};
-        activep->sensesStorep(activep->sensesp());
-        activep->addStmtsp(new AstResumeTriggered{
-            fl, visitor.getDlyEvent() ? new AstVarRef{fl, visitor.getDlyEvent(), VAccess::WRITE}
-                                      : nullptr});
-        nodep->topScopep()->scopep()->addActivep(activep);
-    }
-    V3Global::dumpCheckGlobalTree("dsch_transf_dly", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
+    UINFO(2, "  Add AstResumeTriggered...\n");
+    auto fl = nodep->fileline();
+    auto* activep = new AstActive{fl, "resumeTriggered",
+                                  new AstSenTree{fl, new AstSenItem{fl, AstSenItem::Combo()}}};
+    activep->sensesStorep(activep->sensesp());
+    activep->addStmtsp(new AstResumeTriggered{
+        fl, visitor.getDlyEvent() ? new AstVarRef{fl, visitor.getDlyEvent(), VAccess::WRITE}
+                                  : nullptr});
+    nodep->topScopep()->scopep()->addActivep(activep);
     UINFO(2, "  Move Forked Processes to New Functions...\n");
     { DynamicSchedulerForkVisitor visitor(nodep); }
     V3Global::dumpCheckGlobalTree("dsch_procs", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 3);
@@ -967,9 +938,6 @@ void V3DynamicScheduler::events(AstNetlist* nodep) {
                                   v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
     UINFO(2, "  Add Edge Event Triggers...\n");
     DynamicSchedulerAddTriggersVisitor addTriggersVisitor(nodep);
-    V3Global::dumpCheckGlobalTree("dsch_add_triggers", 0,
-                                  v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
-    UINFO(2, "  Done.\n");
     V3Global::dumpCheckGlobalTree("dsch_events", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 3);
 }
 

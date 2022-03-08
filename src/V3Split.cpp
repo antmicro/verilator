@@ -418,6 +418,16 @@ protected:
         m_noReorderWhy = "JumpGo";
         iterateChildren(nodep);
     }
+    virtual void visit(AstDelay* nodep) override {
+        UINFO(9, "         NoReordering " << nodep << endl);
+        m_noReorderWhy = "Delay";
+        iterateChildren(nodep);
+    }
+    virtual void visit(AstTimingControl* nodep) override {
+        UINFO(9, "         NoReordering " << nodep << endl);
+        m_noReorderWhy = "TimingControl";
+        iterateChildren(nodep);
+    }
 
     //--------------------
     // Default

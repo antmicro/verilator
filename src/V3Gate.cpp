@@ -444,8 +444,6 @@ private:
             AstVarScope* const varscp = nodep->varScopep();
             UASSERT_OBJ(varscp, nodep, "Var didn't get varscoped in V3Scope.cpp");
             GateVarVertex* const vvertexp = makeVarVertex(varscp);
-            if (nodep->access().isWriteOrRW() && varscp->varp()->hasEdgeEvents())
-                m_logicVertexp->setConsumed("hasEdgeEvents");
             UINFO(5, " VARREF to " << varscp << endl);
             if (m_inSenItem) {
                 vvertexp->setIsClock();

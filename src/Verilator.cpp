@@ -299,8 +299,8 @@ static void process() {
 
     if (v3Global.opt.dynamicScheduler() && !v3Global.opt.xmlOnly() && !v3Global.opt.lintOnly()) {
         // Convert processes for dynamic scheduling if needed; mark processes and tasks as
-        // suspendable
-        V3DynamicScheduler::processes(v3Global.rootp());
+        // suspendable; generate signal edge events
+        V3DynamicScheduler::transform(v3Global.rootp());
     }
 
     if (!v3Global.opt.xmlOnly()) {
@@ -353,12 +353,6 @@ static void process() {
         } else {
             v3info("Command Line disabled gate optimization with -Og/-O0.  "
                    "This may cause ordering problems.");
-        }
-
-        if (v3Global.opt.dynamicScheduler() && !v3Global.opt.xmlOnly()
-            && !v3Global.opt.lintOnly()) {
-            // Create named events and triggers for variable sensitivities
-            V3DynamicScheduler::events(v3Global.rootp());
         }
 
         // Combine COVERINCs with duplicate terms
@@ -513,7 +507,7 @@ static void process() {
 
     if (v3Global.opt.dynamicScheduler() && !v3Global.opt.xmlOnly() && !v3Global.opt.lintOnly()) {
         // Add event-related cleanup code to classes that have named events as members
-        V3DynamicScheduler::classes(v3Global.rootp());
+        V3DynamicScheduler::classCleanup(v3Global.rootp());
     }
 
     if (!v3Global.opt.xmlOnly() && v3Global.opt.mtasks()) {

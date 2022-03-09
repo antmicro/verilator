@@ -298,6 +298,7 @@ static void process() {
     }
 
     if (v3Global.opt.dynamicScheduler() && !v3Global.opt.xmlOnly() && !v3Global.opt.lintOnly()) {
+        // Convert processes for dynamic scheduling if needed; mark processes and tasks as suspendable
         V3DynamicScheduler::processes(v3Global.rootp());
     }
 
@@ -355,6 +356,7 @@ static void process() {
 
         if (v3Global.opt.dynamicScheduler() && !v3Global.opt.xmlOnly()
             && !v3Global.opt.lintOnly()) {
+            // Create named events and triggers for variable sensitivities
             V3DynamicScheduler::events(v3Global.rootp());
         }
 
@@ -509,6 +511,7 @@ static void process() {
     }
 
     if (v3Global.opt.dynamicScheduler() && !v3Global.opt.xmlOnly() && !v3Global.opt.lintOnly()) {
+        // Add event-related cleanup code to classes that have named events as members
         V3DynamicScheduler::classes(v3Global.rootp());
     }
 

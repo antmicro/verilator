@@ -1,0 +1,25 @@
+start with a==0, b==0, c==0
+waiting for a==2
+assign 1 to a
+assign 2 to a
+waited for a==2
+waiting for a<2
+assign 0 to a
+waited for a<2
+waiting for a==0
+waited for a==0
+waiting for 1<a<3
+assign 2 to a
+waited for 1<a<3
+waiting for b>a
+assign 2 to b
+assign 1 to a
+waited for b>a
+waiting for a+b<c
+assign 3 to c
+assign 4 to c
+waited for a+b<c
+waiting for a<b && b>c
+assign 5 to b
+waited for a<b && b>c
+*-* All Finished *-*

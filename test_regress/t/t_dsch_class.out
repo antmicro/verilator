@@ -1,0 +1,19 @@
+I'm at time 0
+Starting a #10 delay
+Ended a #10 delay
+Task with no delay (in Delay10)
+I'm at time 10
+Starting a #20 delay
+Event in class triggered at time 25!
+Ended a #20 delay
+Task with no delay (in Delay20)
+I'm at time 30
+Starting a #40 delay
+Event in class triggered at time 50!
+Ended a #40 delay
+Task with no delay (in Delay40)
+I'm at time 70
+Task with no delay
+Task with no delay (in NoDelay)
+I'm at time 70
+*-* All Finished *-*

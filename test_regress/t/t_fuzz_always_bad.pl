@@ -11,7 +11,7 @@ if (!$::Driver) { use FindBin; exec("$FindBin::Bin/bootstrap.pl", @ARGV, $0); di
 scenarios(linter => 1);
 
 if ($Self->{dynamic_scheduler}) {
-    skip("Test not supported without the dynamic scheduler");
+    skip("Test not supported with the dynamic scheduler");
 } else {
     lint(
         fails => 1,

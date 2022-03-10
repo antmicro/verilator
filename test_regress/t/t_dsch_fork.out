@@ -1,0 +1,18 @@
+[0] forked process 4
+[2] forked process 3
+[4] forked process 2
+[8] forked process 1
+[16] main process
+[16] forked process 1
+[16] back in main process
+[16] forked process 2
+[16] back in main process
+[17] forked process 1
+[17] forked process 2
+[17] forked process 3
+[17] forked process 2 again
+[17] forked process 1 again
+[17] forked process 3 again
+[17] spawning 2^8 processes...
+[26] process counter == 256
+*-* All Finished *-*

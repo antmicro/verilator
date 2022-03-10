@@ -1,0 +1,370 @@
+waiting for events[0]
+waiting for eventA, eventB, or eventC
+triggering events[0]
+waiting for events[1]
+[1] POS sig1 or event D
+triggering eventA
+triggering events[1]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[2]
+triggering events[2]
+waiting for events[3]
+triggering eventB
+triggering events[3]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[4]
+triggering events[4]
+waiting for events[5]
+triggering eventC
+triggering events[5]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[6]
+triggering events[6]
+waiting for events[7]
+triggering eventA
+triggering events[7]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[8]
+triggering events[8]
+waiting for events[9]
+triggering eventB
+triggering events[9]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[10]
+triggering events[10]
+waiting for events[11]
+[11] POS sig2 or event D
+triggering eventC
+triggering events[11]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[12]
+triggering events[12]
+waiting for events[13]
+triggering eventA
+triggering events[13]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[14]
+triggering events[14]
+waiting for events[15]
+triggering eventB
+triggering events[15]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[16]
+triggering events[16]
+waiting for events[17]
+triggering eventC
+triggering events[17]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[18]
+triggering events[18]
+waiting for events[19]
+[19] POS sig1 or NEG sig2
+triggering eventA
+triggering events[19]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[20]
+triggering events[20]
+waiting for events[21]
+triggering eventB
+triggering events[21]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[22]
+triggering events[22]
+waiting for events[23]
+triggering eventC
+triggering events[23]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[24]
+triggering events[24]
+waiting for events[25]
+triggering eventA
+triggering events[25]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[26]
+triggering events[26]
+waiting for events[27]
+[27] NEG sig1 or POS sig2
+triggering eventB
+triggering events[27]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[28]
+triggering events[28]
+waiting for events[29]
+[29] POS sig1 or event D
+triggering eventC
+triggering events[29]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[30]
+triggering events[30]
+waiting for events[31]
+[31] POS sig2 or event D
+triggering eventA
+triggering events[31]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[32]
+triggering events[32]
+waiting for events[33]
+triggering eventB
+triggering events[33]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[34]
+triggering events[34]
+waiting for events[35]
+triggering eventC
+triggering events[35]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[36]
+triggering events[36]
+waiting for events[37]
+triggering eventA
+triggering events[37]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[38]
+triggering events[38]
+waiting for events[39]
+[39] POS sig1 or NEG sig2
+triggering eventB
+triggering events[39]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[40]
+triggering events[40]
+waiting for events[41]
+triggering eventC
+triggering events[41]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[42]
+triggering events[42]
+waiting for events[43]
+triggering eventA
+triggering events[43]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[44]
+triggering events[44]
+waiting for events[45]
+triggering eventB
+triggering events[45]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[46]
+triggering events[46]
+waiting for events[47]
+[47] NEG sig1 or POS sig2
+triggering eventC
+triggering events[47]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[48]
+triggering events[48]
+waiting for events[49]
+[49] POS sig1 or event D
+triggering eventA
+triggering events[49]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[50]
+triggering events[50]
+waiting for events[51]
+[51] POS sig2 or event D
+triggering eventB
+triggering events[51]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[52]
+triggering events[52]
+waiting for events[53]
+triggering eventC
+triggering events[53]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[54]
+triggering events[54]
+waiting for events[55]
+triggering eventA
+triggering events[55]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[56]
+triggering events[56]
+waiting for events[57]
+triggering eventB
+triggering events[57]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[58]
+triggering events[58]
+waiting for events[59]
+[59] POS sig1 or NEG sig2
+triggering eventC
+triggering events[59]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[60]
+triggering events[60]
+waiting for events[61]
+triggering eventA
+triggering events[61]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[62]
+triggering events[62]
+waiting for events[63]
+triggering eventB
+triggering events[63]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[64]
+triggering events[64]
+waiting for events[65]
+triggering eventC
+triggering events[65]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[66]
+triggering events[66]
+waiting for events[67]
+[67] NEG sig1 or POS sig2
+triggering eventA
+triggering events[67]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[68]
+triggering events[68]
+waiting for events[69]
+[69] POS sig1 or event D
+triggering eventB
+triggering events[69]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[70]
+triggering events[70]
+waiting for events[71]
+[71] POS sig2 or event D
+triggering eventC
+triggering events[71]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[72]
+triggering events[72]
+waiting for events[73]
+triggering eventA
+triggering events[73]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[74]
+triggering events[74]
+waiting for events[75]
+triggering eventB
+triggering events[75]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[76]
+triggering events[76]
+waiting for events[77]
+triggering eventC
+triggering events[77]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[78]
+triggering events[78]
+waiting for events[79]
+[79] POS sig1 or NEG sig2
+triggering eventA
+triggering events[79]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[80]
+triggering events[80]
+waiting for events[81]
+triggering eventB
+triggering events[81]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[82]
+triggering events[82]
+waiting for events[83]
+triggering eventC
+triggering events[83]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[84]
+triggering events[84]
+waiting for events[85]
+triggering eventA
+triggering events[85]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[86]
+triggering events[86]
+waiting for events[87]
+[87] NEG sig1 or POS sig2
+triggering eventB
+triggering events[87]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[88]
+triggering events[88]
+waiting for events[89]
+[89] POS sig1 or event D
+triggering eventC
+triggering events[89]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[90]
+triggering events[90]
+waiting for events[91]
+[91] POS sig2 or event D
+triggering eventA
+triggering events[91]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[92]
+triggering events[92]
+waiting for events[93]
+triggering eventB
+triggering events[93]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[94]
+triggering events[94]
+waiting for events[95]
+triggering eventC
+triggering events[95]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[96]
+triggering events[96]
+waiting for events[97]
+triggering eventA
+triggering events[97]
+got either eventA, eventB, or eventC
+waiting for eventA, eventB, or eventC
+waiting for events[98]
+triggering events[98]
+waiting for events[99]
+[99] POS sig1 or NEG sig2
+*-* All Finished *-*
+triggering events[99]
+triggering eventB
+got either eventA, eventB, or eventC

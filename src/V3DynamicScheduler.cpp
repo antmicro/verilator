@@ -116,14 +116,20 @@ private:
     //  AstVar::user2()      -> AstNode*.  Event to trigger on var's negedge
     //  AstVar::user3()      -> AstNode*.  Event to trigger on var's anyedge
     // Derived classes should allocate the user data
- 
+
 protected:
     static AstVarScope* getEdgeEvent(AstNode* nodep, VEdgeType edgeType) {
         switch (edgeType) {
-            case VEdgeType::ET_POSEDGE: if (nodep->user1()) return VN_CAST(nodep->user1u().toNodep(), VarScope); break;
-            case VEdgeType::ET_NEGEDGE: if (nodep->user2()) return VN_CAST(nodep->user2u().toNodep(), VarScope); break;
-            case VEdgeType::ET_ANYEDGE: if (nodep->user3()) return VN_CAST(nodep->user3u().toNodep(), VarScope); break;
-            default: nodep->v3fatalSrc("Unhandled edge type: " << edgeType);
+        case VEdgeType::ET_POSEDGE:
+            if (nodep->user1()) return VN_CAST(nodep->user1u().toNodep(), VarScope);
+            break;
+        case VEdgeType::ET_NEGEDGE:
+            if (nodep->user2()) return VN_CAST(nodep->user2u().toNodep(), VarScope);
+            break;
+        case VEdgeType::ET_ANYEDGE:
+            if (nodep->user3()) return VN_CAST(nodep->user3u().toNodep(), VarScope);
+            break;
+        default: nodep->v3fatalSrc("Unhandled edge type: " << edgeType);
         }
         return nullptr;
     }
@@ -134,18 +140,18 @@ protected:
 
     static AstVarScope* getCreateEdgeEvent(AstVar* varp, AstScope* scopep, VEdgeType edgeType) {
         if (auto* eventp = getEdgeEvent(varp, edgeType)) return eventp;
-        string newvarname = (string("__VedgeEvent__") + scopep->nameDotless() + "__" + edgeType.ascii()
-                             + "__" + varp->name());
+        string newvarname = (string("__VedgeEvent__") + scopep->nameDotless() + "__"
+                             + edgeType.ascii() + "__" + varp->name());
         auto* newvarp = new AstVar{varp->fileline(), VVarType::VAR, newvarname,
                                    varp->findBasicDType(VBasicDTypeKwd::EVENTVALUE)};
         scopep->modp()->addStmtp(newvarp);
         auto* newvscp = new AstVarScope{varp->fileline(), scopep, newvarp};
         scopep->addVarp(newvscp);
         switch (edgeType) {
-            case VEdgeType::ET_POSEDGE: varp->user1p(newvscp); break;
-            case VEdgeType::ET_NEGEDGE: varp->user2p(newvscp); break;
-            case VEdgeType::ET_ANYEDGE: varp->user3p(newvscp); break;
-            default: varp->v3fatalSrc("Unhandled edge type: " << edgeType);
+        case VEdgeType::ET_POSEDGE: varp->user1p(newvscp); break;
+        case VEdgeType::ET_NEGEDGE: varp->user2p(newvscp); break;
+        case VEdgeType::ET_ANYEDGE: varp->user3p(newvscp); break;
+        default: varp->v3fatalSrc("Unhandled edge type: " << edgeType);
         }
         return newvscp;
     }
@@ -652,8 +658,6 @@ public:
     virtual ~DynamicSchedulerForkVisitor() override {}
 };
 
-
-
 //######################################################################
 // Create edge events
 
@@ -666,7 +670,7 @@ private:
     // VNUser1InUse    m_inuser1;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
     // VNUser2InUse    m_inuser2;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
     // VNUser2InUse    m_inuser3;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
- 
+
     // STATE
     using VarScopeSet = std::set<AstVarScope*>;
     VarScopeSet m_waitVars;
@@ -768,7 +772,8 @@ public:
 };
 
 //######################################################################
-// Transform continuous assignments into processes if LHS has edge events, to allow adding if statements with triggers
+// Transform continuous assignments into processes if LHS has edge events, to allow adding if
+// statements with triggers
 
 class DynamicSchedulerContinuousAssignVisitor final : public DynamicSchedulerEdgeEventVisitor {
 private:
@@ -779,7 +784,7 @@ private:
     // VNUser1InUse    m_inuser1;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
     // VNUser2InUse    m_inuser2;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
     // VNUser2InUse    m_inuser3;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
- 
+
     // STATE
 
     // METHODS
@@ -792,7 +797,9 @@ private:
             if (hasEdgeEvents(lvalp->varp())) {
                 auto* const lhsp = nodep->lhsp()->unlinkFrBack();
                 auto* const rhsp = nodep->rhsp()->unlinkFrBack();
-                auto* const alwaysp = new AstAlways(nodep->fileline(), VAlwaysKwd::ALWAYS_LATCH, nullptr, new AstAssign(nodep->fileline(), lhsp, rhsp));
+                auto* const alwaysp
+                    = new AstAlways(nodep->fileline(), VAlwaysKwd::ALWAYS_LATCH, nullptr,
+                                    new AstAssign(nodep->fileline(), lhsp, rhsp));
                 nodep->replaceWith(alwaysp);
                 lvalp->varp()->fileline()->warnOff(V3ErrorCode::UNOPTFLAT, true);
                 nodep->deleteTree();
@@ -1011,7 +1018,7 @@ void V3DynamicScheduler::transform(AstNetlist* nodep) {
     V3Global::dumpCheckGlobalTree("dsch_transf_intra", 0,
                                   v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
     UINFO(2, "  Mark Dynamic...\n");
-    DynamicSchedulerMarkDynamicVisitor visitor(nodep); // Keep it around to keep user data
+    DynamicSchedulerMarkDynamicVisitor visitor(nodep);  // Keep it around to keep user data
     V3Global::dumpCheckGlobalTree("dsch_mark_dyn", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
     UINFO(2, "  Add AstResumeTriggered...\n");
     auto fl = nodep->fileline();

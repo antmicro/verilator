@@ -797,11 +797,13 @@ private:
             if (hasEdgeEvents(lvalp->varp())) {
                 auto* const lhsp = nodep->lhsp()->unlinkFrBack();
                 auto* const rhsp = nodep->rhsp()->unlinkFrBack();
-                auto* const alwaysp
-                    = new AstAlways(nodep->fileline(), VAlwaysKwd::ALWAYS_LATCH, nullptr,
-                                    new AstAssign(nodep->fileline(), lhsp, rhsp));
+                auto* const alwaysp = new AstAlways(
+                    nodep->fileline(), VAlwaysKwd::ALWAYS,
+                    new AstSenTree{nodep->fileline(),
+                                   new AstSenItem{nodep->fileline(), VEdgeType::ET_BOTHEDGE,
+                                                  rhsp->cloneTree(false)}},
+                    new AstAssign(nodep->fileline(), lhsp, rhsp));
                 nodep->replaceWith(alwaysp);
-                lvalp->varp()->fileline()->warnOff(V3ErrorCode::UNOPTFLAT, true);
                 nodep->deleteTree();
             }
         }

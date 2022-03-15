@@ -791,6 +791,10 @@ void V3Options::notify() {
         cmdfl->v3error("--coverage and --savable not supported together");
     }
 
+    if (dynamicScheduler() && xmlOnly()) {
+        cmdfl->v3error("--dynamic-scheduler and --xml-only not supported together");
+    }
+
     // Mark options as available
     m_available = true;
 }

@@ -10,16 +10,20 @@ if (!$::Driver) { use FindBin; exec("$FindBin::Bin/bootstrap.pl", @ARGV, $0); di
 
 scenarios(vlt => 1);
 
-my $out_filename = "$Self->{obj_dir}/V$Self->{name}.xml";
+if ($Self->{dynamic_scheduler}) {
+    skip("Test not supported with the dynamic scheduler");
+} else {
+    my $out_filename = "$Self->{obj_dir}/V$Self->{name}.xml";
 
-compile(
-    verilator_flags2 => ['--xml-only'],
-    verilator_make_gmake => 0,
-    make_top_shell => 0,
-    make_main => 0,
-    );
+    compile(
+        verilator_flags2 => ['--xml-only'],
+        verilator_make_gmake => 0,
+        make_top_shell => 0,
+        make_main => 0,
+        );
 
-files_identical($out_filename, $Self->{golden_filename});
+    files_identical($out_filename, $Self->{golden_filename});
+}
 
 ok(1);
 1;

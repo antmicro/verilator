@@ -297,7 +297,7 @@ static void process() {
         V3Task::taskAll(v3Global.rootp());
     }
 
-    if (v3Global.opt.dynamicScheduler() && !v3Global.opt.xmlOnly() && !v3Global.opt.lintOnly()) {
+    if (v3Global.opt.dynamicScheduler()) {
         // Convert processes for dynamic scheduling if needed; mark processes and tasks as
         // suspendable; generate signal edge events
         V3DynamicScheduler::transform(v3Global.rootp());
@@ -503,11 +503,10 @@ static void process() {
     V3Error::abortIfErrors();
     if (!v3Global.opt.lintOnly() && !v3Global.opt.xmlOnly()) {  //
         V3CCtors::cctorsAll();
-    }
-
-    if (v3Global.opt.dynamicScheduler() && !v3Global.opt.xmlOnly() && !v3Global.opt.lintOnly()) {
-        // Add event-related cleanup code to classes that have named events as members
-        V3DynamicScheduler::classCleanup(v3Global.rootp());
+        if (v3Global.opt.dynamicScheduler()) {
+            // Add event-related cleanup code to classes that have named events as members
+            V3DynamicScheduler::classCleanup(v3Global.rootp());
+        }
     }
 
     if (!v3Global.opt.xmlOnly() && v3Global.opt.mtasks()) {

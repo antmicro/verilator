@@ -10,28 +10,32 @@ if (!$::Driver) { use FindBin; exec("$FindBin::Bin/bootstrap.pl", @ARGV, $0); di
 
 scenarios(vlt => 1);
 
-my $out_filename = "$Self->{obj_dir}/V$Self->{name}.xml";
+if ($Self->{dynamic_scheduler}) {
+    skip("Test not supported with the dynamic scheduler");
+} else {
+    my $out_filename = "$Self->{obj_dir}/V$Self->{name}.xml";
 
-top_filename("t/t_enum_type_methods.v");
+    top_filename("t/t_enum_type_methods.v");
 
-compile(
-    verilator_flags2 => ['--debug-check', '--flatten'],
-    verilator_make_gmake => 0,
-    make_top_shell => 0,
-    make_main => 0,
-    );
+    compile(
+        verilator_flags2 => ['--debug-check', '--flatten'],
+        verilator_make_gmake => 0,
+        make_top_shell => 0,
+        make_main => 0,
+        );
 
-files_identical("$out_filename", $Self->{dynamic_scheduler} ? $Self->{golden_filename} =~ s/\.out$/_dsched.out/r : $Self->{golden_filename}, 'logfile');
+    files_identical("$out_filename", $Self->{golden_filename}, 'logfile');
 
-# make sure that certain tags are present in --debug-check
-# that would not be present in --xml-only
-file_grep("$out_filename", qr/<constpool /x);
-file_grep("$out_filename", qr/<inititem /x);
-file_grep("$out_filename", qr/<if /x);
-file_grep("$out_filename", qr/<while /x);
-file_grep("$out_filename", qr/<begin>/x);  # for <if> and <while>
-file_grep("$out_filename", qr/ signed=/x);  # for <basicdtype>
-file_grep("$out_filename", qr/ func=/x);  # for <ccall>
+    # make sure that certain tags are present in --debug-check
+    # that would not be present in --xml-only
+    file_grep("$out_filename", qr/<constpool /x);
+    file_grep("$out_filename", qr/<inititem /x);
+    file_grep("$out_filename", qr/<if /x);
+    file_grep("$out_filename", qr/<while /x);
+    file_grep("$out_filename", qr/<begin>/x);  # for <if> and <while>
+    file_grep("$out_filename", qr/ signed=/x);  # for <basicdtype>
+    file_grep("$out_filename", qr/ func=/x);  # for <ccall>
+}
 
 ok(1);
 1;

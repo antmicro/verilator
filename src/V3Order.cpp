@@ -1569,7 +1569,7 @@ void OrderProcess::processDomainsIterate(OrderEitherVertex* vertexp) {
     OrderVarVertex* const vvertexp = dynamic_cast<OrderVarVertex*>(vertexp);
     AstSenTree* domainp = nullptr;
     if (vvertexp && vvertexp->varScp()->varp()->isNonOutput()) domainp = m_comboDomainp;
-    if (vvertexp && vvertexp->varScp()->varp()->isDynamic()) domainp = m_comboDomainp;
+    if (vvertexp && vvertexp->varScp()->varp()->isWrittenBySuspendable()) domainp = m_comboDomainp;
     if (vvertexp && vvertexp->varScp()->isCircular()) domainp = m_comboDomainp;
     if (!domainp) {
         for (V3GraphEdge* edgep = vertexp->inBeginp(); edgep; edgep = edgep->inNextp()) {

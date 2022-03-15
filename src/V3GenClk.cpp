@@ -186,7 +186,7 @@ private:
             // Variable was previously used as a clock, and is now being set
             // Thus a unordered generated clock...
             UINFO(8, "  VarSetAct " << nodep << endl);
-            vscp->circular(true);
+            vscp->circular(!nodep->varp()->isWrittenBySuspendable());
         }
     }
     virtual void visit(AstNodeAssign* nodep) override {

@@ -112,9 +112,9 @@
 class DynamicSchedulerEdgeEventVisitor VL_NOT_FINAL : public VNVisitor {
 private:
     // NODE STATE
-    //  AstVar::user1()      -> AstNode*.  Event to trigger on var's posedge
-    //  AstVar::user2()      -> AstNode*.  Event to trigger on var's negedge
-    //  AstVar::user3()      -> AstNode*.  Event to trigger on var's anyedge
+    //  AstVar::user1()      -> AstVarScope*.  Event to trigger on var's posedge
+    //  AstVar::user2()      -> AstVarScope*.  Event to trigger on var's negedge
+    //  AstVar::user3()      -> AstVarScope*.  Event to trigger on var's anyedge
     // Derived classes should allocate the user data
 
 protected:
@@ -181,13 +181,15 @@ private:
     //  AstNode::user1()       -> bool.  Set true if process/function/task is suspendable
     //  AstNode::user2()       -> bool.  Set true if process/function/task is dynamically scheduled
     //                                   (should vars written to in process/function/task spread
-    //                                   the 'dynamic' status?)
-    //  AstVar::user1()      -> AstNode*.  Event to trigger on var's posedge
-    //  AstVar::user2()      -> AstNode*.  Event to trigger on var's negedge
-    //  AstVar::user3()      -> AstNode*.  Event to trigger on var's anyedge
+    //                                   the 'dynamically scheduled' status?)
+    //  AstVar::user1()      -> AstVarScope*.  Event to trigger on var's posedge
+    //  AstVar::user2()      -> AstVarScope*.  Event to trigger on var's negedge
+    //  AstVar::user3()      -> AstVarScope*.  Event to trigger on var's anyedge
+    //  AstVar::user4()      -> bool.  Is written to by a dynamically scheduled process?
     VNUser1InUse m_inuser1;
     VNUser2InUse m_inuser2;
     VNUser3InUse m_inuser3;
+    VNUser4InUse m_inuser4;
 
     // STATE
     std::unordered_map<AstCFunc*, Overrides>
@@ -258,7 +260,7 @@ private:
         // Transform if the process is waiting on a dynamic var
         if (!transform)
             transform = sensesp && sensesp->sensesp() && sensesp->sensesp()->varp()
-                        && sensesp->sensesp()->varp()->isDynamic();
+                        && sensesp->sensesp()->varp()->user4();
         if (transform) {
             auto fl = nodep->fileline();
             auto* bodysp = nodep->bodysp();
@@ -348,8 +350,9 @@ private:
         iterateChildren(nodep);
     }
     virtual void visit(AstVarRef* nodep) override {
-        if (m_proc && m_proc->user2() && nodep->access().isWriteOrRW()) {
-            nodep->varp()->isDynamic(true);
+        if (m_proc && nodep->access().isWriteOrRW()) {
+            nodep->varp()->isWrittenBySuspendable(nodep->varp()->isWrittenBySuspendable() || m_proc->user1());
+            nodep->varp()->user4(nodep->varp()->user4() || m_proc->user2());
         }
     }
     virtual void visit(AstAssignDly* nodep) override {

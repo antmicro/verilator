@@ -2733,6 +2733,7 @@ private:
     // Zero elimination
     virtual void visit(AstNodeAssign* nodep) override {
         iterateChildren(nodep);
+        if (nodep->delayp()) m_hasJumpDelay = true;
         if (m_doNConst && replaceNodeAssign(nodep)) return;
     }
     virtual void visit(AstAssignAlias* nodep) override {

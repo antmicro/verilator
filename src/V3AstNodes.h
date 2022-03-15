@@ -2001,7 +2001,7 @@ private:
     bool m_trace : 1;  // Trace this variable
     bool m_isLatched : 1;  // Not assigned in all control paths of combo always
     bool m_isForceable : 1;  // May be forced/released externally from user C code
-    bool m_isDynamic : 1;  // Assigned to by a dynamically scheduled process
+    bool m_writtenBySuspendable : 1;  // Written to by a suspendable process
 
     void init() {
         m_ansi = false;
@@ -2042,7 +2042,7 @@ private:
         m_trace = false;
         m_isLatched = false;
         m_isForceable = false;
-        m_isDynamic = false;
+        m_writtenBySuspendable = false;
         m_attrClocker = VVarAttrClocker::CLOCKER_UNKNOWN;
     }
 
@@ -2206,7 +2206,7 @@ public:
     void isLatched(bool flag) { m_isLatched = flag; }
     bool isForceable() const { return m_isForceable; }
     void setForceable() { m_isForceable = true; }
-    void isDynamic(bool flag) { m_isDynamic = flag; }
+    void isWrittenBySuspendable(bool flag) { m_writtenBySuspendable = flag; }
     // METHODS
     virtual void name(const string& name) override { m_name = name; }
     virtual void tag(const string& text) override { m_tag = text; }
@@ -2261,7 +2261,7 @@ public:
     bool isConst() const { return m_isConst; }
     bool isStatic() const { return m_isStatic; }
     bool isLatched() const { return m_isLatched; }
-    bool isDynamic() const { return m_isDynamic; }
+    bool isWrittenBySuspendable() const { return m_writtenBySuspendable; }
     bool isFuncLocal() const { return m_funcLocal; }
     bool isFuncReturn() const { return m_funcReturn; }
     bool isPullup() const { return m_isPullup; }

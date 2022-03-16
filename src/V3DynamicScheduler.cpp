@@ -351,7 +351,8 @@ private:
     }
     virtual void visit(AstVarRef* nodep) override {
         if (m_proc && nodep->access().isWriteOrRW()) {
-            nodep->varp()->isWrittenBySuspendable(nodep->varp()->isWrittenBySuspendable() || m_proc->user1());
+            nodep->varp()->isWrittenBySuspendable(nodep->varp()->isWrittenBySuspendable()
+                                                  || m_proc->user1());
             nodep->varp()->user4(nodep->varp()->user4() || m_proc->user2());
         }
     }

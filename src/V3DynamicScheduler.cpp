@@ -30,19 +30,23 @@
 //          Each TimingControl, Wait:
 //              Mark containing task/process as dynamically scheduled
 //      Each CFunc:
-//          If it's virtual and any overriding/overridden func is marked, mark it
-//      Each CFunc calling a marked CFunc:
-//          Mark it as suspendable/dynamically scheduled
-//      Each process calling a marked CFunc:
-//          Mark it as suspendable/dynamically scheduled
-//      Each variable written to in a dynamically scheduled process/task:
-//          Mark it as dynamic
+//          If calling/overriding/overriden by a suspendable CFunc, mark it suspendable
+//          If calling/overriding/overriden by a dynamically scheduled CFunc, mark it dynamically
+//          scheduled Suspendable CFuncs return type is VerilatedCoroutine
+//      Each process:
+//          If calling a suspendable CFunc, mark it suspendable
+//          If calling a dynamically scheduled CFunc, mark it dynamically scheduled
+//      Each variable:
+//          If written to by a dynamically scheduled process/task:
+//              Mark it as such
+//          If written to by a suspendable process/task:
+//              Mark it as such (used in other Verilator passes)
 //      Each always process:
 //          If suspendable and has no sentree:
 //              Transform process into an initial process with a body like this:
 //                  forever
 //                      process_body;
-//          If waiting on a dynamic variable:
+//          If waiting on a variable written to b:
 //              Transform process into an initial process with a body like this:
 //                  forever
 //                      @(sensp) begin
@@ -55,7 +59,7 @@
 //                  fork @__VdlyEvent__ lhsp = rhsp; join_none
 //
 //      Each Fork:
-//          Move each statement to a new function
+//          Move each statement to a separate new function
 //          Add call to new function in place of moved statement
 //
 //      Each TimingControl, Wait:
@@ -94,7 +98,8 @@
 //              Create a new Active for this edge with an EventTrigger for this event variable
 //
 //      Each class with an event member:
-//          In the destructor, notify the dispatcher that the event var doesn't exist anymore.
+//          In the destructor, notify the event dispatcher that the event var doesn't exist
+//          anymore.
 //
 //*************************************************************************
 

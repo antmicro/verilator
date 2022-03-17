@@ -16,17 +16,17 @@ module t(/*AUTOARG*/
    reg [15 : 0] t2;
 
    always@(posedge clk) begin
-      if (cyc == 0) begin
-         t2 <= 16'd0;
-      end
-      else if (cyc == 2) begin
-         t2 <= 16'habcd;
-      end
-      else if (cyc == 4) begin
+      if (cyc >= 4) begin
          $display("abcd=%x", t2);
          $display("ab0d=%x", { t2[15:8], 4'd0, t2[3:0] });
          $write("*-* All Finished *-*\n");
          $finish(32'd0);
+      end
+      else if (cyc >= 2) begin
+         t2 <= 16'habcd;
+      end
+      else if (cyc == 0) begin
+         t2 <= 16'd0;
       end
    end
 endmodule

@@ -10,13 +10,17 @@ if (!$::Driver) { use FindBin; exec("$FindBin::Bin/bootstrap.pl", @ARGV, $0); di
 
 scenarios(simulator => 1);
 
-top_filename("t/t_order_clkinst.v");
+if ($Self->{dynamic_scheduler}) {
+    skip("Test not supported with the dynamic scheduler");
+} else {
+    top_filename("t/t_order_clkinst.v");
 
-compile(
-    v_flags2 => ["-Wwarn-IMPERFECTSCH"],
-    fails => 1,
-    expect_filename => $Self->{dynamic_scheduler} ? $Self->{golden_filename} =~ s/\.out$/_dsched.out/r : $Self->{golden_filename},
-    );
+    compile(
+        v_flags2 => ["-Wwarn-IMPERFECTSCH"],
+        fails => 1,
+        expect_filename => $Self->{golden_filename},
+        );
+}
 
 ok(1);
 1;

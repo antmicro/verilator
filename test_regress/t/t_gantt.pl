@@ -43,7 +43,7 @@ run(cmd => ["$ENV{VERILATOR_ROOT}/bin/verilator_gantt",
     );
 
 file_grep("$Self->{obj_dir}/gantt.log", qr/Total threads += 2/i);
-file_grep("$Self->{obj_dir}/gantt.log", qr/Total mtasks += 7/i);
+file_grep("$Self->{obj_dir}/gantt.log", $Self->{dynamic_scheduler} ? qr/Total mtasks += 8/i : qr/Total mtasks += 7/i);
 file_grep("$Self->{obj_dir}/gantt.log", qr/Total evals += 2/i);
 
 # Diff to itself, just to check parsing

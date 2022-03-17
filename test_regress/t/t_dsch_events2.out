@@ -1,0 +1,5 @@
+[1] POS sig1 or event D
+[11] POS sig2 or event D
+[19] POS sig1 or NEG sig2
+[27] NEG sig1 or POS sig2
+*-* All Finished *-*

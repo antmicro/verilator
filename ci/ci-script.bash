@@ -110,6 +110,9 @@ elif [ "$CI_BUILD_STAGE_NAME" = "test" ]; then
     vltmt-1)
       "$MAKE" -C test_regress SCENARIOS=--vltmt DRIVER_HASHSET=--hashset=1/2
       ;;
+    dynamic-scheduler)
+      "$MAKE" -C test_regress DRIVER_FLAGS=--dynamic-scheduler
+      ;;
     coverage-all)
       nodist/code_coverage --stages 1-
       ;;

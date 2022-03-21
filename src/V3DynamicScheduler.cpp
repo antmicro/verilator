@@ -405,53 +405,70 @@ public:
 class DynamicSchedulerIntraAssignDelayVisitor final : public VNVisitor {
 private:
     // STATE
-    using VarMap = std::map<const std::pair<AstNodeModule*, string>, AstVar*>;
-    VarMap m_modVarMap;  // Table of new var names created under module
     size_t m_count = 0;
+    AstScope* m_scopep = nullptr;
 
     // METHODS
-    AstVarScope* getCreateVar(AstVarScope* oldvarscp, const string& name) {
-        UASSERT_OBJ(oldvarscp->scopep(), oldvarscp, "Var unscoped");
+    AstVarScope* getCreateIntraVar(AstNode* lhsp, string name) {
+        name = "__Vintraval" + std::to_string(m_count++) + "__" + name;
+        // UASSERT_OBJ(oldvarscp->scopep(), oldvarscp, "Var unscoped");
         AstVar* varp;
-        AstNodeModule* addmodp = oldvarscp->scopep()->modp();
-        // We need a new AstVar, but only one for all scopes, to match the new AstVarScope
-        const auto it = m_modVarMap.find(make_pair(addmodp, name));
-        if (it != m_modVarMap.end()) {
-            // Created module's AstVar earlier under some other scope
-            varp = it->second;
-        } else {
-            varp = new AstVar{oldvarscp->fileline(), VVarType::BLOCKTEMP, name, oldvarscp->varp()};
-            varp->dtypeFrom(oldvarscp);
-            addmodp->addStmtp(varp);
-            m_modVarMap.emplace(make_pair(addmodp, name), varp);
-        }
-        AstVarScope* varscp = new AstVarScope{oldvarscp->fileline(), oldvarscp->scopep(), varp};
-        oldvarscp->scopep()->addVarp(varscp);
+        AstNodeModule* modp = m_scopep->modp();
+        varp = new AstVar{lhsp->fileline(), VVarType::BLOCKTEMP, name, lhsp->dtypep()};
+        modp->addStmtp(varp);
+        AstVarScope* varscp = new AstVarScope{lhsp->fileline(), m_scopep, varp};
+        m_scopep->addVarp(varscp);
         return varscp;
     }
     VL_DEBUG_FUNC;  // Declare debug()
 
     // VISITORS
+    virtual void visit(AstScope* nodep) override {
+        m_scopep = nodep;
+        iterateChildren(nodep);
+        m_scopep = nullptr;
+    }
     virtual void visit(AstAssign* nodep) override {
         if (auto* delayp = nodep->delayp()) {
             delayp->unlinkFrBack();
             auto* lhsp = VN_CAST(nodep->lhsp(), VarRef);
-            auto* newvscp
-                = getCreateVar(lhsp->varScopep(),
-                               "__Vintraval" + std::to_string(m_count++) + "__" + lhsp->name());
-            nodep->addHereThisAsNext(new AstAssign{
-                nodep->fileline(), new AstVarRef{nodep->fileline(), newvscp, VAccess::WRITE},
-                nodep->rhsp()->unlinkFrBack()});
+            auto* newvscp = getCreateIntraVar(lhsp->varScopep(), lhsp->name());
+            auto* blockp = new AstBegin(
+                nodep->fileline(), "",
+                new AstAssign{nodep->fileline(),
+                              new AstVarRef{nodep->fileline(), newvscp, VAccess::WRITE},
+                              nodep->rhsp()->unlinkFrBack()});
+            nodep->replaceWith(blockp);
             nodep->rhsp(new AstVarRef{nodep->fileline(), newvscp, VAccess::READ});
-            nodep->addHereThisAsNext(new AstDelay{delayp->fileline(), delayp, nullptr});
+            blockp->addStmtsp(new AstDelay{delayp->fileline(), delayp, nodep});
+        }
+    }
+    virtual void visit(AstAssignW* nodep) override {
+        if (auto* delayp = nodep->delayp()) {
+            delayp->unlinkFrBack();
+            auto* const lhsp = nodep->lhsp()->unlinkFrBack();
+            auto* const newvscp = getCreateIntraVar(lhsp, lhsp->name());
+            auto* const rhsp = nodep->rhsp()->unlinkFrBack();
+            auto* const alwaysp = new AstAlways{
+                nodep->fileline(), VAlwaysKwd::ALWAYS,
+                new AstSenTree{nodep->fileline(),
+                               new AstSenItem{nodep->fileline(), AstSenItem::Combo()}},
+                new AstAssign{nodep->fileline(),
+                              new AstVarRef{nodep->fileline(), newvscp, VAccess::WRITE}, rhsp}};
+            if (auto* lvalp = VN_CAST(lhsp, VarRef))
+                lvalp->varp()->fileline()->warnOff(V3ErrorCode::UNOPTFLAT, true);
+            nodep->replaceWith(alwaysp);
+            alwaysp->addStmtp(new AstDelay{delayp->fileline(), delayp, nullptr});
+            alwaysp->addStmtp(
+                new AstAssign{nodep->fileline(), lhsp,
+                              new AstVarRef{nodep->fileline(), newvscp, VAccess::READ}});
+            nodep->deleteTree();
         }
     }
     virtual void visit(AstAssignDly* nodep) override {
         if (auto* delayp = nodep->delayp()) {
             auto* lhsp = VN_CAST(nodep->lhsp(), VarRef);
-            auto* newvscp
-                = getCreateVar(lhsp->varScopep(),
-                               "__Vintraval" + std::to_string(m_count++) + "__" + lhsp->name());
+            auto* newvscp = getCreateIntraVar(lhsp->varScopep(), lhsp->name());
             nodep->addHereThisAsNext(new AstAssign{
                 nodep->fileline(), new AstVarRef{nodep->fileline(), newvscp, VAccess::WRITE},
                 nodep->rhsp()->unlinkFrBack()});
@@ -794,8 +811,6 @@ private:
     // VNUser2InUse    m_inuser2;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
     // VNUser2InUse    m_inuser3;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
 
-    // STATE
-
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
 
@@ -806,12 +821,9 @@ private:
             if (hasEdgeEvents(lvalp->varp())) {
                 auto* const lhsp = nodep->lhsp()->unlinkFrBack();
                 auto* const rhsp = nodep->rhsp()->unlinkFrBack();
-                auto* const alwaysp = new AstAlways(
-                    nodep->fileline(), VAlwaysKwd::ALWAYS,
-                    new AstSenTree{nodep->fileline(),
-                                   new AstSenItem{nodep->fileline(), VEdgeType::ET_BOTHEDGE,
-                                                  rhsp->cloneTree(false)}},
-                    new AstAssign(nodep->fileline(), lhsp, rhsp));
+                lvalp->varp()->fileline()->warnOff(V3ErrorCode::UNOPTFLAT, true);
+                auto* const alwaysp = new AstAlways{nodep->fileline(), VAlwaysKwd::ALWAYS, nullptr,
+                                                    new AstAssign{nodep->fileline(), lhsp, rhsp}};
                 nodep->replaceWith(alwaysp);
                 nodep->deleteTree();
             }
@@ -842,8 +854,6 @@ private:
     // VNUser2InUse    m_inuser3;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
 
     // STATE
-    using VarMap = std::map<const std::pair<AstNodeModule*, string>, AstVar*>;
-    VarMap m_modVarMap;  // Table of new var names created under module
     size_t m_count = 0;
     AstTopScope* m_topScopep = nullptr;  // Current top scope
 
@@ -853,18 +863,10 @@ private:
     AstVarScope* getCreateVar(AstVarScope* oldvarscp, const string& name) {
         UASSERT_OBJ(oldvarscp->scopep(), oldvarscp, "Var unscoped");
         AstVar* varp;
-        AstNodeModule* addmodp = oldvarscp->scopep()->modp();
-        // We need a new AstVar, but only one for all scopes, to match the new AstVarScope
-        const auto it = m_modVarMap.find(make_pair(addmodp, name));
-        if (it != m_modVarMap.end()) {
-            // Created module's AstVar earlier under some other scope
-            varp = it->second;
-        } else {
-            varp = new AstVar{oldvarscp->fileline(), VVarType::BLOCKTEMP, name, oldvarscp->varp()};
-            varp->dtypeFrom(oldvarscp);
-            addmodp->addStmtp(varp);
-            m_modVarMap.emplace(make_pair(addmodp, name), varp);
-        }
+        AstNodeModule* modp = oldvarscp->scopep()->modp();
+        varp = new AstVar{oldvarscp->fileline(), VVarType::BLOCKTEMP, name, oldvarscp->varp()};
+        varp->dtypeFrom(oldvarscp);
+        modp->addStmtp(varp);
         AstVarScope* varscp = new AstVarScope{oldvarscp->fileline(), oldvarscp->scopep(), varp};
         oldvarscp->scopep()->addVarp(varscp);
         return varscp;

@@ -2346,7 +2346,14 @@ module_common_item<nodep>:	// ==IEEE: module_common_item
 	;
 
 continuous_assign<nodep>:	// IEEE: continuous_assign
-		yASSIGN strengthSpecE delayE assignList ';'	{ $$ = $4; }
+		yASSIGN strengthSpecE assignList ';'	{ $$ = $3; }
+	|	yASSIGN strengthSpecE delay_control assignList ';'	{ $$ = $4;
+            for (auto* nodep = $$; nodep; nodep = nodep->nextp()) {
+                if (auto* const assignp = VN_CAST(nodep, NodeAssign)) {
+                    assignp->delayp(nodep == $$ ? $3 : $3->cloneTree(false));
+                }
+            }
+        }
 	;
 
 initial_construct<nodep>:	// IEEE: initial_construct

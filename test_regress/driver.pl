@@ -1900,11 +1900,12 @@ sub _make_main {
             print $fh "        auto newTime = topp->nextTimeSlot();\n";
             print $fh "        if (newTime - contextp->time() <= 0 ||\n";
             print $fh "            newTime - floorf(newTime) == 0) {\n";
-            print $fh "            ${set}clk = !${set}clk;\n";
-            print $fh "            contextp->timeInc(MAIN_TIME_MULTIPLIER);\n";
-            print $fh "        } else {\n";
-            print $fh "            contextp->time(newTime);\n";
+            print $fh "            newTime = contextp->time() + MAIN_TIME_MULTIPLIER;\n";
             print $fh "        }\n";
+            print $fh "        if (floorf(newTime) - floorf(contextp->time()) >= 1) {\n";
+            print $fh "            ${set}clk = !${set}clk;\n";
+            print $fh "        }\n";
+            print $fh "        contextp->time(newTime);\n";
         } else {
             print $fh "        contextp->time(topp->nextTimeSlot());\n";
         }

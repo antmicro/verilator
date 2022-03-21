@@ -33,16 +33,18 @@
 // Using libc++, coroutine library is in std::experimental
 #include <experimental/coroutine>
 namespace std {
-// Bring std::experimental into the std namespace
-using namespace experimental;
+    // Bring std::experimental into the std namespace
+    using namespace experimental;
 }  // namespace std
 #else
 // Using stdlibc++, coroutine library is in std namespace
 #define __cpp_impl_coroutine 1  // clang doesn't define this, but it's needed in <coroutine>
 #include <coroutine>
 namespace std {
-// Bring coroutine library into std::experimental, as clang expects it to be there
-namespace experimental = ::std;
+    // Bring coroutine library into std::experimental, as clang expects it to be there
+    namespace experimental {
+        using namespace std;
+    }
 }  // namespace std
 #endif
 #else  // Not clang

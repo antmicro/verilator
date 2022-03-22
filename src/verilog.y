@@ -40,6 +40,11 @@
 #define BBUNSUP(fl, msg) (fl)->v3warn(E_UNSUPPORTED, msg)
 #define GATEUNSUP(fl, tok) \
     { BBUNSUP((fl), "Unsupported: Verilog 1995 gate primitive: " << (tok)); }
+#define DLYUNSUP(nodep) \
+    if (nodep) { \
+        nodep->v3warn(ASSIGNDLY, "Unsupported: Ignoring delay on this assignment/primitive."); \
+        nodep->deleteTree(); \
+    }
 
 //======================================================================
 // Statics (for here only)
@@ -2602,8 +2607,7 @@ delay<nodep>:
 		delay_control
 			{ 
                 if (!v3Global.opt.dynamicScheduler()) {
-                    $1->v3warn(ASSIGNDLY, "Unsupported: Ignoring delay on this assignment/primitive.");
-                    DEL($1); 
+                    DLYUNSUP($1);
                     $$ = nullptr;
                 } else {
                     $$ = $1;
@@ -3182,7 +3186,7 @@ statement_item<nodep>:		// IEEE: statement_item
 	//UNSUP	yP_MINUSGTGT delay_or_event_controlE hierarchical_identifier/*event*/ ';'	{ UNSUP }
 	//			// IEEE remove below
 	|	yP_MINUSGTGT delayE idDotted/*hierarchical_identifier-event*/ ';'
-			{ $$ = new AstEventTrigger($1, $3); }
+			{ $$ = new AstEventTrigger($1, $3); DLYUNSUP($2); }
 	//
 	//			// IEEE: loop_statement
 	|	yFOREVER stmtBlock			{ $$ = new AstWhile($1,new AstConst($1, AstConst::BitTrue()), $2); }
@@ -4653,22 +4657,22 @@ stream_expressionOrDataType<nodep>:	// IEEE: from streaming_concatenation
 // Gate declarations
 
 gateDecl<nodep>:
-		yBUF    delayE gateBufList ';'		{ $$ = $3; }
-	|	yBUFIF0 delayE gateBufif0List ';'	{ $$ = $3; }
-	|	yBUFIF1 delayE gateBufif1List ';'	{ $$ = $3; }
-	|	yNOT    delayE gateNotList ';'		{ $$ = $3; }
-	|	yNOTIF0 delayE gateNotif0List ';'	{ $$ = $3; }
-	|	yNOTIF1 delayE gateNotif1List ';'	{ $$ = $3; }
-	|	yAND  delayE gateAndList ';'		{ $$ = $3; }
-	|	yNAND delayE gateNandList ';'		{ $$ = $3; }
-	|	yOR   delayE gateOrList ';'		{ $$ = $3; }
-	|	yNOR  delayE gateNorList ';'		{ $$ = $3; }
-	|	yXOR  delayE gateXorList ';'		{ $$ = $3; }
-	|	yXNOR delayE gateXnorList ';'		{ $$ = $3; }
-	|	yPULLUP delayE gatePullupList ';'	{ $$ = $3; }
-	|	yPULLDOWN delayE gatePulldownList ';'	{ $$ = $3; }
-	|	yNMOS delayE gateBufif1List ';'		{ $$ = $3; }  // ~=bufif1, as don't have strengths yet
-	|	yPMOS delayE gateBufif0List ';'		{ $$ = $3; }  // ~=bufif0, as don't have strengths yet
+		yBUF    delayE gateBufList ';'		{ $$ = $3; DLYUNSUP($2); }
+	|	yBUFIF0 delayE gateBufif0List ';'	{ $$ = $3; DLYUNSUP($2); }
+	|	yBUFIF1 delayE gateBufif1List ';'	{ $$ = $3; DLYUNSUP($2); }
+	|	yNOT    delayE gateNotList ';'		{ $$ = $3; DLYUNSUP($2); }
+	|	yNOTIF0 delayE gateNotif0List ';'	{ $$ = $3; DLYUNSUP($2); }
+	|	yNOTIF1 delayE gateNotif1List ';'	{ $$ = $3; DLYUNSUP($2); }
+	|	yAND  delayE gateAndList ';'		{ $$ = $3; DLYUNSUP($2); }
+	|	yNAND delayE gateNandList ';'		{ $$ = $3; DLYUNSUP($2); }
+	|	yOR   delayE gateOrList ';'		{ $$ = $3; DLYUNSUP($2); }
+	|	yNOR  delayE gateNorList ';'		{ $$ = $3; DLYUNSUP($2); }
+	|	yXOR  delayE gateXorList ';'		{ $$ = $3; DLYUNSUP($2); }
+	|	yXNOR delayE gateXnorList ';'		{ $$ = $3; DLYUNSUP($2); }
+	|	yPULLUP delayE gatePullupList ';'	{ $$ = $3; DLYUNSUP($2); }
+	|	yPULLDOWN delayE gatePulldownList ';'	{ $$ = $3; DLYUNSUP($2); }
+	|	yNMOS delayE gateBufif1List ';'		{ $$ = $3; DLYUNSUP($2); }  // ~=bufif1, as don't have strengths yet
+	|	yPMOS delayE gateBufif0List ';'		{ $$ = $3; DLYUNSUP($2); }  // ~=bufif0, as don't have strengths yet
 	//
 	|	yTRAN delayE gateUnsupList ';'		{ $$ = $3; GATEUNSUP($3,"tran"); } // Unsupported
 	|	yRCMOS delayE gateUnsupList ';'		{ $$ = $3; GATEUNSUP($3,"rcmos"); } // Unsupported

@@ -1962,6 +1962,7 @@ private:
     VLifetime m_lifetime;  // Lifetime
     VVarAttrClocker m_attrClocker;
     MTaskIdSet m_mtaskIds;  // MTaskID's that read or write this var
+    AstNode* m_delayp = nullptr;  // Delay on variable
     int m_pinNum = 0;  // For XML, if non-zero the connection pin number
     bool m_ansi : 1;  // ANSI port list variable (for dedup check)
     bool m_declTyped : 1;  // Declared as type (for dedup check)
@@ -2157,6 +2158,7 @@ public:
     AstNode* attrsp() const { return op4p(); }  // op4 = Attributes during early parse
     void childDTypep(AstNodeDType* nodep) { setOp1p(nodep); }
     virtual AstNodeDType* subDTypep() const { return dtypep() ? dtypep() : childDTypep(); }
+    void delayp(AstNode* delayp) { m_delayp = delayp; }
     void ansi(bool flag) { m_ansi = flag; }
     void declTyped(bool flag) { m_declTyped = flag; }
     void attrClockEn(bool flag) { m_attrClockEn = flag; }
@@ -2211,6 +2213,7 @@ public:
     virtual void name(const string& name) override { m_name = name; }
     virtual void tag(const string& text) override { m_tag = text; }
     virtual string tag() const override { return m_tag; }
+    AstNode* delayp() const { return m_delayp; }
     bool isAnsi() const { return m_ansi; }
     bool isContinuously() const { return m_isContinuously; }
     bool isDeclTyped() const { return m_declTyped; }

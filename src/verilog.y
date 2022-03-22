@@ -65,6 +65,7 @@ public:
     AstCase* m_caseAttrp = nullptr;  // Current case statement for attribute adding
     AstNodeDType* m_varDTypep = nullptr;  // Pointer to data type for next signal declaration
     AstNodeDType* m_memDTypep = nullptr;  // Pointer to data type for next member declaration
+    AstNode* m_delayp = nullptr;  // Pointer to delay for next signal declaration
     AstNodeModule* m_modp = nullptr;  // Last module for timeunits
     bool m_pinAnsi = false;  // In ANSI port list
     FileLine* m_instModuleFl = nullptr;  // Fileline of module referenced for instantiations
@@ -142,6 +143,9 @@ public:
     void setDType(AstNodeDType* dtypep) {
         if (m_varDTypep) VL_DO_CLEAR(m_varDTypep->deleteTree(), m_varDTypep = nullptr);
         m_varDTypep = dtypep;
+    }
+    void setDelay(AstNode* delayp) {
+        m_delayp = delayp;
     }
     void pinPush() {
         m_pinStack.push(m_pinNum);
@@ -1697,9 +1701,9 @@ net_dataTypeE<nodeDTypep>:
 	//			// Otherwise #(...) can't be determined to be a delay or parameters
 	//			// Submit this as a footnote to the committee
 		var_data_type	 			{ $$ = $1; }
-	|	signingE rangeList delayE 		{ $$ = GRAMMARP->addRange(new AstBasicDType($2->fileline(), LOGIC, $1),$2,true); }  // not implicit
+	|	signingE rangeList delayE 		{ $$ = GRAMMARP->addRange(new AstBasicDType($2->fileline(), LOGIC, $1),$2,true); GRAMMARP->setDelay($3); }  // not implicit
 	|	signing					{ $$ = new AstBasicDType($<fl>1, LOGIC, $1); }  // not implicit
-	|	/*implicit*/ delayE 			{ $$ = new AstBasicDType(CRELINE(), LOGIC); }  // not implicit
+	|	/*implicit*/ delayE 			{ $$ = new AstBasicDType(CRELINE(), LOGIC); GRAMMARP->setDelay($1); }  // not implicit
 	;
 
 net_type:			// ==IEEE: net_type

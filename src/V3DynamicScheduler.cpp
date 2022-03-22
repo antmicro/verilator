@@ -455,8 +455,6 @@ private:
                                new AstSenItem{nodep->fileline(), AstSenItem::Combo()}},
                 new AstAssign{nodep->fileline(),
                               new AstVarRef{nodep->fileline(), newvscp, VAccess::WRITE}, rhsp}};
-            if (auto* lvalp = VN_CAST(lhsp, VarRef))
-                lvalp->varp()->fileline()->warnOff(V3ErrorCode::UNOPTFLAT, true);
             nodep->replaceWith(alwaysp);
             alwaysp->addStmtp(new AstDelay{delayp->fileline(), delayp, nullptr});
             alwaysp->addStmtp(

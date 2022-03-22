@@ -1179,6 +1179,10 @@ class OrderProcess final : VNDeleter {
             // IEEE does not specify ordering between initial blocks, so we
             // can do whatever we want. We especially do not want to
             // evaluate multiple times, so do not mark the edge circular
+        } else if ((fromLVtxp && VN_IS(fromLVtxp->nodep(), NodeProcedure)
+                    && VN_CAST(fromLVtxp->nodep(), NodeProcedure)->isSuspendable())
+                   || (toLVtxp && VN_IS(toLVtxp->nodep(), NodeProcedure)
+                       && VN_CAST(toLVtxp->nodep(), NodeProcedure)->isSuspendable())) {
         } else {
             nodep->circular(true);
             ++m_statCut[vertexp->type()];

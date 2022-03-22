@@ -4014,8 +4014,7 @@ private:
             // if (debug()) nodep->dumpTree(cout, "  AssignOut: ");
         }
         if (auto* lvalp = VN_CAST(nodep->lhsp(), VarRef))
-            if (lvalp->varp()->delayp())
-                nodep->delayp(lvalp->varp()->delayp());
+            if (lvalp->varp()->delayp()) nodep->delayp(lvalp->varp()->delayp());
         iterateNull(nodep->delayp());
         if (const AstBasicDType* const basicp = nodep->rhsp()->dtypep()->basicp()) {
             if (basicp->isEventValue()) {

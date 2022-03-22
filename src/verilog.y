@@ -2346,13 +2346,15 @@ module_common_item<nodep>:	// ==IEEE: module_common_item
 	;
 
 continuous_assign<nodep>:	// IEEE: continuous_assign
-		yASSIGN strengthSpecE assignList ';'	{ $$ = $3; }
-	|	yASSIGN strengthSpecE delay_control assignList ';'	{ $$ = $4;
-            for (auto* nodep = $$; nodep; nodep = nodep->nextp()) {
-                if (auto* const assignp = VN_CAST(nodep, NodeAssign)) {
-                    assignp->delayp(nodep == $$ ? $3 : $3->cloneTree(false));
+		yASSIGN strengthSpecE delayE assignList ';'
+        {
+            $$ = $4;
+            if ($3)
+                for (auto* nodep = $$; nodep; nodep = nodep->nextp()) {
+                    if (auto* const assignp = VN_CAST(nodep, NodeAssign)) {
+                        assignp->delayp(nodep == $$ ? $3 : $3->cloneTree(false));
+                    }
                 }
-            }
         }
 	;
 
@@ -2591,15 +2593,22 @@ assignOne<nodep>:
 //UNSUP	|	yREPEAT '(' expr ')' event_control	{ }
 //UNSUP	;
 
-delayE:
-		/* empty */				{ }
-	|	delay					{ }
+delayE<nodep>:
+		/* empty */				{ $$ = nullptr; }
+	|	delay					{ $$ = $1; }
 	;
 
-delay:
+delay<nodep>:
 		delay_control
-			{ $1->v3warn(ASSIGNDLY, "Unsupported: Ignoring delay on this assignment/primitive.");
-			  DEL($1); }
+			{ 
+                if (!v3Global.opt.dynamicScheduler()) {
+                    $1->v3warn(ASSIGNDLY, "Unsupported: Ignoring delay on this assignment/primitive.");
+                    DEL($1); 
+                    $$ = nullptr;
+                } else {
+                    $$ = $1;
+                }
+            }
 	;
 
 delay_control<nodep>:	//== IEEE: delay_control
@@ -3089,13 +3098,11 @@ statement_item<nodep>:		// IEEE: statement_item
 	|	fexprLvalue '=' dynamic_array_new ';'	{ $$ = new AstAssign($2, $1, $3); }
 	//
 	//			// IEEE: nonblocking_assignment
-	|	fexprLvalue yP_LTE expr ';'	{ $$ = new AstAssignDly($2,$1,$3); }
-	|	fexprLvalue yP_LTE delay_control expr ';'	{ $$ = new AstAssignDly($2,$1,$4,$3); }
+	|	fexprLvalue yP_LTE delayE expr ';'	{ $$ = new AstAssignDly($2,$1,$4,$3); }
 	//UNSUP	fexprLvalue yP_LTE delay_or_event_controlE expr ';'	{ UNSUP }
 	//
 	//			// IEEE: procedural_continuous_assignment
-	|	yASSIGN idClassSel '=' expr ';'	{ $$ = new AstAssign($1,$2,$4); }
-	|	yASSIGN idClassSel '=' delay_control expr ';'	{ $$ = new AstAssign($1,$2,$5,$4); }
+	|	yASSIGN idClassSel '=' delayE expr ';'	{ $$ = new AstAssign($1,$2,$5,$4); }
 	//UNSUP:			delay_or_event_controlE above
 	|	yDEASSIGN variable_lvalue ';'
 			{ $$ = nullptr; BBUNSUP($1, "Unsupported: Verilog 1995 deassign"); }
@@ -3274,8 +3281,7 @@ statementVerilatorPragmas<nodep>:
 //UNSUP	;
 
 foperator_assignment<nodep>:	// IEEE: operator_assignment (for first part of expression)
-		fexprLvalue '=' expr	{ $$ = new AstAssign($2,$1,$3); }
-	|   fexprLvalue '=' delay_control expr	{ $$ = new AstAssign($2,$1,$4,$3); }
+		fexprLvalue '=' delayE expr	{ $$ = new AstAssign($2,$1,$4,$3); }
 	|	fexprLvalue '=' yD_FOPEN '(' expr ')'		{ $$ = new AstFOpenMcd($3,$1,$5); }
 	|	fexprLvalue '=' yD_FOPEN '(' expr ',' expr ')'	{ $$ = new AstFOpen($3,$1,$5,$7); }
 	//

@@ -144,9 +144,7 @@ public:
         if (m_varDTypep) VL_DO_CLEAR(m_varDTypep->deleteTree(), m_varDTypep = nullptr);
         m_varDTypep = dtypep;
     }
-    void setDelay(AstNode* delayp) {
-        m_delayp = delayp;
-    }
+    void setDelay(AstNode* delayp) { m_delayp = delayp; }
     void pinPush() {
         m_pinStack.push(m_pinNum);
         m_pinNum = 1;

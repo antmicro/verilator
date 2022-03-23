@@ -1183,6 +1183,7 @@ class OrderProcess final : VNDeleter {
                     && VN_CAST(fromLVtxp->nodep(), NodeProcedure)->isSuspendable())
                    || (toLVtxp && VN_IS(toLVtxp->nodep(), NodeProcedure)
                        && VN_CAST(toLVtxp->nodep(), NodeProcedure)->isSuspendable())) {
+            // At least one of the processes gets suspended
         } else {
             nodep->circular(true);
             ++m_statCut[vertexp->type()];

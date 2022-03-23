@@ -61,6 +61,8 @@
 //      Each Fork:
 //          Move each statement to a separate new function
 //          Add call to new function in place of moved statement
+//          If fork is not join_none:
+//              Create a join struct used for syncing processes
 //
 //      Each TimingControl, Wait:
 //          Create event variables for triggering those.
@@ -405,13 +407,12 @@ public:
 class DynamicSchedulerIntraAssignDelayVisitor final : public VNVisitor {
 private:
     // STATE
-    size_t m_count = 0;
-    AstScope* m_scopep = nullptr;
+    size_t m_count = 0;  // Counter for var name generation
+    AstScope* m_scopep = nullptr;  // Current scope
 
     // METHODS
     AstVarScope* getCreateIntraVar(AstNode* lhsp, string name) {
         name = "__Vintraval" + std::to_string(m_count++) + "__" + name;
-        // UASSERT_OBJ(oldvarscp->scopep(), oldvarscp, "Var unscoped");
         AstVar* varp;
         AstNodeModule* modp = m_scopep->modp();
         varp = new AstVar{lhsp->fileline(), VVarType::BLOCKTEMP, name, lhsp->dtypep()};
@@ -502,15 +503,16 @@ private:
     // VNUser2InUse    m_inuser3;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
 
     // STATE
-    AstScope* m_scopep = nullptr;
-    std::map<AstVarScope*, AstVarScope*> m_locals;
-    size_t m_count = 0;
-    AstVar* m_joinEventp;
-    AstVar* m_joinCounterp;
-    AstClassRefDType* m_joinDTypep;
-    AstCFunc* m_joinNewp;
+    AstScope* m_scopep = nullptr;  // Current scope
+    std::map<AstVarScope*, AstVarScope*>
+        m_locals;  // Map from var accessed by process to func-local var
+    size_t m_count = 0;  // Counter for var name generation
+    AstVar* m_joinEventp;  // Join struct sync event member
+    AstVar* m_joinCounterp;  // Join struct thread counter member
+    AstClassRefDType* m_joinDTypep;  // Join struct type
+    AstCFunc* m_joinNewp;  // Join struct constructor
 
-    enum { FORK, GATHER, REPLACE } m_mode = FORK;
+    enum { FORK, GATHER, REPLACE } m_mode = FORK;  // Stages for this visitor
 
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
@@ -697,7 +699,7 @@ private:
 
     // STATE
     using VarScopeSet = std::set<AstVarScope*>;
-    VarScopeSet m_waitVars;
+    VarScopeSet m_waitVars;  // Set of vars in wait expression
 
     bool m_inTimingControlSens = false;  // Are we under a timing control sens list?
     bool m_inWait = false;  // Are we under a wait statement?
@@ -852,7 +854,7 @@ private:
     // VNUser2InUse    m_inuser3;      (Allocated for use in DynamicSchedulerMarkDynamicVisitor)
 
     // STATE
-    size_t m_count = 0;
+    size_t m_count = 0;  // Counter for var name generation
     AstTopScope* m_topScopep = nullptr;  // Current top scope
 
     // METHODS
@@ -970,9 +972,9 @@ class DynamicSchedulerClassEventVisitor final : public VNVisitor {
 private:
     // STATE
     AstClass* m_classp = nullptr;  // Current class
-    AstNode* m_resetStmtsp = nullptr;
-    AstCFunc* m_constructor = nullptr;
-    AstCFunc* m_destructor = nullptr;
+    AstNode* m_resetStmtsp = nullptr;  // Statements that reset member events
+    AstCFunc* m_constructor = nullptr;  // Current class constructor
+    AstCFunc* m_destructor = nullptr;  // Current class destructor
 
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()

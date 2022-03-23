@@ -2296,50 +2296,62 @@ private:
 
 public:
     void handleExclusivity(V3Graph& mtaskGraph, ThreadSchedule& schedule) {
-        const auto moveBy = [&](ExecMTask* mtaskp, uint32_t shift) {
-            mtaskp->predictStart(mtaskp->predictStart() + shift);
-            schedule.mtaskState[mtaskp].completionTime += shift;
-        };
-
-        const auto moveAfter = [&](ExecMTask* firstMtaskp, ExecMTask* secondMtaskp) {
-            if (schedule.mtaskState[firstMtaskp].completionTime > secondMtaskp->predictStart()) {
-                uint32_t shift = schedule.mtaskState[firstMtaskp].completionTime
-                                 - secondMtaskp->predictStart();
-                moveBy(secondMtaskp, shift);
-                for (V3GraphVertex* vxp = secondMtaskp->verticesNextp(); vxp;
-                     vxp = vxp->verticesNextp()) {
-                    ExecMTask* mtaskp = dynamic_cast<ExecMTask*>(vxp);
-                    moveBy(mtaskp, shift);
-                }
-            }
-            new V3GraphEdge(&mtaskGraph, firstMtaskp, secondMtaskp, 1);
-        };
-
-        for (V3GraphVertex* vxp = mtaskGraph.verticesBeginp(); vxp; vxp = vxp->verticesNextp()) {
-            ExecMTask* mtaskp = dynamic_cast<ExecMTask*>(vxp);
-            if (!mtaskp->exclusive()) continue;
-            std::vector<ExecMTask*> prevMTasks(m_nThreads, nullptr);
-            std::vector<ExecMTask*> nextMTasks(m_nThreads, nullptr);
+        auto iterateOtherMtasks = [&](ExecMTask* mtaskp, auto f) {
             for (V3GraphVertex* vxp = mtaskGraph.verticesBeginp(); vxp;
                  vxp = vxp->verticesNextp()) {
                 ExecMTask* otherMtaskp = dynamic_cast<ExecMTask*>(vxp);
-                if (mtaskp == otherMtaskp) continue;
-                auto threadId = schedule.threadId(otherMtaskp);
-                if (schedule.threadId(mtaskp) == threadId) continue;
-                if (mtaskp->predictStart() <= otherMtaskp->predictStart()) {
-                    if (!nextMTasks[threadId]
-                        || otherMtaskp->predictStart() < nextMTasks[threadId]->predictStart())
-                        nextMTasks[threadId] = otherMtaskp;
-                } else {
-                    if (!prevMTasks[threadId]
-                        || otherMtaskp->predictStart() > prevMTasks[threadId]->predictStart())
-                        prevMTasks[threadId] = otherMtaskp;
-                }
+                if (mtaskp != otherMtaskp) f(mtaskp, otherMtaskp);
             }
-            for (auto* otherMtaskp : prevMTasks)
-                if (otherMtaskp) moveAfter(otherMtaskp, mtaskp);
-            for (auto* otherMtaskp : nextMTasks)
-                if (otherMtaskp) moveAfter(mtaskp, otherMtaskp);
+        };
+
+        // For exclusive tasks, find all preceding and subsequent tasks and make sure there is no
+        // overlap
+        for (V3GraphVertex* vxp = mtaskGraph.verticesBeginp(); vxp; vxp = vxp->verticesNextp()) {
+            ExecMTask* mtaskp = dynamic_cast<ExecMTask*>(vxp);
+            if (!mtaskp->exclusive()) continue;
+            uint64_t thisShift = 0;  // Amount of time our exlcusive task needs to be shifted by
+            // Find amount of time our exclusive task needs to be shifted by to avoid overlap with
+            // preceding tasks; create edges from preceding tasks to our exclusive task (if it's on
+            // a different thread)
+            iterateOtherMtasks(mtaskp, [&](auto* mtaskp, auto* otherMtaskp) {
+                if (mtaskp->predictStart() > otherMtaskp->predictStart()) {
+                    if (schedule.mtaskState[otherMtaskp].completionTime > mtaskp->predictStart())
+                        thisShift
+                            = std::max(thisShift, schedule.mtaskState[otherMtaskp].completionTime
+                                                      - mtaskp->predictStart());
+                    if (schedule.threadId(mtaskp) != schedule.threadId(otherMtaskp))
+                        new V3GraphEdge(&mtaskGraph, otherMtaskp, mtaskp, 1);
+                }
+            });
+            // Move our exclusive task by the calculated amount (do not move start time yet, it's
+            // needed for the next step)
+            schedule.mtaskState[mtaskp].completionTime += thisShift;
+            std::vector<uint64_t> subseqShifts(
+                m_nThreads, 0);  // Amount of time to shift subsequent tasks by (per thread)
+            // Find maximum amount of time a subsequent task needs to be shifted by to avoid
+            // overlap with our exclusive task
+            iterateOtherMtasks(mtaskp, [&](auto* mtaskp, auto* otherMtaskp) {
+                auto threadId = schedule.threadId(otherMtaskp);
+                if (mtaskp->predictStart() <= otherMtaskp->predictStart()
+                    && schedule.mtaskState[mtaskp].completionTime > otherMtaskp->predictStart())
+                    subseqShifts[threadId] = std::max(subseqShifts[threadId],
+                                                      schedule.mtaskState[mtaskp].completionTime
+                                                          - otherMtaskp->predictStart());
+            });
+            // Move subsequent tasks by the calculated amount; create edges from our exclusive task
+            // to subsequent tasks (if they're on a different thread)
+            iterateOtherMtasks(mtaskp, [&](auto* mtaskp, auto* otherMtaskp) {
+                auto threadId = schedule.threadId(otherMtaskp);
+                if (mtaskp->predictStart() <= otherMtaskp->predictStart()) {
+                    otherMtaskp->predictStart(otherMtaskp->predictStart()
+                                              + subseqShifts[threadId]);
+                    schedule.mtaskState[otherMtaskp].completionTime += subseqShifts[threadId];
+                    if (schedule.threadId(mtaskp) != threadId)
+                        new V3GraphEdge(&mtaskGraph, mtaskp, otherMtaskp, 1);
+                }
+            });
+            // Move our exclusive task by the calculated amount (move start time now)
+            mtaskp->predictStart(mtaskp->predictStart() + thisShift);
         }
 
         mtaskGraph.removeTransitiveEdges();

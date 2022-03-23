@@ -31,8 +31,8 @@ jobs:
       matrix:
         os: [ubuntu-20.04, ubuntu-18.04]
         compiler:
-          - { cc: clang, cxx: clang++ }
-          - { cc: gcc,   cxx: g++     }
+          - { cc: clang,  cxx: clang++ }
+          - { cc: gcc-10, cxx: g++-10  }
         m32: [0, 1]
         exclude:
           # Build pull requests only with ubuntu-20.04 and without m32
@@ -92,8 +92,8 @@ jobs:
       matrix:
         os: [ubuntu-20.04, ubuntu-18.04]
         compiler:
-          - { cc: clang, cxx: clang++ }
-          - { cc: gcc,   cxx: g++     }
+          - { cc: clang,  cxx: clang++ }
+          - { cc: gcc-10, cxx: g++-10  }
         m32: [0, 1]
         suite: [dist-vlt-0, dist-vlt-1, dist-vlt-2, vltmt-0, vltmt-1, dynamic-scheduler]
         exclude:

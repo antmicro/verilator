@@ -62,7 +62,7 @@ if [ "$CI_BUILD_STAGE_NAME" = "build" ]; then
       yes yes | sudo cpan -fi Parallel::Forker
     fi
     if [ "$CI_M32" = 1 ]; then
-      sudo apt-get install gcc-multilib g++-multilib
+      sudo apt-get install gcc-10-multilib g++-10-multilib
     fi
   elif [ "$CI_OS_NAME" = "osx" ]; then
     brew update
@@ -89,7 +89,7 @@ elif [ "$CI_BUILD_STAGE_NAME" = "test" ]; then
       sudo apt-get install libsystemc-dev
     fi
     if [ "$CI_M32" = 1 ]; then
-      sudo apt-get install lib32z1-dev gcc-multilib g++-multilib
+      sudo apt-get install lib32z1-dev gcc-10-multilib g++-10-multilib
     fi
   elif [ "$CI_OS_NAME" = "osx" ]; then
     brew update

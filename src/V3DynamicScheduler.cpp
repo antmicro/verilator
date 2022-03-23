@@ -1028,8 +1028,7 @@ void V3DynamicScheduler::transform(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     UINFO(2, "  Transform Intra Assign Delays...\n");
     { DynamicSchedulerIntraAssignDelayVisitor{nodep}; }
-    V3Global::dumpCheckGlobalTree("dsch_transf_intra", 0,
-                                  v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
+    V3Global::dumpCheckGlobalTree("dsch_intra", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
     UINFO(2, "  Mark Dynamic...\n");
     DynamicSchedulerMarkDynamicVisitor visitor(nodep);  // Keep it around to keep user data
     V3Global::dumpCheckGlobalTree("dsch_mark_dyn", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
@@ -1056,5 +1055,5 @@ void V3DynamicScheduler::transform(AstNetlist* nodep) {
 
 void V3DynamicScheduler::classCleanup(AstNetlist* nodep) {
     { DynamicSchedulerClassEventVisitor{nodep}; }
-    V3Global::dumpCheckGlobalTree("dsch_classes", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 3);
+    V3Global::dumpCheckGlobalTree("dsch_classes", 0, v3Global.opt.dumpTreeLevel(__FILE__) >= 6);
 }

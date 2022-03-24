@@ -23,12 +23,13 @@ int main(int argc, char* argv[]) {
 #ifdef VL_DYNAMIC_SCHEDULER
         topp->eval();
         auto newTime = topp->nextTimeSlot();
-        if (newTime - simTime <= 0 || newTime - floorf(newTime) == 0) {
-            topp->clk = !topp->clk;
-            simTime += 1;
-        } else {
-            simTime = newTime;
+        if (newTime - simTime <= 0 || newTime - floor(newTime) == 0) {
+            newTime = simTime + 1;
         }
+        if (floor(newTime) - floor(simTime) >= 1) {
+            topp->clk = !topp->clk;
+        }
+        simTime = newTime;
 #else
         topp->eval();
         topp->clk = 1;

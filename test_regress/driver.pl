@@ -1899,10 +1899,10 @@ sub _make_main {
         if ($self->{inputs}{clk}) {
             print $fh "        auto newTime = topp->nextTimeSlot();\n";
             print $fh "        if (newTime - contextp->time() <= 0 ||\n";
-            print $fh "            newTime - floorf(newTime) == 0) {\n";
+            print $fh "            newTime - floor(newTime) == 0) {\n";
             print $fh "            newTime = contextp->time() + MAIN_TIME_MULTIPLIER;\n";
             print $fh "        }\n";
-            print $fh "        if (floorf(newTime) - floorf(contextp->time()) >= 1) {\n";
+            print $fh "        if (floor(newTime) - floor(contextp->time()) >= 1) {\n";
             print $fh "            ${set}clk = !${set}clk;\n";
             print $fh "        }\n";
             print $fh "        contextp->time(newTime);\n";

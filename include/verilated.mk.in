@@ -144,7 +144,7 @@ endif
 ifneq ($(VM_DYNAMIC_SCHEDULER),0)
  ifneq ($(VM_DYNAMIC_SCHEDULER),)
   CPPFLAGS += -DVL_DYNAMIC_SCHEDULER
-  ifeq ($(CXX),clang++)
+  ifneq (,$(findstring clang,$(CXX)))
    CPPFLAGS += -fcoroutines-ts
   else
    CPPFLAGS += -fcoroutines

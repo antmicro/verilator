@@ -146,6 +146,10 @@ private:
             }
         }
         void addConstraint(AstNode* nodep) {
+            if (auto* softp = VN_CAST(nodep, SoftCond)) {
+                // TODO: Create control variable for relaxing
+                nodep = softp->condsp();
+            }
             if (auto* andp = VN_CAST(nodep, LogAnd)) {
                 addConstraint(andp->lhsp());
                 addConstraint(andp->rhsp());

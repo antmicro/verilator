@@ -6491,7 +6491,7 @@ constraint_expressionList<nodep>:  // ==IEEE: { constraint_expression }
 constraint_expression<nodep>:  // ==IEEE: constraint_expression
                 expr/*expression_or_dist*/ ';'          { $$ = $1; }
         //                      // 1800-2012:
-        |       ySOFT expr/*expression_or_dist*/ ';'    { $$ = nullptr; /*UNSUP-no-UVM*/ }
+        |       ySOFT expr/*expression_or_dist*/ ';'    { $$ = new AstSoftCond($<fl>1, $2); /*UNSUP*/ }
         //                      // 1800-2012:
         //                      // IEEE: uniqueness_constraint ';'
         |       yUNIQUE '{' open_range_list '}'         { $$ = nullptr; /*UNSUP-no-UVM*/ }

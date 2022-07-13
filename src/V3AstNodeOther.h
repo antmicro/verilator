@@ -1822,6 +1822,17 @@ public:
     bool hasCombo() const;  // Includes a COMBO SenItem
     bool hasHybrid() const;  // Includes a HYBRID SenItem
 };
+class AstSoftCond final : public AstNode {
+    // @astgen op1 := condsp : List[AstNode]
+private:
+public:
+    AstSoftCond(FileLine* fl, AstNode* condsp)
+        : ASTGEN_SUPER_SoftCond(fl) {
+        addCondsp(condsp);
+    }
+    ASTGEN_MEMBERS_SoftCond;
+    virtual string verilogKwd() const override { return "soft"; }
+};
 class AstSplitPlaceholder final : public AstNode {
 public:
     // Dummy node used within V3Split; never exists outside of V3Split.

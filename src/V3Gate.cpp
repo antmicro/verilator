@@ -508,6 +508,7 @@ private:
         }
     }
     void visit(AstConstraint* nodep) override { iterateNewStmt(nodep, "", ""); }
+    void visit(AstSoftCond* nodep) override { iterateNewStmt(nodep, "", ""); }
     void visit(AstCFunc* nodep) override {
         iterateNewStmt(nodep, "User C Function", "User C Function");
     }

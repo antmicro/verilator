@@ -184,6 +184,12 @@ private:
         m_scopep->addBlocksp(nodep);
         iterateChildren(nodep);
     }
+    void visit(AstSoftCond* nodep) override {
+        nodep->unlinkFrBack();
+        nodep->user2p(nodep);
+        m_scopep->addBlocksp(nodep);
+        iterateChildren(nodep);
+    }
     void visit(AstCellInline* nodep) override {  //
         nodep->scopep(m_scopep);
     }

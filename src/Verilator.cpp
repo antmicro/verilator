@@ -189,7 +189,11 @@ static void process() {
     V3Const::constifyAllLive(v3Global.rootp());
 
     // Add randomize() class methods if they are used by the design
-    if (v3Global.useRandomizeMethods()) V3Randomize::randomizeNetlist(v3Global.rootp());
+    if (v3Global.useRandomizeMethods()) {
+        V3Randomize::randomizeNetlist(v3Global.rootp());
+        // Soft constraints could have used returns, process them
+        V3LinkJump::linkJump(v3Global.rootp());
+    }
 
     // Signal based lint checks, no change to structures
     // Must be before first constification pass drops dead code

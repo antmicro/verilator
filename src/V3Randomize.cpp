@@ -282,19 +282,17 @@ private:
                 if (auto* constrp = VN_CAST(nodep, Constraint)) {
                     for (auto* condp = constrp->condsp(); condp; condp = condp->nextp()) {
                         if (auto* softp = VN_CAST(condp, SoftCond)) {
-                            static size_t m_softConstraintCount; // Number of soft constraint control variables created
+                            static size_t m_softConstraintCount; // Number of soft constraint control varaibles created
+                            // TODO: Create control variable for relaxing
                             auto* const vardtypep
                                 = nodep->findBitDType(32, 32, VSigning::SIGNED);  // use int return of 0/1
                             AstVar* const varp
                                 = new AstVar(nodep->fileline(), VVarType::MODULETEMP,
                                              "__Vsoft_" + cvtToStr(m_softConstraintCount++), vardtypep);
-                            varp->isRand(false);
                             nodep = AstNode::addNext(nodep, varp);
                             condp = softp->condsp();
-                            addConstraint(condp, varp);
-                        } else {
-                            addConstraint(condp);
                         }
+                        addConstraint(condp);
                     }
                 }
                 nodep = nodep->nextp();
@@ -436,6 +434,7 @@ private:
                 varrefp = varrefp->cloneTree(false);
                 auto* stmtsp = new AstBegin(fl, "", new AstAssign(fl, varrefp, new AstConst(fl, 0)), false, false);
                 stmtsp->addStmtsp(new AstReturn(fl, new AstConst(fl, 1)));
+                //stmtsp->addStmtsp(new AstAssign(fl, createRef(fl, fvarp, nullptr, VAccess::WRITE), new AstConst(fl, 1))); // Relaxed something
                 auto* ifp = new AstIf(fl, condp, stmtsp);
                 funcp->addStmtsp(ifp);
             }
@@ -500,8 +499,9 @@ private:
                 auto* const memberVarp = VN_CAST(memberp, Var);
                 // TODO: if soft constraint control add relaxing
                 if (!memberVarp) continue;
-                else if (memberVarp->name().find("__Vsoft") != std::string::npos){
-                    continue; // Don't randomize control variables
+                else if (memberVarp->name().find("__Vsoft") == std::string::npos){
+                    //stmtsp = AstNode::addNext(stmtsp, newRelaxNextSoft(nodep));
+                    newRelaxNextSoft(nodep);
                 }
                 else if (!memberVarp->isRand()) continue;
                 const auto* const dtypep = memberp->dtypep()->skipRefp();
@@ -583,28 +583,6 @@ private:
         //   }
         // }
         //
-        auto* dtypep = nodep->findBitDType(32, 32, VSigning::SIGNED);
-        auto* const frefp
-            = new AstVarRef(nodep->fileline(), fvarp, VAccess::READ);
-        auto* randcallp = new AstMethodCall(fl, frefp, "randomize", nullptr);
-        randcallp->dtypep(dtypep);
-        auto* const rrefp
-            = new AstVarRef(nodep->fileline(), rvarp, VAccess::READ);
-        auto* relaxcallp = new AstMethodCall(fl, rrefp, "relax_next", nullptr);
-        auto* rdtypep = nodep->findBitDType(32, 32, VSigning::SIGNED);
-        relaxcallp->dtypep(rdtypep);
-        auto* redop = new AstWhile(fl, relaxcallp,
-                                   new AstIf(fl,
-                                             new AstEq(fl,
-                                                       randcallp,
-                                                       new AstConst(fl, 1)),
-                                             new AstBreak(fl)));
-
-        auto* ifp = new AstIf(fl, new AstNeq(fl, frefp->cloneTree(false), new AstConst(fl, 1)),
-                              redop,
-                              nullptr
-                              );
-        funcp->addStmtsp(ifp);
         m_constraints = {};
         nodep->user1(false);
     }

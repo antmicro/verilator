@@ -37,8 +37,6 @@ module Test1(
    input clk;
    input [3:0] a, b;
 
-   always @(posedge clk) begin
-      $strobe("%0d == %0d, %0d == %0d", a, b, $past(a), $past(b));
-   end
+   assert property (@(posedge clk) $sampled(a) == $sampled(b));
 
 endmodule

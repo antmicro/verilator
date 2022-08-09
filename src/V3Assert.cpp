@@ -44,6 +44,9 @@ private:
     VDouble0 m_statAsNotImm;  // Statistic tracking
     VDouble0 m_statAsImm;  // Statistic tracking
     VDouble0 m_statAsFull;  // Statistic tracking
+    bool m_inConcurrentAssert = false;
+    bool m_inSenTree = false;
+    bool m_inSampled = false;
 
     // METHODS
     string assertDisplayMessage(AstNode* nodep, const string& prefix, const string& message) {
@@ -252,6 +255,21 @@ private:
         }
     }
 
+    virtual void visit(AstVarRef* nodep) override {
+        iterateChildren(nodep);
+        if (!m_inConcurrentAssert || m_inSenTree || m_inSampled) return;
+        AstVarRef* const varref = nodep->cloneTree(true);
+        AstNode* sampled = new AstSampled(nodep->fileline(), varref);
+        sampled->dtypeFrom(varref);
+        nodep->replaceWith(sampled);
+        VL_DO_DANGLING(pushDeletep(nodep), nodep);
+    }
+    virtual void visit(AstSampled* nodep) override {
+        m_inSampled = true;
+        iterateChildren(nodep);
+        m_inSampled = false;
+    }
+
     //========== Case assertions
     virtual void visit(AstCase* nodep) override {
         iterateChildren(nodep);
@@ -321,42 +339,6 @@ private:
         }
     }
 
-    //========== Past
-    virtual void visit(AstPast* nodep) override {
-        iterateChildren(nodep);
-        uint32_t ticks = 1;
-        if (nodep->ticksp()) {
-            UASSERT_OBJ(VN_IS(nodep->ticksp(), Const), nodep,
-                        "Expected constant ticks, checked in V3Width");
-            ticks = VN_AS(nodep->ticksp(), Const)->toUInt();
-        }
-        UASSERT_OBJ(ticks >= 1, nodep, "0 tick should have been checked in V3Width");
-        AstNode* inp = nodep->exprp()->unlinkFrBack();
-        AstVar* invarp = nullptr;
-        AstSenTree* const sentreep = nodep->sentreep();
-        sentreep->unlinkFrBack();
-        AstAlways* const alwaysp
-            = new AstAlways(nodep->fileline(), VAlwaysKwd::ALWAYS, sentreep, nullptr);
-        m_modp->addStmtp(alwaysp);
-        for (uint32_t i = 0; i < ticks; ++i) {
-            AstVar* const outvarp = new AstVar(
-                nodep->fileline(), VVarType::MODULETEMP,
-                "_Vpast_" + cvtToStr(m_modPastNum++) + "_" + cvtToStr(i), inp->dtypep());
-            m_modp->addStmtp(outvarp);
-            AstNode* const assp = new AstAssignDly(
-                nodep->fileline(), new AstVarRef(nodep->fileline(), outvarp, VAccess::WRITE), inp);
-            alwaysp->addStmtp(assp);
-            // if (debug() >= 9) assp->dumpTree(cout, "-ass: ");
-            invarp = outvarp;
-            inp = new AstVarRef(nodep->fileline(), invarp, VAccess::READ);
-        }
-        nodep->replaceWith(inp);
-    }
-    virtual void visit(AstSampled* nodep) override {
-        nodep->replaceWith(nodep->exprp()->unlinkFrBack());
-        VL_DO_DANGLING(pushDeletep(nodep), nodep);
-    }
-
     //========== Statements
     virtual void visit(AstDisplay* nodep) override {
         iterateChildren(nodep);
@@ -417,21 +399,32 @@ private:
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
     virtual void visit(AstAssert* nodep) override {
+        m_inConcurrentAssert = !nodep->immediate();
         iterateChildren(nodep);
         newPslAssertion(nodep, nodep->failsp());
+        m_inConcurrentAssert = false;
     }
     virtual void visit(AstAssertIntrinsic* nodep) override {
+        m_inConcurrentAssert = !nodep->immediate();
         iterateChildren(nodep);
         newPslAssertion(nodep, nodep->failsp());
+        m_inConcurrentAssert = false;
     }
     virtual void visit(AstCover* nodep) override {
+        m_inConcurrentAssert = !nodep->immediate();
         iterateChildren(nodep);
         newPslAssertion(nodep, nullptr);
+        m_inConcurrentAssert = false;
     }
     virtual void visit(AstRestrict* nodep) override {
         iterateChildren(nodep);
         // IEEE says simulator ignores these
         VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
+    }
+    virtual void visit(AstSenTree* nodep) override {
+        m_inSenTree = true;
+        iterateChildren(nodep);
+        m_inSenTree = false;
     }
 
     virtual void visit(AstNodeModule* nodep) override {

@@ -13,6 +13,7 @@ module t (/*AUTOARG*/
    reg [3:0] a, b;
 
    Test1 t1(clk, a, b);
+   Test2 t2(clk, a, b);
 
    initial begin
       a = 0;
@@ -38,5 +39,16 @@ module Test1(
    input [3:0] a, b;
 
    assert property (@(posedge clk) $sampled(a) == $sampled(b));
+
+endmodule
+
+module Test2(
+   clk, a, b
+   );
+
+   input clk;
+   input [3:0] a, b;
+
+   assert property (@(posedge clk) a == b);
 
 endmodule

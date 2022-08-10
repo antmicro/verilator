@@ -132,13 +132,7 @@ private:
         AstVarScope* const newvscp = new AstVarScope(vscp->fileline(), m_scopep, newvarp);
         vscp->user1p(newvscp);
         m_scopep->addVarp(newvscp);
-        // Add init
-        AstNode* fromp = new AstVarRef(newvarp->fileline(), vscp, VAccess::READ);
-        if (v3Global.opt.xInitialEdge()) fromp = new AstNot(fromp->fileline(), fromp);
-        AstNode* const newinitp = new AstAssign(
-            vscp->fileline(), new AstVarRef(newvarp->fileline(), newvscp, VAccess::WRITE), fromp);
-        addToInitial(newinitp);
-        // At bottom, assign them
+        // At top, assign them
         AstAssign* const finalp = new AstAssign(
             vscp->fileline(), new AstVarRef(vscp->fileline(), newvscp, VAccess::WRITE),
             new AstVarRef(vscp->fileline(), vscp, VAccess::READ));

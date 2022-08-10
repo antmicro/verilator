@@ -24,6 +24,8 @@ module t (/*AUTOARG*/
       a <= a + 1;
       b = b + 1;
 
+      $display("a = %0d, b = %0d, %0d == %0d", a, b, $sampled(a), $sampled(b));
+
       if (b >= 10) begin
          $write("*-* All Finished *-*\n");
          $finish;

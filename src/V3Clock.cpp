@@ -120,6 +120,33 @@ private:
         UINFO(4, "New Last: " << newvscp << endl);
         return newvscp;
     }
+    AstVarScope* getCreateSampledVar(AstVarScope* vscp) {
+        if (vscp->user1p()) return static_cast<AstVarScope*>(vscp->user1p());
+        const AstVar* const varp = vscp->varp();
+        const string newvarname
+            = (string("__Vsampled__") + vscp->scopep()->nameDotless() + "__" + varp->name());
+        AstVar* const newvarp
+            = new AstVar(vscp->fileline(), VVarType::MODULETEMP, newvarname, varp->dtypep());
+        newvarp->noReset(true);  // Reset by below assign
+        m_modp->addStmtp(newvarp);
+        AstVarScope* const newvscp = new AstVarScope(vscp->fileline(), m_scopep, newvarp);
+        vscp->user1p(newvscp);
+        m_scopep->addVarp(newvscp);
+        // Add init
+        AstNode* fromp = new AstVarRef(newvarp->fileline(), vscp, VAccess::READ);
+        if (v3Global.opt.xInitialEdge()) fromp = new AstNot(fromp->fileline(), fromp);
+        AstNode* const newinitp = new AstAssign(
+            vscp->fileline(), new AstVarRef(newvarp->fileline(), newvscp, VAccess::WRITE), fromp);
+        addToInitial(newinitp);
+        // At bottom, assign them
+        AstAssign* const finalp = new AstAssign(
+            vscp->fileline(), new AstVarRef(vscp->fileline(), newvscp, VAccess::WRITE),
+            new AstVarRef(vscp->fileline(), vscp, VAccess::READ));
+        m_evalFuncp->addInitsp(finalp);
+        //
+        UINFO(4, "New Sampled: " << newvscp << endl);
+        return newvscp;
+    }
     AstNode* createSenItemEquation(AstSenItem* nodep) {
         // We know the var is clean, and one bit, so we use binary ops
         // for speed instead of logical ops.
@@ -423,6 +450,13 @@ private:
         // (serial) logic in the cycle.
         nodep->unlinkFrBack();
         addToEvalLoop(nodep);
+    }
+    virtual void visit(AstSampled* nodep) override {
+        AstVarScope* const varscp = VN_AS(nodep->exprp(), VarRef)->varScopep();
+        AstVarScope* const lastscp = getCreateSampledVar(varscp);
+        AstNode* const newp = new AstVarRef(nodep->fileline(), lastscp, VAccess::READ);
+        nodep->replaceWith(newp);
+        VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
 
     //--------------------

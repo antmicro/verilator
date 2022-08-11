@@ -403,6 +403,18 @@ class TristateVisitor final : public TristateBaseVisitor {
         }
         return VN_AS(invarp->user1p(), Var);
     }
+    void replaceVarInExpressionWithEnVar(AstNode* nodep) {
+        // Return expression with master __en variable reference instead of reference to original variable
+        if (AstVarRef* varrefp = VN_CAST(nodep, VarRef))
+            varrefp->varp()->replaceWith(getCreateEnVarp(varrefp->varp()));
+        else if (AstExtend* extendp = VN_CAST(nodep, Extend))
+            replaceVarInExpressionWithEnVar(extendp->lhsp());
+        else if (AstSel* selp = VN_CAST(nodep, Sel))
+            replaceVarInExpressionWithEnVar(selp->fromp());
+        else
+            nodep->v3warn(E_UNSUPPORTED,
+                          "Unsupported tristate construct: " << nodep->prettyTypeName());
+    }
     AstVar* getCreateOutVarp(AstVar* invarp) {
         // Return the master __out for the specified input variable
         if (!invarp->user4p()) {
@@ -930,6 +942,7 @@ class TristateVisitor final : public TristateBaseVisitor {
             // Constification always moves const to LHS
             const AstConst* const constp = VN_CAST(nodep->lhsp(), Const);
             AstVarRef* const varrefp = VN_CAST(nodep->rhsp(), VarRef);  // Input variable
+            AstExtend* const extendp = VN_CAST(nodep->rhsp(), Extend);
             if (constp && constp->user1p() && varrefp) {
                 // 3'b1z0 -> ((3'b101 == in__en) && (3'b100 == in))
                 varrefp->unlinkFrBack();
@@ -951,7 +964,31 @@ class TristateVisitor final : public TristateBaseVisitor {
                 if (debug() >= 9) newp->dumpTree(cout, "-caseeq-new: ");
                 nodep->replaceWith(newp);
                 VL_DO_DANGLING(pushDeletep(nodep), nodep);
+            } else if (constp && constp->user1p() && extendp) {
+                extendp->unlinkFrBack();
+                FileLine* const fl = nodep->fileline();
+                const V3Number oneIfEn
+                    = VN_AS(constp->user1p(), Const)
+                          ->num();  // visit(AstConst) already split into en/ones
+                const V3Number& oneIfEnOne = constp->num();
+                AstVar* const envarp = getCreateEnVarp(VN_AS(VN_AS(extendp->lhsp(), Sel)->fromp(), VarRef)->varp());
+                AstExtend* enExtendp = extendp->cloneTree(false);
+                VN_AS(enExtendp->lhsp(), Sel)->fromp()->replaceWith(new AstVarRef(fl, envarp, VAccess::READ));
+                AstNode* newp
+                    = new AstLogAnd(fl,
+                                    new AstEq(fl, new AstConst(fl, oneIfEn),
+                                              enExtendp),
+                                    // Keep the caseeq if there are X's present
+                                    new AstEqCase(fl, new AstConst(fl, oneIfEnOne), extendp));
+                if (neq) newp = new AstLogNot(fl, newp);
+                UINFO(9, "       newceq " << newp << endl);
+                if (debug() >= 9) nodep->dumpTree(cout, "-caseeq-old: ");
+                if (debug() >= 9) newp->dumpTree(cout, "-caseeq-new: ");
+                nodep->replaceWith(newp);
+                VL_DO_DANGLING(pushDeletep(nodep), nodep);
+                
             } else {
+                std::cout << "Second check" << std::endl;
                 checkUnhandled(nodep);
             }
         }

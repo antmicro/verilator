@@ -44,9 +44,6 @@ private:
     VDouble0 m_statAsNotImm;  // Statistic tracking
     VDouble0 m_statAsImm;  // Statistic tracking
     VDouble0 m_statAsFull;  // Statistic tracking
-    bool m_inConcurrentAssert = false;
-    bool m_inSenTree = false;
-    bool m_inSampled = false;
 
     // METHODS
     string assertDisplayMessage(AstNode* nodep, const string& prefix, const string& message) {
@@ -67,6 +64,11 @@ private:
         if (!nodep->fmtp()->scopeNamep() && nodep->fmtp()->formatScopeTracking()) {
             nodep->fmtp()->scopeNamep(new AstScopeName{nodep->fileline(), true});
         }
+    }
+    AstSampled* newSampledExpr(AstNode* nodep) {
+        const auto sampledp = new AstSampled(nodep->fileline(), nodep);
+        sampledp->dtypeFrom(nodep);
+        return sampledp;
     }
     AstVarRef* newMonitorNumVarRefp(AstNode* nodep, VAccess access) {
         if (!m_monitorNumVarp) {
@@ -126,7 +128,7 @@ private:
     void newPslAssertion(AstNodeCoverOrAssert* nodep, AstNode* failsp) {
         if (m_beginp && nodep->name() == "") nodep->name(m_beginp->name());
 
-        AstNode* const propp = nodep->propp()->unlinkFrBackWithNext();
+        AstNode* propp = nodep->propp()->unlinkFrBackWithNext();
         AstSenTree* const sentreep = nodep->sentreep();
         const string& message = nodep->name();
         AstNode* passsp = nodep->passsp();
@@ -164,6 +166,7 @@ private:
                 ++m_statAsImm;
             } else {
                 ++m_statAsNotImm;
+                propp = newSampledExpr(propp);
             }
             const bool force = VN_IS(nodep, AssertIntrinsic);
             if (passsp) passsp = newIfAssertOn(passsp, force);
@@ -286,26 +289,6 @@ private:
             inp = new AstVarRef(nodep->fileline(), invarp, VAccess::READ);
         }
         nodep->replaceWith(inp);
-    }
-
-    virtual void visit(AstVarRef* nodep) override {
-        iterateChildren(nodep);
-        // Pack a variable reference into $sampled call inside concurrent asserts
-        if (!m_inSenTree && !m_inSampled && m_inConcurrentAssert) {
-            AstVarRef* const varref = nodep->cloneTree(true);
-            AstNode* sampledp = new AstSampled(nodep->fileline(), varref);
-            sampledp->dtypeFrom(varref);
-            sampledp->user1SetOnce();
-            nodep->replaceWith(sampledp);
-            VL_DO_DANGLING(pushDeletep(nodep), nodep);
-        }
-    }
-    virtual void visit(AstSampled* nodep) override {
-        // Don't do this if already done or it was created in this pass
-        if (nodep->user1SetOnce()) return;
-        m_inSampled = true;
-        iterateChildren(nodep);
-        m_inSampled = false;
     }
 
     //========== Case assertions
@@ -437,33 +420,23 @@ private:
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
     virtual void visit(AstAssert* nodep) override {
-        m_inConcurrentAssert = !nodep->immediate();
         iterateChildren(nodep);
         newPslAssertion(nodep, nodep->failsp());
-        m_inConcurrentAssert = false;
     }
     virtual void visit(AstAssertIntrinsic* nodep) override {
-        m_inConcurrentAssert = !nodep->immediate();
         iterateChildren(nodep);
         newPslAssertion(nodep, nodep->failsp());
-        m_inConcurrentAssert = false;
     }
     virtual void visit(AstCover* nodep) override {
-        m_inConcurrentAssert = !nodep->immediate();
         iterateChildren(nodep);
         newPslAssertion(nodep, nullptr);
-        m_inConcurrentAssert = false;
     }
     virtual void visit(AstRestrict* nodep) override {
         iterateChildren(nodep);
         // IEEE says simulator ignores these
         VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
     }
-    virtual void visit(AstSenTree* nodep) override {
-        m_inSenTree = true;
-        iterateChildren(nodep);
-        m_inSenTree = false;
-    }
+    virtual void visit(AstSenTree* nodep) override { iterateChildren(nodep); }
 
     virtual void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);

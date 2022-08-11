@@ -1928,6 +1928,7 @@ public:
     AstNode* fromp() const {
         return op1p();
     }  // op1 = Extracting what (nullptr=TBD during parsing)
+    void fromp(AstNode* nodep) { setOp1p(nodep); }
     AstNode* lsbp() const { return op2p(); }  // op2 = Msb selection expression
     AstNode* widthp() const { return op3p(); }  // op3 = Width
     int widthConst() const { return VN_AS(widthp(), Const)->toSInt(); }

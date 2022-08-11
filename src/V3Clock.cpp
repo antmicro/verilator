@@ -85,6 +85,7 @@ private:
     AstSenTree* m_lastSenp = nullptr;  // Last sensitivity match, so we can detect duplicates.
     AstIf* m_lastIfp = nullptr;  // Last sensitivity if active to add more under
     AstMTaskBody* m_mtaskBodyp = nullptr;  // Current mtask body
+    bool m_inSampled = false;
 
     // METHODS
     VL_DEBUG_FUNC;  // Declare debug()
@@ -445,12 +446,24 @@ private:
         nodep->unlinkFrBack();
         addToEvalLoop(nodep);
     }
+
     virtual void visit(AstSampled* nodep) override {
-        AstVarScope* const varscp = VN_AS(nodep->exprp(), VarRef)->varScopep();
-        AstVarScope* const lastscp = getCreateSampledVar(varscp);
-        AstNode* const newp = new AstVarRef(nodep->fileline(), lastscp, VAccess::READ);
-        nodep->replaceWith(newp);
+        m_inSampled = true;
+        iterateChildren(nodep);
+        m_inSampled = false;
+        nodep->replaceWith(nodep->exprp()->unlinkFrBack());
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
+    }
+    virtual void visit(AstVarRef* nodep) override {
+        iterateChildren(nodep);
+        if (m_inSampled && !nodep->user1SetOnce()) {
+            AstVarScope* const varscp = nodep->varScopep();
+            AstVarScope* const lastscp = getCreateSampledVar(varscp);
+            AstNode* const newp = new AstVarRef(nodep->fileline(), lastscp, VAccess::READ);
+            newp->user1SetOnce();  // Don't sample this one
+            nodep->replaceWith(newp);
+            VL_DO_DANGLING(pushDeletep(nodep), nodep);
+        }
     }
 
     //--------------------

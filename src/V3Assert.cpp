@@ -290,14 +290,19 @@ private:
 
     virtual void visit(AstVarRef* nodep) override {
         iterateChildren(nodep);
-        if (!m_inConcurrentAssert || m_inSenTree || m_inSampled) return;
-        AstVarRef* const varref = nodep->cloneTree(true);
-        AstNode* sampled = new AstSampled(nodep->fileline(), varref);
-        sampled->dtypeFrom(varref);
-        nodep->replaceWith(sampled);
-        VL_DO_DANGLING(pushDeletep(nodep), nodep);
+        // Pack a variable reference into $sampled call inside concurrent asserts
+        if (!m_inSenTree && !m_inSampled && m_inConcurrentAssert) {
+            AstVarRef* const varref = nodep->cloneTree(true);
+            AstNode* sampledp = new AstSampled(nodep->fileline(), varref);
+            sampledp->dtypeFrom(varref);
+            sampledp->user1SetOnce();
+            nodep->replaceWith(sampledp);
+            VL_DO_DANGLING(pushDeletep(nodep), nodep);
+        }
     }
     virtual void visit(AstSampled* nodep) override {
+        // Don't do this if already done or it was created in this pass
+        if (nodep->user1SetOnce()) return;
         m_inSampled = true;
         iterateChildren(nodep);
         m_inSampled = false;

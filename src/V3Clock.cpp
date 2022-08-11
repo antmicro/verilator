@@ -447,6 +447,7 @@ private:
         addToEvalLoop(nodep);
     }
 
+    // Replace $sampled calls with sampling variables
     virtual void visit(AstSampled* nodep) override {
         m_inSampled = true;
         iterateChildren(nodep);

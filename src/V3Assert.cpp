@@ -258,39 +258,6 @@ private:
         }
     }
 
-    virtual void visit(AstPast* nodep) override {
-        iterateChildren(nodep);
-        uint32_t ticks = 1;
-        if (nodep->ticksp()) {
-            UASSERT_OBJ(VN_IS(nodep->ticksp(), Const), nodep,
-                        "Expected constant ticks, checked in V3Width");
-            ticks = VN_AS(nodep->ticksp(), Const)->toUInt();
-        }
-        UASSERT_OBJ(ticks >= 1, nodep, "0 tick should have been checked in V3Width");
-        AstNode* const exprp = nodep->exprp()->unlinkFrBack();
-        AstNode* inp = new AstSampled(nodep->fileline(), exprp);
-        inp->dtypeFrom(exprp);
-        AstVar* invarp = nullptr;
-        AstSenTree* const sentreep = nodep->sentreep();
-        sentreep->unlinkFrBack();
-        AstAlways* const alwaysp
-            = new AstAlways(nodep->fileline(), VAlwaysKwd::ALWAYS, sentreep, nullptr);
-        m_modp->addStmtp(alwaysp);
-        for (uint32_t i = 0; i < ticks; ++i) {
-            AstVar* const outvarp = new AstVar(
-                nodep->fileline(), VVarType::MODULETEMP,
-                "_Vpast_" + cvtToStr(m_modPastNum++) + "_" + cvtToStr(i), inp->dtypep());
-            m_modp->addStmtp(outvarp);
-            AstNode* const assp = new AstAssignDly(
-                nodep->fileline(), new AstVarRef(nodep->fileline(), outvarp, VAccess::WRITE), inp);
-            alwaysp->addStmtp(assp);
-            // if (debug() >= 9) assp->dumpTree(cout, "-ass: ");
-            invarp = outvarp;
-            inp = new AstVarRef(nodep->fileline(), invarp, VAccess::READ);
-        }
-        nodep->replaceWith(inp);
-    }
-
     //========== Case assertions
     virtual void visit(AstCase* nodep) override {
         iterateChildren(nodep);
@@ -358,6 +325,40 @@ private:
                 }
             }
         }
+    }
+
+    //========== Past
+    virtual void visit(AstPast* nodep) override {
+        iterateChildren(nodep);
+        uint32_t ticks = 1;
+        if (nodep->ticksp()) {
+            UASSERT_OBJ(VN_IS(nodep->ticksp(), Const), nodep,
+                        "Expected constant ticks, checked in V3Width");
+            ticks = VN_AS(nodep->ticksp(), Const)->toUInt();
+        }
+        UASSERT_OBJ(ticks >= 1, nodep, "0 tick should have been checked in V3Width");
+        AstNode* const exprp = nodep->exprp()->unlinkFrBack();
+        AstNode* inp = new AstSampled(nodep->fileline(), exprp);
+        inp->dtypeFrom(exprp);
+        AstVar* invarp = nullptr;
+        AstSenTree* const sentreep = nodep->sentreep();
+        sentreep->unlinkFrBack();
+        AstAlways* const alwaysp
+            = new AstAlways(nodep->fileline(), VAlwaysKwd::ALWAYS, sentreep, nullptr);
+        m_modp->addStmtp(alwaysp);
+        for (uint32_t i = 0; i < ticks; ++i) {
+            AstVar* const outvarp = new AstVar(
+                nodep->fileline(), VVarType::MODULETEMP,
+                "_Vpast_" + cvtToStr(m_modPastNum++) + "_" + cvtToStr(i), inp->dtypep());
+            m_modp->addStmtp(outvarp);
+            AstNode* const assp = new AstAssignDly(
+                nodep->fileline(), new AstVarRef(nodep->fileline(), outvarp, VAccess::WRITE), inp);
+            alwaysp->addStmtp(assp);
+            // if (debug() >= 9) assp->dumpTree(cout, "-ass: ");
+            invarp = outvarp;
+            inp = new AstVarRef(nodep->fileline(), invarp, VAccess::READ);
+        }
+        nodep->replaceWith(inp);
     }
 
     //========== Statements

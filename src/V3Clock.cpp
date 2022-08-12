@@ -449,11 +449,13 @@ private:
 
     // Replace $sampled calls with sampling variables
     virtual void visit(AstSampled* nodep) override {
-        m_inSampled = true;
-        iterateChildren(nodep);
-        m_inSampled = false;
-        nodep->replaceWith(nodep->exprp()->unlinkFrBack());
-        VL_DO_DANGLING(pushDeletep(nodep), nodep);
+        VL_RESTORER(m_inSampled);
+        {
+            m_inSampled = true;
+            iterateChildren(nodep);
+            nodep->replaceWith(nodep->exprp()->unlinkFrBack());
+            VL_DO_DANGLING(pushDeletep(nodep), nodep);
+        }
     }
     virtual void visit(AstVarRef* nodep) override {
         iterateChildren(nodep);

@@ -404,9 +404,10 @@ class TristateVisitor final : public TristateBaseVisitor {
         return VN_AS(invarp->user1p(), Var);
     }
     void replaceVarInExpressionWithEnVar(AstNode* nodep) {
-        // Return expression with master __en variable reference instead of reference to original variable
+        // Replace variale references with __en variable references
         if (AstVarRef* varrefp = VN_CAST(nodep, VarRef))
-            varrefp->varp()->replaceWith(getCreateEnVarp(varrefp->varp()));
+            varrefp->replaceWith(new AstVarRef(varrefp->fileline(),
+                                               getCreateEnVarp(varrefp->varp()), VAccess::READ));
         else if (AstExtend* extendp = VN_CAST(nodep, Extend))
             replaceVarInExpressionWithEnVar(extendp->lhsp());
         else if (AstSel* selp = VN_CAST(nodep, Sel))
@@ -941,54 +942,30 @@ class TristateVisitor final : public TristateBaseVisitor {
             UINFO(9, dbgState() << nodep << endl);
             // Constification always moves const to LHS
             const AstConst* const constp = VN_CAST(nodep->lhsp(), Const);
-            AstVarRef* const varrefp = VN_CAST(nodep->rhsp(), VarRef);  // Input variable
-            AstExtend* const extendp = VN_CAST(nodep->rhsp(), Extend);
-            if (constp && constp->user1p() && varrefp) {
+            if (constp && constp->user1p()) {
                 // 3'b1z0 -> ((3'b101 == in__en) && (3'b100 == in))
-                varrefp->unlinkFrBack();
+                AstNode* const rhsp = nodep->rhsp();
+                rhsp->unlinkFrBack();
+                AstNode* const enrhsp = rhsp->cloneTree(false);
+                replaceVarInExpressionWithEnVar(
+                    enrhsp);  // expression with var replaced by __en var
                 FileLine* const fl = nodep->fileline();
+
                 const V3Number oneIfEn
                     = VN_AS(constp->user1p(), Const)
                           ->num();  // visit(AstConst) already split into en/ones
                 const V3Number& oneIfEnOne = constp->num();
-                AstVar* const envarp = getCreateEnVarp(varrefp->varp());
                 AstNode* newp
-                    = new AstLogAnd(fl,
-                                    new AstEq(fl, new AstConst(fl, oneIfEn),
-                                              new AstVarRef(fl, envarp, VAccess::READ)),
+                    = new AstLogAnd(fl, new AstEq(fl, new AstConst(fl, oneIfEn), enrhsp),
                                     // Keep the caseeq if there are X's present
-                                    new AstEqCase(fl, new AstConst(fl, oneIfEnOne), varrefp));
+                                    new AstEqCase(fl, new AstConst(fl, oneIfEnOne), rhsp));
                 if (neq) newp = new AstLogNot(fl, newp);
                 UINFO(9, "       newceq " << newp << endl);
                 if (debug() >= 9) nodep->dumpTree(cout, "-caseeq-old: ");
                 if (debug() >= 9) newp->dumpTree(cout, "-caseeq-new: ");
                 nodep->replaceWith(newp);
                 VL_DO_DANGLING(pushDeletep(nodep), nodep);
-            } else if (constp && constp->user1p() && extendp) {
-                extendp->unlinkFrBack();
-                FileLine* const fl = nodep->fileline();
-                const V3Number oneIfEn
-                    = VN_AS(constp->user1p(), Const)
-                          ->num();  // visit(AstConst) already split into en/ones
-                const V3Number& oneIfEnOne = constp->num();
-                AstVar* const envarp = getCreateEnVarp(VN_AS(VN_AS(extendp->lhsp(), Sel)->fromp(), VarRef)->varp());
-                AstExtend* enExtendp = extendp->cloneTree(false);
-                VN_AS(enExtendp->lhsp(), Sel)->fromp()->replaceWith(new AstVarRef(fl, envarp, VAccess::READ));
-                AstNode* newp
-                    = new AstLogAnd(fl,
-                                    new AstEq(fl, new AstConst(fl, oneIfEn),
-                                              enExtendp),
-                                    // Keep the caseeq if there are X's present
-                                    new AstEqCase(fl, new AstConst(fl, oneIfEnOne), extendp));
-                if (neq) newp = new AstLogNot(fl, newp);
-                UINFO(9, "       newceq " << newp << endl);
-                if (debug() >= 9) nodep->dumpTree(cout, "-caseeq-old: ");
-                if (debug() >= 9) newp->dumpTree(cout, "-caseeq-new: ");
-                nodep->replaceWith(newp);
-                VL_DO_DANGLING(pushDeletep(nodep), nodep);
-                
             } else {
-                std::cout << "Second check" << std::endl;
                 checkUnhandled(nodep);
             }
         }

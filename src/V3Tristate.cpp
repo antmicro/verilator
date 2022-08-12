@@ -405,10 +405,11 @@ class TristateVisitor final : public TristateBaseVisitor {
     }
     void replaceVarInExpressionWithEnVar(AstNode* nodep) {
         // Replace variale references with __en variable references
-        if (AstVarRef* varrefp = VN_CAST(nodep, VarRef))
-            varrefp->replaceWith(new AstVarRef(varrefp->fileline(),
-                                               getCreateEnVarp(varrefp->varp()), VAccess::READ));
-        else if (AstExtend* extendp = VN_CAST(nodep, Extend))
+        if (AstVarRef* varrefp = VN_CAST(nodep, VarRef)) {
+            AstVarRef* enVarrefp = new AstVarRef(varrefp->fileline(),
+                                                 getCreateEnVarp(varrefp->varp()), VAccess::READ);
+            varrefp->replaceWith(enVarrefp);
+        } else if (AstExtend* extendp = VN_CAST(nodep, Extend))
             replaceVarInExpressionWithEnVar(extendp->lhsp());
         else if (AstSel* selp = VN_CAST(nodep, Sel))
             replaceVarInExpressionWithEnVar(selp->fromp());
@@ -944,11 +945,13 @@ class TristateVisitor final : public TristateBaseVisitor {
             const AstConst* const constp = VN_CAST(nodep->lhsp(), Const);
             if (constp && constp->user1p()) {
                 // 3'b1z0 -> ((3'b101 == in__en) && (3'b100 == in))
-                AstNode* const rhsp = nodep->rhsp();
-                rhsp->unlinkFrBack();
-                AstNode* const enrhsp = rhsp->cloneTree(false);
+                AstNode* const enrhsp = nodep->rhsp();
+                // We take enrhsp first, because we need it to have backp() to use replaceWith in
+                // replaceVarInExpressionWithEnVar function
+                AstNode* const rhsp = enrhsp->cloneTree(false);
                 replaceVarInExpressionWithEnVar(
                     enrhsp);  // expression with var replaced by __en var
+                if (enrhsp->backp()) enrhsp->unlinkFrBack();
                 FileLine* const fl = nodep->fileline();
 
                 const V3Number oneIfEn

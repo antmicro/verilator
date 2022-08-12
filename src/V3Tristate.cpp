@@ -404,7 +404,7 @@ class TristateVisitor final : public TristateBaseVisitor {
         return VN_AS(invarp->user1p(), Var);
     }
     void replaceVarInExpressionWithEnVar(AstNode* nodep) {
-        // Replace variale references with master __en variable references
+        // Replace variable references with master __en variable references
         if (AstVarRef* varrefp = VN_CAST(nodep, VarRef)) {
             AstVarRef* enVarrefp = new AstVarRef(varrefp->fileline(),
                                                  getCreateEnVarp(varrefp->varp()), VAccess::READ);

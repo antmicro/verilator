@@ -403,6 +403,14 @@ class TristateVisitor final : public TristateBaseVisitor {
         }
         return VN_AS(invarp->user1p(), Var);
     }
+    AstConst* getEnpConstp(AstConst* constp) {
+        FileLine* const fl = constp->fileline();
+        V3Number numz(constp, constp->width());
+        numz.opBitsZ(constp->num());  // Z->1, else 0
+        V3Number numz0(constp, constp->width());
+        numz0.opNot(numz);  // Z->0, else 1
+        return new AstConst(fl, numz0);
+    }
     void replaceVarInExpressionWithEnVar(AstNode* nodep) {
         // Replace variable references with master __en variable references
         if (AstVarRef* varrefp = VN_CAST(nodep, VarRef)) {
@@ -660,14 +668,10 @@ class TristateVisitor final : public TristateBaseVisitor {
             } else if (m_tgraph.isTristate(nodep)) {
                 m_tgraph.didProcess(nodep);
                 FileLine* const fl = nodep->fileline();
-                V3Number numz(nodep, nodep->width());
-                numz.opBitsZ(nodep->num());  // Z->1, else 0
-                V3Number numz0(nodep, nodep->width());
-                numz0.opNot(numz);  // Z->0, else 1
+                AstConst* const enp = getEnpConstp(nodep);
                 V3Number num1(nodep, nodep->width());
-                num1.opAnd(nodep->num(), numz0);  // 01X->01X, Z->0
+                num1.opAnd(nodep->num(), enp->num());  // 01X->01X, Z->0
                 AstConst* const newconstp = new AstConst(fl, num1);
-                AstConst* const enp = new AstConst(fl, numz0);
                 nodep->replaceWith(newconstp);
                 VL_DO_DANGLING(pushDeletep(nodep), nodep);
                 newconstp->user1p(enp);  // Propagate up constant with non-Z bits as 1

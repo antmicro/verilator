@@ -417,13 +417,19 @@ class TristateVisitor final : public TristateBaseVisitor {
             AstVarRef* enVarrefp = new AstVarRef(varrefp->fileline(),
                                                  getCreateEnVarp(varrefp->varp()), VAccess::READ);
             varrefp->replaceWith(enVarrefp);
-        } else if (AstExtend* extendp = VN_CAST(nodep, Extend))
+        } else if (AstConst* constp = VN_CAST(nodep, Const)) {
+            constp->replaceWith(getEnpConstp(constp));
+        } else if (AstExtend* extendp = VN_CAST(nodep, Extend)) {
             replaceVarInExpressionWithEnVar(extendp->lhsp());
-        else if (AstSel* selp = VN_CAST(nodep, Sel))
+        } else if (AstSel* selp = VN_CAST(nodep, Sel)) {
             replaceVarInExpressionWithEnVar(selp->fromp());
-        else
+        } else if (AstCond* condExprp = VN_CAST(nodep, Cond)) {
+            replaceVarInExpressionWithEnVar(condExprp->expr1p());
+            replaceVarInExpressionWithEnVar(condExprp->expr2p());
+        } else {
             nodep->v3warn(E_UNSUPPORTED,
                           "Unsupported tristate construct: " << nodep->prettyTypeName());
+        }
     }
     AstVar* getCreateOutVarp(AstVar* invarp) {
         // Return the master __out for the specified input variable
@@ -951,9 +957,13 @@ class TristateVisitor final : public TristateBaseVisitor {
                 // 3'b1z0 -> ((3'b101 == in__en) && (3'b100 == in))
                 AstNode* const rhsp = nodep->rhsp();
                 rhsp->unlinkFrBack();
-                AstNode* enrhsp = nullptr;
                 FileLine* const fl = nodep->fileline();
-                if (AstVarRef* varrefp = VN_CAST(rhsp, VarRef)) {
+                AstNode* enrhsp = nullptr;
+                if (rhsp->user1p()) {
+                    enrhsp = rhsp->user1p();
+                    rhsp->user1p(nullptr);
+                    // If there is no en expression already created, we have to do it now
+                } else if (AstVarRef* varrefp = VN_CAST(rhsp, VarRef)) {
                     enrhsp = new AstVarRef(fl, getCreateEnVarp(varrefp->varp()), VAccess::READ);
                 } else {
                     enrhsp = rhsp->cloneTree(false);

@@ -73,6 +73,7 @@ class EmitCGatherDependencies final : VNVisitor {
         iterateChildrenConst(nodep);
     }
     virtual void visit(AstCNew* nodep) override {
+        addSymsDependency();
         addDTypeDependency(nodep->dtypep());
         iterateChildrenConst(nodep);
     }
@@ -81,6 +82,7 @@ class EmitCGatherDependencies final : VNVisitor {
         iterateChildrenConst(nodep);
     }
     virtual void visit(AstNewCopy* nodep) override {
+        addSymsDependency();
         addDTypeDependency(nodep->dtypep());
         iterateChildrenConst(nodep);
     }

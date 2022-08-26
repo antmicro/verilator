@@ -1010,6 +1010,11 @@ std::string VL_TO_STRING(const VlUnpacked<T_Value, T_Depth>& obj) {
 
 #define VlClassRef std::shared_ptr
 
+#define VL_NEW(Class, ...) \
+    VlClassRef<Class> { \
+        new Class{__VA_ARGS__}, [vlSymsp](Class* objp) { vlSymsp->__Vm_gc.put(objp); } \
+    }
+
 template <class T>  // T typically of type VlClassRef<x>
 inline T VL_NULL_CHECK(T t, const char* filename, int linenum) {
     if (VL_UNLIKELY(!t)) Verilated::nullPointerError(filename, linenum);
@@ -1026,6 +1031,65 @@ static inline bool VL_CAST_DYNAMIC(VlClassRef<T> in, VlClassRef<U>& outr) {
         return false;
     }
 }
+
+//===================================================================
+// Class providing delayed deletion of garbage objects. Objects put in this garbage collector get
+// deleted only when 'collect()' is called, or the garbage collector itself is destroyed.
+
+class VlGarbageCollector final {
+    // TYPES
+    // A poor man's std::function that used for deleting objects. Smaller than the usual
+    // std::function implementation and doesn't require including <functional>.
+    class VlDeleter final {
+        // MEMBERS
+        void* const m_objp;  // Pointer to the object that should be deleted.
+        void (*const m_delp)(void*);  // Function that deletes the object (needed for invoking the
+                                      // proper destructor).
+
+    public:
+        // CONSTRUCTOR
+        template <typename T_Class>
+        VlDeleter(T_Class* objp)
+            : m_objp{objp}
+            , m_delp{[](void* p) { delete reinterpret_cast<T_Class*>(p); }} {}
+
+        // METHODS
+        void operator()() const { m_delp(m_objp); }
+    };
+
+    // MEMBERS
+    std::vector<VlDeleter> m_deleters;  // Queue of deleters to run
+    VerilatedMutex m_mutex;  // Mutex protecting deleters
+
+public:
+    // CONSTRUCTOR
+    VlGarbageCollector() = default;
+    ~VlGarbageCollector() { collect(); }
+
+private:
+    VL_UNCOPYABLE(VlGarbageCollector);
+
+public:
+    // METHODS
+    // Adds a new object to the delete queue.
+    template <typename T_Class>
+    void put(T_Class* objp) {
+        const VerilatedLockGuard lock{m_mutex};
+        m_deleters.emplace_back(objp);
+    }
+
+    // Deletes all queued garbage objects.
+    void collect() {
+        while (!m_deleters.empty()) {
+            // Pop it in case a new deleter gets added by calling it
+            VlDeleter deleter = m_deleters.back();
+            m_deleters.pop_back();
+            deleter();
+        }
+        for (const auto& deleter : m_deleters) deleter();
+        m_deleters.clear();
+    }
+};
 
 //======================================================================
 

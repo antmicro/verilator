@@ -885,6 +885,8 @@ private:
     bool m_doV = false;  // Verilog, not C++ conversion
     bool m_doGenerate = false;  // Postpone width checking inside generate
     bool m_hasJumpDelay = false;  // JumpGo or Delay under this while
+    bool m_resolvedNets = false;  // Enable using values of nets,
+                                  // multiple drivers are resolved in V3Tristate
     AstNodeModule* m_modp = nullptr;  // Current module
     const AstArraySel* m_selp = nullptr;  // Current select
     const AstNode* m_scopep = nullptr;  // Current scope
@@ -2853,6 +2855,9 @@ private:
         if (m_wremove && !m_params && m_doNConst && m_modp && operandConst(nodep->rhsp())
             && !VN_AS(nodep->rhsp(), Const)->num().isFourState()
             && varrefp  // Don't do messes with BITREFs/ARRAYREFs
+            && (m_resolvedNets
+                || !varrefp->varp()->isNet())  // Nets may have multiple drivers that should be
+                                               // resolved in V3Tristate.cpp
             && !varrefp->varp()->valuep()  // Not already constified
             && !varrefp->varScopep()) {  // Not scoped (or each scope may have different initial
                                          // value)
@@ -3577,7 +3582,7 @@ public:
         case PROC_LIVE:         break;
         case PROC_V_WARN:       m_doV = true;  m_doNConst = true; m_warn = true; break;
         case PROC_V_NOWARN:     m_doV = true;  m_doNConst = true; break;
-        case PROC_V_EXPENSIVE:  m_doV = true;  m_doNConst = true; m_doExpensive = true; break;
+        case PROC_V_EXPENSIVE:  m_doV = true;  m_doNConst = true; m_doExpensive = true; m_resolvedNets = true; break;
         case PROC_CPP:          m_doV = false; m_doNConst = true; m_doCpp = true; break;
         default:                v3fatalSrc("Bad case"); break;
         }

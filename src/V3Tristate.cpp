@@ -55,6 +55,32 @@
 // duplicating vars and logic that is common between each instance of a
 // module.
 //
+//
+// Another thing done in this phase is signal strength handling.
+// Currently they are only supported in assignments and only in case when the strongest assignment
+// has constant with all bits equal on the RHS. It is the case when they can be statically
+// resolved.
+//
+// Static resolution is done in the following way:
+// - We find the assignment of value 0 (size may be greater than 1) that has greatest strength (the
+// one corresponding to 0) of all other assignments of 0.
+// - We do the same for value '1 and strength corresponding to value 1.
+// - We find the greater of these two strengths. If they are equal we take the one that corresponds
+// to 1.
+// - We remove all assignments that have strengths weaker or equal to the one we found. So we
+// remove all other assignments of constants on RHS and also all assignment that have both
+// strengths non-greater that the one we found, because they are weaker no matter what is on RHS.
+
+// All assignments that are stronger than the one with strongest constant I leave as they are.
+
+// There is a possible problem with equally strong assignments, because multiple assignments with
+// the same strength, but different values should result in x value, but these values are
+// unsupported.
+//
+// Singal strength can also be used in simple logic gates parsed as assignments (see verilog.y),
+// but these gates are then either removed (if they are weaker than the strongest constant) or
+// handled as the gates witout signal strengths are handled now. In other words, gate with greater
+// strength won't properly overwrite weaker driver.
 //*************************************************************************
 
 #include "config_build.h"
@@ -340,6 +366,8 @@ class TristateVisitor final : public TristateBaseVisitor {
     // TYPES
     using RefVec = std::vector<AstVarRef*>;
     using VarMap = std::unordered_map<AstVar*, RefVec*>;
+    using Assigns = std::vector<AstAssignW*>;
+    using VarToAssignsMap = std::unordered_map<AstVar*, Assigns>;
     enum : uint8_t {
         U2_GRAPHING = 1,  // bit[0] if did m_graphing visit
         U2_NONGRAPH = 2,  // bit[1] if did !m_graphing visit
@@ -352,6 +380,7 @@ class TristateVisitor final : public TristateBaseVisitor {
     AstNodeModule* m_modp = nullptr;  // Current module
     AstCell* m_cellp = nullptr;  // current cell
     VarMap m_lhsmap;  // Tristate left-hand-side driver map
+    VarToAssignsMap m_assigns;  // Assigns in current module
     int m_unique = 0;
     bool m_alhs = false;  // On LHS of assignment
     const AstNode* m_logicp = nullptr;  // Current logic being built
@@ -636,6 +665,117 @@ class TristateVisitor final : public TristateBaseVisitor {
         nodep->addStmtp(assp);
     }
 
+    void addToAssignmentList(AstAssignW* nodep) {
+        if (AstVarRef* const varRefp = VN_CAST(nodep->lhsp(), VarRef)) {
+            if (varRefp->varp()->isNet()) {
+                m_assigns[varRefp->varp()].push_back(nodep);
+            } else if (nodep->strengthSpecp()) {
+                if (!varRefp->varp()->isNet())
+                    nodep->v3warn(E_UNSUPPORTED, "Unsupported: Signal strengths are unsupported "
+                                                 "on the following variable type: "
+                                                     << varRefp->varp()->varType());
+
+                nodep->strengthSpecp()->unlinkFrBack()->deleteTree();
+            }
+        } else if (nodep->strengthSpecp()) {
+            nodep->v3warn(E_UNSUPPORTED,
+                          "Unsupported: Assignments with signal strength with LHS of type: "
+                              << nodep->lhsp()->prettyTypeName());
+        }
+    }
+
+    uint8_t getStrength(AstAssignW* const nodep, bool value) {
+        if (AstStrengthSpec* const strengthSpec = nodep->strengthSpecp()) {
+            return value ? strengthSpec->strength1() : strengthSpec->strength0();
+        }
+        return 6;  // default strength is strong (6)
+    }
+
+    bool assignmentOfValueOnAllBits(AstAssignW* const nodep, bool value) {
+        if (AstConst* const constp = VN_CAST(nodep->rhsp(), Const)) {
+            const V3Number num = constp->num();
+            return value ? num.isEqAllOnes() : num.isEqZero();
+        }
+        return false;
+    }
+
+    AstAssignW* getStrongestAssignmentOfValue(const Assigns& assigns, bool value) {
+        auto maxIt = std::max_element(
+            assigns.begin(), assigns.end(), [&](AstAssignW* ap, AstAssignW* bp) {
+                bool valuesOnRhsA = assignmentOfValueOnAllBits(ap, value);
+                bool valuesOnRhsB = assignmentOfValueOnAllBits(bp, value);
+                if (!valuesOnRhsA) return valuesOnRhsB;
+                if (!valuesOnRhsB) return false;
+                return getStrength(ap, value) < getStrength(bp, value);
+            });
+        // If not all assignments have const with all bits equal to value on the RHS,
+        // std::max_element will return one of them anyway, so we need to check before returning
+        return assignmentOfValueOnAllBits(*maxIt, value) ? *maxIt : nullptr;
+    }
+
+    void removeWeakerAssignments(Assigns& assigns) {
+        // Weaker assignments are these assignments that can't change the final value of the net.
+        // If we know the value of the RHS, we take into account only strength corresponding to its
+        // value. We skip here assignments of constants that have bits both 0 and 1, because it
+        // would involve handling parts of bits separately.
+
+        // First we want to find the strongest assignment that has value on the RHS consisting of
+        // only 1 or only 0.
+        AstAssignW* const strongest0p = getStrongestAssignmentOfValue(assigns, 0);
+        AstAssignW* const strongest1p = getStrongestAssignmentOfValue(assigns, 1);
+        AstAssignW* strongestp = nullptr;
+        uint8_t greatestKnownStrength = 0;
+        const auto getIfStrongest = [&](AstAssignW* const strongestCandidatep, bool value) {
+            if (!strongestCandidatep) return;
+            uint8_t strength = getStrength(strongestCandidatep, value);
+            if (strength >= greatestKnownStrength) {
+                greatestKnownStrength = strength;
+                strongestp = strongestCandidatep;
+            }
+        };
+        getIfStrongest(strongest0p, 0);
+        getIfStrongest(strongest1p, 1);
+
+        if (strongestp) {
+            // Then we can safely remove all weaker than it
+            // We also remove assignments of the same strength, because we don't need duplicates
+            // One problem is with 2 assignments of different values and equal strengths. It should
+            // result in assignment of x value, but these values aren't supported now.
+            auto removedIt
+                = std::remove_if(assigns.begin(), assigns.end(), [&](AstAssignW* assignp) {
+                      if (assignp == strongestp) return false;
+                      uint8_t strength0 = getStrength(assignp, 0);
+                      uint8_t strength1 = getStrength(assignp, 1);
+                      bool toRemove = (strength0 <= greatestKnownStrength
+                                       && strength1 <= greatestKnownStrength)
+                                      || (strength0 <= greatestKnownStrength
+                                          && assignmentOfValueOnAllBits(assignp, 0))
+                                      || (strength1 <= greatestKnownStrength
+                                          && assignmentOfValueOnAllBits(assignp, 1));
+
+                      if (toRemove) {
+                          // We don't want to propagate tristate if its assignment is removed.
+                          TristateVertex* const vertexp
+                              = reinterpret_cast<TristateVertex*>(assignp->rhsp()->user5p());
+                          if (vertexp) vertexp->isTristate(false);
+                          assignp->unlinkFrBack()->deleteTree();
+                          return true;
+                      }
+                      return false;
+                  });
+            assigns.erase(removedIt, assigns.end());
+        }
+    }
+
+    void resolveMultipleNetAssignments() {
+        for (auto& varpAssigns : m_assigns) {
+            if (varpAssigns.second.size() > 1) {
+                // first we try static resolution
+                removeWeakerAssignments(varpAssigns.second);
+            }
+        }
+    }
+
     // VISITORS
     virtual void visit(AstConst* nodep) override {
         UINFO(9, dbgState() << nodep << endl);
@@ -889,6 +1029,8 @@ class TristateVisitor final : public TristateBaseVisitor {
 
     void visitAssign(AstNodeAssign* nodep) {
         if (m_graphing) {
+            if (AstAssignW* assignWp = VN_CAST(nodep, AssignW)) addToAssignmentList(assignWp);
+
             if (nodep->user2() & U2_GRAPHING) return;
             VL_RESTORER(m_logicp);
             m_logicp = nodep;
@@ -1373,6 +1515,7 @@ class TristateVisitor final : public TristateBaseVisitor {
         VL_RESTORER(m_graphing);
         VL_RESTORER(m_unique);
         VL_RESTORER(m_lhsmap);
+        VL_RESTORER(m_assigns);
         // Not preserved, needs pointer instead: TristateGraph origTgraph = m_tgraph;
         UASSERT_OBJ(m_tgraph.empty(), nodep, "Unsupported: NodeModule under NodeModule");
         {
@@ -1382,6 +1525,7 @@ class TristateVisitor final : public TristateBaseVisitor {
             m_unique = 0;
             m_logicp = nullptr;
             m_lhsmap.clear();
+            m_assigns.clear();
             m_modp = nodep;
             // Walk the graph, finding all variables and tristate constructs
             {
@@ -1389,6 +1533,8 @@ class TristateVisitor final : public TristateBaseVisitor {
                 iterateChildren(nodep);
                 m_graphing = false;
             }
+            // resolve multiple net assignments and signal strengths
+            resolveMultipleNetAssignments();
             // Use graph to find tristate signals
             m_tgraph.graphWalk(nodep);
             // Build the LHS drivers map for this module

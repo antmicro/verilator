@@ -23,10 +23,6 @@
                                            : ... In instance t
    41 |       i_sub0.cannot_split1[1] = bad_func(addr, rd_data0);
       |                               ^
-%Error: t/t_split_var_1_bad.v:79:16: Illegal assignment of constant to unpacked array
-                                   : ... In instance t.i_sub2
-   79 |    assign b = a[0];   
-      |                ^
 %Warning-SPLITVAR: t/t_split_var_1_bad.v:56:31: 'cannot_split0' has split_var metacomment but will not be split because index cannot be determined statically.
                                               : ... In instance t.i_sub0
    56 |       rd_data = cannot_split0[addr];
@@ -75,4 +71,16 @@
                                               : ... In instance t.i_sub1
    66 |       rd_data = rd_tmp[{3'b0, addr[0]}+:8];
       |                       ^
+%Error: t/t_split_var_1_bad.v:78:11: Illegal assignment of constant to unpacked array
+                                   : ... In instance t
+   78 |    assign a = 1'b0;   
+      |           ^
+%Error: t/t_split_var_1_bad.v:79:16: VARREF 'i_sub2.a(0)' is not an unpacked array, but is in an unpacked array context
+                                   : ... In instance t
+   79 |    assign b = a[0];   
+      |                ^
+%Error: t/t_split_var_1_bad.v:78:15: CONST '1'h0' is not an unpacked array, but is in an unpacked array context
+                                   : ... In instance t
+   78 |    assign a = 1'b0;   
+      |               ^~~~
 %Error: Exiting due to

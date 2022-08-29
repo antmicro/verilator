@@ -693,6 +693,16 @@ AstNodeDType::CTypeRecursed AstNodeDType::cTypeRecurse(bool compound) const {
         info.m_type = "VlUnpacked<" + sub.m_type;
         info.m_type += ", " + cvtToStr(adtypep->declRange().elements());
         info.m_type += ">";
+    } else if (const AstCDType* const cdtypep = VN_CAST(dtypep, CDType)) {
+        info.m_type = cdtypep->name();
+        UASSERT_OBJ(cdtypep->requiredParams() == cdtypep->params().size(), this,
+                    "Incorrect number of params for this type");
+        bool inParamList = true;
+        for (const std::string& param : cdtypep->params()) {
+            info.m_type += (inParamList ? "<" : ", ") + param;
+            inParamList = false;
+        }
+        if (!inParamList) info.m_type += ">";
     } else if (const AstBasicDType* const bdtypep = dtypep->basicp()) {
         // We don't print msb()/lsb() as multidim packed would require recursion,
         // and may confuse users as C++ data is stored always with bit 0 used
@@ -707,16 +717,6 @@ AstNodeDType::CTypeRecursed AstNodeDType::cTypeRecurse(bool compound) const {
             info.m_type = "double";
         } else if (bdtypep->keyword().isString()) {
             info.m_type = "std::string";
-        } else if (bdtypep->keyword().isMTaskState()) {
-            info.m_type = "VlMTaskVertex";
-        } else if (bdtypep->isTriggerVec()) {
-            info.m_type = "VlTriggerVec<" + cvtToStr(dtypep->width()) + ">";
-        } else if (bdtypep->isDelayScheduler()) {
-            info.m_type = "VlDelayScheduler";
-        } else if (bdtypep->isTriggerScheduler()) {
-            info.m_type = "VlTriggerScheduler";
-        } else if (bdtypep->isForkSync()) {
-            info.m_type = "VlForkSync";
         } else if (bdtypep->isEvent()) {
             info.m_type = "VlEvent";
         } else if (dtypep->widthMin() <= 8) {  // Handle unpacked arrays; not bdtypep->width

@@ -197,6 +197,10 @@ private:
         }
         if (nodep->classp()) nodep->classp()->user1Inc();
     }
+    virtual void visit(AstCDType* nodep) override {
+        checkDType(nodep);
+        checkAll(nodep);
+    }
     virtual void visit(AstNodeDType* nodep) override {
         iterateChildren(nodep);
         checkDType(nodep);

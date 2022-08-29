@@ -1003,10 +1003,6 @@ public:
     bool isBitLogic() const { return keyword().isBitLogic(); }
     bool isDouble() const { return keyword().isDouble(); }
     bool isEvent() const { return keyword() == VBasicDTypeKwd::EVENT; }
-    bool isTriggerVec() const { return keyword() == VBasicDTypeKwd::TRIGGERVEC; }
-    bool isForkSync() const { return keyword() == VBasicDTypeKwd::FORK_SYNC; }
-    bool isDelayScheduler() const { return keyword() == VBasicDTypeKwd::DELAY_SCHEDULER; }
-    bool isTriggerScheduler() const { return keyword() == VBasicDTypeKwd::TRIGGER_SCHEDULER; }
     bool isOpaque() const { return keyword().isOpaque(); }
     bool isString() const { return keyword().isString(); }
     bool isZeroInit() const { return keyword().isZeroInit(); }
@@ -1146,6 +1142,60 @@ public:
     void classp(AstClass* nodep) { m_classp = nodep; }
     AstPin* paramsp() const { return VN_AS(op4p(), Pin); }
     virtual bool isCompound() const override { return true; }
+};
+
+class AstCDType final : public AstNodeDType {
+    // Reference to a C++ type
+    // Children: PINs (for parameter settings)
+public:
+    enum CTypeName : uint8_t {
+        MTASKSTATE,
+        TRIGGERVEC,
+        DELAY_SCHEDULER,
+        TRIGGER_SCHEDULER,
+        FORK_SYNC,
+        // Leave last
+        _ENUM_MAX
+    };
+
+private:
+    CTypeName m_name;
+    std::vector<std::string> m_params;
+
+public:
+    AstCDType(FileLine* fl, CTypeName name)
+        : ASTGEN_SUPER_CDType(fl)
+        , m_name{name} {
+        dtypep(this);
+    }
+    ASTNODE_NODE_FUNCS(CDType)
+    virtual string name() const override {
+        static const char* const names[]
+            = {"VlMTaskState",       "VlTriggerVec", "VlDelayScheduler",
+               "VlTriggerScheduler", "VlForkSync",   " MAX"};
+        return names[m_name];
+    }
+    // METHODS
+    virtual bool same(const AstNode* samep) const override { return false; }
+    virtual bool similarDType(AstNodeDType* samep) const override { return false; }
+    virtual AstBasicDType* basicp() const override { return nullptr; }
+    virtual AstNodeDType* skipRefp() const override { return (AstNodeDType*)this; }
+    virtual AstNodeDType* skipRefToConstp() const override { return (AstNodeDType*)this; }
+    virtual AstNodeDType* skipRefToEnump() const override { return (AstNodeDType*)this; }
+    virtual int widthAlignBytes() const override { return 0; }
+    virtual int widthTotalBytes() const override { return 0; }
+    virtual AstNodeDType* virtRefDTypep() const override { return nullptr; }
+    virtual void virtRefDTypep(AstNodeDType* nodep) override {}
+    virtual AstNodeDType* subDTypep() const override { return nullptr; }
+    virtual bool isCompound() const override { return true; }
+    bool isMTaskState() const { return m_name == MTASKSTATE; }
+    bool isTriggerVec() const { return m_name == TRIGGERVEC; }
+    bool isDelayScheduler() const { return m_name == DELAY_SCHEDULER; }
+    bool isTriggerScheduler() const { return m_name == TRIGGER_SCHEDULER; }
+    bool isForkSync() const { return m_name == FORK_SYNC; }
+    void addParam(const std::string& param) { m_params.emplace_back(param); }
+    const std::vector<std::string>& params() const { return m_params; }
+    size_t requiredParams() const { return m_name == TRIGGERVEC ? 1 : 0; }
 };
 
 class AstIfaceRefDType final : public AstNodeDType {

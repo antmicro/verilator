@@ -3017,7 +3017,8 @@ static void finalizeCosts(V3Graph* execMTaskGraphp) {
 }
 
 static void addMTaskToFunction(const ThreadSchedule& schedule, const uint32_t threadId,
-                               AstCFunc* funcp, const ExecMTask* mtaskp) {
+                               AstCFunc* funcp, const ExecMTask* mtaskp,
+                               AstCDType* const mtaskStateDtypep) {
     AstNodeModule* const modp = v3Global.rootp()->topModulep();
     FileLine* const fl = modp->fileline();
 
@@ -3030,8 +3031,6 @@ static void addMTaskToFunction(const ThreadSchedule& schedule, const uint32_t th
         // This mtask has dependencies executed on another thread, so it may block. Create the task
         // state variable and wait to be notified.
         const string name = "__Vm_mtaskstate_" + cvtToStr(mtaskp->id());
-        AstBasicDType* const mtaskStateDtypep
-            = v3Global.rootp()->typeTablep()->findBasicDType(fl, VBasicDTypeKwd::MTASKSTATE);
         AstVar* const varp = new AstVar(fl, VVarType::MODULETEMP, name, mtaskStateDtypep);
         varp->valuep(new AstConst(fl, nDependencies));
         varp->protect(false);  // Do not protect as we still have references in AstText
@@ -3084,7 +3083,8 @@ static void addMTaskToFunction(const ThreadSchedule& schedule, const uint32_t th
 }
 
 static const std::vector<AstCFunc*> createThreadFunctions(const ThreadSchedule& schedule,
-                                                          const string& tag) {
+                                                          const string& tag,
+                                                          AstCDType* const mtaskStateDtypep) {
     AstNodeModule* const modp = v3Global.rootp()->topModulep();
     FileLine* const fl = modp->fileline();
 
@@ -3109,7 +3109,7 @@ static const std::vector<AstCFunc*> createThreadFunctions(const ThreadSchedule& 
 
         // Invoke each mtask scheduled to this thread from the thread function
         for (const ExecMTask* const mtaskp : thread) {
-            addMTaskToFunction(schedule, threadId, funcp, mtaskp);
+            addMTaskToFunction(schedule, threadId, funcp, mtaskp, mtaskStateDtypep);
         }
 
         // Unblock the fake "final" mtask when this thread is finished
@@ -3118,8 +3118,6 @@ static const std::vector<AstCFunc*> createThreadFunctions(const ThreadSchedule& 
     }
 
     // Create the fake "final" mtask state variable
-    AstBasicDType* const mtaskStateDtypep
-        = v3Global.rootp()->typeTablep()->findBasicDType(fl, VBasicDTypeKwd::MTASKSTATE);
     AstVar* const varp
         = new AstVar(fl, VVarType::MODULETEMP, "__Vm_mtaskstate_final", mtaskStateDtypep);
     varp->valuep(new AstConst(fl, funcps.size()));
@@ -3164,7 +3162,7 @@ static void addThreadStartToExecGraph(AstExecGraph* const execGraphp,
     addStrStmt("vlSelf->__Vm_mtaskstate_final.waitUntilUpstreamDone(vlSymsp->__Vm_even_cycle);\n");
 }
 
-static void implementExecGraph(AstExecGraph* const execGraphp) {
+static void implementExecGraph(AstExecGraph* const execGraphp, AstCDType* const mtaskStateDtypep) {
     // Nothing to be done if there are no MTasks in the graph at all.
     if (execGraphp->depGraphp()->empty()) return;
 
@@ -3174,7 +3172,8 @@ static void implementExecGraph(AstExecGraph* const execGraphp) {
 
     // Create a function to be run by each thread. Note this moves all AstMTaskBody nodes form the
     // AstExecGrap into the AstCFunc created
-    const std::vector<AstCFunc*>& funcps = createThreadFunctions(schedule, execGraphp->name());
+    const std::vector<AstCFunc*>& funcps
+        = createThreadFunctions(schedule, execGraphp->name(), mtaskStateDtypep);
     UASSERT(!funcps.empty(), "Non-empty ExecGraph yields no threads?");
 
     // Start the thread functions at the point this AstExecGraph is located in the tree.
@@ -3193,7 +3192,9 @@ void V3Partition::finalize(AstNetlist* netlistp) {
         finalizeCosts(execGraphp->depGraphp());
 
         // Replace the graph body with its multi-threaded implementation.
-        implementExecGraph(execGraphp);
+        auto* const mtaskStateDtypep = new AstCDType{netlistp->fileline(), AstCDType::MTASKSTATE};
+        netlistp->typeTablep()->addTypesp(mtaskStateDtypep);
+        implementExecGraph(execGraphp, mtaskStateDtypep);
     });
 }
 

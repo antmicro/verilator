@@ -240,25 +240,24 @@ class EmitCImp final : EmitCFunc {
         ofp()->indentInc();
         for (const AstNode* nodep = modp->stmtsp(); nodep; nodep = nodep->nextp()) {
             if (const AstVar* const varp = VN_CAST(nodep, Var)) {
-                if (const AstBasicDType* const dtypep
-                    = VN_CAST(varp->dtypeSkipRefp(), BasicDType)) {
-                    if (dtypep->keyword().isMTaskState()) {
+                if (const AstCDType* const dtypep = VN_CAST(varp->dtypep(), CDType)) {
+                    if (dtypep->isMTaskState()) {
                         puts(", ");
                         puts(varp->nameProtect());
                         puts("(");
                         iterate(varp->valuep());
-                        puts(")\n");
-                    } else if (varp->isIO() && varp->isSc()) {
-                        puts(", ");
-                        puts(varp->nameProtect());
-                        puts("(");
-                        putsQuoted(varp->nameProtect());
                         puts(")\n");
                     } else if (dtypep->isDelayScheduler()) {
                         puts(", ");
                         puts(varp->nameProtect());
                         puts("{*symsp->_vm_contextp__}\n");
                     }
+                } else if (varp->isIO() && varp->isSc()) {
+                    puts(", ");
+                    puts(varp->nameProtect());
+                    puts("(");
+                    putsQuoted(varp->nameProtect());
+                    puts(")\n");
                 }
             }
         }
@@ -376,7 +375,7 @@ class EmitCImp final : EmitCFunc {
                             // lower level subinst code does it.
                         } else if (varp->isParam()) {
                         } else if (varp->isStatic() && varp->isConst()) {
-                        } else if (varp->basicp() && varp->basicp()->isTriggerVec()) {
+                        } else if (VN_IS(varp->dtypep(), CDType)) {
                         } else {
                             int vects = 0;
                             AstNodeDType* elementp = varp->dtypeSkipRefp();
@@ -392,8 +391,6 @@ class EmitCImp final : EmitCFunc {
                                 elementp = arrayp->subDTypep()->skipRefp();
                             }
                             const AstBasicDType* const basicp = elementp->basicp();
-                            // Do not save MTask state, only matters within an evaluation
-                            if (basicp && basicp->keyword().isMTaskState()) continue;
                             // Want to detect types that are represented as arrays
                             // (i.e. packed types of more than 64 bits).
                             if (elementp->isWide()

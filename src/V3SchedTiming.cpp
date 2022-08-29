@@ -85,10 +85,11 @@ AstCCall* TimingKit::createCommit(AstNetlist* const netlistp) {
             auto* const resumep = VN_AS(activep->stmtsp(), CMethodHard);
             UASSERT_OBJ(!resumep->nextp(), resumep, "Should be the only statement here");
             AstVarScope* const schedulerp = VN_AS(resumep->fromp(), VarRef)->varScopep();
-            UASSERT_OBJ(schedulerp->dtypep()->basicp()->isDelayScheduler()
-                            || schedulerp->dtypep()->basicp()->isTriggerScheduler(),
+            UASSERT_OBJ(VN_IS(schedulerp->dtypep(), CDType)
+                            && (VN_AS(schedulerp->dtypep(), CDType)->isDelayScheduler()
+                                || VN_AS(schedulerp->dtypep(), CDType)->isTriggerScheduler()),
                         schedulerp, "Unexpected type");
-            if (!schedulerp->dtypep()->basicp()->isTriggerScheduler()) continue;
+            if (!VN_AS(schedulerp->dtypep(), CDType)->isTriggerScheduler()) continue;
             // Create the global commit function only if we have trigger schedulers
             if (!m_commitFuncp) {
                 AstScope* const scopeTopp = netlistp->topScopep()->scopep();
@@ -156,7 +157,7 @@ TimingKit prepareTiming(AstNetlist* const netlistp) {
             // Create a resume() call on the timing scheduler
             auto* const resumep = new AstCMethodHard{
                 flp, new AstVarRef{flp, schedulerp, VAccess::READWRITE}, "resume"};
-            if (schedulerp->dtypep()->basicp()->isTriggerScheduler()) {
+            if (VN_AS(schedulerp->dtypep(), CDType)->isTriggerScheduler()) {
                 resumep->addPinsp(methodp->pinsp()->cloneTree(false));
             }
             resumep->statement(true);
@@ -254,7 +255,7 @@ void transformForks(AstNetlist* const netlistp) {
             const VNUser2InUse user2InUse;  // AstVarScope -> AstVarScope: var to remap to
             funcp->foreach<AstNodeVarRef>([&](AstNodeVarRef* refp) {
                 AstVar* const varp = refp->varp();
-                AstBasicDType* const dtypep = varp->dtypep()->basicp();
+                AstCDType* const dtypep = VN_CAST(varp->dtypep(), CDType);
                 // If it a fork sync or an intra-assignment variable, pass it by value
                 const bool passByValue = (dtypep && dtypep->isForkSync())
                                          || VString::startsWith(varp->name(), "__Vintra");

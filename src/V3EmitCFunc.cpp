@@ -684,11 +684,7 @@ string EmitCFunc::emitVarResetRecurse(const AstVar* varp, const string& varNameP
     } else if (basicp && basicp->keyword() == VBasicDTypeKwd::STRING) {
         // String's constructor deals with it
         return "";
-    } else if (basicp && basicp->isForkSync()) {
-        return "";
-    } else if (basicp && basicp->isDelayScheduler()) {
-        return "";
-    } else if (basicp && basicp->isTriggerScheduler()) {
+    } else if (VN_IS(dtypep, CDType)) {
         return "";
     } else if (basicp) {
         const bool zeroit

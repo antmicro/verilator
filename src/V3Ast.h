@@ -448,11 +448,6 @@ public:
         // Internal types for mid-steps
         SCOPEPTR,
         CHARPTR,
-        MTASKSTATE,
-        TRIGGERVEC,
-        DELAY_SCHEDULER,
-        TRIGGER_SCHEDULER,
-        FORK_SYNC,
         // Unsigned and two state; fundamental types
         UINT32,
         UINT64,
@@ -463,57 +458,18 @@ public:
     };
     enum en m_e;
     const char* ascii() const {
-        static const char* const names[] = {"%E-unk",
-                                            "bit",
-                                            "byte",
-                                            "chandle",
-                                            "event",
-                                            "int",
-                                            "integer",
-                                            "logic",
-                                            "longint",
-                                            "real",
-                                            "shortint",
-                                            "time",
-                                            "string",
-                                            "VerilatedScope*",
-                                            "char*",
-                                            "VlMTaskState",
-                                            "VlTriggerVec",
-                                            "VlDelayScheduler",
-                                            "VlTriggerScheduler",
-                                            "VlFork",
-                                            "IData",
-                                            "QData",
-                                            "LOGIC_IMPLICIT",
-                                            " MAX"};
+        static const char* const names[] = {
+            "%E-unk", "bit",     "byte",  "chandle",        "event", "int",    "integer",
+            "logic",  "longint", "real",  "shortint",       "time",  "string", "VerilatedScope*",
+            "char*",  "IData",   "QData", "LOGIC_IMPLICIT", " MAX"};
         return names[m_e];
     }
     const char* dpiType() const {
-        static const char* const names[] = {"%E-unk",
-                                            "svBit",
-                                            "char",
-                                            "void*",
-                                            "char",
-                                            "int",
-                                            "%E-integer",
-                                            "svLogic",
-                                            "long long",
-                                            "double",
-                                            "short",
-                                            "%E-time",
-                                            "const char*",
-                                            "dpiScope",
-                                            "const char*",
-                                            "%E-mtaskstate",
-                                            "%E-triggervec",
-                                            "%E-dly-sched",
-                                            "%E-trig-sched",
-                                            "%E-fork",
-                                            "IData",
-                                            "QData",
-                                            "%E-logic-implct",
-                                            " MAX"};
+        static const char* const names[]
+            = {"%E-unk",      "svBit",    "char",        "void*",  "char",  "int",
+               "%E-integer",  "svLogic",  "long long",   "double", "short", "%E-time",
+               "const char*", "dpiScope", "const char*", "IData",  "QData", "%E-logic-implct",
+               " MAX"};
         return names[m_e];
     }
     static void selfTest() {
@@ -545,11 +501,6 @@ public:
         case STRING: return 64;  // opaque  // Just the pointer, for today
         case SCOPEPTR: return 0;  // opaque
         case CHARPTR: return 0;  // opaque
-        case MTASKSTATE: return 0;  // opaque
-        case TRIGGERVEC: return 0;  // opaque
-        case DELAY_SCHEDULER: return 0;  // opaque
-        case TRIGGER_SCHEDULER: return 0;  // opaque
-        case FORK_SYNC: return 0;  // opaque
         case UINT32: return 32;
         case UINT64: return 64;
         default: return 0;
@@ -586,13 +537,11 @@ public:
     }
     bool isOpaque() const {  // IE not a simple number we can bit optimize
         return (m_e == EVENT || m_e == STRING || m_e == SCOPEPTR || m_e == CHARPTR
-                || m_e == MTASKSTATE || m_e == TRIGGERVEC || m_e == DELAY_SCHEDULER
-                || m_e == TRIGGER_SCHEDULER || m_e == FORK_SYNC || m_e == DOUBLE);
+                || m_e == DOUBLE);
     }
     bool isDouble() const { return m_e == DOUBLE; }
     bool isEvent() const { return m_e == EVENT; }
     bool isString() const { return m_e == STRING; }
-    bool isMTaskState() const { return m_e == MTASKSTATE; }
     // Does this represent a C++ LiteralType? (can be constexpr)
     bool isLiteralType() const {
         switch (m_e) {

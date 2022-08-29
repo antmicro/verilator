@@ -145,6 +145,11 @@ private:
             m_hash += nodep->nrange().right();
         });
     }
+    virtual void visit(AstCDType* nodep) override {
+        m_hash += hashNodeAndIterate(nodep, false, HASH_CHILDREN, [=]() {
+            for (const std::string& param : nodep->params()) m_hash += param;
+        });
+    }
     virtual void visit(AstConstDType* nodep) override {
         m_hash += hashNodeAndIterate(nodep, HASH_DTYPE, HASH_CHILDREN, [=]() {  //
             iterateNull(nodep->virtRefDTypep());

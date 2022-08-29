@@ -581,8 +581,8 @@ const TriggerKit createTriggers(AstNetlist* netlistp, SenExprBuilder& senExprBui
     const uint32_t nTriggers = senTreeps.size() + extraTriggers.size();
 
     // Create the TRIGGERVEC variable
-    AstBasicDType* const tDtypep = new AstBasicDType(flp, VBasicDTypeKwd::TRIGGERVEC,
-                                                     VSigning::UNSIGNED, nTriggers, nTriggers);
+    AstCDType* const tDtypep = new AstCDType(flp, AstCDType::TRIGGERVEC);
+    tDtypep->addParam(cvtToStr(nTriggers));
     netlistp->typeTablep()->addTypesp(tDtypep);
     AstVarScope* const vscp = scopeTopp->createTemp("__V" + name + "Triggered", tDtypep);
 
@@ -743,7 +743,9 @@ std::pair<AstVarScope*, AstNode*> makeEvalLoop(AstNetlist* netlistp, const strin
                                                AstCFunc* trigDumpp,
                                                std::function<AstNode*()> computeTriggers,
                                                std::function<AstNode*()> makeBody) {
-    UASSERT_OBJ(trigVscp->dtypep()->basicp()->isTriggerVec(), trigVscp, "Not TRIGGERVEC");
+    UASSERT_OBJ(VN_IS(trigVscp->dtypep(), CDType)
+                    && VN_AS(trigVscp->dtypep(), CDType)->isTriggerVec(),
+                trigVscp, "Not TRIGGERVEC");
     AstTopScope* const topScopep = netlistp->topScopep();
     AstScope* const scopeTopp = topScopep->scopep();
     FileLine* const flp = scopeTopp->fileline();

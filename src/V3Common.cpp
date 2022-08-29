@@ -66,7 +66,7 @@ static void makeToStringMiddle(AstClass* nodep) {
     std::string comma;
     for (AstNode* itemp = nodep->membersp(); itemp; itemp = itemp->nextp()) {
         if (const auto* const varp = VN_CAST(itemp, Var)) {
-            if (!varp->isParam()) {
+            if (!varp->isParam() && !VN_IS(varp->dtypep(), CDType)) {
                 string stmt = "out += \"";
                 stmt += comma;
                 comma = ", ";

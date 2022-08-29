@@ -114,8 +114,8 @@ private:
     V3UniqueNames m_trigSchedNames{"__VtrigSched"};  // Trigger scheduler name generator
 
     // DTypes
-    AstBasicDType* m_forkDtp = nullptr;  // Fork variable type
-    AstBasicDType* m_trigSchedDtp = nullptr;  // Trigger scheduler type
+    AstCDType* m_forkDtp = nullptr;  // Fork variable type
+    AstCDType* m_trigSchedDtp = nullptr;  // Trigger scheduler type
 
     // Timing-related globals
     AstVarScope* m_delaySchedp = nullptr;  // Global delay scheduler
@@ -197,8 +197,8 @@ private:
     // Creates the global delay scheduler variable
     AstVarScope* getCreateDelayScheduler() {
         if (m_delaySchedp) return m_delaySchedp;
-        auto* const dlySchedDtp = new AstBasicDType{
-            m_scopeTopp->fileline(), VBasicDTypeKwd::DELAY_SCHEDULER, VSigning::UNSIGNED};
+        auto* const dlySchedDtp
+            = new AstCDType{m_scopeTopp->fileline(), AstCDType::DELAY_SCHEDULER};
         m_netlistp->typeTablep()->addTypesp(dlySchedDtp);
         m_delaySchedp = m_scopeTopp->createTemp("__VdlySched", dlySchedDtp);
         // Delay scheduler has to be accessible from top
@@ -224,8 +224,7 @@ private:
         if (!sensesp->user1p()) {
             if (!m_trigSchedDtp) {
                 m_trigSchedDtp
-                    = new AstBasicDType{m_scopeTopp->fileline(), VBasicDTypeKwd::TRIGGER_SCHEDULER,
-                                        VSigning::UNSIGNED};
+                    = new AstCDType{m_scopeTopp->fileline(), AstCDType::TRIGGER_SCHEDULER};
                 m_netlistp->typeTablep()->addTypesp(m_trigSchedDtp);
             }
             AstVarScope* const trigSchedp
@@ -248,10 +247,9 @@ private:
         return VN_AS(sensesp->user2p(), Text)->cloneTree(false);
     }
     // Creates the fork handle type and returns it
-    AstBasicDType* getCreateForkSyncDTypep() {
+    AstCDType* getCreateForkSyncDTypep() {
         if (m_forkDtp) return m_forkDtp;
-        m_forkDtp = new AstBasicDType{m_scopeTopp->fileline(), VBasicDTypeKwd::FORK_SYNC,
-                                      VSigning::UNSIGNED};
+        m_forkDtp = new AstCDType{m_scopeTopp->fileline(), AstCDType::FORK_SYNC};
         m_netlistp->typeTablep()->addTypesp(m_forkDtp);
         return m_forkDtp;
     }

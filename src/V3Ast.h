@@ -2053,6 +2053,29 @@ public:
         return predicateImpl<const T_Node, /* Default: */ true>(this, p);
     }
 
+    // Returns the first (in pre-order sense) encountered node of the specified type. If no such
+    // node exists, returns null.
+    template <typename T_Node>
+    T_Node* find() {
+        T_Node* resultp = nullptr;
+        exists<T_Node>([&](T_Node* nodep) {
+            resultp = nodep;
+            return true;
+        });
+        return resultp;
+    }
+
+    // Same as above, but for 'const' nodes
+    template <typename T_Node>
+    const T_Node* find() const {
+        const T_Node* resultp = nullptr;
+        exists<T_Node>([&](const T_Node* nodep) {
+            resultp = nodep;
+            return true;
+        });
+        return resultp;
+    }
+
     int nodeCount() const {
         // TODO: this should really return size_t, but need to fix use sites
         int count = 0;

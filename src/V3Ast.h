@@ -1763,8 +1763,18 @@ public:
     // METHODS - Tree modifications
     // Returns nodep, adds newp to end of nodep's list
     static AstNode* addNext(AstNode* nodep, AstNode* newp);
+    template <typename T_Node>
+    static T_Node* addNext(T_Node* nodep, T_Node* newp) {
+        return reinterpret_cast<T_Node*>(
+            addNext(static_cast<AstNode*>(nodep), static_cast<AstNode*>(newp)));
+    }
     // Returns nodep, adds newp (maybe nullptr) to end of nodep's list
     static AstNode* addNextNull(AstNode* nodep, AstNode* newp);
+    template <typename T_Node>
+    static T_Node* addNextNull(T_Node* nodep, T_Node* newp) {
+        return reinterpret_cast<T_Node*>(
+            addNextNull(static_cast<AstNode*>(nodep), static_cast<AstNode*>(newp)));
+    }
     inline AstNode* addNext(AstNode* newp) { return addNext(this, newp); }
     inline AstNode* addNextNull(AstNode* newp) { return addNextNull(this, newp); }
     void addNextHere(AstNode* newp);  // Insert newp at this->nextp

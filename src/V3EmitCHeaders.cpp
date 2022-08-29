@@ -251,6 +251,12 @@ class EmitCHeader final : public EmitCConstInit {
         // From `systemc_header
         emitTextSection(modp, VNType::atScHdr);
 
+        if (const auto* const classPackagep = VN_CAST(modp, ClassPackage)) {
+            const AstClass* const classp = classPackagep->classp();
+            // If the class has triggers, forward declare it
+            if (classp->hasTriggers()) puts("class " + prefixNameProtect(classp) + ";\n");
+        }
+
         // Open class body {{{
         puts("\nclass ");
         puts(prefixNameProtect(modp));

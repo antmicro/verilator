@@ -240,6 +240,63 @@ public:
 };
 
 //=============================================================================
+// VlClassTriggerScheduler manages awaiting objects for a given class.
+
+template <typename T, typename Syms>
+class VlClassTriggerScheduler final {
+    // MEMBERS
+    std::unordered_set<T*> m_awaiting;
+    std::unordered_set<T*> m_uncommitted;
+    std::vector<T*> m_triggered;
+
+public:
+    // METHODS
+    void resume(Syms* const __restrict__ symsp) {
+        for (auto* const objp : m_triggered) objp->_timing_resume(symsp);
+        m_triggered.clear();
+    }
+    void commit(Syms* const __restrict__ symsp) {
+        for (auto* const objp : m_uncommitted) objp->_timing_commit(symsp);
+        m_uncommitted.clear();
+    }
+    void reportAwait(T* const objp) {
+        if (!objp->__Vawait_count++) m_awaiting.insert(objp);
+        m_uncommitted.insert(objp);
+    }
+    void doneAwait(T* const objp) {
+        if (!--objp->__Vawait_count) {
+            m_awaiting.erase(objp);
+            m_uncommitted.erase(objp);
+        }
+    }
+    void erase(T* const objp) {
+        m_awaiting.erase(objp);
+        m_uncommitted.erase(objp);
+    }
+    bool evalTriggers(Syms* const __restrict__ symsp) {
+        for (auto* const objp : m_awaiting) {
+            objp->_eval_triggers__cls(symsp);
+            if (objp->__VclsTriggered.any()) {
+                m_uncommitted.erase(objp);
+                m_triggered.push_back(objp);
+            }
+        }
+        return !m_triggered.empty();
+    }
+    void postTriggerUpdates(Syms* const __restrict__ symsp) {
+        for (auto* const objp : m_awaiting) objp->_post_trigger_updates__cls(symsp);
+    }
+};
+
+#define VL_NEW_WITH_TRIGGERS(ClassPkg, Class, ...) \
+    VlClassRef<Class> { \
+        new Class{__VA_ARGS__}, [vlSymsp](Class* objp) { \
+            vlSymsp->__Vm_gc.put(objp); \
+            vlSymsp->ClassPkg.__Vm_scheduler.erase(objp); \
+        } \
+    }
+
+//=============================================================================
 // VlNow is a helper awaitable type that always suspends, and then immediately resumes a coroutine.
 // Allows forcing the move of coroutine locals to the heap.
 

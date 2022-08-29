@@ -48,6 +48,7 @@
 
 #include "V3Ast.h"
 #include "V3Const.h"
+#include "V3EmitCBase.h"
 #include "V3EmitV.h"
 #include "V3Graph.h"
 #include "V3SenTree.h"
@@ -227,8 +228,15 @@ private:
                     = new AstCDType{m_scopeTopp->fileline(), AstCDType::TRIGGER_SCHEDULER};
                 m_netlistp->typeTablep()->addTypesp(m_trigSchedDtp);
             }
-            AstVarScope* const trigSchedp
-                = m_scopeTopp->createTemp(m_trigSchedNames.get(sensesp), m_trigSchedDtp);
+            AstVarScope* trigSchedp;
+            if (m_classp) {
+                trigSchedp = m_scopep->createTemp(m_trigSchedNames.get(sensesp), m_trigSchedDtp);
+                trigSchedp->varp()->combineType(VVarType::MEMBER);
+                m_classp->addMembersp(trigSchedp->varp()->unlinkFrBack());
+            } else {
+                trigSchedp
+                    = m_scopeTopp->createTemp(m_trigSchedNames.get(sensesp), m_trigSchedDtp);
+            }
             sensesp->user1p(trigSchedp);
         }
         return VN_AS(sensesp->user1p(), VarScope);
@@ -461,7 +469,7 @@ private:
         VL_DO_DANGLING(nodep->deleteTree(), nodep);
     }
     virtual void visit(AstEventControl* nodep) override {
-        if (m_classp) nodep->v3warn(E_UNSUPPORTED, "Unsupported: event controls in methods");
+        if (m_classp) m_classp->setHasTriggers();
         auto* const sensesp = m_finder.getSenTree(nodep->sensesp());
         nodep->sensesp()->unlinkFrBack()->deleteTree();
         // Get this sentree's trigger scheduler

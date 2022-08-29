@@ -124,6 +124,9 @@ class TimingKit final {
 
 public:
     LogicByScope m_lbs;  // Actives that resume timing schedulers
+    LogicByScope m_classLbs;  // Same, but for classes
+    AstCMethodHard* m_classCommitp;  // Commit calls for class trigger schedulers
+    AstCMethodHard* m_classUpdatep;  // Update calls for class trigger schedulers
 
     // Remaps external domains using the specified trigger map
     std::map<const AstVarScope*, std::vector<AstSenTree*>>
@@ -134,10 +137,14 @@ public:
     AstCCall* createCommit(AstNetlist* const netlistp);
 
     TimingKit() = default;
-    TimingKit(LogicByScope&& lbs,
+    TimingKit(LogicByScope&& lbs, LogicByScope&& classLbs, AstCMethodHard* classCommitp,
+              AstCMethodHard* classUpdatep,
               std::map<const AstVarScope*, std::set<AstSenTree*>>&& externalDomains)
         : m_externalDomains{externalDomains}
-        , m_lbs{lbs} {}
+        , m_lbs{lbs}
+        , m_classLbs{classLbs}
+        , m_classCommitp{classCommitp}
+        , m_classUpdatep{classUpdatep} {}
     VL_UNCOPYABLE(TimingKit);
     TimingKit(TimingKit&&) = default;
     TimingKit& operator=(TimingKit&&) = default;

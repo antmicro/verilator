@@ -206,6 +206,16 @@ public:
         m_emitConstInit = true;
         iterate(initp);
     }
+    void emitNewCommon(AstNodeDType* const dtypep) {
+        puts("VL_NEW");
+        AstClass* const classp = VN_AS(dtypep, ClassRefDType)->classp();
+        if (classp->hasTriggers()) {
+            puts("_WITH_TRIGGERS(TOP__" + classp->classOrPackagep()->nameProtect() + ", ");
+        } else {
+            puts("(");
+        }
+        puts(prefixNameProtect(classp) + ", ");
+    }
 
     // VISITORS
     using EmitCConstInit::visit;
@@ -420,7 +430,7 @@ public:
     }
     virtual void visit(AstCNew* nodep) override {
         bool comma = false;
-        puts("VL_NEW(" + prefixNameProtect(nodep->dtypep()) + ", ");
+        emitNewCommon(nodep->dtypep());
         puts("vlSymsp");  // TODO make this part of argsp, and eliminate when unnecessary
         if (nodep->argsp()) comma = true;
         for (AstNode* subnodep = nodep->argsp(); subnodep; subnodep = subnodep->nextp()) {
@@ -1055,7 +1065,7 @@ public:
         puts(")");
     }
     virtual void visit(AstNewCopy* nodep) override {
-        puts("VL_NEW(" + prefixNameProtect(nodep->dtypep()) + ", ");
+        emitNewCommon(nodep->dtypep());
         puts("*");  // i.e. make into a reference
         iterateAndNextNull(nodep->rhsp());
         puts(")");

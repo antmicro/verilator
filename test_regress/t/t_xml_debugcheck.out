@@ -32,7 +32,7 @@
       <topscope loc="d,10,8,10,9">
         <scope loc="d,10,8,10,9" name="TOP"/>
       </topscope>
-      <cfunc loc="a,0,0,0,0" name="_eval_static">
+      <cfunc loc="d,10,8,10,9" name="_eval_static">
         <ccall loc="d,10,8,10,9" func="_eval_static__TOP"/>
       </cfunc>
       <cfunc loc="d,10,8,10,9" name="_eval_static__TOP">
@@ -41,7 +41,7 @@
           <varref loc="d,22,23,22,24" name="t.cyc" dtype_id="4"/>
         </assign>
       </cfunc>
-      <cfunc loc="a,0,0,0,0" name="_eval_initial">
+      <cfunc loc="d,10,8,10,9" name="_eval_initial">
         <ccall loc="d,10,8,10,9" func="_eval_initial__TOP"/>
         <assign loc="d,60,22,60,25" dtype_id="8">
           <varref loc="d,60,22,60,25" name="clk" dtype_id="8"/>
@@ -587,9 +587,9 @@
           </begin>
         </if>
       </cfunc>
-      <cfunc loc="a,0,0,0,0" name="_eval_final"/>
-      <cfunc loc="a,0,0,0,0" name="_eval_settle"/>
-      <cfunc loc="a,0,0,0,0" name="_eval_triggers__act">
+      <cfunc loc="d,10,8,10,9" name="_eval_final"/>
+      <cfunc loc="d,10,8,10,9" name="_eval_settle"/>
+      <cfunc loc="d,10,8,10,9" name="_eval_triggers__act">
         <assign loc="d,10,8,10,9" dtype_id="8">
           <and loc="d,60,14,60,21" dtype_id="8">
             <ccast loc="d,60,22,60,25" dtype_id="8">
@@ -618,7 +618,7 @@
           <text loc="d,10,8,10,9"/>
         </textblock>
       </cfunc>
-      <cfunc loc="a,0,0,0,0" name="_dump_triggers__act">
+      <cfunc loc="d,10,8,10,9" name="_dump_triggers__act">
         <if loc="d,10,8,10,9">
           <and loc="d,10,8,10,9" dtype_id="8">
             <const loc="d,10,8,10,9" name="32&apos;h1" dtype_id="13"/>
@@ -644,7 +644,7 @@
           </begin>
         </if>
       </cfunc>
-      <cfunc loc="a,0,0,0,0" name="_dump_triggers__nba">
+      <cfunc loc="d,10,8,10,9" name="_dump_triggers__nba">
         <if loc="d,10,8,10,9">
           <and loc="d,10,8,10,9" dtype_id="8">
             <const loc="d,10,8,10,9" name="32&apos;h1" dtype_id="13"/>
@@ -1496,7 +1496,7 @@
           </begin>
         </if>
       </cfunc>
-      <cfunc loc="a,0,0,0,0" name="_eval">
+      <cfunc loc="d,10,8,10,9" name="_eval">
         <var loc="d,10,8,10,9" name="__VpreTriggered" dtype_id="6" vartype="VlTriggerVec" origName="__VpreTriggered"/>
         <var loc="d,10,8,10,9" name="__VnbaIterCount" dtype_id="5" vartype="bit" origName="__VnbaIterCount"/>
         <var loc="d,10,8,10,9" name="__VnbaContinue" dtype_id="3" vartype="bit" origName="__VnbaContinue"/>

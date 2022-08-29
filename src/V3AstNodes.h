@@ -333,6 +333,7 @@ class AstClass final : public AstNodeModule {
     AstClassPackage* m_classOrPackagep = nullptr;  // Class package this is under
     bool m_virtual = false;  // Virtual class
     bool m_extended = false;  // Is extension or extended by other classes
+    bool m_hasTriggers = false;  // Does it have its own triggers
     void insertCache(AstNode* nodep);
 
 public:
@@ -374,6 +375,8 @@ public:
     void isExtended(bool flag) { m_extended = flag; }
     bool isVirtual() const { return m_virtual; }
     void isVirtual(bool flag) { m_virtual = flag; }
+    bool hasTriggers() const { return m_hasTriggers; }
+    void setHasTriggers() { m_hasTriggers = true; }
     // Return true if this class is an extension of base class (SLOW)
     // Accepts nullptrs
     static bool isClassExtendedFrom(const AstClass* refClassp, const AstClass* baseClassp);
@@ -1153,6 +1156,7 @@ public:
         TRIGGERVEC,
         DELAY_SCHEDULER,
         TRIGGER_SCHEDULER,
+        CLASS_TRIGGER_SCHEDULER,
         FORK_SYNC,
         // Leave last
         _ENUM_MAX
@@ -1170,9 +1174,13 @@ public:
     }
     ASTNODE_NODE_FUNCS(CDType)
     virtual string name() const override {
-        static const char* const names[]
-            = {"VlMTaskState",       "VlTriggerVec", "VlDelayScheduler",
-               "VlTriggerScheduler", "VlForkSync",   " MAX"};
+        static const char* const names[] = {"VlMTaskState",
+                                            "VlTriggerVec",
+                                            "VlDelayScheduler",
+                                            "VlTriggerScheduler",
+                                            "VlClassTriggerScheduler",
+                                            "VlForkSync",
+                                            " MAX"};
         return names[m_name];
     }
     // METHODS
@@ -1193,9 +1201,12 @@ public:
     bool isDelayScheduler() const { return m_name == DELAY_SCHEDULER; }
     bool isTriggerScheduler() const { return m_name == TRIGGER_SCHEDULER; }
     bool isForkSync() const { return m_name == FORK_SYNC; }
+    bool isClassTriggerScheduler() const { return m_name == CLASS_TRIGGER_SCHEDULER; }
     void addParam(const std::string& param) { m_params.emplace_back(param); }
     const std::vector<std::string>& params() const { return m_params; }
-    size_t requiredParams() const { return m_name == TRIGGERVEC ? 1 : 0; }
+    size_t requiredParams() const {
+        return m_name == TRIGGERVEC ? 1 : m_name == CLASS_TRIGGER_SCHEDULER ? 2 : 0;
+    }
 };
 
 class AstIfaceRefDType final : public AstNodeDType {

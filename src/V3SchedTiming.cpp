@@ -34,6 +34,65 @@
 
 namespace V3Sched {
 
+namespace {
+
+//============================================================================
+// Utility functions
+
+AstCMethodHard* makeCMethodHard(FileLine* const flp, AstVarScope* const fromp,
+                                const char* const name, AstNode* const pinsp) {
+    return new AstCMethodHard{flp, new AstVarRef{flp, fromp, VAccess::READWRITE}, name, pinsp};
+}
+
+AstCMethodHard* makeCMethodHardVoid(FileLine* const flp, AstVarScope* const fromp,
+                                    const char* const name, AstNode* const pinsp = nullptr) {
+    AstCMethodHard* const methodp = makeCMethodHard(flp, fromp, name, pinsp);
+    methodp->dtypeSetVoid();
+    methodp->statement(true);
+    return methodp;
+}
+
+AstCMethodHard* makeCMethodHardBit(FileLine* const flp, AstVarScope* const fromp,
+                                   const char* const name, AstNode* const pinsp = nullptr) {
+    AstCMethodHard* const methodp = makeCMethodHard(flp, fromp, name, pinsp);
+    methodp->dtypeSetBit();
+    return methodp;
+}
+
+AstActive* convertToCommitActive(AstActive* activep) {
+    auto* const resumep = VN_AS(activep->stmtsp(), CMethodHard);
+    UASSERT_OBJ(!resumep->nextp(), resumep, "Should be the only statement here");
+    AstVarScope* const schedulerp = VN_AS(resumep->fromp(), VarRef)->varScopep();
+    UASSERT_OBJ(VN_IS(schedulerp->dtypep(), CDType)
+                    && VN_AS(schedulerp->dtypep(), CDType)->isTriggerScheduler(),
+                schedulerp, "Unexpected type");
+    AstSenTree* const sensesp = activep->sensesp();
+    FileLine* const flp = sensesp->fileline();
+    // Negate the sensitivity. We will commit only if the event wasn't
+    // triggered on the current iteration
+    auto* const negSensesp = sensesp->cloneTree(false);
+    negSensesp->sensesp()->sensp(
+        new AstLogNot{flp, negSensesp->sensesp()->sensp()->unlinkFrBack()});
+    sensesp->addNextHere(negSensesp);
+    auto* const newactp = new AstActive{flp, "", negSensesp};
+    // Create the commit call and put it in the commit function
+    newactp->addStmtsp(
+        makeCMethodHardVoid(flp, schedulerp, "commit", resumep->pinsp()->cloneTree(false)));
+    return newactp;
+}
+
+AstCFunc* makeClassMethod(AstScope* scopep, const string& name) {
+    AstCFunc* const funcp = new AstCFunc{scopep->fileline(), name, scopep, ""};
+    funcp->isStatic(false);
+    funcp->isConst(false);
+    funcp->isMethod(true);
+    funcp->argTypes(EmitCBaseVisitor::symClassVar());
+    scopep->addActivep(funcp);
+    return funcp;
+}
+
+}  // namespace
+
 //============================================================================
 // Remaps external domains using the specified trigger map
 
@@ -57,7 +116,7 @@ TimingKit::remapDomains(const std::unordered_map<const AstSenTree*, AstSenTree*>
 
 AstCCall* TimingKit::createResume(AstNetlist* const netlistp) {
     if (!m_resumeFuncp) {
-        if (m_lbs.empty()) return nullptr;
+        if (m_lbs.empty() && m_classLbs.empty()) return nullptr;
         // Create global resume function
         AstScope* const scopeTopp = netlistp->topScopep()->scopep();
         m_resumeFuncp = new AstCFunc{netlistp->fileline(), "_timing_resume", scopeTopp, ""};
@@ -71,6 +130,14 @@ AstCCall* TimingKit::createResume(AstNetlist* const netlistp) {
             AstActive* const activep = p.second;
             m_resumeFuncp->addStmtsp(activep);
         }
+        const VNUser1InUse user1InUse;  // AstScope -> AstCFunc: resume func for scope
+        for (auto& p : m_classLbs) {
+            AstScope* const scopep = p.first;
+            if (!scopep->user1p()) scopep->user1p(makeClassMethod(scopep, "_timing_resume"));
+            auto* const resumeMethodp = VN_AS(scopep->user1p(), CFunc);
+            AstActive* const activep = p.second;
+            resumeMethodp->addStmtsp(activep);
+        }
     }
     return new AstCCall{m_resumeFuncp->fileline(), m_resumeFuncp};
 }
@@ -80,47 +147,34 @@ AstCCall* TimingKit::createResume(AstNetlist* const netlistp) {
 
 AstCCall* TimingKit::createCommit(AstNetlist* const netlistp) {
     if (!m_commitFuncp) {
+        if (!m_lbs.empty() || m_classCommitp) {
+            AstScope* const scopeTopp = netlistp->topScopep()->scopep();
+            m_commitFuncp = new AstCFunc{netlistp->fileline(), "_timing_commit", scopeTopp, ""};
+            m_commitFuncp->dontCombine(true);
+            m_commitFuncp->isLoose(true);
+            m_commitFuncp->isConst(false);
+            m_commitFuncp->declPrivate(true);
+            scopeTopp->addActivep(m_commitFuncp);
+        } else {
+            return nullptr;
+        }
         for (auto& p : m_lbs) {
             AstActive* const activep = p.second;
             auto* const resumep = VN_AS(activep->stmtsp(), CMethodHard);
-            UASSERT_OBJ(!resumep->nextp(), resumep, "Should be the only statement here");
-            AstVarScope* const schedulerp = VN_AS(resumep->fromp(), VarRef)->varScopep();
-            UASSERT_OBJ(VN_IS(schedulerp->dtypep(), CDType)
-                            && (VN_AS(schedulerp->dtypep(), CDType)->isDelayScheduler()
-                                || VN_AS(schedulerp->dtypep(), CDType)->isTriggerScheduler()),
-                        schedulerp, "Unexpected type");
-            if (!VN_AS(schedulerp->dtypep(), CDType)->isTriggerScheduler()) continue;
+            AstVarScope* const fromp = VN_AS(resumep->fromp(), VarRef)->varScopep();
+            if (!VN_AS(fromp->dtypep(), CDType)->isTriggerScheduler()) continue;
             // Create the global commit function only if we have trigger schedulers
-            if (!m_commitFuncp) {
-                AstScope* const scopeTopp = netlistp->topScopep()->scopep();
-                m_commitFuncp
-                    = new AstCFunc{netlistp->fileline(), "_timing_commit", scopeTopp, ""};
-                m_commitFuncp->dontCombine(true);
-                m_commitFuncp->isLoose(true);
-                m_commitFuncp->isConst(false);
-                m_commitFuncp->declPrivate(true);
-                scopeTopp->addActivep(m_commitFuncp);
-            }
-            AstSenTree* const sensesp = activep->sensesp();
-            FileLine* const flp = sensesp->fileline();
-            // Negate the sensitivity. We will commit only if the event wasn't triggered on the
-            // current iteration
-            auto* const negSensesp = sensesp->cloneTree(false);
-            negSensesp->sensesp()->sensp(
-                new AstLogNot{flp, negSensesp->sensesp()->sensp()->unlinkFrBack()});
-            sensesp->addNextHere(negSensesp);
-            auto* const newactp = new AstActive{flp, "", negSensesp};
-            // Create the commit call and put it in the commit function
-            auto* const commitp = new AstCMethodHard{
-                flp, new AstVarRef{flp, schedulerp, VAccess::READWRITE}, "commit"};
-            commitp->addPinsp(resumep->pinsp()->cloneTree(false));
-            commitp->statement(true);
-            commitp->dtypeSetVoid();
-            newactp->addStmtsp(commitp);
-            m_commitFuncp->addStmtsp(newactp);
+            m_commitFuncp->addStmtsp(convertToCommitActive(activep));
         }
-        // We still haven't created a commit function (no trigger schedulers), return null
-        if (!m_commitFuncp) return nullptr;
+        const VNUser1InUse user1InUse;  // AstScope -> AstCFunc: resume func for scope
+        for (auto& p : m_classLbs) {
+            AstScope* const scopep = p.first;
+            if (!scopep->user1p()) scopep->user1p(makeClassMethod(scopep, "_timing_commit"));
+            auto* const commitMethodp = VN_AS(scopep->user1p(), CFunc);
+            AstActive* const activep = p.second;
+            commitMethodp->addStmtsp(convertToCommitActive(activep));
+        }
+        if (m_classCommitp) m_commitFuncp->addStmtsp(m_classCommitp);
     }
     return new AstCCall{m_commitFuncp->fileline(), m_commitFuncp};
 }
@@ -134,13 +188,22 @@ TimingKit prepareTiming(AstNetlist* const netlistp) {
     private:
         // NODE STATE
         //  AstSenTree::user1()  -> bool.  Set true if the sentree has been visited.
+        //  AstClass::user1p()   -> AstVarScope*.  VlClassTriggerScheduler instance for this class.
         const VNUser1InUse m_inuser1;
 
         // STATE
         bool m_inProcess = false;  // Are we in a process?
         bool m_gatherVars = false;  // Should we gather vars in m_writtenBySuspendable?
+        AstNetlist* const m_netlistp;  // Root node
         AstScope* const m_scopeTopp;  // Scope at the top
+        AstClass* m_classp = nullptr;  // Current class
+        AstScope* m_scopep = nullptr;  // Current scope
+        AstSenItem* m_classSenItemsp = nullptr;
         LogicByScope& m_lbs;  // Timing resume actives
+        LogicByScope& m_classLbs;  // Same, but for classes
+        AstCMethodHard*& m_classCommitp;  // Commit calls for class trigger schedulers
+        AstCMethodHard*& m_classUpdatep;  // Update calls for class trigger schedulers
+        AstCMethodHard* m_classResumep = nullptr;
         // Additional var sensitivities
         std::map<const AstVarScope*, std::set<AstSenTree*>>& m_externalDomains;
         std::set<AstSenTree*> m_processDomains;  // Sentrees from the current process
@@ -155,20 +218,43 @@ TimingKit prepareTiming(AstNetlist* const netlistp) {
             AstSenTree* const sensesp = awaitp->sensesp();
             FileLine* const flp = sensesp->fileline();
             // Create a resume() call on the timing scheduler
-            auto* const resumep = new AstCMethodHard{
-                flp, new AstVarRef{flp, schedulerp, VAccess::READWRITE}, "resume"};
+            auto* const resumep = makeCMethodHardVoid(flp, schedulerp, "resume");
             if (VN_AS(schedulerp->dtypep(), CDType)->isTriggerScheduler()) {
                 resumep->addPinsp(methodp->pinsp()->cloneTree(false));
             }
-            resumep->statement(true);
-            resumep->dtypeSetVoid();
-            // Put it in an active and put that in the global resume function
-            auto* const activep = new AstActive{flp, "_timing", sensesp};
-            activep->addStmtsp(resumep);
-            m_lbs.emplace_back(m_scopeTopp, activep);
+            if (m_classp && VN_AS(schedulerp->dtypep(), CDType)->isTriggerScheduler()) {
+                m_classLbs.add(m_scopep, sensesp, resumep);
+            } else {
+                m_lbs.add(m_scopep, sensesp, resumep);
+            }
+        }
+        // Creates the current class scheduler if it doesn't exist already
+        AstVarScope* getCreateClassTriggerScheduler() {
+            UASSERT(m_classp, "Not under class");
+            if (!m_classp->user1p()) {
+                auto* const scopep = m_classp->classOrPackagep()->find<AstScope>();
+                auto* const dtypep
+                    = new AstCDType{scopep->fileline(), AstCDType::CLASS_TRIGGER_SCHEDULER};
+                dtypep->addParam(EmitCBaseVisitor::prefixNameProtect(m_classp));
+                dtypep->addParam(EmitCBaseVisitor::symClassName());
+                m_netlistp->typeTablep()->addTypesp(dtypep);
+                AstVarScope* const schedulerp = scopep->createTemp("__Vm_scheduler", dtypep);
+                schedulerp->varp()->combineType(VVarType::MEMBER);
+                m_classp->user1p(schedulerp);
+            }
+            return VN_AS(m_classp->user1p(), VarScope);
         }
 
         // VISITORS
+        virtual void visit(AstNetlist* nodep) override {
+            iterateChildren(nodep);
+            if (m_classSenItemsp) {
+                FileLine* const flp = nodep->fileline();
+                auto* const sensesp = new AstSenTree{flp, m_classSenItemsp};
+                nodep->topScopep()->addSenTreep(sensesp);
+                m_lbs.add(m_scopeTopp, sensesp, m_classResumep);
+            }
+        }
         virtual void visit(AstNodeProcedure* const nodep) override {
             UASSERT_OBJ(!m_inProcess && !m_gatherVars && m_processDomains.empty()
                             && m_writtenBySuspendable.empty(),
@@ -193,11 +279,54 @@ TimingKit prepareTiming(AstNetlist* const netlistp) {
             // If not in a process, we don't need to gather variables or domains
             iterateChildren(nodep);
         }
+        virtual void visit(AstClass* nodep) override {
+            UASSERT_OBJ(!m_classp, nodep, "Class under class");
+            m_classp = nodep;
+            iterateChildren(nodep);
+            if (AstVarScope* const schedulerp = VN_AS(nodep->user1p(), VarScope)) {
+                FileLine* const flp = nodep->fileline();
+                auto* const symsp = new AstText{flp, "vlSymsp"};
+                m_classSenItemsp = AstNode::addNext(
+                    m_classSenItemsp,
+                    new AstSenItem{flp, VEdgeType::ET_TRUE,
+                                   makeCMethodHardBit(flp, schedulerp, "evalTriggers", symsp)});
+                m_classResumep = AstNode::addNext(
+                    m_classResumep,
+                    makeCMethodHardVoid(flp, schedulerp, "resume", symsp->cloneTree(false))),
+                m_classCommitp = AstNode::addNext(
+                    m_classCommitp,
+                    makeCMethodHardVoid(flp, schedulerp, "commit", symsp->cloneTree(false)));
+                m_classUpdatep = AstNode::addNext(
+                    m_classUpdatep, makeCMethodHardVoid(flp, schedulerp, "postTriggerUpdates",
+                                                        symsp->cloneTree(false)));
+            }
+            m_classp = nullptr;
+        }
+        virtual void visit(AstScope* nodep) override {
+            VL_RESTORER(m_scopep);
+            m_scopep = nodep;
+            iterateChildren(nodep);
+            if (m_classp && m_classp->user1p()) {
+                auto* newvscp = nodep->createTemp("__Vawait_count", 32);
+                newvscp->varp()->combineType(VVarType::MEMBER);
+            }
+        }
         virtual void visit(AstCAwait* nodep) override {
             if (AstSenTree* const sensesp = nodep->sensesp()) {
                 if (!sensesp->user1SetOnce()) createResumeActive(nodep);
                 nodep->clearSensesp();  // Clear as these sentrees will get deleted later
                 if (m_inProcess) m_processDomains.insert(sensesp);
+                auto* const methodp = VN_AS(nodep->exprp(), CMethodHard);
+                AstVarScope* const schedulerp = VN_AS(methodp->fromp(), VarRef)->varScopep();
+                if (VN_AS(schedulerp->dtypep(), CDType)->isTriggerScheduler() && m_classp) {
+                    FileLine* const flp = nodep->fileline();
+                    AstVarScope* const schedulerp = getCreateClassTriggerScheduler();
+                    auto* const thisp = new AstText{flp, "this"};
+                    nodep->addHereThisAsNext(
+                        makeCMethodHardVoid(flp, schedulerp, "reportAwait", thisp));
+                    nodep->addNextHere(makeCMethodHardVoid(flp, schedulerp, "doneAwait",
+                                                           thisp->cloneTree(false)));
+                }
             }
         }
         virtual void visit(AstNodeVarRef* nodep) override {
@@ -213,19 +342,28 @@ TimingKit prepareTiming(AstNetlist* const netlistp) {
 
     public:
         // CONSTRUCTORS
-        explicit AwaitVisitor(AstNetlist* nodep, LogicByScope& lbs,
+        explicit AwaitVisitor(AstNetlist* nodep, LogicByScope& lbs, LogicByScope& classLbs,
+                              AstCMethodHard*& classCommitp, AstCMethodHard*& classUpdatep,
                               std::map<const AstVarScope*, std::set<AstSenTree*>>& externalDomains)
-            : m_scopeTopp{nodep->topScopep()->scopep()}
+            : m_netlistp{nodep}
+            , m_scopeTopp{nodep->topScopep()->scopep()}
             , m_lbs{lbs}
+            , m_classLbs{classLbs}
+            , m_classCommitp{classCommitp}
+            , m_classUpdatep{classUpdatep}
             , m_externalDomains{externalDomains} {
             iterate(nodep);
         }
         virtual ~AwaitVisitor() override = default;
     };
     LogicByScope lbs;
+    LogicByScope classLbs;
+    AstCMethodHard* classCommitp = nullptr;
+    AstCMethodHard* classUpdatep = nullptr;
     std::map<const AstVarScope*, std::set<AstSenTree*>> externalDomains;
-    AwaitVisitor{netlistp, lbs, externalDomains};
-    return {std::move(lbs), std::move(externalDomains)};
+    AwaitVisitor{netlistp, lbs, classLbs, classCommitp, classUpdatep, externalDomains};
+    return {std::move(lbs), std::move(classLbs), classCommitp, classUpdatep,
+            std::move(externalDomains)};
 }
 
 //============================================================================

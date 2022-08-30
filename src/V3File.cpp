@@ -30,6 +30,7 @@
 #include <iomanip>
 #include <map>
 #include <memory>
+#include <mutex>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -108,6 +109,7 @@ class V3FileDependImp final {
     // MEMBERS
     std::set<string> m_filenameSet;  // Files generated (elim duplicates)
     std::set<DependFile> m_filenameList;  // Files sourced/generated
+    mutable std::mutex m_mutex;
 
     static string stripQuotes(const string& in) {
         string pretty = in;
@@ -120,6 +122,7 @@ class V3FileDependImp final {
 public:
     // ACCESSOR METHODS
     void addSrcDepend(const string& filename) {
+        std::lock_guard<std::mutex> lg(m_mutex);
         if (m_filenameSet.find(filename) == m_filenameSet.end()) {
             // cppcheck-suppress stlFindInsert  // cppcheck 1.90 bug
             m_filenameSet.insert(filename);
@@ -129,6 +132,7 @@ public:
         }
     }
     void addTgtDepend(const string& filename) {
+        std::lock_guard<std::mutex> lg(m_mutex);
         if (m_filenameSet.find(filename) == m_filenameSet.end()) {
             // cppcheck-suppress stlFindInsert  // cppcheck 1.90 bug
             m_filenameSet.insert(filename);
@@ -172,6 +176,7 @@ inline void V3FileDependImp::writeDepend(const string& filename) {
 }
 
 inline std::vector<string> V3FileDependImp::getAllDeps() const {
+    std::lock_guard<std::mutex> lg(m_mutex);
     std::vector<string> r;
     for (const auto& itr : m_filenameList) {
         if (!itr.target() && itr.exists()) r.push_back(itr.filename());
@@ -958,6 +963,8 @@ class VIdProtectImp final {
     // MEMBERS
     std::map<const std::string, std::string> m_nameMap;  // Map of old name into new name
     std::unordered_set<std::string> m_newIdSet;  // Which new names exist
+    std::mutex m_mutex;
+
 protected:
     // CONSTRUCTORS
     friend class VIdProtect;
@@ -989,6 +996,7 @@ public:
         return old;
     }
     string protectIf(const string& old, bool doIt) {
+        std::lock_guard<std::mutex> lg(m_mutex);
         if (!v3Global.opt.protectIds() || old.empty() || !doIt) return old;
         const auto it = m_nameMap.find(old);
         if (it != m_nameMap.end()) {

@@ -87,6 +87,7 @@ my $opt_stop;
 my $opt_trace;
 my $opt_verbose;
 my $Opt_Verilated_Debug;
+my $opt_verilation_threads;
 our $Opt_Unsupported;
 our $Opt_Verilation = 1;
 our @Opt_Driver_Verilator_Flags;
@@ -115,6 +116,7 @@ if (! GetOptions(
           "verbose!"    => \$opt_verbose,
           "verilation!"         => \$Opt_Verilation,  # Undocumented debugging
           "verilated-debug!"    => \$Opt_Verilated_Debug,
+          "verilation-threads=i" => \$opt_verilation_threads,
           #W               see parameter()
           # Scenarios
           "atsim|athdl!"=> sub { $opt_scenarios{atsim} = $_[1]; },
@@ -134,6 +136,7 @@ if (! GetOptions(
 
 $opt_jobs = calc_jobs() if defined $opt_jobs && $opt_jobs == 0;
 $Fork->max_proc($opt_jobs);
+$opt_verilation_threads = max_procs() if defined $opt_verilation_threads && $opt_verilation_threads == 0;
 
 if ((scalar keys %opt_scenarios) < 1) {
     $opt_scenarios{dist} = 1;
@@ -919,6 +922,7 @@ sub compile_vlt_flags {
 
     my @verilator_flags = @{$param{verilator_flags}};
     unshift @verilator_flags, "--gdb" if $opt_gdb;
+    unshift @verilator_flags, "--verilation-threads $opt_verilation_threads" if $opt_verilation_threads;
     unshift @verilator_flags, "--gdbbt" if $opt_gdbbt;
     unshift @verilator_flags, "--rr" if $opt_rr;
     unshift @verilator_flags, "--x-assign unique";  # More likely to be buggy

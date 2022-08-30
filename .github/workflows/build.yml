@@ -103,6 +103,7 @@ jobs:
           - { cc: gcc,   cxx: g++     }
         m32: [0, 1]
         suite: [dist-vlt-0, dist-vlt-1, dist-vlt-2, vltmt-0, vltmt-1]
+        verilation-threads: [0, 1]
         exclude:
           # Build pull requests only with ubuntu-20.04 and without m32
           - os:  ${{ github.event_name == 'pull_request' && 'ubuntu-18.04' || 'do-not-exclude' }}
@@ -119,11 +120,12 @@ jobs:
           - {os: ubuntu-20.04, compiler: { cc: gcc-10, cxx: g++-10 }, m32: 0, suite: vltmt-0}
           - {os: ubuntu-20.04, compiler: { cc: gcc-10, cxx: g++-10 }, m32: 0, suite: vltmt-1}
     runs-on: ${{ matrix.os }}
-    name: Test | ${{ matrix.os }} | ${{ matrix.compiler.cc }} | ${{ matrix.suite }} ${{ matrix.m32 && '| -m32' || '' }}
+    name: Test | ${{ matrix.os }} | ${{ matrix.compiler.cc }} | ${{ matrix.suite }} ${{ matrix.m32 && '| -m32' || '' }} ${{ matrix.verilation-threads && '| verilation-threads' || '' }}
     env:
       CI_BUILD_STAGE_NAME: test
       CI_RUNS_ON: ${{ matrix.os }}
       CI_M32: ${{ matrix.m32 }}
+      CI_VERILATION_THREADS: ${{ matrix.verilation-threads }}
       CC: ${{ matrix.compiler.cc }}
       CXX: ${{ matrix.compiler.cxx }}
       CACHE_BASE_KEY: test-${{ matrix.os }}-${{ matrix.compiler.cc }}-m32=${{ matrix.m32 }}-${{ matrix.suite }}

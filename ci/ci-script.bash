@@ -91,24 +91,25 @@ elif [ "$CI_BUILD_STAGE_NAME" = "test" ]; then
 
   # Run sanitize on Ubuntu 20.04 only
   [ "$CI_RUNS_ON" = 'ubuntu-20.04' ] && [ "$CI_M32" = "" ] && sanitize='--sanitize' || sanitize=''
+  [ "$CI_VERILATION_THREADS" = '1' ] && verilation_threads="--verilation-threads ${NPROC}" || verilation_threads=''
 
   # Run the specified test
   ccache -z
   case $TESTS in
     dist-vlt-0)
-      "$MAKE" -C test_regress SCENARIOS="--dist --vlt $sanitize" DRIVER_HASHSET=--hashset=0/3
+      "$MAKE" -C test_regress SCENARIOS="--dist --vlt $sanitize" DRIVER_HASHSET=--hashset=0/3 DRIVER_FLAGS="--j ${NPROC} ${verilation_threads}"
       ;;
     dist-vlt-1)
-      "$MAKE" -C test_regress SCENARIOS="--dist --vlt $sanitize" DRIVER_HASHSET=--hashset=1/3
+      "$MAKE" -C test_regress SCENARIOS="--dist --vlt $sanitize" DRIVER_HASHSET=--hashset=1/3 DRIVER_FLAGS="--j ${NPROC} ${verilation_threads}"
       ;;
     dist-vlt-2)
-      "$MAKE" -C test_regress SCENARIOS="--dist --vlt $sanitize" DRIVER_HASHSET=--hashset=2/3
+      "$MAKE" -C test_regress SCENARIOS="--dist --vlt $sanitize" DRIVER_HASHSET=--hashset=2/3 DRIVER_FLAGS="--j ${NPROC} ${verilation_threads}"
       ;;
     vltmt-0)
-      "$MAKE" -C test_regress SCENARIOS=--vltmt DRIVER_HASHSET=--hashset=0/2
+      "$MAKE" -C test_regress SCENARIOS=--vltmt DRIVER_HASHSET=--hashset=0/2 DRIVER_FLAGS="--j ${NPROC} ${verilation_threads}"
       ;;
     vltmt-1)
-      "$MAKE" -C test_regress SCENARIOS=--vltmt DRIVER_HASHSET=--hashset=1/2
+      "$MAKE" -C test_regress SCENARIOS=--vltmt DRIVER_HASHSET=--hashset=1/2 DRIVER_FLAGS="--j ${NPROC} ${verilation_threads}"
       ;;
     coverage-all)
       nodist/code_coverage --stages 1-

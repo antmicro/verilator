@@ -319,6 +319,7 @@ private:
     int         m_compLimitBlocks = 0;  // compiler selection; number of nested blocks
     int         m_compLimitMembers = 64;  // compiler selection; number of members in struct before make anon array
     int         m_compLimitParens = 240;  // compiler selection; number of nested parens
+    int         m_verilationThreads = 0;  // main switch: --verilation-threads
 
     string      m_bin;          // main switch: --bin {binary}
     string      m_exeName;      // main switch: -o {name}
@@ -504,6 +505,8 @@ public:
     int outputSplit() const { return m_outputSplit; }
     int outputSplitCFuncs() const { return m_outputSplitCFuncs; }
     int outputSplitCTrace() const { return m_outputSplitCTrace; }
+    bool verilationThreadsEnabled() const { return m_verilationThreads > 1; }
+    int verilationThreads() const { return m_verilationThreads; }
     int pinsBv() const { return m_pinsBv; }
     int reloopLimit() const { return m_reloopLimit; }
     VOptionBool skipIdentical() const { return m_skipIdentical; }

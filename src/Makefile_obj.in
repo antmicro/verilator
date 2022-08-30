@@ -68,6 +68,7 @@ CFG_CXXFLAGS_PARSER = @CFG_CXXFLAGS_PARSER@
 CFG_CXXFLAGS_WEXTRA = @CFG_CXXFLAGS_WEXTRA@
 CFG_LDFLAGS_SRC = @CFG_LDFLAGS_SRC@
 CFG_LIBS = @CFG_LIBS@
+CFG_WITH_THREADED = @CFG_WITH_THREADED@
 
 #### End of system configuration section. ####
 
@@ -92,7 +93,9 @@ endif
 
 # -lfl not needed as Flex invoked with %nowrap option
 LIBS = $(CFG_LIBS) -lm
-
+ifeq ($(CFG_WITH_THREADED),yes)
+LIBS += -lpthread
+endif
 CPPFLAGS += -MMD
 CPPFLAGS += -I. -I$(bldsrc) -I$(srcdir) -I$(incdir) -I../../include
 #CPPFLAGS += -DVL_LEAK_CHECKS 	# If running valgrind or other hunting tool
@@ -251,6 +254,7 @@ RAW_OBJS = \
 	V3Subst.o \
 	V3Table.o \
 	V3Task.o \
+	V3ThreadPool.o \
 	V3Trace.o \
 	V3TraceDecl.o \
 	V3Tristate.o \

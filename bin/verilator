@@ -358,6 +358,7 @@ detailed descriptions of these arguments.
     --output-split-cfuncs <statements>   Split model functions
     --output-split-ctrace <statements>   Split tracing functions
      -P                         Disable line numbers and blanks with -E
+    --verilation-threads <jobs> Run Verilator on <jobs> threads when possible
     --pins-bv <bits>            Specify types for top level ports
     --pins-sc-biguint           Specify types for top level ports
     --pins-sc-uint              Specify types for top level ports

@@ -1411,6 +1411,12 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc, char
         V3Options::addLibraryFile(parseFileArg(optdir, valp));
     });
     DECL_OPTION("-verilate", OnOff, &m_verilate);
+    DECL_OPTION("-verilation-threads", CbVal, [this, fl](const char* valp) {
+        m_verilationThreads = std::atoi(valp);
+        if (m_verilationThreads < 1)
+            fl->v3fatal("--verilation-threads requires positive value: " << valp);
+        if (m_verilationThreads == 1) m_verilationThreads = 0;
+    });
     DECL_OPTION("-version", CbCall, [this]() {
         showVersion(false);
         std::exit(0);

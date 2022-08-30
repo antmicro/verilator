@@ -31,6 +31,7 @@
 #include <iomanip>
 #include <map>
 #include <memory>
+#include <mutex>
 
 #include <sys/stat.h>
 #include <sys/types.h>

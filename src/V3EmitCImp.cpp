@@ -22,6 +22,7 @@
 #include "V3EmitCFunc.h"
 #include "V3Global.h"
 #include "V3String.h"
+#include "V3ThreadPool.h"
 #include "V3UniqueNames.h"
 
 #include <map>
@@ -556,7 +557,8 @@ class EmitCImp final : EmitCFunc {
     ~EmitCImp() override = default;
 
 public:
-    static void main(const AstNodeModule* modp, bool slow, std::deque<AstCFile*>& cfilesr) {
+    static void main(const AstNodeModule* modp, bool slow,
+                     std::deque<AstCFile*>& cfilesr) VL_MT_SAFE {
         EmitCImp{modp, slow, cfilesr};
     }
 };
@@ -900,7 +902,7 @@ class EmitCTrace final : EmitCFunc {
     ~EmitCTrace() override = default;
 
 public:
-    static void main(AstNodeModule* modp, bool slow, std::deque<AstCFile*>& cfilesr) {
+    static void main(AstNodeModule* modp, bool slow, std::deque<AstCFile*>& cfilesr) VL_MT_SAFE {
         EmitCTrace{modp, slow, cfilesr};
     }
 };
@@ -913,23 +915,39 @@ void V3EmitC::emitcImp() {
     // Make parent module pointers available.
     const EmitCParentModule emitCParentModule;
     std::list<std::deque<AstCFile*>> cfiles;
+    std::list<std::future<void>> futures;
 
     // Process each module in turn
     for (const AstNode* nodep = v3Global.rootp()->modulesp(); nodep; nodep = nodep->nextp()) {
         if (VN_IS(nodep, Class)) continue;  // Imped with ClassPackage
         const AstNodeModule* const modp = VN_AS(nodep, NodeModule);
         cfiles.emplace_back();
-        EmitCImp::main(modp, /* slow: */ true, cfiles.back());
+        auto& slow = cfiles.back();
+        futures.push_back(v3ThreadPool.enqueue<void>(
+            [modp, &slow]() VL_MT_START { EmitCImp::main(modp, /* slow: */ true, slow); }));
         cfiles.emplace_back();
-        EmitCImp::main(modp, /* slow: */ false, cfiles.back());
+        auto& fast = cfiles.back();
+        futures.push_back(v3ThreadPool.enqueue<void>(
+            [modp, &fast]() VL_MT_START { EmitCImp::main(modp, /* slow: */ false, fast); }));
     }
 
     // Emit trace routines (currently they can only exist in the top module)
     if (v3Global.opt.trace() && !v3Global.opt.lintOnly()) {
         cfiles.emplace_back();
-        EmitCTrace::main(v3Global.rootp()->topModulep(), /* slow: */ true, cfiles.back());
+        auto& slow = cfiles.back();
+        futures.push_back(v3ThreadPool.enqueue<void>([&slow]() VL_MT_START {
+            EmitCTrace::main(v3Global.rootp()->topModulep(), /* slow: */ true, slow);
+        }));
         cfiles.emplace_back();
-        EmitCTrace::main(v3Global.rootp()->topModulep(), /* slow: */ false, cfiles.back());
+        auto& fast = cfiles.back();
+        futures.push_back(v3ThreadPool.enqueue<void>([&fast]() VL_MT_START {
+            EmitCTrace::main(v3Global.rootp()->topModulep(), /* slow: */ false, fast);
+        }));
+    }
+    // Wait for futures
+    while (!futures.empty()) {
+        futures.front().get();
+        futures.pop_front();
     }
     for (const auto& collr : cfiles) {
         for (const auto cfilep : collr) v3Global.rootp()->addFilesp(cfilep);

@@ -517,11 +517,7 @@ private:
                 } else if (const auto* const classRefp = VN_CAST(dtypep, ClassRefDType)) {
                     auto* const refp
                         = new AstVarRef(nodep->fileline(), memberVarp, VAccess::WRITE);
-                    auto* const memberFuncp = V3Randomize::newRandomizeFunc(classRefp->classp());
-                    auto* const callp
-                        = new AstMethodCall(nodep->fileline(), refp, "randomize", nullptr);
-                    callp->taskp(memberFuncp);
-                    callp->dtypeFrom(memberFuncp);
+                    auto* const memberFuncp = V3Randomize::newTryRandFunc(classRefp->classp());
                     stmtsp = AstNode::addNext(
                         stmtsp, newClassRandStmtsp(classRefp->classp(),
                                                    createRef(nodep->fileline(), memberVarp, fromp,
@@ -574,9 +570,11 @@ private:
         if (!nodep->user1()) return;  // Doesn't need randomize, or already processed
         UINFO(9, "Define randomize() for " << nodep << endl);
         auto* relaxp = newRelaxNextSoft(nodep);
-        auto* funcp = V3Randomize::newRandomizeFunc(nodep);
+        auto* parentfuncp = V3Randomize::newRandomizeFunc(nodep);
+        auto* funcp = V3Randomize::newTryRandFunc(nodep);
         auto* fvarp = VN_CAST(funcp->fvarp(), Var);
         auto* rvarp = VN_CAST(relaxp->fvarp(), Var);
+
         funcp->addStmtsp(newClassRandStmtsp(nodep, nullptr));
         funcp->addStmtsp(m_constraints.applyConstraints(funcp, nullptr, m_varCnt));
         funcp->addStmtsp(new AstAssign(fl, new AstVarRef(fl, fvarp, VAccess::WRITE),
@@ -588,6 +586,32 @@ private:
         //   }
         // }
         //
+        auto* dtypep = nodep->findBitDType(32, 32, VSigning::SIGNED);
+        auto* const frefp
+            = new AstVarRef(nodep->fileline(), fvarp, VAccess::WRITE);
+        auto* randcallp = new AstFuncRef(fl, "try_rand", nullptr);
+        randcallp->taskp(funcp);
+        randcallp->dtypeFrom(funcp);
+        auto* const rrefp
+            = new AstVarRef(nodep->fileline(), rvarp, VAccess::WRITE);
+        auto* relaxcallp = new AstFuncRef(fl, "relax_next", nullptr);
+        auto* rdtypep = nodep->findBitDType(32, 32, VSigning::SIGNED);
+        relaxcallp->taskp(relaxp);
+        relaxcallp->dtypeFrom(relaxp);
+        auto* redop = new AstWhile(fl, relaxcallp,
+                                   new AstIf(fl,
+                                             new AstNeq(fl,
+                                       new AstRedOr(fl, randcallp),
+                                                       new AstConst(fl, 0)),
+                                             new AstBreak(fl)));
+
+        auto* ifp = new AstIf(fl, new AstNeq(fl,
+                                       new AstRedOr(fl, frefp->cloneTree(false)),
+                    new AstConst(fl, 1)),
+                              redop,
+                              nullptr
+                              );
+        parentfuncp->addStmtsp(ifp);
         m_constraints = {};
         nodep->user1(false);
     }
@@ -668,6 +692,27 @@ AstFunc* V3Randomize::newRandomizeFunc(AstClass* nodep) {
         fvarp->funcReturn(true);
         fvarp->direction(VDirection::OUTPUT);
         funcp = new AstFunc(nodep->fileline(), "randomize", nullptr, fvarp);
+        funcp->dtypep(dtypep);
+        funcp->classMethod(true);
+        funcp->isVirtual(nodep->isExtended());
+        nodep->addMembersp(funcp);
+        nodep->repairCache();
+    }
+    return funcp;
+}
+
+AstFunc* V3Randomize::newTryRandFunc(AstClass* nodep) {
+    // Internal randomization, used for rerunning
+    auto* funcp = VN_AS(nodep->findMember("try_rand"), Func);
+    if (!funcp) {
+        auto* const dtypep
+            = nodep->findBitDType(32, 32, VSigning::SIGNED);  // IEEE says int return of 0/1
+        auto* const fvarp = new AstVar(nodep->fileline(), VVarType::MEMBER, "randomize", dtypep);
+        fvarp->lifetime(VLifetime::AUTOMATIC);
+        fvarp->funcLocal(true);
+        fvarp->funcReturn(true);
+        fvarp->direction(VDirection::OUTPUT);
+        funcp = new AstFunc(nodep->fileline(), "try_rand", nullptr, fvarp);
         funcp->dtypep(dtypep);
         funcp->classMethod(true);
         funcp->isVirtual(nodep->isExtended());

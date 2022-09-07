@@ -180,6 +180,13 @@ static void process() {
     v3Global.assertDTypesResolved(true);
     v3Global.widthMinUsage(VWidthMinUsage::MATCHES_WIDTH);
 
+    // Add randomize() class methods if they are used by the design
+    if (v3Global.useRandomizeMethods()) {
+        V3Randomize::randomizeNetlist(v3Global.rootp());
+        // Soft constraints could have used returns, process them
+        V3LinkJump::linkJump(v3Global.rootp());
+    }
+
     // Coverage insertion
     //    Before we do dead code elimination and inlining, or we'll lose it.
     if (v3Global.opt.coverage()) V3Coverage::coverage(v3Global.rootp());
@@ -188,12 +195,6 @@ static void process() {
     // so V3Undriven sees variables to be eliminated, ie "if (0 && foo) ..."
     V3Const::constifyAllLive(v3Global.rootp());
 
-    // Add randomize() class methods if they are used by the design
-    if (v3Global.useRandomizeMethods()) {
-        V3Randomize::randomizeNetlist(v3Global.rootp());
-        // Soft constraints could have used returns, process them
-        V3LinkJump::linkJump(v3Global.rootp());
-    }
 
     // Signal based lint checks, no change to structures
     // Must be before first constification pass drops dead code

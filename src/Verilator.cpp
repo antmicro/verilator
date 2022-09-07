@@ -195,7 +195,6 @@ static void process() {
     // so V3Undriven sees variables to be eliminated, ie "if (0 && foo) ..."
     V3Const::constifyAllLive(v3Global.rootp());
 
-
     // Signal based lint checks, no change to structures
     // Must be before first constification pass drops dead code
     V3Undriven::undrivenAll(v3Global.rootp());

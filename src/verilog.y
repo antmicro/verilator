@@ -1182,7 +1182,7 @@ package_or_generate_item_declaration<nodep>:    // ==IEEE: package_or_generate_i
         //                      // local_parameter_declaration under parameter_declaration
         |       parameter_declaration ';'               { $$ = $1; }
         //UNSUP covergroup_declaration                  { $$ = $1; }
-        //UNSUP assertion_item_declaration              { $$ = $1; }
+        |       assertion_item_declaration              { $$ = $1; }
         |       ';'                                     { $$ = nullptr; }
         ;
 
@@ -5308,11 +5308,11 @@ clocking_declaration<nodep>:            // IEEE: clocking_declaration  (INCOMPLE
 //************************************************
 // Asserts
 
-//UNSUPassertion_item_declaration:  // ==IEEE: assertion_item_declaration
-//UNSUP         property_declaration                    { $$ = $1; }
+assertion_item_declaration<nodep>:  // ==IEEE: assertion_item_declaration
+                property_declaration                    { $$ = $1; }
 //UNSUP |       sequence_declaration                    { $$ = $1; }
 //UNSUP |       let_declaration                         { $$ = $1; }
-//UNSUP ;
+        ;
 
 assertion_item<nodep>:          // ==IEEE: assertion_item
                 concurrent_assertion_item               { $$ = $1; }
@@ -5411,66 +5411,71 @@ elseStmtBlock<nodep>:   // Part of concurrent_assertion_statement
         |       yELSE stmtBlock                         { $$ = $2; }
         ;
 
-//UNSUPproperty_declaration<nodep>:  // ==IEEE: property_declaration
-//UNSUP         property_declarationFront property_port_listE ';' property_declarationBody
-//UNSUP                 yENDPROPERTY endLabelE
-//UNSUP                 { SYMP->popScope($$); }
-//UNSUP ;
+property_declaration<nodeFTaskp>:  // ==IEEE: property_declaration
+                property_declarationFront property_port_listE ';' property_declarationBody
+                        yENDPROPERTY endLabelE
+                        {   $$ = $1;
+                            $$->addStmtsp($2);
+                            $$->addStmtsp($4);
+                            SYMP->popScope($$);
+                            GRAMMARP->endLabel($<fl>6, $$, $6); }
+        ;
 
-//UNSUPproperty_declarationFront<nodep>:  // IEEE: part of property_declaration
-//UNSUP         yPROPERTY idAny/*property_identifier*/
-//UNSUP                 { SYMP->pushNew($$); }
-//UNSUP ;
+property_declarationFront<nodeFTaskp>:  // IEEE: part of property_declaration
+                yPROPERTY idAny/*property_identifier*/
+                        { $$ = new AstProperty{$1, *$2, nullptr};
+                          SYMP->pushNewUnderNodeOrCurrent($$, nullptr); }
+        ;
 
-//UNSUPproperty_port_listE<nodep>:  // IEEE: [ ( [ property_port_list ] ) ]
-//UNSUP         /* empty */                             { $$ = nullptr; }
-//UNSUP |       '(' {VARRESET_LIST(""); VARIO("input"); } property_port_list ')'
-//UNSUP                 { VARRESET_NONLIST(""); }
-//UNSUP ;
+property_port_listE<nodep>:  // IEEE: [ ( [ property_port_list ] ) ]
+                /* empty */                       { $$ = nullptr; }
+        |       '(' property_port_list ')'        { $$ = $2; }
+        ;
 
-//UNSUPproperty_port_list<nodep>:  // ==IEEE: property_port_list
-//UNSUP         property_port_item                      { $$ = $1; }
-//UNSUP |       property_port_list ',' property_port_item       { }
-//UNSUP ;
+property_port_list<nodep>:  // ==IEEE: property_port_list
+                property_port_item                              { $$ = $1; }
+        |       property_port_list ',' property_port_item       { $$ = addNextNull($1, $3); }
+        ;
 
-//UNSUPproperty_port_item<nodep>:  // IEEE: property_port_item/sequence_port_item
+property_port_item<nodep>:  // IEEE: property_port_item/sequence_port_item
 //UNSUP //                      // Merged in sequence_port_item
 //UNSUP //                      // IEEE: property_lvar_port_direction ::= yINPUT
 //UNSUP //                      // prop IEEE: [ yLOCAL [ yINPUT ] ] property_formal_type
 //UNSUP //                      //           id {variable_dimension} [ '=' property_actual_arg ]
 //UNSUP //                      // seq IEEE: [ yLOCAL [ sequence_lvar_port_direction ] ] sequence_formal_type
 //UNSUP //                      //           id {variable_dimension} [ '=' sequence_actual_arg ]
-//UNSUP         property_port_itemFront property_port_itemAssignment { }
-//UNSUP ;
+                property_port_itemFront property_port_itemAssignment { $$ = $2; }
+        ;
 
-//UNSUPproperty_port_itemFront: // IEEE: part of property_port_item/sequence_port_item
-//UNSUP         property_port_itemDirE property_formal_typeNoDt         { VARDTYPE($2); }
+property_port_itemFront: // IEEE: part of property_port_item/sequence_port_item
+//UNSUP            property_port_itemDirE property_formal_typeNoDt         { VARDTYPE($2); }
 //UNSUP //                      // data_type_or_implicit
-//UNSUP |       property_port_itemDirE data_type                { VARDTYPE($2); }
+                   property_port_itemDirE data_type                { VARDTYPE($2); }
 //UNSUP |       property_port_itemDirE yVAR data_type           { VARDTYPE($3); }
 //UNSUP |       property_port_itemDirE yVAR implicit_typeE      { VARDTYPE($3); }
 //UNSUP |       property_port_itemDirE signingE rangeList       { VARDTYPE(SPACED($2,$3)); }
-//UNSUP |       property_port_itemDirE /*implicit*/             { /*VARDTYPE-same*/ }
-//UNSUP ;
+//UNSUP |       property_port_itemDirE implicit_typeE           { VARDTYPE($2); }
+        ;
 
-//UNSUPproperty_port_itemAssignment<nodep>:  // IEEE: part of property_port_item/sequence_port_item/checker_port_direction
-//UNSUP         portSig variable_dimensionListE         { VARDONE($<fl>1, $1, $2, ""); PINNUMINC(); }
+property_port_itemAssignment<nodep>:  // IEEE: part of property_port_item/sequence_port_item/checker_port_direction
+                id variable_dimensionListE         { $$ = VARDONEA($<fl>1, *$1, $2, nullptr); }
 //UNSUP |       portSig variable_dimensionListE '=' property_actual_arg
 //UNSUP                 { VARDONE($<fl>1, $1, $2, $4); PINNUMINC(); }
-//UNSUP ;
+        ;
 
-//UNSUPproperty_port_itemDirE:
-//UNSUP         /* empty */                             { $$ = nullptr; }
-//UNSUP |       yLOCAL__ETC                             { }
-//UNSUP |       yLOCAL__ETC port_direction              { }
-//UNSUP ;
+property_port_itemDirE:
+                /* empty */                             { GRAMMARP->m_pinAnsi = true; VARIO(INPUT); }
+//UNSUP |        yLOCAL__ETC             { GRAMMARP->m_pinAnsi = true; VARIO(INPUT); }
+//UNSUP |        yLOCAL__ETC yINPUT      { GRAMMARP->m_pinAnsi = true; VARIO(INPUT); }
+        ;
 
-//UNSUPproperty_declarationBody<nodep>:  // IEEE: part of property_declaration
+property_declarationBody<nodep>:  // IEEE: part of property_declaration
 //UNSUP         assertion_variable_declarationList property_statement_spec      { }
 //UNSUP //                      // IEEE-2012: Incorectly hasyCOVER ySEQUENCE then property_spec here.
 //UNSUP //                      // Fixed in IEEE 1800-2017
-//UNSUP |       property_statement_spec                 { $$ = $1; }
-//UNSUP ;
+                property_spec                 { $$ = $1; }
+        |       property_spec ';'             { $$ = $1; }
+        ;
 
 //UNSUPassertion_variable_declarationList: // IEEE: part of assertion_variable_declaration
 //UNSUP         assertion_variable_declaration          { $$ = $1; }
@@ -5524,11 +5529,11 @@ property_spec<nodep>:                   // IEEE: property_spec
         //UNSUP: This rule has been super-specialized to what is supported now
         //UNSUP remove below
                 '@' '(' senitemEdge ')' yDISABLE yIFF '(' expr ')' pexpr
-                        { $$ = new AstPropClocked($1, $3, $8, $10); }
-        |       '@' '(' senitemEdge ')' pexpr           { $$ = new AstPropClocked($1, $3, nullptr, $5); }
+                        { $$ = new AstPropSpec{$1, $3, $8, $10}; }
+        |       '@' '(' senitemEdge ')' pexpr           { $$ = new AstPropSpec{$1, $3, nullptr, $5}; }
         //UNSUP remove above
-        |       yDISABLE yIFF '(' expr ')' pexpr        { $$ = new AstPropClocked($4->fileline(), nullptr, $4, $6); }
-        |       pexpr                                   { $$ = new AstPropClocked($1->fileline(), nullptr, nullptr, $1); }
+        |       yDISABLE yIFF '(' expr ')' pexpr        { $$ = new AstPropSpec{$4->fileline(), nullptr, $4, $6}; }
+        |       pexpr                                   { $$ = new AstPropSpec{$1->fileline(), nullptr, nullptr, $1}; }
         ;
 
 //UNSUPproperty_statement_spec<nodep>:  // ==IEEE: property_statement_spec

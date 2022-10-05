@@ -3252,7 +3252,7 @@ private:
                     nodep->dtypeFrom(ftaskp);
                     nodep->classOrPackagep(classp);
                     if (VN_IS(ftaskp, Task)) nodep->makeStatement();
-                    processFTaskRefArgs(nodep);
+                    if (nodep->name() != "randomize") processFTaskRefArgs(nodep);
                 }
                 return;
             }

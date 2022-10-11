@@ -93,6 +93,8 @@ public:
     string m_instModule;  // Name of module referenced for instantiations
     AstPin* m_instParamp = nullptr;  // Parameters for instantiations
     bool m_tracingParse = true;  // Tracing disable for parser
+    bool m_insideProperty = false;  // Is inside property declaration
+    bool m_typedPropertyPort = false;  // True if typed property port occured on port lists
 
     int m_pinNum = -1;  // Pin number currently parsing
     std::stack<int> m_pinStack;  // Queue of pin numbers being parsed
@@ -719,7 +721,7 @@ BISONPRE_VERSION(3.7,%define api.header.include {"V3ParseBison.h"})
 %token<fl>              yUNSIGNED       "unsigned"
 //UNSUP %token<fl>      yUNTIL          "until"
 //UNSUP %token<fl>      yUNTIL_WITH     "until_with"
-//UNSUP %token<fl>      yUNTYPED        "untyped"
+%token<fl>              yUNTYPED        "untyped"
 %token<fl>              yVAR            "var"
 %token<fl>              yVECTORED       "vectored"
 %token<fl>              yVIRTUAL__CLASS "virtual-then-class"
@@ -5418,7 +5420,9 @@ property_declaration<nodeFTaskp>:  // ==IEEE: property_declaration
                             $$->addStmtsp($2);
                             $$->addStmtsp($4);
                             SYMP->popScope($$);
-                            GRAMMARP->endLabel($<fl>6, $$, $6); }
+                            GRAMMARP->endLabel($<fl>6, $$, $6);
+                            GRAMMARP->m_insideProperty = false;
+                            GRAMMARP->m_typedPropertyPort = false; }
         ;
 
 property_declarationFront<nodeFTaskp>:  // IEEE: part of property_declaration
@@ -5448,13 +5452,14 @@ property_port_item<nodep>:  // IEEE: property_port_item/sequence_port_item
         ;
 
 property_port_itemFront: // IEEE: part of property_port_item/sequence_port_item
-//UNSUP            property_port_itemDirE property_formal_typeNoDt         { VARDTYPE($2); }
+                property_port_itemDirE property_formal_typeNoDt { VARDTYPE($2); }
 //UNSUP //                      // data_type_or_implicit
-                   property_port_itemDirE data_type                { VARDTYPE($2); }
+        |       property_port_itemDirE data_type
+                        { VARDTYPE($2); GRAMMARP->m_typedPropertyPort = true; }
 //UNSUP |       property_port_itemDirE yVAR data_type           { VARDTYPE($3); }
 //UNSUP |       property_port_itemDirE yVAR implicit_typeE      { VARDTYPE($3); }
 //UNSUP |       property_port_itemDirE signingE rangeList       { VARDTYPE(SPACED($2,$3)); }
-//UNSUP |       property_port_itemDirE implicit_typeE           { VARDTYPE($2); }
+        |       property_port_itemDirE implicit_typeE           { VARDTYPE($2); }
         ;
 
 property_port_itemAssignment<nodep>:  // IEEE: part of property_port_item/sequence_port_item/checker_port_direction
@@ -5503,19 +5508,19 @@ property_declarationBody<nodep>:  // IEEE: part of property_declaration
 //UNSUP         property_port_listE                     { $$ = $1; }
 //UNSUP ;
 
-//UNSUPproperty_formal_typeNoDt<nodep>:  // IEEE: property_formal_type (w/o implicit)
-//UNSUP         sequence_formal_typeNoDt                { $$ = $1; }
+property_formal_typeNoDt<nodeDTypep>:  // IEEE: property_formal_type (w/o implicit)
+                sequence_formal_typeNoDt                { $$ = $1; }
 //UNSUP |       yPROPERTY                               { }
-//UNSUP ;
+        ;
 
-//UNSUPsequence_formal_typeNoDt<nodep>:  // ==IEEE: sequence_formal_type (w/o data_type_or_implicit)
-//UNSUP //                      // IEEE: data_type_or_implicit
-//UNSUP //                      // implicit expanded where used
+sequence_formal_typeNoDt<nodeDTypep>:  // ==IEEE: sequence_formal_type (w/o data_type_or_implicit)
+//                      // IEEE: data_type_or_implicit
+//                      // implicit expanded where used
 //UNSUP         ySEQUENCE                               { }
-//UNSUP //                      // IEEE-2009: yEVENT
-//UNSUP //                      // already part of data_type.  Removed in 1800-2012.
-//UNSUP |       yUNTYPED                                { }
-//UNSUP ;
+//                      // IEEE-2009: yEVENT
+//                      // already part of data_type.  Removed in 1800-2012.
+                yUNTYPED                                { $$ = nullptr; GRAMMARP->m_typedPropertyPort = false; }
+        ;
 
 //UNSUPsequence_declarationBody<nodep>:  // IEEE: part of sequence_declaration
 //UNSUP //                      // 1800-2012 makes ';' optional

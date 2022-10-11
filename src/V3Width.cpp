@@ -5750,6 +5750,7 @@ private:
         UASSERT_OBJ(nodep->dtypep(), nodep,
                     "Under node " << nodep->prettyTypeName()
                                   << " has no dtype?? Missing Visitor func?");
+        if (expDTypep->basicp()->untyped() || nodep->dtypep()->basicp()->untyped()) return false;
         UASSERT_OBJ(nodep->width() != 0, nodep,
                     "Under node " << nodep->prettyTypeName()
                                   << " has no expected width?? Missing Visitor func?");

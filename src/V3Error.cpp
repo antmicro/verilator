@@ -43,6 +43,7 @@ bool V3Error::s_describedWarnings = false;
 bool V3Error::s_describedWeb = false;
 V3Error::MessagesSet V3Error::s_messages;
 V3Error::ErrorExitCb V3Error::s_errorExitCb = nullptr;
+VerilatedMutex V3Error::s_mutex;
 
 struct v3errorIniter {
     v3errorIniter() { V3Error::init(); }
@@ -67,7 +68,8 @@ V3ErrorCode::V3ErrorCode(const char* msgp) {
 //######################################################################
 // V3Error class functions
 
-void V3Error::init() {
+void V3Error::init() VL_MT_SAFE {
+    const VerilatedLockGuard lg{s_mutex};
     for (int i = 0; i < V3ErrorCode::_ENUM_MAX; i++) {
         s_describedEachWarn[i] = false;
         s_pretendError[i] = V3ErrorCode{i}.pretendError();
@@ -77,7 +79,7 @@ void V3Error::init() {
     }
 }
 
-string V3Error::lineStr(const char* filename, int lineno) {
+string V3Error::lineStr(const char* filename, int lineno) VL_MT_SAFE {
     std::ostringstream out;
     const char* const fnslashp = std::strrchr(filename, '/');
     if (fnslashp) filename = fnslashp + 1;
@@ -89,7 +91,7 @@ string V3Error::lineStr(const char* filename, int lineno) {
     return out.str();
 }
 
-void V3Error::incErrors() {
+void V3Error::incErrors() VL_MT_SAFE {
     s_errCount++;
     if (errorCount() == errorLimit()) {  // Not >= as would otherwise recurse
         v3fatalExit("Exiting due to too many errors encountered; --error-limit="  //
@@ -109,7 +111,7 @@ void V3Error::abortIfWarnings() {
     }
 }
 
-bool V3Error::isError(V3ErrorCode code, bool supp) {
+bool V3Error::isError(V3ErrorCode code, bool supp) VL_MT_SAFE {
     if (supp) {
         return false;
     } else if (code == V3ErrorCode::USERINFO) {
@@ -131,7 +133,12 @@ bool V3Error::isError(V3ErrorCode code, bool supp) {
     }
 }
 
-string V3Error::msgPrefix() {
+string V3Error::msgPrefix() VL_MT_SAFE {
+    const VerilatedLockGuard lg{s_mutex};
+    return msgPrefixNoLock();
+}
+
+string V3Error::msgPrefixNoLock() VL_REQUIRES(s_mutex) VL_MT_SAFE {
     const V3ErrorCode code = s_errorCode;
     const bool supp = s_errorSuppressed;
     if (supp) {
@@ -158,9 +165,9 @@ string V3Error::msgPrefix() {
 //======================================================================
 // Abort/exit
 
-void V3Error::vlAbortOrExit() {
+void V3Error::vlAbortOrExit() VL_REQUIRES(s_mutex) VL_MT_SAFE {
     if (V3Error::debugDefault()) {
-        std::cerr << msgPrefix() << "Aborting since under --debug" << endl;
+        std::cerr << msgPrefixNoLock() << "Aborting since under --debug" << endl;
         V3Error::vlAbort();
     } else {
         std::exit(1);
@@ -175,16 +182,25 @@ void V3Error::vlAbort() {
 //======================================================================
 // Global Functions
 
-void V3Error::suppressThisWarning() {
+void V3Error::suppressThisWarning() VL_MT_SAFE {
+    const VerilatedLockGuard lg{s_mutex};
 #ifndef V3ERROR_NO_GLOBAL_
     V3Stats::addStatSum(std::string{"Warnings, Suppressed "} + s_errorCode.ascii(), 1);
 #endif
     s_errorSuppressed = true;
 }
 
-string V3Error::warnMore() { return string(msgPrefix().size(), ' '); }
+string V3Error::warnMore() VL_MT_SAFE {
+    const VerilatedLockGuard lg{s_mutex};
+    return warnMoreNoLock();
+}
 
-void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) {
+string V3Error::warnMoreNoLock() VL_REQUIRES(s_mutex) VL_MT_SAFE {
+    return string(msgPrefixNoLock().size(), ' ');
+}
+
+void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) VL_MT_SAFE {
+    VerilatedLockGuard lg{s_mutex};
 #if defined(__COVERITY__) || defined(__cppcheck__)
     if (s_errorCode == V3ErrorCode::EC_FATAL) __coverity_panic__(x);
 #endif
@@ -193,7 +209,7 @@ void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) {
         // On debug, show only non default-off warning to prevent pages of warnings
         && (!debug() || s_errorCode.defaultsOff()))
         return;
-    string msg = msgPrefix() + sstr.str();
+    string msg = msgPrefixNoLock() + sstr.str();
     if (s_errorSuppressed) {  // If suppressed print only first line to reduce verbosity
         string::size_type pos;
         if ((pos = msg.find('\n')) != string::npos) {
@@ -211,7 +227,7 @@ void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) {
     if (s_messages.find(msg) != s_messages.end()) return;
     s_messages.insert(msg);
     if (!extra.empty()) {
-        const string extraMsg = warnMore() + extra + "\n";
+        const string extraMsg = warnMoreNoLock() + extra + "\n";
         const size_t pos = msg.find('\n');
         msg.insert(pos + 1, extraMsg);
     }
@@ -230,7 +246,7 @@ void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) {
         const bool anError = isError(s_errorCode, s_errorSuppressed);
         if (s_errorCode >= V3ErrorCode::EC_FIRST_NAMED && !s_describedWeb) {
             s_describedWeb = true;
-            std::cerr << warnMore() << "... For " << (anError ? "error" : "warning")
+            std::cerr << warnMoreNoLock() << "... For " << (anError ? "error" : "warning")
                       << " description see https://verilator.org/warn/" << s_errorCode.ascii()
                       << "?v=" << PACKAGE_VERSION_NUMBER_STRING << endl;
         }
@@ -238,14 +254,14 @@ void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) {
             s_describedEachWarn[s_errorCode] = true;
             if (s_errorCode >= V3ErrorCode::EC_FIRST_WARN && !s_describedWarnings) {
                 s_describedWarnings = true;
-                std::cerr << warnMore() << "... Use \"/* verilator lint_off "
+                std::cerr << warnMoreNoLock() << "... Use \"/* verilator lint_off "
                           << s_errorCode.ascii()
                           << " */\" and lint_on around source to disable this message." << endl;
             }
             if (s_errorCode.dangerous()) {
-                std::cerr << warnMore() << "*** See https://verilator.org/warn/"
+                std::cerr << warnMoreNoLock() << "*** See https://verilator.org/warn/"
                           << s_errorCode.ascii() << " before disabling this,\n";
-                std::cerr << warnMore() << "else you may end up with different sim results."
+                std::cerr << warnMoreNoLock() << "else you may end up with different sim results."
                           << endl;
             }
         }
@@ -259,7 +275,10 @@ void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) {
             }
         }
         if (anError) {
+            // We need to unlock lockguard here, as incErrors can call v3errorEnd recursively
+            lg.unlock();
             incErrors();
+            lg.lock();
         } else {
             incWarnings();
         }
@@ -269,7 +288,7 @@ void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) {
             if (!inFatal) {
                 inFatal = true;
                 if (s_tellManual == 1) {
-                    std::cerr << warnMore()
+                    std::cerr << warnMoreNoLock()
                               << "... See the manual at https://verilator.org/verilator_doc.html "
                                  "for more assistance."
                               << endl;

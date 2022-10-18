@@ -193,14 +193,16 @@ public:
         of.puts(string("VM_MODPREFIX = ") + v3Global.opt.modPrefix() + "\n");
 
         of.puts("# User CFLAGS (from -CFLAGS on Verilator command line)\n");
-        of.puts("VM_USER_CFLAGS = \\\n");
+        of.puts("VM_USER_CFLAGS = -I" + V3Options::getenvCRAVE_ROOT() + "/src \\\n");
         if (!v3Global.opt.libCreate().empty()) of.puts("\t-fPIC \\\n");
         const V3StringList& cFlags = v3Global.opt.cFlags();
         for (const string& i : cFlags) of.puts("\t" + i + " \\\n");
         of.puts("\n");
 
         of.puts("# User LDLIBS (from -LDFLAGS on Verilator command line)\n");
-        of.puts("VM_USER_LDLIBS = \\\n");
+        of.puts("VM_USER_LDLIBS = " + V3Options::getenvCRAVE_ROOT() + "/build/src/lib/libcrave.a "
+                + V3Options::getenvCRAVE_ROOT()
+                + "/build/metaSMT/src/lib/libmetaSMT.a -lstp -lcudd\\\n");
         const V3StringList& ldLibs = v3Global.opt.ldLibs();
         for (const string& i : ldLibs) of.puts("\t" + i + " \\\n");
         of.puts("\n");

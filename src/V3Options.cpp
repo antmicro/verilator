@@ -711,6 +711,16 @@ string V3Options::getenvVERILATOR_ROOT() {
     return var;
 }
 
+string V3Options::getenvCRAVE_ROOT() {
+    string var = V3Os::getenvStr("CRAVE_ROOT", "");
+    if (var == "" && string(DEFENV_CRAVE_ROOT) != "") {
+        var = DEFENV_CRAVE_ROOT;
+        V3Os::setenvStr("CRAVE_ROOT", var, "Hardcoded at build time");
+    }
+    if (var == "") v3fatal("$CRAVE_ROOT needs to be in environment\n");
+    return var;
+}
+
 bool V3Options::systemCSystemWide() {
 #ifdef HAVE_SYSTEMC
     return true;

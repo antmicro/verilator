@@ -662,6 +662,7 @@ public:
     static string getenvSYSTEMC_INCLUDE();
     static string getenvSYSTEMC_LIBDIR();
     static string getenvVERILATOR_ROOT();
+    static string getenvCRAVE_ROOT();
     static bool systemCSystemWide();
     static bool systemCFound();  // SystemC installed, or environment points to it
     static bool coroutineSupport();  // Compiler supports coroutines

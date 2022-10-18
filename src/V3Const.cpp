@@ -3474,8 +3474,9 @@ private:
     TREEOPV("AstOneHot{$lhsp.width1}",          "replaceWLhs(nodep)");
     TREEOPV("AstOneHot0{$lhsp.width1}",         "replaceNum(nodep,1)");
     // Binary AND/OR is faster than logical and/or (usually)
-    TREEOPV("AstLogAnd{$lhsp.width1, $rhsp.width1, isTPure($lhsp), isTPure($rhsp)}", "AstAnd{$lhsp,$rhsp}");
-    TREEOPV("AstLogOr {$lhsp.width1, $rhsp.width1, nodep->isPure(), isTPure($lhsp), isTPure($rhsp)}", "AstOr{$lhsp,$rhsp}");
+    // CRAVE does not like this
+    //TREEOPV("AstLogAnd{$lhsp.width1, $rhsp.width1, isTPure($lhsp), isTPure($rhsp)}", "AstAnd{$lhsp,$rhsp}");
+    //TREEOPV("AstLogOr {$lhsp.width1, $rhsp.width1, nodep->isPure(), isTPure($lhsp), isTPure($rhsp)}", "AstOr{$lhsp,$rhsp}");
     TREEOPV("AstLogNot{$lhsp.width1, isTPure($lhsp)}",  "AstNot{$lhsp}");
     // CONCAT(CONCAT({a},{b}),{c}) -> CONCAT({a},CONCAT({b},{c}))
     // CONCAT({const},CONCAT({const},{c})) -> CONCAT((constifiedCONC{const|const},{c}))

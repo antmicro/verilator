@@ -2397,7 +2397,7 @@ private:
                                       itemp->unlinkFrBack());
             }
             if (newp) {
-                newp = new AstOr(nodep->fileline(), newp, inewp);
+                newp = new AstLogOr(nodep->fileline(), newp, inewp);
             } else {
                 newp = inewp;
             }

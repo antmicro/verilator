@@ -429,6 +429,7 @@ public:
     bool isForkSync() const { return keyword() == VBasicDTypeKwd::FORK_SYNC; }
     bool isDelayScheduler() const { return keyword() == VBasicDTypeKwd::DELAY_SCHEDULER; }
     bool isTriggerScheduler() const { return keyword() == VBasicDTypeKwd::TRIGGER_SCHEDULER; }
+    bool isRandomGenerator() const { return keyword() == VBasicDTypeKwd::RANDOM_GENERATOR; }
     bool isOpaque() const { return keyword().isOpaque(); }
     bool isString() const { return keyword().isString(); }
     bool isZeroInit() const { return keyword().isZeroInit(); }

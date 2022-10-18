@@ -6448,7 +6448,7 @@ class_constraint<nodep>:  // ==IEEE: class_constraint
         //                      // IEEE: constraint_declaration
         //                      // UNSUP: We have the unsupported warning on the randomize() call, so don't bother on
         //                      // constraint blocks. When we support randomize we need to make AST nodes for below rules
-		        constraintStaticE yCONSTRAINT idAny constraint_block    { $$ = new AstConstraint($<fl>1, $4); /*UNSUP*/ }
+		        constraintStaticE yCONSTRAINT idAny constraint_block    { $$ = new AstConstraint($<fl>2, $4); /*UNSUP*/ }
         //                      // IEEE: constraint_prototype + constraint_prototype_qualifier
         |       constraintStaticE yCONSTRAINT idAny ';'         { $$ = nullptr; }
         |       yEXTERN constraintStaticE yCONSTRAINT idAny ';'

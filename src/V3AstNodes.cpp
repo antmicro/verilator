@@ -754,6 +754,8 @@ AstNodeDType::CTypeRecursed AstNodeDType::cTypeRecurse(bool compound) const {
             info.m_type = "VlTriggerScheduler";
         } else if (bdtypep->isForkSync()) {
             info.m_type = "VlForkSync";
+        } else if (bdtypep->isRandomGenerator()) {
+            info.m_type = "crave::Generator";
         } else if (bdtypep->isEvent()) {
             info.m_type = "VlEvent";
         } else if (dtypep->widthMin() <= 8) {  // Handle unpacked arrays; not bdtypep->width

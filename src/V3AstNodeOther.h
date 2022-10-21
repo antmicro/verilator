@@ -1823,12 +1823,12 @@ public:
     bool hasHybrid() const;  // Includes a HYBRID SenItem
 };
 class AstSoftCond final : public AstNode {
-    // @astgen op1 := condsp : List[AstNode]
+    // @astgen op1 := condp : AstNode
 private:
 public:
-    AstSoftCond(FileLine* fl, AstNode* condsp)
+    AstSoftCond(FileLine* fl, AstNode* condp)
         : ASTGEN_SUPER_SoftCond(fl) {
-        addCondsp(condsp);
+        this->condp(condp);
     }
     ASTGEN_MEMBERS_SoftCond;
     virtual string verilogKwd() const override { return "soft"; }

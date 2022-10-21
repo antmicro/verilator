@@ -342,12 +342,24 @@ private:
             auto* condsp = constrp->condsp();
             while (condsp) {
                 condsp->unlinkFrBackWithNext();
-                auto* const methodp = new AstCMethodHard{
-                    fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "hard", condsp};
-                methodp->dtypeSetVoid();
-                methodp->statement(true);
-                funcp->addStmtsp(methodp);
-                condsp = condsp->nextp();
+                if (auto* const softp = VN_CAST(condsp, SoftCond)) {
+                    auto* const methodp
+                        = new AstCMethodHard{fl, new AstVarRef{fl, genp, VAccess::READWRITE},
+                                             "soft", softp->condp()->unlinkFrBack()};
+                    methodp->dtypeSetVoid();
+                    methodp->statement(true);
+                    funcp->addStmtsp(methodp);
+                    auto* delp = condsp;
+                    condsp = condsp->nextp()->unlinkFrBack();
+                    VL_DO_DANGLING(delp->deleteTree(), condsp);
+                } else {
+                    auto* const methodp = new AstCMethodHard{
+                        fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "hard", condsp};
+                    methodp->dtypeSetVoid();
+                    methodp->statement(true);
+                    funcp->addStmtsp(methodp);
+                    condsp = condsp->nextp();
+                }
             }
         });
         auto* const methodp

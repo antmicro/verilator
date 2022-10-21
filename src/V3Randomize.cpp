@@ -325,11 +325,22 @@ private:
         UINFO(9, "Define randomize() for " << nodep << endl);
         auto* relaxp = newRelaxNextSoft(nodep);
         auto* funcp = V3Randomize::newRandomizeFunc(nodep);
-        auto* genp = new AstVar(fl, VVarType::MEMBER, "gen",
+        auto* genp = new AstVar(fl, VVarType::MEMBER, "constraint",
                                 nodep->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR));
         nodep->addMembersp(genp);
         auto* fvarp = VN_CAST(funcp->fvarp(), Var);
         auto* rvarp = VN_CAST(relaxp->fvarp(), Var);
+
+        auto* const methodp
+            = new AstCMethodHard{fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "next"};
+        methodp->dtypeSetBit();
+        funcp->addStmtsp(new AstAssign(fl, new AstVarRef(fl, fvarp, VAccess::WRITE), methodp));
+        nodep->user1(false);
+
+        auto* newp = VN_AS(nodep->findMember("new"), NodeFTask);
+        UASSERT_OBJ(newp, nodep, "No new() in class");
+        auto* taskp = V3Randomize::newSetupConstraintsTask(nodep);
+        newp->addStmtsp(new AstTaskRef{fl, taskp->name(), nullptr});
 
         nodep->foreach<AstConstraint>([&](AstConstraint* const constrp) {
             constrp->foreach<AstNodeVarRef>([&](AstNodeVarRef* const refp) {
@@ -348,7 +359,7 @@ private:
                                              "soft", softp->condp()->unlinkFrBack()};
                     methodp->dtypeSetVoid();
                     methodp->statement(true);
-                    funcp->addStmtsp(methodp);
+                    taskp->addStmtsp(methodp);
                     auto* delp = condsp;
                     condsp = condsp->nextp()->unlinkFrBack();
                     VL_DO_DANGLING(delp->deleteTree(), condsp);
@@ -357,16 +368,11 @@ private:
                         fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "hard", condsp};
                     methodp->dtypeSetVoid();
                     methodp->statement(true);
-                    funcp->addStmtsp(methodp);
+                    taskp->addStmtsp(methodp);
                     condsp = condsp->nextp();
                 }
             }
         });
-        auto* const methodp
-            = new AstCMethodHard{fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "next"};
-        methodp->dtypeSetBit();
-        funcp->addStmtsp(new AstAssign(fl, new AstVarRef(fl, fvarp, VAccess::WRITE), methodp));
-        nodep->user1(false);
     }
 
     void visit(AstMethodCall* nodep) override {
@@ -430,6 +436,18 @@ void V3Randomize::randomizeNetlist(AstNetlist* nodep) {
         RandomizeVisitor{nodep};
     }
     V3Global::dumpCheckGlobalTree("randomize", 0, dumpTree() >= 3);
+}
+
+AstTask* V3Randomize::newSetupConstraintsTask(AstClass* nodep) {
+    auto* funcp = VN_AS(nodep->findMember("_setup_constraints"), Task);
+    if (!funcp) {
+        funcp = new AstTask{nodep->fileline(), "_setup_constraints", nullptr};
+        funcp->classMethod(true);
+        funcp->isVirtual(nodep->isExtended());
+        nodep->addMembersp(funcp);
+        nodep->repairCache();
+    }
+    return funcp;
 }
 
 AstFunc* V3Randomize::newRandomizeFunc(AstClass* nodep) {

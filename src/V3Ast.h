@@ -504,11 +504,12 @@ public:
     }
     const char* dpiType() const {
         static const char* const names[]
-            = {"%E-unk",        "svBit",         "char",         "void*",           "char",
-               "int",           "%E-integer",    "svLogic",      "long long",       "double",
-               "short",         "%E-time",       "const char*",  "%E-untyped", "dpiScope",        "const char*",
-               "%E-mtaskstate", "%E-triggervec", "%E-dly-sched", "%E-trig-sched",   "%E-dyn-sched",
-               "%E-fork",       "IData",         "QData",        "%E-logic-implct", " MAX"};
+            = {"%E-unk",       "svBit",         "char",          "void*",        "char",
+               "int",          "%E-integer",    "svLogic",       "long long",    "double",
+               "short",        "%E-time",       "const char*",   "%E-untyped",   "dpiScope",
+               "const char*",  "%E-mtaskstate", "%E-triggervec", "%E-dly-sched", "%E-trig-sched",
+               "%E-dyn-sched", "%E-fork",       "IData",         "QData",        "%E-logic-implct",
+               " MAX"};
         return names[m_e];
     }
     static void selfTest() {

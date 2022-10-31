@@ -381,7 +381,7 @@ string AstVar::verilogKwd() const {
 }
 
 string AstVar::vlArgType(bool named, bool forReturn, bool forFunc, const string& namespc,
-                         bool asRef) const VL_MT_SAFE {
+                         bool asRef) const {
     UASSERT_OBJ(!forReturn, this,
                 "Internal data is never passed as return, but as first argument");
     string ostatic;
@@ -698,7 +698,7 @@ public:
     }
 };
 
-string AstNodeDType::cType(const string& name, bool /*forFunc*/, bool isRef) const VL_MT_SAFE {
+string AstNodeDType::cType(const string& name, bool /*forFunc*/, bool isRef) const {
     const CTypeRecursed info = cTypeRecurse(false);
     return info.render(name, isRef);
 }
@@ -1786,7 +1786,7 @@ void AstRefDType::cloneRelink() {
         m_classOrPackagep = m_classOrPackagep->clonep();
     }
 }
-AstNodeDType* AstRefDType::subDTypep() const {
+AstNodeDType* AstRefDType::subDTypep() const VL_MT_SAFE {
     if (typedefp()) return typedefp()->subDTypep();
     return refDTypep();  // Maybe nullptr
 }

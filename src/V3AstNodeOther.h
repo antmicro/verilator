@@ -758,7 +758,8 @@ public:
     string modName() const { return m_modName; }  // * = Instance name
     void modName(const string& name) { m_modName = name; }
     FileLine* modNameFileline() const { return m_modNameFileline; }
-    AstNodeModule* modp() const { return m_modp; }  // [AfterLink] = Pointer to module instantiated
+    // [AfterLink] = Pointer to module instantiated
+    AstNodeModule* modp() const VL_MT_SAFE { return m_modp; }
     void modp(AstNodeModule* nodep) { m_modp = nodep; }
     bool hasIfaceVar() const { return m_hasIfaceVar; }
     void hasIfaceVar(bool flag) { m_hasIfaceVar = flag; }
@@ -1495,7 +1496,7 @@ public:
     ASTGEN_MEMBERS_AstTypedef;
     void dump(std::ostream& str) const override;
     AstNodeDType* getChildDTypep() const override { return childDTypep(); }
-    virtual AstNodeDType* subDTypep() const { return dtypep() ? dtypep() : childDTypep(); }
+    virtual AstNodeDType* subDTypep() const VL_MT_SAFE { return dtypep() ? dtypep() : childDTypep(); }
     // METHODS
     string name() const override { return m_name; }
     bool maybePointedTo() const override { return true; }
@@ -1738,7 +1739,7 @@ public:
     string dpiTmpVarType(const string& varName) const;
     // Return Verilator internal type for argument: CData, SData, IData, WData
     string vlArgType(bool named, bool forReturn, bool forFunc, const string& namespc = "",
-                     bool asRef = false) const VL_MT_SAFE;
+                     bool asRef = false) const;
     string vlEnumType() const;  // Return VerilatorVarType: VLVT_UINT32, etc
     string vlEnumDir() const;  // Return VerilatorVarDir: VLVD_INOUT, etc
     string vlPropDecl(const string& propName) const;  // Return VerilatorVarProps declaration

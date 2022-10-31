@@ -80,10 +80,10 @@ public:
     // cppcheck-suppress noExplicitConstructor
     constexpr VDfgType(en _e)
         : m_e{_e} {}
-    constexpr operator en() const { return m_e; }
+    constexpr operator en() const VL_PURE { return m_e; }
 };
 constexpr bool operator==(VDfgType lhs, VDfgType rhs) { return lhs.m_e == rhs.m_e; }
-constexpr bool operator==(VDfgType lhs, VDfgType::en rhs) { return lhs.m_e == rhs; }
+constexpr bool operator==(VDfgType lhs, VDfgType::en rhs) VL_PURE { return lhs.m_e == rhs; }
 constexpr bool operator==(VDfgType::en lhs, VDfgType rhs) { return lhs == rhs.m_e; }
 inline std::ostream& operator<<(std::ostream& os, const VDfgType& t) { return os << t.ascii(); }
 
@@ -516,7 +516,7 @@ private:
     // For internal use only.
     // Note: specializations for particular vertex types are provided by 'astgen'
     template <typename T>
-    inline static bool privateTypeTest(const DfgVertex* nodep);
+    inline static bool privateTypeTest(const DfgVertex* nodep) VL_MT_SAFE;
 
 public:
     // Subtype test

@@ -337,7 +337,7 @@ public:
 
 // Global versions, so that if the class doesn't define a operator, we get the functions anyways.
 inline void v3errorEnd(std::ostringstream& sstr) { V3Error::v3errorEnd(sstr); }
-inline void v3errorEndFatal(std::ostringstream& sstr) {
+inline void v3errorEndFatal(std::ostringstream& sstr) VL_MT_SAFE {
     V3Error::v3errorEnd(sstr);
     assert(0);  // LCOV_EXCL_LINE
     VL_UNREACHABLE;
@@ -432,7 +432,7 @@ inline void v3errorEndFatal(std::ostringstream& sstr) {
 
 // Helper macros for VL_DEFINE_DEBUG_FUNCTIONS
 #define VL_DEFINE_DEBUG(name) \
-    VL_ATTR_UNUSED static int debug##name() { \
+    VL_ATTR_UNUSED static int debug##name() VL_MT_SAFE { \
         static int level = -1; \
         if (VL_UNLIKELY(level < 0)) { \
             std::string tag{VL_STRINGIFY(name)}; \

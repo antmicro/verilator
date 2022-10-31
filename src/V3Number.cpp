@@ -76,7 +76,7 @@ constexpr int MAX_SPRINTF_DOUBLE_SIZE
 //======================================================================
 // Errors
 
-void V3Number::v3errorEnd(const std::ostringstream& str) const VL_MT_SAFE {
+void V3Number::v3errorEnd(const std::ostringstream& str) const {
     std::ostringstream nsstr;
     nsstr << str.str();
     if (m_nodep) {
@@ -88,7 +88,7 @@ void V3Number::v3errorEnd(const std::ostringstream& str) const VL_MT_SAFE {
     }
 }
 
-void V3Number::v3errorEndFatal(const std::ostringstream& str) const VL_MT_SAFE {
+void V3Number::v3errorEndFatal(const std::ostringstream& str) const {
     v3errorEnd(str);
     assert(0);  // LCOV_EXCL_LINE
     VL_UNREACHABLE;
@@ -587,7 +587,7 @@ bool V3Number::displayedFmtLegal(char format, bool isScan) {
     }
 }
 
-string V3Number::displayPad(size_t fmtsize, char pad, bool left, const string& in) {
+string V3Number::displayPad(size_t fmtsize, char pad, bool left, const string& in) VL_MT_SAFE {
     string padding;
     if (in.length() < fmtsize) padding = string(fmtsize - in.length(), pad);
     return left ? (in + padding) : (padding + in);

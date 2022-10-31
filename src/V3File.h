@@ -35,18 +35,19 @@
 
 class V3File final {
 public:
-    static std::ifstream* new_ifstream(const string& filename) {
+    static std::ifstream* new_ifstream(const string& filename) VL_MT_SAFE {
         addSrcDepend(filename);
         return new_ifstream_nodepend(filename);
     }
-    static std::ifstream* new_ifstream_nodepend(const string& filename) {
+    static std::ifstream* new_ifstream_nodepend(const string& filename) VL_MT_SAFE {
         return new std::ifstream{filename.c_str()};
     }
-    static std::ofstream* new_ofstream(const string& filename, bool append = false) {
+    static std::ofstream* new_ofstream(const string& filename, bool append = false) VL_MT_SAFE {
         addTgtDepend(filename);
         return new_ofstream_nodepend(filename, append);
     }
-    static std::ofstream* new_ofstream_nodepend(const string& filename, bool append = false) {
+    static std::ofstream* new_ofstream_nodepend(const string& filename,
+                                                bool append = false) VL_MT_SAFE {
         createMakeDirFor(filename);
         if (append) {
             return new std::ofstream{filename.c_str(), std::ios::app};
@@ -61,16 +62,16 @@ public:
     }
 
     // Dependencies
-    static void addSrcDepend(const string& filename);
-    static void addTgtDepend(const string& filename);
+    static void addSrcDepend(const string& filename) VL_MT_SAFE;
+    static void addTgtDepend(const string& filename) VL_MT_SAFE;
     static void writeDepend(const string& filename);
     static std::vector<string> getAllDeps();
     static void writeTimes(const string& filename, const string& cmdlineIn);
     static bool checkTimes(const string& filename, const string& cmdlineIn);
 
     // Directory utilities
-    static void createMakeDirFor(const string& filename);
-    static void createMakeDir();
+    static void createMakeDirFor(const string& filename) VL_MT_SAFE;
+    static void createMakeDir() VL_MT_SAFE;
 };
 
 //============================================================================
@@ -171,7 +172,7 @@ public:
     // STATIC METHODS
     static string indentSpaces(int num);
     // Add escaped characters to strings
-    static string quoteNameControls(const string& namein, Language lang = LA_C);
+    static string quoteNameControls(const string& namein, Language lang = LA_C) VL_MT_SAFE;
     static bool tokenMatch(const char* cp, const char* cmp);
     static bool tokenNotStart(const char* cp);  // Import/export meaning no endfunction
     static bool tokenStart(const char* cp);

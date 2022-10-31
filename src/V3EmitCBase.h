@@ -63,29 +63,35 @@ public:
     void putsQuoted(const string& str) { ofp()->putsQuoted(str); }
     void ensureNewLine() { ofp()->ensureNewLine(); }
     bool optSystemC() { return v3Global.opt.systemC(); }
-    static string protect(const string& name) { return VIdProtect::protectIf(name, true); }
-    static string protectIf(const string& name, bool doIt) {
+    static string protect(const string& name) VL_MT_SAFE {
+        return VIdProtect::protectIf(name, true);
+    }
+    static string protectIf(const string& name, bool doIt) VL_MT_SAFE {
         return VIdProtect::protectIf(name, doIt);
     }
-    static string protectWordsIf(const string& name, bool doIt) {
+    static string protectWordsIf(const string& name, bool doIt) VL_MT_SAFE {
         return VIdProtect::protectWordsIf(name, doIt);
     }
-    static string ifNoProtect(const string& in) { return v3Global.opt.protectIds() ? "" : in; }
+    static string ifNoProtect(const string& in) VL_MT_SAFE {
+        return v3Global.opt.protectIds() ? "" : in;
+    }
     static string voidSelfAssign(const AstNodeModule* modp) {
         const string className = prefixNameProtect(modp);
         return className + "* const __restrict vlSelf VL_ATTR_UNUSED = static_cast<" + className
                + "*>(voidSelf);\n";
     }
-    static string symClassName() { return v3Global.opt.prefix() + "_" + protect("_Syms"); }
+    static string symClassName() VL_MT_SAFE {
+        return v3Global.opt.prefix() + "_" + protect("_Syms");
+    }
     static string symClassVar() { return symClassName() + "* __restrict vlSymsp"; }
     static string symClassAssign() {
         return symClassName() + "* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;\n";
     }
     static string funcNameProtect(const AstCFunc* nodep, const AstNodeModule* modp = nullptr);
-    static string prefixNameProtect(const AstNode* nodep) {  // C++ name with prefix
+    static string prefixNameProtect(const AstNode* nodep) VL_MT_SAFE {  // C++ name with prefix
         return v3Global.opt.modPrefix() + "_" + protect(nodep->name());
     }
-    static string topClassName() {  // Return name of top wrapper module
+    static string topClassName() VL_MT_SAFE {  // Return name of top wrapper module
         return v3Global.opt.prefix();
     }
 

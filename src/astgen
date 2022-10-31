@@ -865,7 +865,7 @@ def write_type_enum(prefix, nodeList):
         fh.write("        _BOUNDS_END\n")
         fh.write("    };\n")
 
-        fh.write("    const char* ascii() const {\n")
+        fh.write("    const char* ascii() const VL_MT_SAFE {\n")
         fh.write("        static const char* const names[_ENUM_END + 1] = {\n")
         for node in sorted(filter(lambda _: _.isLeaf, nodeList),
                            key=lambda _: _.typeId):
@@ -889,7 +889,7 @@ def write_type_tests(prefix, nodeList):
             enum = "VDfgType"
         for node in nodeList:
             fh.write(
-                "template<> inline bool {b}::privateTypeTest<{p}{n}>(const {b}* {v}) {{ "
+                "template<> inline bool {b}::privateTypeTest<{p}{n}>(const {b}* {v}) VL_MT_SAFE {{ "
                 .format(b=base, p=prefix, n=node.name, v=variable))
             if node.isRoot:
                 fh.write("return true;")
@@ -931,7 +931,7 @@ def write_ast_macros(filename):
             static Ast{t}* cloneTreeNull(Ast{t}* nodep, bool cloneNextLink) {{
                 return nodep ? nodep->cloneTree(cloneNextLink) : nullptr;
             }}
-            Ast{t}* clonep() const VL_MT_SAFE {{ return static_cast<Ast{t}*>(AstNode::clonep()); }}
+            Ast{t}* clonep() const {{ return static_cast<Ast{t}*>(AstNode::clonep()); }}
             Ast{t}* addNext(Ast{t}* nodep) {{ return static_cast<Ast{t}*>(AstNode::addNext(this, nodep)); }}
             ''',
                       t=node.name)

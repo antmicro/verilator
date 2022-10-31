@@ -93,7 +93,7 @@ string V3Global::debugFilename(const string& nameComment, int newNumber) {
     return opt.hierTopDataDir() + "/" + opt.prefix() + "_" + digitsFilename(m_debugFileNumber)
            + "_" + nameComment;
 }
-string V3Global::digitsFilename(int number) {
+string V3Global::digitsFilename(int number) VL_MT_SAFE {
     std::stringstream ss;
     ss << std::setfill('0') << std::setw(3) << number;
     return ss.str();

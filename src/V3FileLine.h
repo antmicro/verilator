@@ -64,7 +64,7 @@ class FileLineSingleton final {
     ~FileLineSingleton() = default;
 
     fileNameIdx_t nameToNumber(const string& filename);
-    string numberToName(fileNameIdx_t filenameno) const { return m_names[filenameno]; }
+    string numberToName(fileNameIdx_t filenameno) const VL_MT_SAFE { return m_names[filenameno]; }
     V3LangCode numberToLang(fileNameIdx_t filenameno) const { return m_languages[filenameno]; }
     void numberToLang(fileNameIdx_t filenameno, const V3LangCode& l) {
         m_languages[filenameno] = l;
@@ -75,12 +75,12 @@ class FileLineSingleton final {
         m_languages.clear();
     }
     void fileNameNumMapDumpXml(std::ostream& os);
-    static string filenameLetters(fileNameIdx_t fileno);
+    static string filenameLetters(fileNameIdx_t fileno) VL_MT_SAFE;
 
     // Add given bitset to the interned bitsets, return interned index
     msgEnSetIdx_t addMsgEnBitSet(const MsgEnBitSet& bitSet);
     // Add index of default bitset
-    msgEnSetIdx_t defaultMsgEnIndex();
+    msgEnSetIdx_t defaultMsgEnIndex() VL_MT_SAFE;
     // Set bitIdx to value in bitset at interned index setIdx, return interned index of result
     msgEnSetIdx_t msgEnSetBit(msgEnSetIdx_t setIdx, size_t bitIdx, bool value);
     // Return index to intersection set
@@ -115,7 +115,7 @@ public:
     string getLine(int lineno) const VL_MT_SAFE;
     string ascii() const { return "ct" + cvtToStr(m_id); }
 };
-std::ostream& operator<<(std::ostream& os, VFileContent* contentp);
+std::ostream& operator<<(std::ostream& os, VFileContent* contentp) VL_MT_SAFE;
 
 // File and line number of an object, mostly for error reporting
 
@@ -159,11 +159,11 @@ protected:
 
 private:
     // CONSTRUCTORS
-    static FileLineSingleton& singleton() {
+    static FileLineSingleton& singleton() VL_MT_SAFE {
         static FileLineSingleton s;
         return s;
     }
-    static FileLine& defaultFileLine() {
+    static FileLine& defaultFileLine() VL_MT_SAFE {
         static FileLine s;
         return s;
     }
@@ -242,7 +242,7 @@ public:
     string prettySource() const VL_MT_SAFE;  // Source, w/stripped unprintables and newlines
     FileLine* parent() const VL_MT_SAFE { return m_parent; }
     V3LangCode language() const { return singleton().numberToLang(filenameno()); }
-    string ascii() const;
+    string ascii() const VL_MT_SAFE;
     string asciiLineCol() const;
     int filenameno() const VL_MT_SAFE { return m_filenameno; }
     string filename() const VL_MT_SAFE { return singleton().numberToName(filenameno()); }
@@ -265,7 +265,7 @@ public:
     }
     void warnOff(V3ErrorCode code, bool flag) { warnOn(code, !flag); }
     bool warnOff(const string& msg, bool flag);  // Returns 1 if ok
-    bool warnIsOff(V3ErrorCode code) const;
+    bool warnIsOff(V3ErrorCode code) const VL_MT_SAFE;
     void warnLintOff(bool flag);
     void warnStyleOff(bool flag);
     void warnUnusedOff(bool flag);
@@ -352,6 +352,6 @@ private:
     string warnContext(bool secondary) const VL_MT_SAFE;
     const MsgEnBitSet& msgEn() const VL_MT_SAFE { return singleton().msgEn(m_msgEnIdx); }
 };
-std::ostream& operator<<(std::ostream& os, FileLine* fileline);
+std::ostream& operator<<(std::ostream& os, FileLine* fileline) VL_MT_SAFE;
 
 #endif  // Guard

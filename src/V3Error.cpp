@@ -167,7 +167,7 @@ void V3Error::vlAbortOrExit() {
     }
 }
 
-void V3Error::vlAbort() {
+void V3Error::vlAbort() VL_MT_SAFE_EXCLUDES(singleton().m_mutex) {
     VL_GCOV_DUMP();
     std::abort();
 }

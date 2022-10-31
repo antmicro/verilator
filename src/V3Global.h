@@ -144,8 +144,8 @@ public:
     void widthMinUsage(const VWidthMinUsage& flag) { m_widthMinUsage = flag; }
     bool constRemoveXs() const { return m_constRemoveXs; }
     void constRemoveXs(bool flag) { m_constRemoveXs = flag; }
-    string debugFilename(const string& nameComment, int newNumber = 0);
-    static string digitsFilename(int number);
+    string debugFilename(const string& nameComment, int newNumber = 0) VL_MT_SAFE_EXCLUDES(m_mutex);
+    static string digitsFilename(int number) VL_MT_SAFE;
     bool needTraceDumper() const { return m_needTraceDumper; }
     void needTraceDumper(bool flag) { m_needTraceDumper = flag; }
     bool dpi() const VL_MT_SAFE { return m_dpi; }

@@ -61,9 +61,9 @@ public:
     /// under another compound-requiring object e.g. class
     virtual bool isCompound() const = 0;
     // (Slow) recurse down to find basic data type
-    virtual AstBasicDType* basicp() const = 0;
+    virtual AstBasicDType* basicp() const VL_MT_SAFE = 0;
     // recurses over typedefs/const/enum to next non-typeref type
-    virtual AstNodeDType* skipRefp() const = 0;
+    virtual AstNodeDType* skipRefp() const VL_MT_SAFE = 0;
     // recurses over typedefs to next non-typeref-or-const type
     virtual AstNodeDType* skipRefToConstp() const = 0;
     // recurses over typedefs/const to next non-typeref-or-enum/struct type
@@ -124,12 +124,12 @@ public:
     const char* charIQWN() const {
         return (isString() ? "N" : isWide() ? "W" : isQuad() ? "Q" : "I");
     }
-    string cType(const string& name, bool forFunc, bool isRef) const VL_MT_SAFE;
+    string cType(const string& name, bool forFunc, bool isRef) const;
     bool isLiteralType() const VL_MT_SAFE;  // Represents a C++ LiteralType? (can be constexpr)
 
 private:
     class CTypeRecursed;
-    CTypeRecursed cTypeRecurse(bool compound) const VL_MT_SAFE;
+    CTypeRecursed cTypeRecurse(bool compound) const;
 };
 class AstNodeArrayDType VL_NOT_FINAL : public AstNodeDType {
     // Array data type, ie "some_dtype var_name [2:0]"
@@ -190,7 +190,7 @@ public:
     inline int hi() const;
     inline int lo() const;
     inline int elementsConst() const;
-    inline VNumRange declRange() const;
+    inline VNumRange declRange() const VL_MT_SAFE;
 };
 class AstNodeUOrStructDType VL_NOT_FINAL : public AstNodeDType {
     // A struct or union; common handling
@@ -1078,8 +1078,8 @@ public:
     AstBasicDType* basicp() const override VL_MT_SAFE {
         return subDTypep() ? subDTypep()->basicp() : nullptr;
     }
-    AstNodeDType* subDTypep() const override;
-    AstNodeDType* skipRefp() const override VL_MT_SAFE {
+    AstNodeDType* subDTypep() const override VL_MT_SAFE;
+    AstNodeDType* skipRefp() const override {
         // Skip past both the Ref and the Typedef
         if (subDTypep()) {
             return subDTypep()->skipRefp();
@@ -1108,9 +1108,9 @@ public:
     int widthTotalBytes() const override { return dtypeSkipRefp()->widthTotalBytes(); }
     void name(const string& flag) override { m_name = flag; }
     AstNodeDType* dtypeSkipRefp() const { return subDTypep()->skipRefp(); }
-    AstTypedef* typedefp() const { return m_typedefp; }
+    AstTypedef* typedefp() const VL_MT_SAFE { return m_typedefp; }
     void typedefp(AstTypedef* nodep) { m_typedefp = nodep; }
-    AstNodeDType* refDTypep() const { return m_refDTypep; }
+    AstNodeDType* refDTypep() const VL_MT_SAFE { return m_refDTypep; }
     void refDTypep(AstNodeDType* nodep) { m_refDTypep = nodep; }
     AstNodeDType* virtRefDTypep() const override { return refDTypep(); }
     void virtRefDTypep(AstNodeDType* nodep) override { refDTypep(nodep); }

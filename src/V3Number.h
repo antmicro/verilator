@@ -63,7 +63,7 @@ public:
         DOUBLE = 2,
         STRING = 3,
     };
-    friend std::ostream& operator<<(std::ostream& os, const V3NumberDataType& rhs) {
+    friend std::ostream& operator<<(std::ostream& os, const V3NumberDataType& rhs) VL_MT_SAFE {
         switch (rhs) {
         case V3NumberDataType::UNINITIALIZED: return os << "UNINITIALIZED";
         case V3NumberDataType::LOGIC: return os << "LOGIC";
@@ -548,7 +548,7 @@ private:
             m_data.m_sized = false;
         }
     }
-    static string displayPad(size_t fmtsize, char pad, bool left, const string& in);
+    static string displayPad(size_t fmtsize, char pad, bool left, const string& in) VL_MT_SAFE;
     string displayed(FileLine* fl, const string& vformat) const VL_MT_SAFE;
     string displayed(const string& vformat) const VL_MT_SAFE {
         return displayed(m_fileline, vformat);
@@ -624,9 +624,9 @@ public:
     bool isAnyXZ() const;
     bool isAnyZ() const VL_MT_SAFE;
     bool isMsbXZ() const { return bitIsXZ(m_data.width() - 1); }
-    uint32_t toUInt() const;
+    uint32_t toUInt() const VL_MT_SAFE;
     int32_t toSInt() const VL_MT_SAFE;
-    uint64_t toUQuad() const;
+    uint64_t toUQuad() const VL_MT_SAFE;
     int64_t toSQuad() const VL_MT_SAFE;
     string toString() const VL_MT_SAFE;
     string toDecimalS() const VL_MT_SAFE;  // return ASCII signed decimal number

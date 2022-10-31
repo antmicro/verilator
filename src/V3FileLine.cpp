@@ -39,7 +39,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // FileLineSingleton class functions
 
-string FileLineSingleton::filenameLetters(fileNameIdx_t fileno) {
+string FileLineSingleton::filenameLetters(fileNameIdx_t fileno) VL_MT_SAFE {
     constexpr int size
         = 1 + (64 / 4);  // Each letter retires more than 4 bits of a > 64 bit number
     char out[size];
@@ -326,7 +326,7 @@ string FileLine::ascii() const VL_MT_SAFE {
     // For most errors especially in the parser the lastLineno is more accurate than firstLineno
     return filename() + ":" + cvtToStr(lastLineno()) + ":" + cvtToStr(firstColumn());
 }
-std::ostream& operator<<(std::ostream& os, FileLine* fileline) {
+std::ostream& operator<<(std::ostream& os, FileLine* fileline) VL_MT_SAFE {
     os << fileline->ascii() << ": " << std::hex;
     return (os);
 }

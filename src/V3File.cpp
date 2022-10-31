@@ -16,6 +16,7 @@
 
 #include "config_build.h"
 #include "verilatedos.h"
+#include "verilated_threads.h"
 
 #include "V3File.h"
 
@@ -307,7 +308,7 @@ void V3File::writeTimes(const string& filename, const string& cmdlineIn) {
 bool V3File::checkTimes(const string& filename, const string& cmdlineIn) {
     return dependImp.checkTimes(filename, cmdlineIn);
 }
-void V3File::createMakeDirFor(const string& filename) {
+void V3File::createMakeDirFor(const string& filename) VL_MT_SAFE {
     if (filename != VL_DEV_NULL
         // If doesn't start with makeDir then some output file user requested
         && filename.substr(0, v3Global.opt.makeDir().length() + 1)
@@ -853,7 +854,8 @@ void V3OutFormatter::putcNoTracking(char chr) {
     putcOutput(chr);
 }
 
-string V3OutFormatter::quoteNameControls(const string& namein, V3OutFormatter::Language lang) {
+string V3OutFormatter::quoteNameControls(const string& namein,
+                                         V3OutFormatter::Language lang) VL_MT_SAFE {
     // Encode control chars into output-appropriate escapes
     // Reverse is V3Parse::deQuote
     string out;
@@ -1055,7 +1057,7 @@ public:
 
 private:
     void trySep(const string& old, string::size_type start, const string& trySep,
-                string::size_type& posr, string& separatorr) {
+                string::size_type& posr, string& separatorr) VL_MT_SAFE {
         const string::size_type trypos = old.find(trySep, start);
         if (trypos != string::npos) {
             if (posr == string::npos || (posr > trypos)) {

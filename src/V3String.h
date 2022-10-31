@@ -34,13 +34,13 @@
 // Global string-related functions
 
 template <class T>
-std::string cvtToStr(const T& t) {
+std::string cvtToStr(const T& t) VL_MT_SAFE {
     std::ostringstream os;
     os << t;
     return os.str();
 }
 template <class T>
-typename std::enable_if<std::is_pointer<T>::value, std::string>::type cvtToHex(const T tp) {
+typename std::enable_if<std::is_pointer<T>::value, std::string>::type cvtToHex(const T tp) VL_MT_SAFE {
     std::ostringstream os;
     os << static_cast<const void*>(tp);
     return os.str();
@@ -78,14 +78,14 @@ inline string ucfirst(const string& text) {
 // VString - String manipulation
 
 class VString final {
-    static bool wildmatchi(const char* s, const char* p);
+    static bool wildmatchi(const char* s, const char* p) VL_MT_SAFE;
 
 public:
     // METHODS (generic string utilities)
     // Return true if p with ? or *'s matches s
-    static bool wildmatch(const char* s, const char* p);
+    static bool wildmatch(const char* s, const char* p) VL_MT_SAFE;
     // Return true if p with ? or *'s matches s
-    static bool wildmatch(const string& s, const string& p);
+    static bool wildmatch(const string& s, const string& p) VL_MT_SAFE;
     // Return {a}{dot}{b}, omitting dot if a or b are empty
     static string dot(const string& a, const string& dot, const string& b);
     // Convert string to lowercase (tolower)
@@ -107,7 +107,7 @@ public:
     static string quoteStringLiteralForShell(const string& str);
     // Replace any unprintable with space
     // This includes removing tabs, so column tracking is correct
-    static string spaceUnprintable(const string& str);
+    static string spaceUnprintable(const string& str) VL_MT_SAFE;
     // Remove any whitespace
     static string removeWhitespace(const string& str);
     // Return true if only whitespace or ""

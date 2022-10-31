@@ -37,10 +37,11 @@ public:
     // METHODS (generic filename utilities)
     static string filenameFromDirBase(const string& dir, const string& basename);
     /// Return non-directory part of filename
-    static string filenameNonDir(const string& filename);
+    static string filenameNonDir(const string& filename) VL_MT_SAFE;
     /// Return non-extensioned (no .) part of filename
-    static string filenameNonExt(const string& filename);
-    static string filenameNonDirExt(const string& filename) {  ///< Return basename of filename
+    static string filenameNonExt(const string& filename) VL_MT_SAFE;
+    ///< Return basename of filename
+    static string filenameNonDirExt(const string& filename) VL_MT_SAFE {
         return filenameNonExt(filenameNonDir(filename));
     }
     static string filenameDir(const string& filename);  ///< Return directory part of filename
@@ -53,7 +54,7 @@ public:
     static string getline(std::istream& is, char delim = '\n');
 
     // METHODS (directory utilities)
-    static void createDir(const string& dirname);
+    static void createDir(const string& dirname) VL_MT_SAFE;
     static void unlinkRegexp(const string& dir, const string& regexp);
 
     // METHODS (random)

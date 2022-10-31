@@ -455,12 +455,12 @@ class V3ConfigResolver final {
     ~V3ConfigResolver() = default;
 
 public:
-    static V3ConfigResolver& s() {
+    static V3ConfigResolver& s() VL_MT_SAFE {
         static V3ConfigResolver s_singleton;
         return s_singleton;
     }
     V3ConfigModuleResolver& modules() { return m_modules; }
-    V3ConfigFileResolver& files() { return m_files; }
+    V3ConfigFileResolver& files() VL_MT_SAFE { return m_files; }
     V3ConfigScopeTraceResolver& scopeTraces() { return m_scopeTraces; }
 
     void addProfileData(FileLine* fl, const string& model, const string& key, uint64_t cost) {

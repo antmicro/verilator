@@ -105,7 +105,7 @@ public:
 constexpr bool operator==(const VNType& lhs, const VNType& rhs) VL_MT_SAFE {
     return lhs.m_e == rhs.m_e;
 }
-constexpr bool operator==(const VNType& lhs, VNType::en rhs) { return lhs.m_e == rhs; }
+constexpr bool operator==(const VNType& lhs, VNType::en rhs) VL_MT_SAFE { return lhs.m_e == rhs; }
 constexpr bool operator==(VNType::en lhs, const VNType& rhs) { return lhs == rhs.m_e; }
 inline std::ostream& operator<<(std::ostream& os, const VNType& rhs) { return os << rhs.ascii(); }
 
@@ -1665,7 +1665,7 @@ public:
     virtual void tag(const string& text) {}
     virtual string tag() const { return ""; }
     virtual string verilogKwd() const { return ""; }
-    string nameProtect() const VL_MT_SAFE;  // Name with --protect-id applied
+    string nameProtect() const;  // Name with --protect-id applied
     string origNameProtect() const;  // origName with --protect-id applied
     string shortName() const;  // Name with __PVT__ removed for concatenating scopes
     static string dedotName(const string& namein);  // Name with dots removed
@@ -1678,7 +1678,7 @@ public:
     encodeName(const string& namein);  // Encode user name into internal C representation
     static string encodeNumber(int64_t num);  // Encode number into internal C representation
     static string vcdName(const string& namein);  // Name for printing out to vcd files
-    string prettyName() const VL_MT_SAFE { return prettyName(name()); }
+    string prettyName() const { return prettyName(name()); }
     string prettyNameQ() const { return prettyNameQ(name()); }
     string prettyTypeName() const;  // "VARREF" for error messages (NOT dtype's pretty name)
     virtual string prettyOperatorName() const { return "operator " + prettyTypeName(); }
@@ -1992,7 +1992,7 @@ private:
 
     // For internal use only.
     template <typename TargetType, typename DeclType>
-    constexpr static bool uselessCast() {
+    constexpr static bool uselessCast() VL_MT_SAFE {
         using NonRef = typename std::remove_reference<DeclType>::type;
         using NonPtr = typename std::remove_pointer<NonRef>::type;
         using NonCV = typename std::remove_cv<NonPtr>::type;
@@ -2001,7 +2001,7 @@ private:
 
     // For internal use only.
     template <typename TargetType, typename DeclType>
-    constexpr static bool impossibleCast() {
+    constexpr static bool impossibleCast() VL_MT_SAFE {
         using NonRef = typename std::remove_reference<DeclType>::type;
         using NonPtr = typename std::remove_pointer<NonRef>::type;
         using NonCV = typename std::remove_cv<NonPtr>::type;

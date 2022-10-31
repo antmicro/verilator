@@ -146,7 +146,7 @@ class EmitCGatherDependencies final : VNVisitor {
     }
 
 public:
-    static const std::set<std::string> gather(AstCFunc* cfuncp) {
+    static const std::set<std::string> gather(AstCFunc* cfuncp) VL_MT_SAFE {
         const EmitCGatherDependencies visitor{cfuncp};
         return std::move(visitor.m_dependencies);
     }
@@ -435,7 +435,7 @@ class EmitCImp final : EmitCFunc {
     }
     // Predicate to check if we actually need to emit anything into the common implementation file.
     // Used to avoid creating empty output files.
-    bool hasCommonImp(const AstNodeModule* modp) const {
+    bool hasCommonImp(const AstNodeModule* modp) const VL_MT_SAFE {
         // Nothing to emit if no module!
         if (!modp) return false;
         // We always need the slow file

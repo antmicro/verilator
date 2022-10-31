@@ -61,9 +61,9 @@ public:
     /// under another compound-requiring object e.g. class
     virtual bool isCompound() const = 0;
     // (Slow) recurse down to find basic data type
-    virtual AstBasicDType* basicp() const = 0;
+    virtual AstBasicDType* basicp() const VL_MT_SAFE = 0;
     // recurses over typedefs/const/enum to next non-typeref type
-    virtual AstNodeDType* skipRefp() const = 0;
+    virtual AstNodeDType* skipRefp() const VL_MT_SAFE = 0;
     // recurses over typedefs to next non-typeref-or-const type
     virtual AstNodeDType* skipRefToConstp() const = 0;
     // recurses over typedefs/const to next non-typeref-or-enum/struct type
@@ -1083,7 +1083,7 @@ public:
     AstBasicDType* basicp() const override VL_MT_SAFE {
         return subDTypep() ? subDTypep()->basicp() : nullptr;
     }
-    AstNodeDType* subDTypep() const override;
+    AstNodeDType* subDTypep() const override VL_MT_SAFE;
     AstNodeDType* skipRefp() const override VL_MT_SAFE {
         // Skip past both the Ref and the Typedef
         if (subDTypep()) {
@@ -1113,9 +1113,9 @@ public:
     int widthTotalBytes() const override { return dtypeSkipRefp()->widthTotalBytes(); }
     void name(const string& flag) override { m_name = flag; }
     AstNodeDType* dtypeSkipRefp() const { return subDTypep()->skipRefp(); }
-    AstTypedef* typedefp() const { return m_typedefp; }
+    AstTypedef* typedefp() const VL_MT_SAFE { return m_typedefp; }
     void typedefp(AstTypedef* nodep) { m_typedefp = nodep; }
-    AstNodeDType* refDTypep() const { return m_refDTypep; }
+    AstNodeDType* refDTypep() const VL_MT_SAFE { return m_refDTypep; }
     void refDTypep(AstNodeDType* nodep) { m_refDTypep = nodep; }
     AstNodeDType* virtRefDTypep() const override { return refDTypep(); }
     void virtRefDTypep(AstNodeDType* nodep) override { refDTypep(nodep); }

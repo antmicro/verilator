@@ -1,0 +1,3 @@
+[submodule "crave"]
+	path = crave
+	url = ../crave

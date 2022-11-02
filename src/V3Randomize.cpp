@@ -125,8 +125,6 @@ private:
 
     // STATE
     size_t m_enumValueTabCount = 0;  // Number of tables with enum values created
-    size_t m_funcCnt = 0;
-    size_t m_varCnt = 0;
     AstNodeModule* m_modp;
 
     // METHODS
@@ -272,7 +270,6 @@ private:
                 } else if (const auto* const classRefp = VN_CAST(dtypep, ClassRefDType)) {
                     auto* const refp
                         = new AstVarRef(nodep->fileline(), memberVarp, VAccess::WRITE);
-                    auto* const memberFuncp = V3Randomize::newRandomizeFunc(classRefp->classp());
                     stmtsp = AstNode::addNext(
                         stmtsp, newClassRandStmtsp(classRefp->classp(),
                                                    createRef(nodep->fileline(), memberVarp, fromp,
@@ -329,7 +326,6 @@ private:
                                 nodep->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR));
         nodep->addMembersp(genp);
         auto* fvarp = VN_CAST(funcp->fvarp(), Var);
-        auto* rvarp = VN_CAST(relaxp->fvarp(), Var);
 
         auto* const methodp
             = new AstCMethodHard{fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "next"};
@@ -376,7 +372,6 @@ private:
     }
 
     void visit(AstMethodCall* nodep) override {
-        auto* fl = nodep->fileline();
         auto* classp = VN_CAST(VN_CAST(nodep->fromp(), VarRef)->dtypep(), ClassRefDType)->classp();
         if (nodep->name() == "randomize" && nodep->pinsp()) {
             if (nodep->pinsp()) {

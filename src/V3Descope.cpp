@@ -75,6 +75,7 @@ private:
     // module.
     string descopedSelfPointer(const AstScope* scopep) {
         UASSERT(scopep, "Var/Func not scoped");
+        UASSERT_OBJ(m_funcp, scopep, "Var/Func outside of CFunc");
         // Static functions can't use relative references via 'this->'
         const bool relativeRefOk = !m_funcp->isStatic();
 

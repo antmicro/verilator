@@ -89,6 +89,7 @@ private:
         if (!nodep->user2() && nodep->hasDType()) {
             if (VN_IS(nodep, Var)
                 || VN_IS(nodep, NodeDType)  // Don't want to change variable widths!
+                || VN_IS(nodep, LambdaArgRef)  // Or arguments!
                 || VN_IS(nodep->dtypep()->skipRefp(), AssocArrayDType)  // Or arrays
                 || VN_IS(nodep->dtypep()->skipRefp(), WildcardArrayDType)
                 || VN_IS(nodep->dtypep()->skipRefp(), DynArrayDType)

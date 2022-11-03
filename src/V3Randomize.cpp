@@ -119,6 +119,7 @@ private:
     // NODE STATE
     // Cleared on Netlist
     //  AstClass::user1()       -> bool.  Set true to indicate needs randomize processing
+    //  AstMemberSel::user1()   -> bool.  Set to true if already processed
     //  AstEnumDType::user2()   -> AstVar*.  Pointer to table with enum values
     // VNUser1InUse    m_inuser1;      (Allocated for use in RandomizeMarkVisitor)
     const VNUser2InUse m_inuser2;
@@ -126,6 +127,9 @@ private:
     // STATE
     size_t m_enumValueTabCount = 0;  // Number of tables with enum values created
     AstNodeModule* m_modp;
+    AstNode* m_fromp;  // Current randomized variable
+    bool m_inMemberSel;  // True if iterating below a MemberSel
+    bool m_hasRandVarRef;  // True if a reference to the randomized variable was found
 
     // METHODS
     AstVar* enumValueTabp(AstEnumDType* nodep) {
@@ -338,6 +342,8 @@ private:
         auto* taskp = V3Randomize::newSetupConstraintsTask(nodep);
         newp->addStmtsp(new AstTaskRef{fl, taskp->name(), nullptr});
 
+        iterateChildren(nodep);
+
         nodep->foreach<AstConstraint>([&](AstConstraint* const constrp) {
             constrp->foreach<AstNodeVarRef>([&](AstNodeVarRef* const refp) {
                 auto* const methodp = new AstCMethodHard{
@@ -372,42 +378,79 @@ private:
     }
 
     void visit(AstMethodCall* nodep) override {
-        auto* classp = VN_CAST(VN_CAST(nodep->fromp(), VarRef)->dtypep(), ClassRefDType)->classp();
-        if (nodep->name() == "randomize" && nodep->pinsp()) {
-            if (nodep->pinsp()) {
-                auto* pinsp = nodep->pinsp()->unlinkFrBack();
-                VL_DO_DANGLING(pinsp->deleteTree(), pinsp);
-            }
-            /*auto* const stmtsp = ?;
-            if (stmtsp) {
-                std::string funcName = "__Vrandomize" + std::to_string(m_funcCnt++);
-                auto* dtypep = nodep->findBitDType(32, 32, VSigning::SIGNED);
-                auto* fvarp = new AstVar(fl, VVarType::MEMBER, funcName, dtypep);
-                fvarp->lifetime(VLifetime::AUTOMATIC);
-                fvarp->funcLocal(true);
-                fvarp->funcReturn(true);
-                fvarp->direction(VDirection::OUTPUT);
-                auto* funcp = new AstFunc(fl, funcName, nullptr, fvarp);
-                auto* refp = new AstFuncRef(fl, funcName, nullptr);
-                auto* fromp = VN_CAST(nodep->fromp(), VarRef)->varp();
-                funcp->addStmtsp(newClassRandStmtsp(classp, fromp));
-                funcp->addStmtsp(stmtsp);
-                funcp->dtypep(dtypep);
-                refp->taskp(funcp);
-                refp->dtypep(dtypep);
-                if (auto* classp = VN_CAST(m_modp, Class)) {
-                    funcp->classMethod(true);
-                    classp->addMembersp(funcp);
-                    classp->repairCache();
-                } else {
-                    m_modp->addStmtsp(funcp);
-                }
-                nodep->replaceWith(refp);
-                VL_DO_DANGLING(nodep->deleteTree(), nodep);
-            }
-            m_constraints = {};*/
+        if (!(nodep->name() == "randomize" && nodep->pinsp())) {
+            iterateChildren(nodep);
+            return;
+        }
+
+        VL_RESTORER(m_inMemberSel);
+        VL_RESTORER(m_fromp);
+
+        m_fromp = nodep->fromp();
+        m_inMemberSel = false;
+
+        iterateChildren(nodep);
+
+        auto* constrp = VN_AS(nodep->pinsp(), Constraint);
+        auto* fl = constrp->fileline();
+
+        const auto indexArgRefp = new AstLambdaArgRef{fl, "constraint__DOT__index", true};
+        const auto valueArgRefp = new AstLambdaArgRef{fl, "constraint", false};
+        indexArgRefp->dtypep(indexArgRefp->findCHandleDType());
+        valueArgRefp->dtypep(valueArgRefp->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR));
+        const auto newp = new AstWith{fl, indexArgRefp, valueArgRefp,
+                                      constrp->condsp()->unlinkFrBackWithNext()};
+        newp->dtypeFrom(newp->exprp());
+
+        auto* const classp = VN_AS(nodep->fromp()->dtypep(), ClassRefDType)->classp();
+
+        iterate(classp);
+
+        auto* const genp = VN_AS(classp->findMember("constraint"), Var);
+        UASSERT_OBJ(genp, classp, "Randomized class without generator");
+        auto* const dtypep
+            = nodep->findBitDType(32, 32, VSigning::SIGNED);  // IEEE says int return of 0/1
+        const auto mathp = new AstCMath{fl, nullptr};
+        mathp->addExprsp(new AstText{fl, "VL_RANDOMIZE_WITH("});
+        mathp->addExprsp(createRef(fl, genp, nodep->fromp(), VAccess::READWRITE));
+        mathp->addExprsp(new AstText{fl, ", "});
+        mathp->addExprsp(newp);
+        mathp->addExprsp(new AstText{fl, ")"});
+        mathp->dtypep(dtypep);
+
+        nodep->replaceWith(mathp);
+        VL_DO_DANGLING(pushDeletep(nodep), nodep);
+    }
+
+    void visit(AstMemberSel* nodep) override {
+        if (nodep->user1SetOnce()) return;
+        if (!m_fromp) {
+            iterateChildren(nodep);
+            return;
+        }
+
+        if (m_fromp->sameTree(nodep->fromp())) m_hasRandVarRef = true;
+        if (m_inMemberSel) {
+            iterateChildren(nodep);
+            return;
+        }
+
+        VL_RESTORER(m_inMemberSel);
+        m_inMemberSel = true;
+
+        iterateChildren(nodep);
+
+        if (m_hasRandVarRef) {
+            auto* const genp = new AstLambdaArgRef{m_fromp->fileline(), "constraint", false};
+            genp->dtypep(genp->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR));
+            auto* const methodp = new AstCMethodHard{nodep->fileline(), genp, "write_var"};
+            methodp->dtypep(nodep->dtypep());
+            nodep->replaceWith(methodp);
+            methodp->addPinsp(nodep);
+            m_hasRandVarRef = false;
         }
     }
+
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         m_modp = nodep;

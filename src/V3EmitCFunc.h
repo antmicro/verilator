@@ -460,7 +460,8 @@ public:
             puts(",");
         }
         if (auto* const argrefp = nodep->valueArgRefp()) {
-            putbs(argrefp->dtypep()->cType(argrefp->nameProtect(), false, false));
+            putbs(argrefp->dtypep()->cType(argrefp->nameProtect(), false,
+                                           argrefp->dtypep()->basicp()->isRandomGenerator()));
         }
         // Probably fragile, V3Task may need to convert to a AstCReturn
         puts(") { return ");

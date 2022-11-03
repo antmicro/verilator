@@ -13,4 +13,13 @@
 #define VERILATOR_VERILATED_RANDOM_H_
 
 #include <crave/ConstrainedRandom.hpp>
+
+template <typename Func>
+inline IData VL_RANDOMIZE_WITH(const crave::Generator& constraint, Func with_func) {
+    crave::Generator gen;
+    gen.merge(constraint);
+    gen.hard(with_func(QData{}, gen));
+    return gen.next();
+}
+
 #endif  // Guard

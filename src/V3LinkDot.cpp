@@ -1438,28 +1438,6 @@ class LinkDotFindVisitor final : public VNVisitor {
             iterateAndNextNull(nodep->exprp());
         }
     }
-    AstNode* m_fromp = nullptr;
-    virtual void visit(AstDot* nodep) override {
-        if (nodep->user1()) return;
-        if (auto* withParsep = VN_CAST(nodep->rhsp(), WithParse)) {
-            if (withParsep->funcrefp()->name() == "randomize") {
-                m_fromp = nodep->lhsp();
-                iterateAndNextNull(withParsep->exprp());
-                m_fromp = nullptr;
-            }
-        }
-        iterateChildren(nodep);
-    }
-    virtual void visit(AstParseRef* nodep) override {
-        if (m_fromp) {
-            auto* dotp = new AstDot(nodep->fileline(), false, m_fromp->cloneTree(false),
-                                    nodep->cloneTree(false));
-            nodep->replaceWith(dotp);
-            dotp->user1SetOnce();
-            VL_DO_DANGLING(nodep->deleteTree(), nodep);
-        }
-    }
-
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
 public:
@@ -1952,6 +1930,7 @@ private:
     VSymEnt* m_modSymp = nullptr;  // SymEnt for current module
     VSymEnt* m_pinSymp = nullptr;  // SymEnt for pin lookups
     const AstCell* m_cellp = nullptr;  // Current cell
+    AstNode* m_fromp = nullptr;  // Current randomized variable
     AstNodeModule* m_modp = nullptr;  // Current module
     AstNodeFTask* m_ftaskp = nullptr;  // Current function/task
     int m_modportNum = 0;  // Uniqueify modport numbers
@@ -2389,6 +2368,18 @@ private:
                 UINFO(1, "ds=" << m_ds.ascii() << endl);
                 nodep->v3fatalSrc("Unhandled VParseRefExp");
             }
+            if (allowVar && m_fromp
+                && (m_ds.m_dotPos == DP_NONE || m_ds.m_dotp->lhsp() == nodep)) {
+                auto* const classRefp
+                    = VN_AS(VN_AS(m_fromp, VarRef)->varp()->subDTypep(), ClassRefDType);
+                if (classRefp->classp()->findMember(nodep->name())) {
+                    nodep->replaceWith(new AstMemberSel{nodep->fileline(),
+                                                        m_fromp->cloneTree(false),
+                                                        VFlagChildDType{}, nodep->name()});
+                    VL_DO_DANGLING(pushDeletep(nodep), nodep);
+                    return;
+                }
+            }
             // Lookup
             VSymEnt* foundp;
             string baddot;
@@ -2753,8 +2744,10 @@ private:
     void visit(AstMethodCall* nodep) override {
         // Created here so should already be resolved.
         VL_RESTORER(m_ds);
+        VL_RESTORER(m_fromp);
         {
             m_ds.init(m_curSymp);
+            if (nodep->name() == "randomize") m_fromp = nodep->fromp();
             iterateChildren(nodep);
         }
     }

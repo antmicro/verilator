@@ -37,11 +37,14 @@ module t (/*AUTOARG*/);
 
    initial begin
       int rand_result;
+      int lb, ub;
       longint prev_checksum;
       $display("===================\nSatisfiable constraints:");
       for (int i = 0; i < 25; i++) begin
          obj = new;
-         rand_result = obj.randomize();
+         lb = 16;
+         ub = 32;
+         rand_result = obj.randomize() with { lb <= y && y <= ub; };
          $display("obj.v == %0d", obj.v);
          $display("obj.w == %0d", obj.w);
          $display("obj.x == %0d", obj.x);
@@ -52,7 +55,9 @@ module t (/*AUTOARG*/);
          if (!(obj.v inside {ONE, THREE})) $stop;
          if (obj.w != 5) $stop;
          if (!(obj.x inside {1,2,4,5})) $stop;
+         if (obj.y < 16 || obj.y > 32) $stop;
          if (obj.z <= 13 || obj.z >= 21) $stop;
+         if (lb != 16 || ub != 32) $stop;
       end
       //$display("===================\nUnsatisfiable constraints for obj.y:");
       //rand_result = obj.randomize() with { 256 < y && y < 256; };

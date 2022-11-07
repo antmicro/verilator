@@ -2725,6 +2725,25 @@ public:
     // * = Add a newline for $display
     bool addNewline() const { return displayType().addNewline(); }
 };
+class AstDoWhile final : public AstNodeStmt {
+    // @astgen op1 := precondsp : List[AstNode]
+    // @astgen op2 := condp : AstNode
+    // @astgen op3 := stmtsp : List[AstNode]
+    // @astgen op4 := incsp : List[AstNode]
+public:
+    AstDoWhile(FileLine* fl, AstNode* condp, AstNode* stmtsp = nullptr, AstNode* incsp = nullptr)
+        : ASTGEN_SUPER_DoWhile(fl) {
+        this->condp(condp);
+        this->addStmtsp(stmtsp);
+        this->addIncsp(incsp);
+    }
+    ASTGEN_MEMBERS_AstDoWhile;
+    bool isGateOptimizable() const override { return false; }
+    int instrCount() const override { return INSTR_COUNT_BRANCH; }
+    bool same(const AstNode* /*samep*/) const override { return true; }
+    // Stop statement searchback here
+    bool isFirstInMyListOfStatements(AstNode* n) const override { return n == stmtsp(); }
+};
 class AstDumpCtl final : public AstNodeStmt {
     // $dumpon etc
     // Parents: expr

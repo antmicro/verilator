@@ -2209,7 +2209,7 @@ AstNode* AstNode::addNext<AstNode, AstNode>(AstNode* nodep, AstNode* newp);
 AstNode* AstNode::addNext(AstNode* newp) { return addNext(this, newp); }
 void AstNode::addPrev(AstNode* newp) {
     replaceWith(newp);
-    newp->addNext(this);
+    newp->addNextHere(this);
 }
 
 // Specialisations of privateTypeTest

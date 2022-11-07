@@ -83,6 +83,14 @@ private:
                 underp = nodep;
                 under_and_next = false;  // IE we skip the entire while
             }
+        } else if (VN_IS(nodep, DoWhile)) {
+            // Handle it the same as AstWhile, because it will be converted to it
+            if (endOfIter) {
+                underp = VN_AS(nodep, DoWhile)->stmtsp();
+            } else {
+                underp = nodep;
+                under_and_next = false;
+            }
         } else {
             nodep->v3fatalSrc("Unknown jump point for break/disable/continue");
             return nullptr;
@@ -188,6 +196,27 @@ private:
             m_loopInc = true;
             iterateAndNextNull(nodep->incsp());
         }
+    }
+    void visit(AstDoWhile* nodep) override {
+        // It is converted to AstWhile in this visit method
+        VL_RESTORER(m_loopp);
+        VL_RESTORER(m_loopInc);
+        {
+            m_loopp = nodep;
+            m_loopInc = false;
+            iterateAndNextNull(nodep->precondsp());
+            iterateAndNextNull(nodep->condp());
+            iterateAndNextNull(nodep->stmtsp());
+            m_loopInc = true;
+            iterateAndNextNull(nodep->incsp());
+        }
+        AstNode* condp = nodep->condp() ? nodep->condp()->unlinkFrBack() : nullptr;
+        AstNode* bodyp = nodep->stmtsp() ? nodep->stmtsp()->unlinkFrBack() : nullptr;
+        AstNode* incsp = nodep->incsp() ? nodep->incsp()->unlinkFrBack() : nullptr;
+        AstWhile* whilep = new AstWhile{nodep->fileline(), condp, bodyp, incsp};
+        nodep->replaceWith(whilep);
+        VL_DO_DANGLING(nodep->deleteTree(), nodep);
+        if (bodyp) whilep->addPrev(bodyp->cloneTree(false));
     }
     void visit(AstForeach* nodep) override {
         VL_RESTORER(m_loopp);

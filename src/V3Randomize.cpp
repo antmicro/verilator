@@ -272,8 +272,6 @@ private:
                         = createRef(nodep->fileline(), memberVarp, fromp, VAccess::WRITE);
                     stmtsp = AstNode::addNext(stmtsp, newRandStmtsp(nodep->fileline(), refp));
                 } else if (const auto* const classRefp = VN_CAST(dtypep, ClassRefDType)) {
-                    auto* const refp
-                        = new AstVarRef(nodep->fileline(), memberVarp, VAccess::WRITE);
                     stmtsp = AstNode::addNext(
                         stmtsp, newClassRandStmtsp(classRefp->classp(),
                                                    createRef(nodep->fileline(), memberVarp, fromp,
@@ -324,7 +322,7 @@ private:
         m_modp = nodep;
         if (!nodep->user1()) return;  // Doesn't need randomize, or already processed
         UINFO(9, "Define randomize() for " << nodep << endl);
-        auto* relaxp = newRelaxNextSoft(nodep);
+        newRelaxNextSoft(nodep);
         auto* funcp = V3Randomize::newRandomizeFunc(nodep);
         auto* genp = new AstVar(fl, VVarType::MEMBER, "constraint",
                                 nodep->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR));

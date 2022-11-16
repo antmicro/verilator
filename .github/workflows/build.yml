@@ -64,6 +64,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         path: repo
+        submodules: recursive
 
     - name: Cache $CCACHE_DIR
       uses: actions/cache@v2

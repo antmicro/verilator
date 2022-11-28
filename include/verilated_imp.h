@@ -387,7 +387,7 @@ private:
 
 protected:
     // METHODS - protected
-    void commandArgsAddGuts(int argc, const char** argv);
+    void commandArgsAddGuts(int argc, const char** argv) VL_MT_SAFE_REQUIRES(m_argMutex);
     void commandArgVl(const std::string& arg);
     bool commandArgVlString(const std::string& arg, const std::string& prefix,
                             std::string& valuer);

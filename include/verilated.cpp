@@ -2453,14 +2453,15 @@ void VerilatedContext::threads(unsigned n) {
     }
 }
 
-void VerilatedContext::commandArgs(int argc, const char** argv) VL_MT_SAFE_EXCLUDES(m_argMutex) {
-    const VerilatedLockGuard lock{m_argMutex};
-    m_args.m_argVec.clear();  // Empty first, then add
+void VerilatedContext::commandArgs(int argc, const char** argv)
+    VL_MT_SAFE_EXCLUDES(impp()->m_argMutex) {
+    const VerilatedLockGuard lock{impp()->m_argMutex};
+    impp()->m_args.m_argVec.clear();  // Empty first, then add
     impp()->commandArgsAddGuts(argc, argv);
 }
 void VerilatedContext::commandArgsAdd(int argc, const char** argv)
-    VL_MT_SAFE_EXCLUDES(m_argMutex) {
-    const VerilatedLockGuard lock{m_argMutex};
+    VL_MT_SAFE_EXCLUDES(impp()->m_argMutex) {
+    const VerilatedLockGuard lock{impp()->m_argMutex};
     impp()->commandArgsAddGuts(argc, argv);
 }
 const char* VerilatedContext::commandArgsPlusMatch(const char* prefixp)

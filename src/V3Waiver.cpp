@@ -24,17 +24,18 @@
 #include <sstream>
 
 void V3Waiver::addEntry(V3ErrorCode errorCode, const std::string& filename,
-                        const std::string& str) {
+                        const std::string& str) VL_MT_SAFE_EXCLUDES(V3Waiver::s_mutex) {
     std::stringstream entry;
     const size_t pos = str.find('\n');
     entry << "lint_off -rule " << errorCode.ascii() << " -file \"*" << filename << "\" -match \""
           << str.substr(0, pos);
     if (pos != std::string::npos) entry << "*";
     entry << "\"";
+    const VerilatedLockGuard lg{s_mutex};
     s_waiverList.push_back(entry.str());
 }
 
-void V3Waiver::write(const std::string& filename) {
+void V3Waiver::write(const std::string& filename) VL_MT_SAFE_EXCLUDES(V3Waiver::s_mutex) {
     const std::unique_ptr<std::ofstream> ofp{V3File::new_ofstream(filename)};
     if (ofp->fail()) v3fatal("Can't write " << filename);
 
@@ -48,9 +49,12 @@ void V3Waiver::write(const std::string& filename) {
     *ofp << "//   2. Keep the waiver permanently if you are sure this is okay\n";
     *ofp << "//   3. Keep the waiver temporarily to suppress the output\n\n";
 
+    const VerilatedLockGuard lg{s_mutex};
+
     if (s_waiverList.empty()) *ofp << "// No waivers needed - great!\n";
 
     for (const auto& i : s_waiverList) *ofp << "// " << i << "\n\n";
 }
 
 V3Waiver::WaiverList V3Waiver::s_waiverList;
+VerilatedMutex V3Waiver::s_mutex;

@@ -202,7 +202,10 @@ void V3Statistic::dump(std::ofstream& os) const {
 //######################################################################
 // Top Stats class
 
-void V3Stats::addStat(const V3Statistic& stat) { StatsReport::addStat(stat); }
+void V3Stats::addStat(const V3Statistic& stat) VL_MT_SAFE_EXCLUDES(s_mutex) {
+    const VerilatedLockGuard lock{s_mutex};
+    StatsReport::addStat(stat);
+}
 
 void V3Stats::statsStage(const string& name) {
     static double lastWallTime = -1;
@@ -220,7 +223,8 @@ void V3Stats::statsStage(const string& name) {
     V3Stats::addStatPerf("Stage, Memory (MB), " + digitName, memory);
 }
 
-void V3Stats::statsReport() {
+void V3Stats::statsReport() VL_MT_SAFE_EXCLUDES(s_mutex) {
+    const VerilatedLockGuard lock{s_mutex};
     UINFO(2, __FUNCTION__ << ": " << endl);
 
     // Open stats file

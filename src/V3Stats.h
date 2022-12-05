@@ -100,27 +100,28 @@ public:
 //============================================================================
 
 class V3Stats final {
+    static VerilatedMutex s_mutex;
 public:
-    static void addStat(const V3Statistic&);
-    static void addStat(const string& stage, const string& name, double count) {
+    static void addStat(const V3Statistic&) VL_MT_SAFE_EXCLUDES(s_mutex);
+    static void addStat(const string& stage, const string& name, double count) VL_MT_SAFE_EXCLUDES(s_mutex) {
         addStat(V3Statistic{stage, name, count});
     }
-    static void addStat(const string& name, double count) {
+    static void addStat(const string& name, double count) VL_MT_SAFE_EXCLUDES(s_mutex) {
         addStat(V3Statistic{"*", name, count});
     }
-    static void addStatSum(const string& name, double count) {
+    static void addStatSum(const string& name, double count) VL_MT_SAFE_EXCLUDES(s_mutex) {
         addStat(V3Statistic{"*", name, count, true});
     }
-    static void addStatPerf(const string& name, double count) {
+    static void addStatPerf(const string& name, double count) VL_MT_SAFE_EXCLUDES(s_mutex) {
         addStat(V3Statistic{"*", name, count, true, true});
     }
     /// Called each stage
     static void statsStage(const string& name);
     /// Called by the top level to collect statistics
-    static void statsStageAll(AstNetlist* nodep, const string& stage, bool fast = false);
-    static void statsFinalAll(AstNetlist* nodep);
+    static void statsStageAll(AstNetlist* nodep, const string& stage, bool fast = false) VL_MT_SAFE_EXCLUDES(s_mutex);
+    static void statsFinalAll(AstNetlist* nodep) VL_MT_SAFE_EXCLUDES(s_mutex);
     /// Called by the top level to dump the statistics
-    static void statsReport();
+    static void statsReport() VL_MT_SAFE_EXCLUDES(s_mutex);
 };
 
 #endif  // Guard

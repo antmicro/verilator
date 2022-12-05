@@ -27,6 +27,7 @@
 
 #include "config_build.h"
 #include "verilatedos.h"
+#include "verilated_threads.h"
 
 // Limited V3 headers here - this is a base class for Vlc etc
 #include "V3Os.h"

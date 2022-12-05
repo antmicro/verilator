@@ -282,11 +282,13 @@ public:
 //######################################################################
 // Top Stats class
 
-void V3Stats::statsStageAll(AstNetlist* nodep, const string& stage, bool fast) {
+void V3Stats::statsStageAll(AstNetlist* nodep, const string& stage, bool fast) VL_MT_SAFE_EXCLUDES(s_mutex) {
     { StatsVisitor{nodep, stage, fast}; }
 }
 
-void V3Stats::statsFinalAll(AstNetlist* nodep) {
+void V3Stats::statsFinalAll(AstNetlist* nodep) VL_MT_SAFE_EXCLUDES(s_mutex) {
     statsStageAll(nodep, "Final");
     statsStageAll(nodep, "Final_Fast", true);
 }
+
+VerilatedMutex V3Stats::s_mutex;

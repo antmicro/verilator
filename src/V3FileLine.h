@@ -80,7 +80,7 @@ class FileLineSingleton final {
     // Add given bitset to the interned bitsets, return interned index
     msgEnSetIdx_t addMsgEnBitSet(const MsgEnBitSet& bitSet);
     // Add index of default bitset
-    msgEnSetIdx_t defaultMsgEnIndex() VL_MT_SAFE;
+    msgEnSetIdx_t defaultMsgEnIndex();
     // Set bitIdx to value in bitset at interned index setIdx, return interned index of result
     msgEnSetIdx_t msgEnSetBit(msgEnSetIdx_t setIdx, size_t bitIdx, bool value);
     // Return index to intersection set

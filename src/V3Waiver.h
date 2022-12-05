@@ -17,6 +17,8 @@
 #ifndef VERILATOR_V3WAIVER_H_
 #define VERILATOR_V3WAIVER_H_
 
+#include "verilated_threads.h"
+
 #include "V3Error.h"
 
 #include <string>
@@ -25,10 +27,12 @@
 class V3Waiver final {
     // TYPES
     using WaiverList = std::vector<std::string>;
-    static WaiverList s_waiverList;
+    static VerilatedMutex s_mutex;  // Protect members
+    static WaiverList s_waiverList VL_GUARDED_BY(s_mutex);
 
 public:
-    static void addEntry(V3ErrorCode errorCode, const string& filename, const std::string& str);
+    static void addEntry(V3ErrorCode errorCode, const string& filename,
+                         const std::string& str) VL_MT_SAFE;
     static void write(const std::string& filename);
 };
 

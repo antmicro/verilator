@@ -300,6 +300,69 @@ class CallAnnotationsValidator:
         return (True, refd, annotations, children)
 
     # Call handling
+    def process_method_call_constructor(self, node: clang.cindex.Cursor,
+                            refd: clang.cindex.Cursor,
+                            annotations: VlAnnotations,
+                            refd_children: Iterable[clang.cindex.Cursor]):
+        assert self._call_location
+        ctx = self._call_location.annotations
+
+        if "get" in str(refd.spelling):
+            print(f"ctx is safe: {ctx.is_mt_safe_context()}, annotations is mt safe: {annotations.is_mt_safe_call()}, annotations is mt unsafe: {annotations.is_mt_unsafe_call()}")
+        # MT-safe context
+        if ctx.is_mt_safe_context():
+            is_mt_safe = False
+
+            if annotations.is_mt_safe_call():
+                is_mt_safe = True
+            elif not annotations.is_mt_unsafe_call():
+                # Check whether the object the method is called on is mt-safe
+                def find_object_ref(n):
+                    try:
+                        n = next(n.get_children())
+                        if n.kind != CursorKind.MEMBER_REF_EXPR:
+                            return None
+                        n = next(n.get_children())
+                        if n.kind == CursorKind.UNEXPOSED_EXPR:
+                            n = next(n.get_children())
+                        return n
+                    except StopIteration:
+                        return None
+
+                n = find_object_ref(node)
+                if n:
+                    print(f"n: {n}, n kind: {n.kind}")
+                if not n:
+                    # we are in constructor and no reference means
+                    # we are calling local method. It is MT safe
+                    # only if this method is also only calling local methods or
+                    # MT-safe methods
+                    self.iterate_children(refd.get_children(), self.dispatch_node_inside_definition_constructor)
+                    is_mt_safe = True
+                # class/struct member
+                if n and n.kind == CursorKind.MEMBER_REF_EXPR and n.referenced:
+                    is_mt_safe = True
+                # variable
+                elif n and n.kind == CursorKind.DECL_REF_EXPR and n.referenced:
+                    # This is probably a local or an argument. Assume it's safe.
+                    is_mt_safe = True
+                elif n and n.kind == CursorKind.CALL_EXPR and n.referenced:
+                    # Call to local method, mt-safe in constructor context
+                    # only if this method is also only calling local methods or MT-safe methods
+                    print(f"n: {n.spelling} n kind: {n.kind}")
+                    self.dispatch_node_inside_definition_constructor(n)
+                    is_mt_safe = True
+
+            if not is_mt_safe:
+                self.emit_diagnostic(
+                    FunctionInfo.from_node(refd, refd, annotations),
+                    DiagnosticKind.NON_MT_SAFE_CALL_IN_MT_SAFE_CTX)
+
+        if ctx.is_pure_context():
+            if not annotations.is_pure_call():
+                self.emit_diagnostic(
+                    FunctionInfo.from_node(refd, refd, annotations),
+                    DiagnosticKind.NON_PURE_CALL_IN_PURE_CTX)
 
     def process_method_call(self, node: clang.cindex.Cursor,
                             refd: clang.cindex.Cursor,
@@ -373,7 +436,9 @@ class CallAnnotationsValidator:
         assert self._call_location
         ctx = self._call_location.annotations
 
-        # Constructors are always OK in MT-safe context.
+        # MT-safe context
+        if ctx.is_mt_safe_context():
+            self.iterate_children(refd.get_children(), self.dispatch_node_inside_definition_constructor)
 
         # pure context
         if ctx.is_pure_context():
@@ -382,6 +447,55 @@ class CallAnnotationsValidator:
                 self.emit_diagnostic(
                     FunctionInfo.from_node(refd, refd, annotations),
                     DiagnosticKind.NON_PURE_CALL_IN_PURE_CTX)
+
+    def dispatch_call_node_constructor(self, node: clang.cindex.Cursor):
+        [supported, refd, annotations,
+         refd_children] = self.get_referenced_node_info(node)
+
+        if not supported:
+            self.iterate_children(node.get_children(),
+                                  self.dispatch_node_inside_definition_constructor)
+            return
+
+        assert refd is not None
+        if self._is_ignored_call(refd):
+            return
+
+        assert self._call_location is not None
+        node_file = os.path.abspath(node.location.file.name)
+        self._call_location = self._call_location.copy(file=node_file,
+                                                       line=node.location.line)
+        self._call_location.mt_safe = True
+
+        #if str(refd.spelling) == "splitSizeReset":
+        print(f"b: {refd.spelling}, kind: {refd.kind}")
+        # Standalone functions and static class methods
+        if (refd.kind == CursorKind.FUNCTION_DECL
+                or refd.kind == CursorKind.CXX_METHOD
+                and refd.is_static_method()):
+            self.process_function_call(refd, annotations)
+            return
+        # Function pointer
+        if refd.kind in [CursorKind.VAR_DECL, CursorKind.FIELD_DECL]:
+            self.process_function_call(refd, annotations)
+            return
+        # Non-static class methods
+        if refd.kind == CursorKind.CXX_METHOD:
+            self.process_method_call_constructor(node, refd, annotations, refd_children)
+            return
+        # Conversion method (e.g. `operator int()`)
+        if refd.kind == CursorKind.CONVERSION_FUNCTION:
+            self.process_method_call(node, refd, annotations)
+            return
+        # Constructors
+        if refd.kind == CursorKind.CONSTRUCTOR:
+            self.process_constructor_call(refd, annotations)
+            return
+
+        # Ignore other callables
+        print(f"{refd.location.file.name}:{refd.location.line}: "
+              f"{refd.displayname}    {refd.kind}\n"
+              f"    from: {node.location.file.name}:{node.location.line}")
 
     def dispatch_call_node(self, node: clang.cindex.Cursor):
         [supported, refd, annotations, _] = self.get_referenced_node_info(node)
@@ -432,6 +546,13 @@ class CallAnnotationsValidator:
               f"    from: {node.location.file.name}:{node.location.line}")
 
     # Definition handling
+    def dispatch_node_inside_definition_constructor(self, node: clang.cindex.Cursor):
+        if node.kind == CursorKind.CALL_EXPR:
+            self.dispatch_call_node_constructor(node)
+            return
+
+        return self.iterate_children(node.get_children(),
+                                     self.dispatch_node_inside_definition_constructor)
 
     def dispatch_node_inside_definition(self, node: clang.cindex.Cursor):
         if node.kind == CursorKind.CALL_EXPR:

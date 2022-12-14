@@ -23,7 +23,7 @@ sub check {
                    glob("$root/src/*.cpp $root/src/obj_opt/V3Const__gen.cpp");
     my $srcfiles_str = join(" ", @srcfiles);
     my $precompile_args = "-c $root/src/V3Ast.h";
-    my $clang_args = "-I$root/src/ -I$root/include/ -I$root/src/obj_opt/ -fcoroutines-ts";
+    my $clang_args = "-I$root/src/ -I$root/include/ -I$root/src/obj_opt/ -fcoroutines-ts -I/usr/lib/clang/14.0.6/include/";
 
     sub run_clang_check {
         {

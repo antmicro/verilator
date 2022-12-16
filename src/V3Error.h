@@ -242,8 +242,8 @@ public:
 constexpr bool operator==(const V3ErrorCode& lhs, const V3ErrorCode& rhs) {
     return lhs.m_e == rhs.m_e;
 }
-constexpr bool operator==(const V3ErrorCode& lhs, V3ErrorCode::en rhs) { return lhs.m_e == rhs; }
-constexpr bool operator==(V3ErrorCode::en lhs, const V3ErrorCode& rhs) { return lhs == rhs.m_e; }
+constexpr bool operator==(const V3ErrorCode& lhs, V3ErrorCode::en rhs) VL_PURE { return lhs.m_e == rhs; }
+constexpr bool operator==(V3ErrorCode::en lhs, const V3ErrorCode& rhs) VL_PURE { return lhs == rhs.m_e; }
 inline std::ostream& operator<<(std::ostream& os, const V3ErrorCode& rhs) {
     return os << rhs.ascii();
 }
@@ -337,7 +337,7 @@ public:
 
 // Global versions, so that if the class doesn't define a operator, we get the functions anyways.
 inline void v3errorEnd(std::ostringstream& sstr) { V3Error::v3errorEnd(sstr); }
-inline void v3errorEndFatal(std::ostringstream& sstr) {
+VL_ATTR_NORETURN inline void v3errorEndFatal(std::ostringstream& sstr) VL_MT_SAFE {
     V3Error::v3errorEnd(sstr);
     assert(0);  // LCOV_EXCL_LINE
     VL_UNREACHABLE;

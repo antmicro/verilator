@@ -52,7 +52,7 @@ public:
         uint32_t m_value;
         // Each bit is true if it's X or Z, 10=z, 11=x
         uint32_t m_valueX;
-        bool operator==(const ValueAndX& other) const {
+        bool operator==(const ValueAndX& other) const VL_MT_SAFE {
             return m_value == other.m_value && m_valueX == other.m_valueX;
         }
     };
@@ -555,8 +555,8 @@ private:
     }
 
 public:
-    void v3errorEnd(const std::ostringstream& sstr) const;
-    void v3errorEndFatal(const std::ostringstream& sstr) const VL_ATTR_NORETURN;
+    void v3errorEnd(const std::ostringstream& sstr) const VL_MT_SAFE;
+    void v3errorEndFatal(const std::ostringstream& sstr) const VL_ATTR_NORETURN VL_MT_SAFE;
     void width(int width, bool sized = true) {
         m_data.m_sized = sized;
         m_data.resize(width);
@@ -614,25 +614,25 @@ public:
     bool isAllZ() const VL_MT_SAFE;
     bool isAllX() const VL_MT_SAFE;
     bool isEqZero() const VL_MT_SAFE;
-    bool isNeqZero() const;
-    bool isBitsZero(int msb, int lsb) const;
-    bool isEqOne() const;
-    bool isEqAllOnes(int optwidth = 0) const;
-    bool isCaseEq(const V3Number& rhs) const;  // operator==
-    bool isLtXZ(const V3Number& rhs) const;  // operator< with XZ compared
+    bool isNeqZero() const VL_MT_SAFE;
+    bool isBitsZero(int msb, int lsb) const VL_MT_SAFE;
+    bool isEqOne() const VL_MT_SAFE;
+    bool isEqAllOnes(int optwidth = 0) const VL_MT_SAFE;
+    bool isCaseEq(const V3Number& rhs) const VL_MT_SAFE;  // operator==
+    bool isLtXZ(const V3Number& rhs) const VL_MT_SAFE;  // operator< with XZ compared
     bool isAnyX() const VL_MT_SAFE;
-    bool isAnyXZ() const;
+    bool isAnyXZ() const VL_MT_SAFE;
     bool isAnyZ() const VL_MT_SAFE;
-    bool isMsbXZ() const { return bitIsXZ(m_data.width() - 1); }
-    uint32_t toUInt() const;
+    bool isMsbXZ() const VL_MT_SAFE { return bitIsXZ(m_data.width() - 1); }
+    uint32_t toUInt() const VL_MT_SAFE;
     int32_t toSInt() const VL_MT_SAFE;
-    uint64_t toUQuad() const;
+    uint64_t toUQuad() const VL_MT_SAFE;
     int64_t toSQuad() const VL_MT_SAFE;
     string toString() const VL_MT_SAFE;
     string toDecimalS() const VL_MT_SAFE;  // return ASCII signed decimal number
     string toDecimalU() const VL_MT_SAFE;  // return ASCII unsigned decimal number
     double toDouble() const VL_MT_SAFE;
-    V3Hash toHash() const;
+    V3Hash toHash() const VL_MT_SAFE;
     uint32_t edataWord(int eword) const;
     uint8_t dataByte(int byte) const;
     uint32_t countBits(const V3Number& ctrl) const;

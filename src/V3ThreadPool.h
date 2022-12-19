@@ -22,6 +22,7 @@
 #define _V3THREADPOOL_H_ 1
 
 #include "V3Ast.h"
+#include "verilated_threads.h"
 
 #include <condition_variable>
 #include <functional>

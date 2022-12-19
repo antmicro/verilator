@@ -16,9 +16,10 @@
 
 #include "config_build.h"
 #include "verilatedos.h"
-#include "verilated_threads.h"
 
 #include "V3File.h"
+
+#include "verilated_threads.h"
 
 #include "V3Ast.h"
 #include "V3Global.h"

@@ -300,10 +300,10 @@ class CallAnnotationsValidator:
         return (True, refd, annotations, children)
 
     # Call handling
-    def process_method_call_constructor(self, node: clang.cindex.Cursor,
-                            refd: clang.cindex.Cursor,
-                            annotations: VlAnnotations,
-                            refd_children: Iterable[clang.cindex.Cursor]):
+    def process_method_call_constructor(
+            self, node: clang.cindex.Cursor, refd: clang.cindex.Cursor,
+            annotations: VlAnnotations,
+            refd_children: Iterable[clang.cindex.Cursor]):
         assert self._call_location
         ctx = self._call_location.annotations
 
@@ -333,7 +333,9 @@ class CallAnnotationsValidator:
                     # we are calling local method. It is MT safe
                     # only if this method is also only calling local methods or
                     # MT-safe methods
-                    self.iterate_children(refd.get_children(), self.dispatch_node_inside_definition_constructor)
+                    self.iterate_children(
+                        refd.get_children(),
+                        self.dispatch_node_inside_definition_constructor)
                     is_mt_safe = True
                 # class/struct member
                 if n and n.kind == CursorKind.MEMBER_REF_EXPR and n.referenced:
@@ -433,7 +435,9 @@ class CallAnnotationsValidator:
 
         # MT-safe context
         if ctx.is_mt_safe_context():
-            self.iterate_children(refd.get_children(), self.dispatch_node_inside_definition_constructor)
+            self.iterate_children(
+                refd.get_children(),
+                self.dispatch_node_inside_definition_constructor)
 
         # pure context
         if ctx.is_pure_context():
@@ -448,8 +452,9 @@ class CallAnnotationsValidator:
          refd_children] = self.get_referenced_node_info(node)
 
         if not supported:
-            self.iterate_children(node.get_children(),
-                                  self.dispatch_node_inside_definition_constructor)
+            self.iterate_children(
+                node.get_children(),
+                self.dispatch_node_inside_definition_constructor)
             return
 
         assert refd is not None
@@ -475,7 +480,8 @@ class CallAnnotationsValidator:
             return
         # Non-static class methods
         if refd.kind == CursorKind.CXX_METHOD:
-            self.process_method_call_constructor(node, refd, annotations, refd_children)
+            self.process_method_call_constructor(node, refd, annotations,
+                                                 refd_children)
             return
         # Conversion method (e.g. `operator int()`)
         if refd.kind == CursorKind.CONVERSION_FUNCTION:
@@ -540,13 +546,15 @@ class CallAnnotationsValidator:
               f"    from: {node.location.file.name}:{node.location.line}")
 
     # Definition handling
-    def dispatch_node_inside_definition_constructor(self, node: clang.cindex.Cursor):
+    def dispatch_node_inside_definition_constructor(self,
+                                                    node: clang.cindex.Cursor):
         if node.kind == CursorKind.CALL_EXPR:
             self.dispatch_call_node_constructor(node)
             return
 
-        return self.iterate_children(node.get_children(),
-                                     self.dispatch_node_inside_definition_constructor)
+        return self.iterate_children(
+            node.get_children(),
+            self.dispatch_node_inside_definition_constructor)
 
     def dispatch_node_inside_definition(self, node: clang.cindex.Cursor):
         if node.kind == CursorKind.CALL_EXPR:

@@ -1496,7 +1496,9 @@ public:
     ASTGEN_MEMBERS_AstTypedef;
     void dump(std::ostream& str) const override;
     AstNodeDType* getChildDTypep() const override { return childDTypep(); }
-    virtual AstNodeDType* subDTypep() const VL_MT_SAFE { return dtypep() ? dtypep() : childDTypep(); }
+    virtual AstNodeDType* subDTypep() const VL_MT_SAFE {
+        return dtypep() ? dtypep() : childDTypep();
+    }
     // METHODS
     string name() const override { return m_name; }
     bool maybePointedTo() const override { return true; }

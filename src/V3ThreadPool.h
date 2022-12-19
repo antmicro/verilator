@@ -21,8 +21,9 @@
 #ifndef _V3THREADPOOL_H_
 #define _V3THREADPOOL_H_ 1
 
-#include "V3Ast.h"
 #include "verilated_threads.h"
+
+#include "V3Ast.h"
 
 #include <condition_variable>
 #include <functional>
@@ -78,7 +79,7 @@ std::future<T> V3ThreadPool::enqueue(std::function<T()>&& f) {
     std::shared_ptr<std::promise<T>> prom = std::make_shared<std::promise<T>>();
     std::future<T> result = prom->get_future();
     push_job(prom, std::move(f));
-    const VerilatedLockGuard lock {m_mutex};
+    const VerilatedLockGuard lock{m_mutex};
     m_cv.notify_one();
     return result;
 }

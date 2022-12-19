@@ -101,9 +101,11 @@ public:
 
 class V3Stats final {
     static VerilatedMutex s_mutex;
+
 public:
     static void addStat(const V3Statistic&) VL_MT_SAFE_EXCLUDES(s_mutex);
-    static void addStat(const string& stage, const string& name, double count) VL_MT_SAFE_EXCLUDES(s_mutex) {
+    static void addStat(const string& stage, const string& name, double count)
+        VL_MT_SAFE_EXCLUDES(s_mutex) {
         addStat(V3Statistic{stage, name, count});
     }
     static void addStat(const string& name, double count) VL_MT_SAFE_EXCLUDES(s_mutex) {
@@ -118,7 +120,8 @@ public:
     /// Called each stage
     static void statsStage(const string& name);
     /// Called by the top level to collect statistics
-    static void statsStageAll(AstNetlist* nodep, const string& stage, bool fast = false) VL_MT_SAFE_EXCLUDES(s_mutex);
+    static void statsStageAll(AstNetlist* nodep, const string& stage, bool fast = false)
+        VL_MT_SAFE_EXCLUDES(s_mutex);
     static void statsFinalAll(AstNetlist* nodep) VL_MT_SAFE_EXCLUDES(s_mutex);
     /// Called by the top level to dump the statistics
     static void statsReport() VL_MT_SAFE_EXCLUDES(s_mutex);

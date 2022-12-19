@@ -40,7 +40,8 @@ std::string cvtToStr(const T& t) VL_MT_SAFE {
     return os.str();
 }
 template <class T>
-typename std::enable_if<std::is_pointer<T>::value, std::string>::type cvtToHex(const T tp) VL_MT_SAFE {
+typename std::enable_if<std::is_pointer<T>::value, std::string>::type
+cvtToHex(const T tp) VL_MT_SAFE {
     std::ostringstream os;
     os << static_cast<const void*>(tp);
     return os.str();

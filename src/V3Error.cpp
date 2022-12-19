@@ -33,9 +33,10 @@ int V3Error::s_errorLimit = V3Error::MAX_ERRORS;
 bool V3Error::s_warnFatal = true;
 std::ostringstream V3Error::s_errorStr;  // Error string being formed
 bool V3Error::s_describedWeb = false;
-std::array<bool, V3ErrorCode::_ENUM_MAX> V3Error::s_describedEachWarn;  // Told user specifics about this warning
-std::array<bool, V3ErrorCode::_ENUM_MAX> V3Error::s_pretendError;  // Pretend this warning is an error
-
+std::array<bool, V3ErrorCode::_ENUM_MAX>
+    V3Error::s_describedEachWarn;  // Told user specifics about this warning
+std::array<bool, V3ErrorCode::_ENUM_MAX>
+    V3Error::s_pretendError;  // Pretend this warning is an error
 
 struct v3errorIniter {
     v3errorIniter() { V3Error::init(); }
@@ -191,7 +192,8 @@ string V3ErrorGuarded::warnMoreNoLock() VL_REQUIRES(m_mutex) VL_MT_SAFE {
 }
 
 // cppcheck-has-bug-suppress constParameter
-void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) VL_MT_SAFE_EXCLUDES(singleton().m_mutex) {
+void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra)
+    VL_MT_SAFE_EXCLUDES(singleton().m_mutex) {
     VerilatedLockGuard guard{singleton().m_mutex};
 #if defined(__COVERITY__) || defined(__cppcheck__)
     if (s_errorCode == V3ErrorCode::EC_FATAL) __coverity_panic__(x);
@@ -202,7 +204,8 @@ void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) VL_MT_SA
         && (!debug() || singleton().m_errorCode.defaultsOff()))
         return;
     string msg = singleton().msgPrefixNoLock() + sstr.str();
-    if (singleton().m_errorSuppressed) {  // If suppressed print only first line to reduce verbosity
+    if (singleton()
+            .m_errorSuppressed) {  // If suppressed print only first line to reduce verbosity
         string::size_type pos;
         if ((pos = msg.find('\n')) != string::npos) {
             msg.erase(pos, msg.length() - pos);
@@ -234,18 +237,23 @@ void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) VL_MT_SA
         std::cerr << msg;
     }
     if (!singleton().m_errorSuppressed
-        && !(singleton().m_errorCode == V3ErrorCode::EC_INFO || singleton().m_errorCode == V3ErrorCode::USERINFO)) {
-        const bool anError = singleton().isError(singleton().m_errorCode, singleton().m_errorSuppressed);
+        && !(singleton().m_errorCode == V3ErrorCode::EC_INFO
+             || singleton().m_errorCode == V3ErrorCode::USERINFO)) {
+        const bool anError
+            = singleton().isError(singleton().m_errorCode, singleton().m_errorSuppressed);
         if (singleton().m_errorCode >= V3ErrorCode::EC_FIRST_NAMED && !s_describedWeb) {
             s_describedWeb = true;
             std::cerr << singleton().warnMoreNoLock() << "... For "
                       << (anError ? "error" : "warning")
-                      << " description see https://verilator.org/warn/" << singleton().m_errorCode.ascii()
-                      << "?v=" << PACKAGE_VERSION_NUMBER_STRING << endl;
+                      << " description see https://verilator.org/warn/"
+                      << singleton().m_errorCode.ascii() << "?v=" << PACKAGE_VERSION_NUMBER_STRING
+                      << endl;
         }
-        if (!s_describedEachWarn[singleton().m_errorCode] && !s_pretendError[singleton().m_errorCode]) {
+        if (!s_describedEachWarn[singleton().m_errorCode]
+            && !s_pretendError[singleton().m_errorCode]) {
             s_describedEachWarn[singleton().m_errorCode] = true;
-            if (singleton().m_errorCode >= V3ErrorCode::EC_FIRST_WARN && !singleton().m_describedWarnings) {
+            if (singleton().m_errorCode >= V3ErrorCode::EC_FIRST_WARN
+                && !singleton().m_describedWarnings) {
                 singleton().m_describedWarnings = true;
                 std::cerr << singleton().warnMoreNoLock() << "... Use \"/* verilator lint_off "
                           << singleton().m_errorCode.ascii()
@@ -254,14 +262,15 @@ void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) VL_MT_SA
             if (singleton().m_errorCode.dangerous()) {
                 std::cerr << singleton().warnMoreNoLock() << "*** See https://verilator.org/warn/"
                           << singleton().m_errorCode.ascii() << " before disabling this,\n";
-                std::cerr << singleton().warnMoreNoLock() << "else you may end up with different sim results."
-                          << endl;
+                std::cerr << singleton().warnMoreNoLock()
+                          << "else you may end up with different sim results." << endl;
             }
         }
         // If first warning is not the user's fault (internal/unsupported) then give the website
         // Not later warnings, as a internal may be caused by an earlier problem
         if (singleton().m_tellManual == 0) {
-            if (singleton().m_errorCode.mentionManual() || sstr.str().find("Unsupported") != string::npos) {
+            if (singleton().m_errorCode.mentionManual()
+                || sstr.str().find("Unsupported") != string::npos) {
                 singleton().m_tellManual = 1;
             } else {
                 singleton().m_tellManual = 2;
@@ -275,7 +284,8 @@ void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) VL_MT_SA
         } else {
             singleton().incWarnings();
         }
-        if (singleton().m_errorCode == V3ErrorCode::EC_FATAL || singleton().m_errorCode == V3ErrorCode::EC_FATALEXIT
+        if (singleton().m_errorCode == V3ErrorCode::EC_FATAL
+            || singleton().m_errorCode == V3ErrorCode::EC_FATALEXIT
             || singleton().m_errorCode == V3ErrorCode::EC_FATALSRC) {
             static bool inFatal = false;
             if (!inFatal) {

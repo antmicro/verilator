@@ -48,22 +48,23 @@ public:
     ~V3ConfigWildcardResolver() = default;
 
     /// Update into maps from other
-    void update(const V3ConfigWildcardResolver& other) VL_MT_SAFE_EXCLUDES(m_mutex) VL_MT_SAFE_EXCLUDES(other.m_mutex) {
-        VerilatedLockGuard lock {m_mutex};
-        VerilatedLockGuard otherLock {other.m_mutex};
+    void update(const V3ConfigWildcardResolver& other) VL_MT_SAFE_EXCLUDES(m_mutex)
+        VL_MT_SAFE_EXCLUDES(other.m_mutex) {
+        VerilatedLockGuard lock{m_mutex};
+        VerilatedLockGuard otherLock{other.m_mutex};
         for (const auto& itr : other.m_mapResolved) m_mapResolved[itr.first].update(itr.second);
         for (const auto& itr : other.m_mapWildcard) m_mapWildcard[itr.first].update(itr.second);
     }
 
     // Access and create a (wildcard) entity
     T& at(const string& name) VL_MT_SAFE_EXCLUDES(m_mutex) {
-        VerilatedLockGuard lock {m_mutex};
+        VerilatedLockGuard lock{m_mutex};
         // Don't store into wildcards if the name is not a wildcard string
         return m_mapWildcard[name];
     }
     // Access an entity and resolve wildcards that match it
     T* resolve(const string& name) VL_MT_SAFE_EXCLUDES(m_mutex) {
-        VerilatedLockGuard lock {m_mutex};
+        VerilatedLockGuard lock{m_mutex};
         // Lookup if it was resolved before, typically not
         auto it = m_mapResolved.find(name);
         if (VL_UNLIKELY(it != m_mapResolved.end())) return &it->second;
@@ -84,7 +85,7 @@ public:
     }
     // Flush on update
     void flush() VL_MT_SAFE_EXCLUDES(m_mutex) {
-        VerilatedLockGuard lock {m_mutex};
+        VerilatedLockGuard lock{m_mutex};
         m_mapResolved.clear();
     }
 };

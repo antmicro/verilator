@@ -2264,7 +2264,8 @@ constexpr bool AstNode::isLeaf<AstVarXRef>() {
 
 // foreach implementation
 template <typename T_Arg, typename Callable>
-void AstNode::foreachImpl(ConstCorrectAstNode<T_Arg>* nodep, const Callable& f, bool visitNext) VL_MT_SAFE {
+void AstNode::foreachImpl(ConstCorrectAstNode<T_Arg>* nodep, const Callable& f,
+                          bool visitNext) VL_MT_SAFE {
     // Pre-order traversal implemented directly (without recursion) for speed reasons. The very
     // first iteration (the one that operates on the input nodep) is special, as we might or
     // might not need to enqueue nodep->nextp() depending on VisitNext, while in all other

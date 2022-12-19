@@ -23,8 +23,8 @@
 #include <memory>
 #include <sstream>
 
-void V3Waiver::addEntry(V3ErrorCode errorCode, const std::string& filename,
-                        const std::string& str) VL_MT_SAFE_EXCLUDES(V3Waiver::s_mutex) {
+void V3Waiver::addEntry(V3ErrorCode errorCode, const std::string& filename, const std::string& str)
+    VL_MT_SAFE_EXCLUDES(V3Waiver::s_mutex) {
     std::stringstream entry;
     const size_t pos = str.find('\n');
     entry << "lint_off -rule " << errorCode.ascii() << " -file \"*" << filename << "\" -match \""

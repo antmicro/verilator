@@ -307,8 +307,6 @@ class CallAnnotationsValidator:
         assert self._call_location
         ctx = self._call_location.annotations
 
-        if "get" in str(refd.spelling):
-            print(f"ctx is safe: {ctx.is_mt_safe_context()}, annotations is mt safe: {annotations.is_mt_safe_call()}, annotations is mt unsafe: {annotations.is_mt_unsafe_call()}")
         # MT-safe context
         if ctx.is_mt_safe_context():
             is_mt_safe = False
@@ -330,8 +328,6 @@ class CallAnnotationsValidator:
                         return None
 
                 n = find_object_ref(node)
-                if n:
-                    print(f"n: {n}, n kind: {n.kind}")
                 if not n:
                     # we are in constructor and no reference means
                     # we are calling local method. It is MT safe
@@ -349,7 +345,6 @@ class CallAnnotationsValidator:
                 elif n and n.kind == CursorKind.CALL_EXPR and n.referenced:
                     # Call to local method, mt-safe in constructor context
                     # only if this method is also only calling local methods or MT-safe methods
-                    print(f"n: {n.spelling} n kind: {n.kind}")
                     self.dispatch_node_inside_definition_constructor(n)
                     is_mt_safe = True
 
@@ -468,7 +463,6 @@ class CallAnnotationsValidator:
         self._call_location.mt_safe = True
 
         #if str(refd.spelling) == "splitSizeReset":
-        print(f"b: {refd.spelling}, kind: {refd.kind}")
         # Standalone functions and static class methods
         if (refd.kind == CursorKind.FUNCTION_DECL
                 or refd.kind == CursorKind.CXX_METHOD

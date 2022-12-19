@@ -28,21 +28,14 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 // Statics
 
 int V3Error::s_errCount = 0;
-int V3Error::s_warnCount = 0;
 int V3Error::s_debugDefault = 0;
 int V3Error::s_errorLimit = V3Error::MAX_ERRORS;
 bool V3Error::s_warnFatal = true;
-int V3Error::s_tellManual = 0;
 std::ostringstream V3Error::s_errorStr;  // Error string being formed
-V3ErrorCode V3Error::s_errorCode = V3ErrorCode::EC_FATAL;
-bool V3Error::s_errorContexted = false;
-bool V3Error::s_errorSuppressed = false;
-std::array<bool, V3ErrorCode::_ENUM_MAX> V3Error::s_describedEachWarn;
-std::array<bool, V3ErrorCode::_ENUM_MAX> V3Error::s_pretendError;
-bool V3Error::s_describedWarnings = false;
 bool V3Error::s_describedWeb = false;
-V3Error::MessagesSet V3Error::s_messages;
-V3Error::ErrorExitCb V3Error::s_errorExitCb = nullptr;
+std::array<bool, V3ErrorCode::_ENUM_MAX> V3Error::s_describedEachWarn;  // Told user specifics about this warning
+std::array<bool, V3ErrorCode::_ENUM_MAX> V3Error::s_pretendError;  // Pretend this warning is an error
+
 
 struct v3errorIniter {
     v3errorIniter() { V3Error::init(); }
@@ -77,7 +70,7 @@ void V3Error::init() {
     }
 }
 
-string V3Error::lineStr(const char* filename, int lineno) {
+string V3Error::lineStr(const char* filename, int lineno) VL_MT_SAFE {
     std::ostringstream out;
     const char* const fnslashp = std::strrchr(filename, '/');
     if (fnslashp) filename = fnslashp + 1;
@@ -89,7 +82,7 @@ string V3Error::lineStr(const char* filename, int lineno) {
     return out.str();
 }
 
-void V3Error::incErrors() {
+void V3Error::incErrors() VL_MT_SAFE {
     s_errCount++;
     if (errorCount() == errorLimit()) {  // Not >= as would otherwise recurse
         v3fatalExit("Exiting due to too many errors encountered; --error-limit="  //
@@ -109,7 +102,7 @@ void V3Error::abortIfWarnings() {
     }
 }
 
-bool V3Error::isError(V3ErrorCode code, bool supp) {
+bool V3ErrorGuarded::isError(V3ErrorCode code, bool supp) VL_MT_SAFE {
     if (supp) {
         return false;
     } else if (code == V3ErrorCode::USERINFO) {
@@ -124,16 +117,21 @@ bool V3Error::isError(V3ErrorCode code, bool supp) {
         return true;
     } else if (code == V3ErrorCode::EC_ERROR) {
         return true;
-    } else if (code < V3ErrorCode::EC_FIRST_WARN || s_pretendError[code]) {
+    } else if (code < V3ErrorCode::EC_FIRST_WARN || V3Error::pretendError(code)) {
         return true;
     } else {
         return false;
     }
 }
 
-string V3Error::msgPrefix() {
-    const V3ErrorCode code = s_errorCode;
-    const bool supp = s_errorSuppressed;
+string V3Error::msgPrefix() VL_MT_SAFE_EXCLUDES(singleton().m_mutex) {
+    const VerilatedLockGuard guard{singleton().m_mutex};
+    return singleton().msgPrefixNoLock();
+}
+
+string V3ErrorGuarded::msgPrefixNoLock() VL_REQUIRES(m_mutex) VL_MT_SAFE {
+    const V3ErrorCode code = m_errorCode;
+    const bool supp = m_errorSuppressed;
     if (supp) {
         return "-arning-suppressed: ";
     } else if (code == V3ErrorCode::USERINFO) {
@@ -158,9 +156,9 @@ string V3Error::msgPrefix() {
 //======================================================================
 // Abort/exit
 
-void V3Error::vlAbortOrExit() {
+void V3ErrorGuarded::vlAbortOrExit() VL_REQUIRES(m_mutex) {
     if (V3Error::debugDefault()) {
-        std::cerr << msgPrefix() << "Aborting since under --debug" << endl;
+        std::cerr << msgPrefixNoLock() << "Aborting since under --debug" << endl;
         V3Error::vlAbort();
     } else {
         std::exit(1);
@@ -175,27 +173,36 @@ void V3Error::vlAbort() VL_MT_SAFE_EXCLUDES(singleton().m_mutex) {
 //======================================================================
 // Global Functions
 
-void V3Error::suppressThisWarning() {
+void V3Error::suppressThisWarning() VL_MT_SAFE_EXCLUDES(singleton().m_mutex) {
+    const VerilatedLockGuard guard{singleton().m_mutex};
 #ifndef V3ERROR_NO_GLOBAL_
-    V3Stats::addStatSum(std::string{"Warnings, Suppressed "} + s_errorCode.ascii(), 1);
+    V3Stats::addStatSum(std::string{"Warnings, Suppressed "} + singleton().m_errorCode.ascii(), 1);
 #endif
-    s_errorSuppressed = true;
+    singleton().m_errorSuppressed = true;
 }
 
-string V3Error::warnMore() { return string(msgPrefix().size(), ' '); }
+string V3Error::warnMore() VL_MT_SAFE_EXCLUDES(singleton().m_mutex) {
+    const VerilatedLockGuard guard{singleton().m_mutex};
+    return singleton().warnMoreNoLock();
+}
+
+string V3ErrorGuarded::warnMoreNoLock() VL_REQUIRES(m_mutex) VL_MT_SAFE {
+    return string(msgPrefixNoLock().size(), ' ');
+}
 
 // cppcheck-has-bug-suppress constParameter
-void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) {
+void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) VL_MT_SAFE_EXCLUDES(singleton().m_mutex) {
+    VerilatedLockGuard guard{singleton().m_mutex};
 #if defined(__COVERITY__) || defined(__cppcheck__)
     if (s_errorCode == V3ErrorCode::EC_FATAL) __coverity_panic__(x);
 #endif
     // Skip suppressed messages
-    if (s_errorSuppressed
+    if (singleton().m_errorSuppressed
         // On debug, show only non default-off warning to prevent pages of warnings
-        && (!debug() || s_errorCode.defaultsOff()))
+        && (!debug() || singleton().m_errorCode.defaultsOff()))
         return;
-    string msg = msgPrefix() + sstr.str();
-    if (s_errorSuppressed) {  // If suppressed print only first line to reduce verbosity
+    string msg = singleton().msgPrefixNoLock() + sstr.str();
+    if (singleton().m_errorSuppressed) {  // If suppressed print only first line to reduce verbosity
         string::size_type pos;
         if ((pos = msg.find('\n')) != string::npos) {
             msg.erase(pos, msg.length() - pos);
@@ -209,90 +216,94 @@ void V3Error::v3errorEnd(std::ostringstream& sstr, const string& extra) {
         while ((pos = msg.find("\n\n")) != string::npos) msg.erase(pos + 1, 1);
     }
     // Suppress duplicate messages
-    if (s_messages.find(msg) != s_messages.end()) return;
-    s_messages.insert(msg);
+    if (singleton().m_messages.find(msg) != singleton().m_messages.end()) return;
+    singleton().m_messages.insert(msg);
     if (!extra.empty()) {
-        const string extraMsg = warnMore() + extra + "\n";
+        const string extraMsg = singleton().warnMoreNoLock() + extra + "\n";
         const size_t pos = msg.find('\n');
         msg.insert(pos + 1, extraMsg);
     }
     // Output
     if (
 #ifndef V3ERROR_NO_GLOBAL_
-        !(v3Global.opt.quietExit() && s_errorCode == V3ErrorCode::EC_FATALEXIT)
+        !(v3Global.opt.quietExit() && singleton().m_errorCode == V3ErrorCode::EC_FATALEXIT)
 #else
         true
 #endif
     ) {
         std::cerr << msg;
     }
-    if (!s_errorSuppressed
-        && !(s_errorCode == V3ErrorCode::EC_INFO || s_errorCode == V3ErrorCode::USERINFO)) {
-        const bool anError = isError(s_errorCode, s_errorSuppressed);
-        if (s_errorCode >= V3ErrorCode::EC_FIRST_NAMED && !s_describedWeb) {
+    if (!singleton().m_errorSuppressed
+        && !(singleton().m_errorCode == V3ErrorCode::EC_INFO || singleton().m_errorCode == V3ErrorCode::USERINFO)) {
+        const bool anError = singleton().isError(singleton().m_errorCode, singleton().m_errorSuppressed);
+        if (singleton().m_errorCode >= V3ErrorCode::EC_FIRST_NAMED && !s_describedWeb) {
             s_describedWeb = true;
-            std::cerr << warnMore() << "... For " << (anError ? "error" : "warning")
-                      << " description see https://verilator.org/warn/" << s_errorCode.ascii()
+            std::cerr << singleton().warnMoreNoLock() << "... For "
+                      << (anError ? "error" : "warning")
+                      << " description see https://verilator.org/warn/" << singleton().m_errorCode.ascii()
                       << "?v=" << PACKAGE_VERSION_NUMBER_STRING << endl;
         }
-        if (!s_describedEachWarn[s_errorCode] && !s_pretendError[s_errorCode]) {
-            s_describedEachWarn[s_errorCode] = true;
-            if (s_errorCode >= V3ErrorCode::EC_FIRST_WARN && !s_describedWarnings) {
-                s_describedWarnings = true;
-                std::cerr << warnMore() << "... Use \"/* verilator lint_off "
-                          << s_errorCode.ascii()
+        if (!s_describedEachWarn[singleton().m_errorCode] && !s_pretendError[singleton().m_errorCode]) {
+            s_describedEachWarn[singleton().m_errorCode] = true;
+            if (singleton().m_errorCode >= V3ErrorCode::EC_FIRST_WARN && !singleton().m_describedWarnings) {
+                singleton().m_describedWarnings = true;
+                std::cerr << singleton().warnMoreNoLock() << "... Use \"/* verilator lint_off "
+                          << singleton().m_errorCode.ascii()
                           << " */\" and lint_on around source to disable this message." << endl;
             }
-            if (s_errorCode.dangerous()) {
-                std::cerr << warnMore() << "*** See https://verilator.org/warn/"
-                          << s_errorCode.ascii() << " before disabling this,\n";
-                std::cerr << warnMore() << "else you may end up with different sim results."
+            if (singleton().m_errorCode.dangerous()) {
+                std::cerr << singleton().warnMoreNoLock() << "*** See https://verilator.org/warn/"
+                          << singleton().m_errorCode.ascii() << " before disabling this,\n";
+                std::cerr << singleton().warnMoreNoLock() << "else you may end up with different sim results."
                           << endl;
             }
         }
         // If first warning is not the user's fault (internal/unsupported) then give the website
         // Not later warnings, as a internal may be caused by an earlier problem
-        if (s_tellManual == 0) {
-            if (s_errorCode.mentionManual() || sstr.str().find("Unsupported") != string::npos) {
-                s_tellManual = 1;
+        if (singleton().m_tellManual == 0) {
+            if (singleton().m_errorCode.mentionManual() || sstr.str().find("Unsupported") != string::npos) {
+                singleton().m_tellManual = 1;
             } else {
-                s_tellManual = 2;
+                singleton().m_tellManual = 2;
             }
         }
         if (anError) {
+            // We need to unlock lockguard here, as incErrors can call v3errorEnd recursively
+            guard.unlock();
             incErrors();
+            guard.lock();
         } else {
-            incWarnings();
+            singleton().incWarnings();
         }
-        if (s_errorCode == V3ErrorCode::EC_FATAL || s_errorCode == V3ErrorCode::EC_FATALEXIT
-            || s_errorCode == V3ErrorCode::EC_FATALSRC) {
+        if (singleton().m_errorCode == V3ErrorCode::EC_FATAL || singleton().m_errorCode == V3ErrorCode::EC_FATALEXIT
+            || singleton().m_errorCode == V3ErrorCode::EC_FATALSRC) {
             static bool inFatal = false;
             if (!inFatal) {
                 inFatal = true;
-                if (s_tellManual == 1) {
-                    std::cerr << warnMore()
+                if (singleton().m_tellManual == 1) {
+                    std::cerr << singleton().warnMoreNoLock()
                               << "... See the manual at https://verilator.org/verilator_doc.html "
                                  "for more assistance."
                               << endl;
-                    s_tellManual = 2;
+                    singleton().m_tellManual = 2;
                 }
 #ifndef V3ERROR_NO_GLOBAL_
                 if (dumpTree()) {
                     v3Global.rootp()->dumpTreeFile(v3Global.debugFilename("final.tree", 990));
                 }
                 if (debug()) {
-                    if (s_errorExitCb) s_errorExitCb();
+                    if (singleton().m_errorExitCb) singleton().m_errorExitCb();
                     V3Stats::statsFinalAll(v3Global.rootp());
                     V3Stats::statsReport();
                 }
 #endif
             }
 
-            vlAbortOrExit();
+            singleton().vlAbortOrExit();
         } else if (anError) {
             // We don't dump tree on any error because a Visitor may be in middle of
             // a tree cleanup and cause a false broken problem.
-            if (s_errorExitCb) s_errorExitCb();
+            if (singleton().m_errorExitCb) singleton().m_errorExitCb();
         }
     }
 }

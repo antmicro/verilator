@@ -124,6 +124,23 @@ private:
                 && !nodep->stmtsp()->nextp());  // Has only one item
     }
 
+    void renameRefsInNext(AstNode* nodep, const std::string& oldName, const std::string& newName) {
+        if (!nodep) return;
+        if (VN_IS(nodep, Var) && nodep->name() == oldName) {
+            // Variable overwritten, don't go further
+            return;
+        }
+        if ((VN_IS(nodep, ParseRef) || VN_IS(nodep, VarRef)) && nodep->name() == oldName) {
+            nodep->name(newName);
+        }
+
+        renameRefsInNext(nodep->op1p(), oldName, newName);
+        renameRefsInNext(nodep->op2p(), oldName, newName);
+        renameRefsInNext(nodep->op3p(), oldName, newName);
+        renameRefsInNext(nodep->op4p(), oldName, newName);
+        renameRefsInNext(nodep->nextp(), oldName, newName);
+    }
+
     // VISITs
     void visit(AstNodeFTask* nodep) override {
         if (!nodep->user1SetOnce()) {  // Process only once.
@@ -205,6 +222,14 @@ private:
             } else {
                 nodep->lifetime(m_lifetime);
             }
+        }
+        if (nodep->lifetime().isStatic() && m_ftaskp) {
+            const std::string oldName = nodep->name();
+            std::string newName = m_ftaskp->name() + "__static__" + oldName;
+            nodep->name(newName);
+            renameRefsInNext(nodep, oldName, newName);
+            nodep->unlinkFrBack();
+            m_ftaskp->addHereThisAsNext(nodep);
         }
         if (nodep->isParam() && !nodep->valuep()
             && nodep->fileline()->language() < V3LangCode::L1800_2009) {

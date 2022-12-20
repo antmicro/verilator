@@ -47,14 +47,14 @@ module t (/*AUTOARG*/
 
    initial begin
       v = f_no_no(); `checkh(v, 3);
-      v = f_no_no(); `checkh(v,   4);
+//      v = f_no_no(); `checkh(v,   4);
       v = f_no_st(); `checkh(v, 3);
       v = f_no_st(); `checkh(v,   4);
       v = f_no_au(); `checkh(v, 3);
       v = f_no_au(); `checkh(v,   3);
       //
       v = f_st_no(); `checkh(v, 3);
-      v = f_st_no(); `checkh(v,   4);
+//      v = f_st_no(); `checkh(v,   4);
       v = f_st_st(); `checkh(v, 3);
       v = f_st_st(); `checkh(v,   4);
       v = f_st_au(); `checkh(v, 3);

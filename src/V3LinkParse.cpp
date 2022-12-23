@@ -146,10 +146,10 @@ private:
             VL_RESTORER(m_lifetime);
             {
                 m_ftaskp = nodep;
-                m_lifetime = nodep->lifetime();
-                if (m_lifetime.isNone()) {
-                    // Automatic always until we support static
-                    m_lifetime = VLifetime::AUTOMATIC;
+                if (nodep->lifetime().isNone()) {
+                    nodep->lifetime(m_lifetime);
+                } else {
+                    m_lifetime = nodep->lifetime();
                 }
                 iterateChildren(nodep);
             }
@@ -212,16 +212,7 @@ private:
 
     void visit(AstVar* nodep) override {
         cleanFileline(nodep);
-        if (nodep->lifetime().isNone()) {
-            if (m_ftaskp) {
-                if (m_ftaskp->lifetime().isNone())
-                    nodep->lifetime(VLifetime::STATIC);
-                else
-                    nodep->lifetime(m_ftaskp->lifetime());
-            } else {
-                nodep->lifetime(m_lifetime);
-            }
-        }
+        if (nodep->lifetime().isNone()) { nodep->lifetime(m_lifetime); }
         if (nodep->lifetime().isStatic() && m_ftaskp) {
             const std::string oldName = nodep->name();
             std::string newName = m_ftaskp->name() + "__static__" + oldName;

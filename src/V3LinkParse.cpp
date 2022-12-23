@@ -214,7 +214,10 @@ private:
         cleanFileline(nodep);
         if (nodep->lifetime().isNone()) {
             if (m_ftaskp) {
-                nodep->lifetime(VLifetime::AUTOMATIC);
+                if (m_ftaskp->lifetime().isNone())
+                    nodep->lifetime(VLifetime::STATIC);
+                else
+                    nodep->lifetime(m_ftaskp->lifetime());
             } else {
                 nodep->lifetime(m_lifetime);
             }

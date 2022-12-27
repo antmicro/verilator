@@ -212,7 +212,9 @@ private:
 
     void visit(AstVar* nodep) override {
         cleanFileline(nodep);
-        if (nodep->lifetime().isNone()) { nodep->lifetime(m_lifetime); }
+        if (nodep->lifetime().isNone() && nodep->varType() != VVarType::PORT) {
+            nodep->lifetime(m_lifetime);
+        }
         if (nodep->lifetime().isStatic() && m_ftaskp) {
             const std::string oldName = nodep->name();
             std::string newName = m_ftaskp->name() + "__static__" + oldName;

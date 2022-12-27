@@ -128,7 +128,9 @@ private:
             // Variable overwritten, don't go further
             return;
         }
-        if (VN_IS(nodep, ParseRef) && nodep->name() == oldName) nodep->name(newName);
+        if ((VN_IS(nodep, ParseRef) || VN_IS(nodep, VarRef)) && nodep->name() == oldName) {
+            nodep->name(newName);
+        }
 
         renameRefsInNext(nodep->op1p(), oldName, newName);
         renameRefsInNext(nodep->op2p(), oldName, newName);

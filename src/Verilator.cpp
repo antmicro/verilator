@@ -143,15 +143,17 @@ static void process() {
     V3LinkLValue::linkLValue(v3Global.rootp());
     // Convert return/continue/disable to jumps
     V3LinkJump::linkJump(v3Global.rootp());
+
+    // Remove parameters by cloning modules to de-parameterized versions
+    // This requires some width calculations and constant propagation
+    V3Param::param(v3Global.rootp());
+
     // Convert --/++ to normal operations. Must be after LinkJump.
     V3LinkInc::linkIncrements(v3Global.rootp());
     V3Error::abortIfErrors();
 
     if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "Link");
 
-    // Remove parameters by cloning modules to de-parameterized versions
-    //   This requires some width calculations and constant propagation
-    V3Param::param(v3Global.rootp());
     V3LinkDot::linkDotParamed(v3Global.rootp());  // Cleanup as made new modules
     V3Error::abortIfErrors();
 

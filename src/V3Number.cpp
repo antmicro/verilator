@@ -76,7 +76,7 @@ constexpr int MAX_SPRINTF_DOUBLE_SIZE
 //======================================================================
 // Errors
 
-void V3Number::v3errorEnd(const std::ostringstream& str) const VL_MT_SAFE {
+void V3Number::v3errorEnd(const std::ostringstream& str) const VL_REQUIRES(V3Error::s().m_mutex) {
     std::ostringstream nsstr;
     nsstr << str.str();
     if (m_nodep) {
@@ -84,11 +84,12 @@ void V3Number::v3errorEnd(const std::ostringstream& str) const VL_MT_SAFE {
     } else if (m_fileline) {
         m_fileline->v3errorEnd(nsstr);
     } else {
-        V3Error::v3errorEnd(nsstr);
+        V3Error::s().v3errorEnd(nsstr);
     }
 }
 
-void V3Number::v3errorEndFatal(const std::ostringstream& str) const VL_MT_SAFE {
+void V3Number::v3errorEndFatal(const std::ostringstream& str) const
+    VL_REQUIRES(V3Error::s().m_mutex) {
     v3errorEnd(str);
     assert(0);  // LCOV_EXCL_LINE
     VL_UNREACHABLE;
@@ -245,14 +246,15 @@ void V3Number::create(const char* sourcep) {
                     opAdd(product, addend);
                     if (product.bitsValue(width(), 4)) {  // Overflowed
                         static int warned = 0;
-                        v3error("Too many digits for "
-                                << width() << " bit number: " << sourcep << '\n'
-                                << ((!sized() && !warned++) ? (
-                                        V3Error::warnMore() + "... As that number was unsized"
-                                        + " ('d...) it is limited to 32 bits (IEEE 1800-2017 "
-                                          "5.7.1)\n"
-                                        + V3Error::warnMore() + "... Suggest adding a size to it.")
-                                                            : ""));
+                        v3error(
+                            "Too many digits for "
+                            << width() << " bit number: " << sourcep << '\n'
+                            << ((!sized() && !warned++) ? (
+                                    V3Error::s().warnMore() + "... As that number was unsized"
+                                    + " ('d...) it is limited to 32 bits (IEEE 1800-2017 "
+                                      "5.7.1)\n"
+                                    + V3Error::s().warnMore() + "... Suggest adding a size to it.")
+                                                        : ""));
                         while (*(cp + 1)) cp++;  // Skip ahead so don't get multiple warnings
                     }
                 }

@@ -99,13 +99,13 @@ class Graph final : public V3Graph {
         // TODO: 'typeName' is an internal thing. This should be more human readable.
         if (LogicVertex* const lvtxp = dynamic_cast<LogicVertex*>(vtxp)) {
             AstNode* const logicp = lvtxp->logicp();
-            std::cerr << logicp->fileline()->warnOther()
+            std::cerr << logicp->fileline()->warnOtherGuarded()
                       << "     Example path: " << logicp->typeName() << endl;
         } else {
             VarVertex* const vvtxp = dynamic_cast<VarVertex*>(vtxp);
             UASSERT(vvtxp, "Cannot be anything else");
             AstVarScope* const vscp = vvtxp->vscp();
-            std::cerr << vscp->fileline()->warnOther()
+            std::cerr << vscp->fileline()->warnOtherGuarded()
                       << "     Example path: " << vscp->prettyName() << endl;
         }
     }

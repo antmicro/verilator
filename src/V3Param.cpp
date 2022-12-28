@@ -908,7 +908,7 @@ class ParamVisitor final : public VNVisitor {
         std::multimap<int, AstNodeModule*> workQueue;
         workQueue.emplace(nodep->level(), nodep);
         m_generateHierName = "";
-        m_iterateModule = true;
+        m_iterateModule = false;
 
         // Visit all cells under module, recursively
         do {
@@ -995,7 +995,6 @@ class ParamVisitor final : public VNVisitor {
     void visit(AstNodeModule* nodep) override {
         if (nodep->recursiveClone()) nodep->dead(true);  // Fake, made for recursive elimination
         if (nodep->dead()) return;  // Marked by LinkDot (and above)
-
         if (m_iterateModule) {  // Iterating body
             UINFO(4, " MOD-under-MOD.  " << nodep << endl);
             m_workQueue.emplace(nodep->level(), nodep);  // Delay until current module is done
@@ -1004,7 +1003,6 @@ class ParamVisitor final : public VNVisitor {
 
         // Start traversal at root-like things
         if (nodep->level() <= 2  // Haven't added top yet, so level 2 is the top
-            || VN_IS(nodep, Class)  // Nor moved classes
             || VN_IS(nodep, Package)) {  // Likewise haven't done wrapTopPackages yet
             visitCells(nodep);
         }

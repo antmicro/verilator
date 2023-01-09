@@ -323,7 +323,7 @@ public:
     /// When building an error, prefix for printing secondary information
     /// from a different FileLine than the original error
     string warnOther() const VL_REQUIRES(V3Error::s().m_mutex);
-    string warnOtherGuarded() const VL_MT_SAFE_EXCLUDES(V3Error::s().m_mutex);
+    string warnOtherGuarded() const VL_EXCLUDES(V3Error::s().m_mutex) VL_MT_UNSAFE;
     /// When building an error, current location in include etc
     /// If not used in a given error, automatically pasted at end of error
     string warnContextPrimary() const VL_REQUIRES(V3Error::s().m_mutex) {

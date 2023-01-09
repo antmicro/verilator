@@ -452,10 +452,12 @@ public:
     }
 
     // When printing an error/warning, print prefix for multiline message
-    static string warnMore() VL_REQUIRES(s().m_mutex) {
-        return s().warnMore();
-    }
-    static string warnMoreGuarded() VL_MT_SAFE_EXCLUDES(s().m_mutex) {
+    static string warnMore() VL_REQUIRES(s().m_mutex) { return s().warnMore(); }
+    // This function should only be used when it is impossible to
+    // generate whole error message inside v3warn macros and it needs to be
+    // streamed directly to cerr.
+    // Use with caution as this function isn't MT_SAFE.
+    static string warnMoreGuarded() VL_EXCLUDES(s().m_mutex) VL_MT_UNSAFE {
         const VerilatedLockGuard guard{s().m_mutex};
         return s().warnMore();
     }

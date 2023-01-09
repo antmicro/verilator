@@ -475,7 +475,10 @@ public:
     }
 
     // When printing an error/warning, print prefix for multiline message
-    static string warnMore() VL_MT_SAFE_EXCLUDES(s().m_mutex) {
+    static string warnMore() VL_REQUIRES(s().m_mutex) {
+        return s().warnMore();
+    }
+    static string warnMoreGuarded() VL_MT_SAFE_EXCLUDES(s().m_mutex) {
         const VerilatedLockGuard guard{s().m_mutex};
         return s().warnMore();
     }

@@ -340,7 +340,8 @@ class CallAnnotationsValidator:
                     # we are calling local method. It is MT safe
                     # only if this method is also only calling local methods or
                     # MT-safe methods
-                    self.iterate_children(refd.get_children(), self.dispatch_node_inside_definition)
+                    self.iterate_children(refd.get_children(),
+                                          self.dispatch_node_inside_definition)
                     is_mt_safe = True
                 # class/struct member
                 if refn and refn.kind == CursorKind.MEMBER_REF_EXPR and refn.referenced:
@@ -389,7 +390,8 @@ class CallAnnotationsValidator:
 
         # Constructors are always OK in MT-safe context.
         if ctx.is_mt_safe_context():
-            self._constructor_context = FunctionInfo.from_node(refd, refd, annotations)
+            self._constructor_context = FunctionInfo.from_node(
+                refd, refd, annotations)
             self.iterate_children(refd.get_children(),
                                   self.dispatch_node_inside_definition)
             self._constructor_context = None

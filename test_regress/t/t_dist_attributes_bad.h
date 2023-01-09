@@ -282,34 +282,24 @@ public:
 
 class ConstructorCallsUnsafeLocalFunction {
 public:
-    void unsafe_function() VL_MT_UNSAFE {};
-    ConstructorCallsUnsafeLocalFunction() {
-        unsafe_function();
-    }
+    void unsafe_function() VL_MT_UNSAFE{};
+    ConstructorCallsUnsafeLocalFunction() { unsafe_function(); }
 };
 class ConstructorCallsStaticFunctionNoAnnotation {
 public:
-    ConstructorCallsStaticFunctionNoAnnotation() {
-        static_function();
-    }
+    ConstructorCallsStaticFunctionNoAnnotation() { static_function(); }
 };
 
 class ConstructorCallsLocalFunction {
 public:
     void local_function() {}
-    ConstructorCallsLocalFunction() {
-        local_function();
-    }
+    ConstructorCallsLocalFunction() { local_function(); }
 };
 
 class ConstructorCallsLocalFunctionCallsGlobal {
 public:
-    void local_function() {
-        static_function();
-    }
-    ConstructorCallsLocalFunctionCallsGlobal() {
-        local_function();
-    }
+    void local_function() { static_function(); }
+    ConstructorCallsLocalFunctionCallsGlobal() { local_function(); }
 };
 
 class SafeFunction {
@@ -323,47 +313,37 @@ public:
 
 class ConstructorWithPointer {
 public:
-    ConstructorWithPointer(SafeFunction* p) {p->safe_function();}
+    ConstructorWithPointer(SafeFunction* p) { p->safe_function(); }
 };
 
 class ConstructorWithReference {
 public:
-    ConstructorWithReference(SafeFunction& p) {p.safe_function();}
+    ConstructorWithReference(SafeFunction& p) { p.safe_function(); }
 };
 class ConstructorWithUnsafePointer {
 public:
-    ConstructorWithUnsafePointer(UnsafeFunction* p) {p->unsafe_function();}
+    ConstructorWithUnsafePointer(UnsafeFunction* p) { p->unsafe_function(); }
 };
 
 class ConstructorWithUnsafeReference {
 public:
-    ConstructorWithUnsafeReference(UnsafeFunction& p) {p.unsafe_function();}
+    ConstructorWithUnsafeReference(UnsafeFunction& p) { p.unsafe_function(); }
 };
 
 class ConstructorCallsLocalCallsGlobal {
-    void local_function2() {
-        static_function();
-    }
-    void local_function() {
-        local_function2();
-    }
+    void local_function2() { static_function(); }
+    void local_function() { local_function2(); }
+
 public:
-    ConstructorCallsLocalCallsGlobal() {
-        local_function();
-    }
+    ConstructorCallsLocalCallsGlobal() { local_function(); }
 };
 
 class ConstructorCallsLocalCallsClassGlobal {
-    void local_function2() {
-        StaticClass::static_class_function();
-    }
-    void local_function() {
-        local_function2();
-    }
+    void local_function2() { StaticClass::static_class_function(); }
+    void local_function() { local_function2(); }
+
 public:
-    ConstructorCallsLocalCallsClassGlobal() {
-        local_function();
-    }
+    ConstructorCallsLocalCallsClassGlobal() { local_function(); }
 };
 
 class TestClassConstructor {
@@ -380,7 +360,7 @@ class TestClassConstructor {
         ConstructorCallsLocalFunction f{};
     }
     void safe_function_calls_constructor_with_pointer_good() VL_MT_SAFE {
-        SafeFunction *i = new SafeFunction{};
+        SafeFunction* i = new SafeFunction{};
         ConstructorWithPointer f{i};
     }
     void safe_function_calls_constructor_with_reference_good() VL_MT_SAFE {
@@ -388,7 +368,7 @@ class TestClassConstructor {
         ConstructorWithReference f{i};
     }
     void safe_function_calls_constructor_with_unsafepointer_bad() VL_MT_SAFE {
-        UnsafeFunction *i = new UnsafeFunction{};
+        UnsafeFunction* i = new UnsafeFunction{};
         ConstructorWithUnsafePointer f{i};
     }
     void safe_function_calls_constructor_with_unsafereference_bad() VL_MT_SAFE {

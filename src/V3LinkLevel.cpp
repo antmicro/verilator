@@ -63,8 +63,7 @@ void V3LinkLevel::modSortByLevel() {
                                       VL_REQUIRES(V3Error::s().m_mutex) -> std::string {
                 std::stringstream ss;
                 for (AstNode* alsop : tops) {
-                    ss << std::endl
-                       << warnMore << "... Top module " << alsop->prettyNameQ() << endl
+                    ss << warnMore << "... Top module " << alsop->prettyNameQ() << endl
                        << alsop->warnContextSecondary();
                 }
                 return ss.str();
@@ -75,6 +74,7 @@ void V3LinkLevel::modSortByLevel() {
                                        << "... Suggest see manual; fix the duplicates, or use "
                                           "--top-module to select top."
                                        << V3Error::s().warnContextNone()
+                                       << V3Error::warnAdditionalInfo()
                                        << warnTopModules(secp->warnMore(), tops));
         }
     }

@@ -457,10 +457,14 @@ public:
     // generate whole error message inside v3warn macros and it needs to be
     // streamed directly to cerr.
     // Use with caution as this function isn't MT_SAFE.
-    static string warnMoreGuarded() VL_EXCLUDES(s().m_mutex) VL_MT_UNSAFE {
+    static string warnMoreStandalone() VL_EXCLUDES(s().m_mutex) VL_MT_UNSAFE {
         const VerilatedLockGuard guard{s().m_mutex};
         return s().warnMore();
     }
+    // This function marks place in error message from which point message
+    // should be printed after information about error code.
+    // This post-processing is done in v3errorEnd function.
+    static string warnAdditionalInfo() VL_MT_SAFE { return "__WARNADDITIONALINFO__"; }
     /// When building an error, don't show context info
     static string warnContextNone() {
         V3Error::errorContexted(true);

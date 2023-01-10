@@ -134,11 +134,21 @@ void V3ErrorGuarded::v3errorEnd(std::ostringstream& sstr, const string& extra)
             msg += "...";
         }
     }
+    string msg_additional;
+    {
+        string::size_type pos;
+        if ((pos = msg.find(V3Error::warnAdditionalInfo())) != string::npos) {
+            msg_additional = msg.substr(pos + V3Error::warnAdditionalInfo().size());
+            msg.erase(pos);
+        }
+    }
     // Trailing newline (generally not on messages) & remove dup newlines
     {
         msg += '\n';  // Trailing newlines generally not put on messages so add
         string::size_type pos;
         while ((pos = msg.find("\n\n")) != string::npos) msg.erase(pos + 1, 1);
+        while ((pos = msg_additional.find("\n\n")) != string::npos)
+            msg_additional.erase(pos + 1, 1);
     }
     // Suppress duplicate messages
     if (!m_messages.insert(msg).second) return;
@@ -181,6 +191,7 @@ void V3ErrorGuarded::v3errorEnd(std::ostringstream& sstr, const string& extra)
                           << endl;
             }
         }
+        if (!msg_additional.empty()) { std::cerr << msg_additional; }
         // If first warning is not the user's fault (internal/unsupported) then give the website
         // Not later warnings, as a internal may be caused by an earlier problem
         if (tellManual() == 0) {

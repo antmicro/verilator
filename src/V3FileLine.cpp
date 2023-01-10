@@ -415,7 +415,7 @@ string FileLine::warnOther() const VL_REQUIRES(V3Error::s().m_mutex) {
         return V3Error::s().warnMore();
     }
 };
-string FileLine::warnOtherGuarded() const VL_EXCLUDES(V3Error::s().m_mutex) VL_MT_UNSAFE {
+string FileLine::warnOtherStandalone() const VL_EXCLUDES(V3Error::s().m_mutex) VL_MT_UNSAFE {
     const VerilatedLockGuard guard{V3Error::s().m_mutex};
     return warnOther();
 }

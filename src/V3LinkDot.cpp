@@ -2351,16 +2351,18 @@ private:
                 // if (debug() >= 9) nodep->dumpTree("-  dot-rho: ");
             }
             if (start) {
-                AstNode* newp;
-                if (m_ds.m_dotErr) {
-                    newp = new AstConst{nodep->fileline(), AstConst::BitFalse{}};
-                } else {
-                    // RHS is what we're left with
-                    newp = nodep->rhsp()->unlinkFrBack();
+                if (!m_ds.m_unresolved) {
+                    AstNode* newp;
+                    if (m_ds.m_dotErr) {
+                        newp = new AstConst{nodep->fileline(), AstConst::BitFalse{}};
+                    } else {
+                        // RHS is what we're left with
+                        newp = nodep->rhsp()->unlinkFrBack();
+                    }
+                    if (debug() >= 9) newp->dumpTree("-  dot-out: ");
+                    nodep->replaceWith(newp);
+                    VL_DO_DANGLING(pushDeletep(nodep), nodep);
                 }
-                if (debug() >= 9) newp->dumpTree("-  dot-out: ");
-                nodep->replaceWith(newp);
-                VL_DO_DANGLING(pushDeletep(nodep), nodep);
             } else {  // Dot midpoint
                 AstNodeExpr* newp = nodep->rhsp()->unlinkFrBack();
                 if (m_ds.m_unresolved) {

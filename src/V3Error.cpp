@@ -219,13 +219,21 @@ void V3ErrorGuarded::v3errorEnd(std::ostringstream& sstr, const string& extra)
                     tellManual(2);
                 }
 #ifndef V3ERROR_NO_GLOBAL_
-                if (dumpTree()) {
-                    v3Global.rootp()->dumpTreeFile(v3Global.debugFilename("final.tree", 990));
-                }
-                if (debug()) {
-                    execErrorExitCb();
-                    V3Stats::statsFinalAll(v3Global.rootp());
-                    V3Stats::statsReport();
+                if (dumpTree() || debug()) {
+                    V3ThreadPool::s().requestExclusiveAccess([&]() VL_REQUIRES(m_mutex) {
+                        if (dumpTree()) {
+                            v3Global.rootp()->dumpTreeFile(
+                                v3Global.debugFilename("final.tree", 990));
+                        }
+                        if (debug()) {
+                            execErrorExitCb();
+                            V3Stats::statsFinalAll(v3Global.rootp());
+                            V3Stats::statsReport();
+                        }
+                        // Abort in exclusive access to make sure other threads
+                        // doesn't change error code
+                        vlAbortOrExit();
+                    });
                 }
 #endif
             }

@@ -161,13 +161,6 @@
 # define VL_MT_SAFE
 #endif
 // Comment tag that function is threadsafe, only
-// when other theads doesn't change AST tree
-#if defined(__clang__)
-# define VL_MT_SAFE_STABLE_TREE __attribute__((annotate("MT_SAFE")))
-#else
-# define VL_MT_SAFE_STABLE_TREE
-#endif
-// Comment tag that function is threadsafe, only
 // during normal operation (post-init)
 #if defined(__clang__)
 # define VL_MT_SAFE_POSTINIT __attribute__((annotate("MT_SAFE_POSTINIT")))

@@ -24,6 +24,9 @@
 
 // Limited V3 headers here - this is a base class for Vlc etc
 #include "V3String.h"
+#ifndef V3ERROR_NO_GLOBAL_
+#include "V3ThreadPool.h"
+#endif
 
 #include <array>
 #include <bitset>
@@ -484,7 +487,7 @@ public:
     static void vlAbort();
     // static, but often overridden in classes.
     static void v3errorEnd(std::ostringstream& sstr, const string& extra = "")
-        VL_MT_SAFE_EXCLUDES(s().m_mutex) VL_MT_SAFE_STABLE_TREE {
+        VL_MT_SAFE_EXCLUDES(s().m_mutex) VL_MT_SAFE {
         const VerilatedLockGuard guard{s().m_mutex};
         s().v3errorEnd(sstr, extra);
     }
@@ -492,22 +495,29 @@ public:
     // due to bug in gcc causing internal error when backtrace is printed.
     // Instead use this wrapper.
     static void v3errorEndGuardedCall(std::ostringstream& sstr, const string& extra = "")
-        VL_REQUIRES(s().m_mutex) VL_MT_SAFE_STABLE_TREE {
+        VL_REQUIRES(s().m_mutex) VL_MT_SAFE {
         s().v3errorEnd(sstr, extra);
     }
 };
 
 // Global versions, so that if the class doesn't define a operator, we get the functions anyways.
-inline void v3errorEnd(std::ostringstream& sstr)
-    VL_REQUIRES(V3Error::s().m_mutex) VL_MT_SAFE_STABLE_TREE {
+inline void v3errorEnd(std::ostringstream& sstr) VL_REQUIRES(V3Error::s().m_mutex) VL_MT_SAFE {
     V3Error::v3errorEndGuardedCall(sstr);
 }
 inline void v3errorEndFatal(std::ostringstream& sstr)
-    VL_REQUIRES(V3Error::s().m_mutex) VL_MT_SAFE_STABLE_TREE {
+    VL_REQUIRES(V3Error::s().m_mutex) VL_MT_SAFE {
     V3Error::v3errorEndGuardedCall(sstr);
     assert(0);  // LCOV_EXCL_LINE
     VL_UNREACHABLE;
 }
+
+#ifndef V3ERROR_NO_GLOBAL_
+#define V3ErrorLockAndCheckStopRequested \
+    V3Error::s().m_mutex.lockCheckStopRequest( \
+        []() -> void { V3ThreadPool::s().waitIfStopRequested(); })
+#else
+#define V3ErrorLockAndCheckStopRequested V3Error::s().m_mutex.lock()
+#endif
 
 // Theses allow errors using << operators: v3error("foo"<<"bar");
 // Careful, you can't put () around msg, as you would in most macro definitions
@@ -518,11 +528,11 @@ inline void v3errorEndFatal(std::ostringstream& sstr)
 // but we are unlocking the mutex after function using comma operator.
 // This way macros should also work when they are in 'if' stmt without '{}'.
 #define v3warnCode(code, msg) \
-    v3errorEnd((V3Error::s().m_mutex.lock(), V3Error::s().v3errorPrep(code), \
+    v3errorEnd((V3ErrorLockAndCheckStopRequested, V3Error::s().v3errorPrep(code), \
                 (V3Error::s().v3errorStr() << msg), V3Error::s().v3errorStr())), \
         V3Error::s().m_mutex.unlock()
 #define v3warnCodeFatal(code, msg) \
-    v3errorEndFatal((V3Error::s().m_mutex.lock(), V3Error::s().v3errorPrep(code), \
+    v3errorEndFatal((V3ErrorLockAndCheckStopRequested, V3Error::s().v3errorPrep(code), \
                      (V3Error::s().v3errorStr() << msg), V3Error::s().v3errorStr())), \
         V3Error::s().m_mutex.unlock()
 #define v3warn(code, msg) v3warnCode(V3ErrorCode::code, msg)
@@ -537,7 +547,7 @@ inline void v3errorEndFatal(std::ostringstream& sstr)
                     __FILE__ << ":" << std::dec << __LINE__ << ": " << msg)
 // Use this when normal v3fatal is called in static method that overrides fileline.
 #define v3fatalStatic(msg) \
-    (::v3errorEndFatal((V3Error::s().m_mutex.lock(), \
+    (::v3errorEndFatal((V3ErrorLockAndCheckStopRequested, \
                         V3Error::s().v3errorPrep(V3ErrorCode::EC_FATAL), \
                         (V3Error::s().v3errorStr() << msg), V3Error::s().v3errorStr()))), \
         V3Error::s().m_mutex.unlock()

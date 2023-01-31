@@ -56,6 +56,7 @@ public:
     // METHODS
     V3OutCFile* ofp() const VL_MT_SAFE { return m_ofp; }
     void puts(const string& str) { ofp()->puts(str); }
+    void putsHeader() { ofp()->putsHeader(); }
     void putbs(const string& str) { ofp()->putbs(str); }
     void putsDecoration(const string& str) {
         if (v3Global.opt.decoration()) puts(str);
@@ -105,7 +106,8 @@ public:
                && (varp->basicp() && !varp->basicp()->isOpaque());  // Aggregates can't be anon
     }
 
-    static AstCFile* newCFile(const string& filename, bool slow, bool source, bool add = true);
+    static AstCFile* newCFile(const string& filename, bool slow, bool source);
+    static AstCFile* createCFile(const string& filename, bool slow, bool source) VL_MT_SAFE;
     string cFuncArgs(const AstCFunc* nodep);
     void emitCFuncHeader(const AstCFunc* funcp, const AstNodeModule* modp, bool withScope);
     void emitCFuncDecl(const AstCFunc* funcp, const AstNodeModule* modp, bool cLinkage = false);

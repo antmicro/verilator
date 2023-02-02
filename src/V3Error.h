@@ -465,8 +465,8 @@ public:
         return s().warnMore();
     }
     // This function marks place in error message from which point message
-    // should be printed after information about error code.
-    // This post-processing is done in v3errorEnd function.
+    // should be printed after information on the error code.
+    // The post-processing is done in v3errorEnd function.
     static string warnAdditionalInfo() VL_MT_SAFE { return "__WARNADDITIONALINFO__"; }
     /// When building an error, don't show context info
     static string warnContextNone() {
@@ -491,22 +491,15 @@ public:
         const VerilatedLockGuard guard{s().m_mutex};
         s().v3errorEnd(sstr, extra);
     }
-    // We can't call 's().v3errorEnd' directly in 'v3ErrorEnd'/'v3errorEndFatal',
-    // due to bug in gcc causing internal error when backtrace is printed.
-    // Instead use this wrapper.
-    static void v3errorEndGuardedCall(std::ostringstream& sstr, const string& extra = "")
-        VL_REQUIRES(s().m_mutex) VL_MT_SAFE {
-        s().v3errorEnd(sstr, extra);
-    }
 };
 
 // Global versions, so that if the class doesn't define a operator, we get the functions anyways.
 inline void v3errorEnd(std::ostringstream& sstr) VL_REQUIRES(V3Error::s().m_mutex) VL_MT_SAFE {
-    V3Error::v3errorEndGuardedCall(sstr);
+    V3Error::s().v3errorEnd(sstr);
 }
 inline void v3errorEndFatal(std::ostringstream& sstr)
     VL_REQUIRES(V3Error::s().m_mutex) VL_MT_SAFE {
-    V3Error::v3errorEndGuardedCall(sstr);
+    V3Error::s().v3errorEnd(sstr);
     assert(0);  // LCOV_EXCL_LINE
     VL_UNREACHABLE;
 }

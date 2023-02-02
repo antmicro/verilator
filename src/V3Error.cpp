@@ -231,7 +231,7 @@ void V3ErrorGuarded::v3errorEnd(std::ostringstream& sstr, const string& extra)
                             V3Stats::statsReport();
                         }
                         // Abort in exclusive access to make sure other threads
-                        // doesn't change error code
+                        // don't change error code
                         vlAbortOrExit();
                     });
                 }

@@ -488,8 +488,8 @@ public:
         return s().warnMore();
     }
     // This function marks place in error message from which point message
-    // should be printed after information about error code.
-    // This post-processing is done in v3errorEnd function.
+    // should be printed after information on the error code.
+    // The post-processing is done in v3errorEnd function.
     static string warnAdditionalInfo() VL_MT_SAFE { return "__WARNADDITIONALINFO__"; }
     /// When building an error, don't show context info
     static string warnContextNone() {
@@ -515,7 +515,8 @@ public:
         s().v3errorEnd(sstr, extra);
     }
     // We can't call 's().v3errorEnd' directly in 'v3ErrorEnd'/'v3errorEndFatal',
-    // due to bug in gcc causing internal error when backtrace is printed.
+    // due to bug in GCC (tested on 11.3.0 version with --enable-m32)
+    // causing internal error when backtrace is printed.
     // Instead use this wrapper.
     static void v3errorEndGuardedCall(std::ostringstream& sstr, const string& extra = "")
         VL_REQUIRES(s().m_mutex) VL_MT_SAFE {

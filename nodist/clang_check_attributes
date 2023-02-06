@@ -341,7 +341,8 @@ class CallAnnotationsValidator:
                     # we are calling local method. It is MT safe
                     # only if this method is also only calling local methods or
                     # MT-safe methods
-                    self.iterate_children(refd.get_children(), self.dispatch_node_inside_definition)
+                    self.iterate_children(refd.get_children(),
+                                          self.dispatch_node_inside_definition)
                     is_mt_safe = True
                 # class/struct member
                 elif refn and refn.kind == CursorKind.MEMBER_REF_EXPR and refn.referenced:

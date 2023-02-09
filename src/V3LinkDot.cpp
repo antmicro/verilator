@@ -2026,6 +2026,8 @@ private:
     int m_modportNum = 0;  // Uniqueify modport numbers
     bool m_inSens = false;  // True if in senitem
     std::set<std::string> m_ifClassImpNames;  // Names imported from interface class
+    bool m_extendsParam
+        = false;  // True if current class has a parameter as its (possibly indirect) base class
 
     struct DotStates {
         DotPosition m_dotPos;  // Scope part of dotted resolution
@@ -2213,6 +2215,7 @@ private:
                                    = VN_CAST(foundp->nodep(), ParamTypeDType)) {
                             if (m_statep->forPrimary()) {
                                 // Extending has to be handled after V3Param.cpp
+                                m_extendsParam = true;
                                 return;
                             } else {
                                 AstNodeDType* const paramTypep = paramp->getChildDTypep();
@@ -2887,6 +2890,7 @@ private:
         if (start) m_ds = lastStates;
     }
     void visit(AstClassOrPackageRef* nodep) override {
+        nodep->user3SetOnce();
         if (AstParamTypeDType* const paramp
             = VN_CAST(nodep->classOrPackageNodep(), ParamTypeDType)) {
             iterate(paramp);
@@ -3337,6 +3341,7 @@ private:
             m_ds.m_dotSymp = m_curSymp = m_modSymp = m_statep->getNodeSym(nodep);
             m_modp = nodep;
             handleExtends(nodep);
+            if (m_extendsParam) return;
             iterateChildren(nodep);
         }
         // V3Width when determines types needs to find enum values and such

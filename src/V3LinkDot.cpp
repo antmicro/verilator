@@ -2887,6 +2887,11 @@ private:
         if (start) m_ds = lastStates;
     }
     void visit(AstClassOrPackageRef* nodep) override {
+        if (AstParamTypeDType* const paramp
+            = VN_CAST(nodep->classOrPackageNodep(), ParamTypeDType)) {
+            iterate(paramp);
+            return;
+        }
         // Class: Recurse inside or cleanup not founds
         // checkNoDot not appropriate, can be under a dot
         AstNode::user5ClearTree();

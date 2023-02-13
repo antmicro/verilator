@@ -1418,11 +1418,21 @@ parameter_port_listE<nodep>:    // IEEE: parameter_port_list + empty == paramete
         //                      // IEEE: '#' '(' parameter_port_declaration { ',' parameter_port_declaration } ')'
         //                      // Can't just do that as "," conflicts with between vars and between stmts, so
         //                      // split into pre-comma and post-comma parts
-        |       '#' '(' {VARRESET_LIST(GPARAM);} paramPortDeclOrArgList ')'
+        |       '#' '(' {VARRESET_LIST(GPARAM);} parameter_port_list ')'
                         { $$ = $4; VARRESET_NONLIST(UNKNOWN); }
         //                      // Note legal to start with "a=b" with no parameter statement
         ;
 
+parameter_port_list<nodep>:
+list_of_param_assignments { $$ = $1; }
+| list_of_param_assignments ',' parameter_port_declaration { $$ = $1->addNext(VN_AS($3, Var)); }
+| parameter_port_declaration {$$ = $1; }
+;
+parameter_port_declaration<nodep>:
+parameter_declaration { $$ = $1; }
+| data_type list_of_param_assignments { };
+| yTYPE__ETC list_of_type_assignments {};
+;
 paramPortDeclOrArgList<nodep>:  // IEEE: list_of_param_assignments + { parameter_port_declaration }
                 paramPortDeclOrArg                              { $$ = $1; }
         |       paramPortDeclOrArgList ',' paramPortDeclOrArg   { $$ = $1->addNext($3); }

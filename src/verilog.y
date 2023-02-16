@@ -1436,8 +1436,8 @@ parameter_port_declaration { $$ = $1; }
 
 parameter_port_declaration<nodep>:
 parameter_declaration { $$ = $1; }
-| parameter_port_declarationFrontE list_of_param_assignments { $$ = $2; };
-| parameter_port_declarationTypeFrontE list_of_type_assignments { $$ = $2; };
+| parameter_port_declarationFront list_of_param_assignments { $$ = $2; };
+| parameter_port_declarationTypeFront list_of_type_assignments { $$ = $2; };
 ;
 
 portsStarE<nodep>:              // IEEE: .* + list_of_ports + list_of_port_declarations + empty
@@ -1870,14 +1870,14 @@ parameter_declarationTypeFront: // IEEE: local_ or parameter_declaration w/o ass
                 varParamReset yTYPE__ETC                { /*VARRESET-in-varParam*/ VARDTYPE(new AstParseTypeDType{$2}); }
         ;
 
-parameter_port_declarationFrontE: // IEEE: local_ or parameter_port_declaration w/o assignment
+parameter_port_declarationFront: // IEEE: local_ or parameter_port_declaration w/o assignment
         //                      // IEEE: parameter_declaration (minus assignment)
         //                      // IEEE: local_parameter_declaration (minus assignment)
         //                      // Front must execute first so VARDTYPE is ready before list of vars
                 data_type                               { /*VARRESET-in-varParam*/ VARDTYPE($1); }
         ;
 
-parameter_port_declarationTypeFrontE: // IEEE: parameter_port_declaration w/o assignment
+parameter_port_declarationTypeFront: // IEEE: parameter_port_declaration w/o assignment
         //                      // IEEE: parameter_declaration (minus assignment)
         //                      // IEEE: local_parameter_declaration (minus assignment)
         //                      // Front must execute first so VARDTYPE is ready before list of vars

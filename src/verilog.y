@@ -1425,30 +1425,20 @@ parameter_port_listE<nodep>:    // IEEE: parameter_port_list + empty == paramete
 
 parameter_port_list<nodep>:
 list_of_param_assignments { $$ = $1; }
-| list_of_param_assignments ',' parameter_port_declaration { $$ = $1->addNext(VN_AS($3, Var)); }
-| parameter_port_declaration {$$ = $1; }
+| list_of_param_assignments ',' parameter_port_declaration_list { $$ = $1->addNext(VN_AS($3, Var)); }
+| parameter_port_declaration_list {$$ = $1; }
 ;
+
+parameter_port_declaration_list<nodep>:
+parameter_port_declaration { $$ = $1; }
+| parameter_port_declaration ',' parameter_port_declaration_list { $$ = $1->addNext($3); }
+;
+
 parameter_port_declaration<nodep>:
 parameter_declaration { $$ = $1; }
-| data_type list_of_param_assignments { };
-| yTYPE__ETC list_of_type_assignments {};
+| parameter_port_declarationFrontE list_of_param_assignments { $$ = $2; };
+| parameter_port_declarationTypeFrontE list_of_type_assignments { $$ = $2; };
 ;
-paramPortDeclOrArgList<nodep>:  // IEEE: list_of_param_assignments + { parameter_port_declaration }
-                paramPortDeclOrArg                              { $$ = $1; }
-        |       paramPortDeclOrArgList ',' paramPortDeclOrArg   { $$ = $1->addNext($3); }
-        |       paramPortDeclOrArgList sigAttrScope {$$ = $1;}
-        ;
-
-paramPortDeclOrArg<nodep>:      // IEEE: param_assignment + parameter_port_declaration
-        //                      // We combine the two as we can't tell which follows a comma
-                paramPortDeclOrArgSub     {$$ = $1;}
-        |       vlTag                                   { $$ = nullptr; }
-        ;
-paramPortDeclOrArgSub<nodep>:
-                parameter_port_declarationFrontE param_assignment       { $$ = $2; }
-        |       parameter_port_declarationTypeFrontE type_assignment    { $$ = $2; }
-        |       sigAttrScope paramPortDeclOrArgSub {$$ = $2; }
-        ;
 
 portsStarE<nodep>:              // IEEE: .* + list_of_ports + list_of_port_declarations + empty
                 /* empty */                             { $$ = nullptr; }
@@ -1884,18 +1874,14 @@ parameter_port_declarationFrontE: // IEEE: local_ or parameter_port_declaration 
         //                      // IEEE: parameter_declaration (minus assignment)
         //                      // IEEE: local_parameter_declaration (minus assignment)
         //                      // Front must execute first so VARDTYPE is ready before list of vars
-                varParamReset implicit_typeE            { /*VARRESET-in-varParam*/ VARDTYPE($2); }
-        |       varParamReset data_type                 { /*VARRESET-in-varParam*/ VARDTYPE($2); }
-        |       implicit_typeE                          { /*VARRESET-in-varParam*/ VARDTYPE($1); }
-        |       data_type                               { /*VARRESET-in-varParam*/ VARDTYPE($1); }
+                data_type                               { /*VARRESET-in-varParam*/ VARDTYPE($1); }
         ;
 
 parameter_port_declarationTypeFrontE: // IEEE: parameter_port_declaration w/o assignment
         //                      // IEEE: parameter_declaration (minus assignment)
         //                      // IEEE: local_parameter_declaration (minus assignment)
         //                      // Front must execute first so VARDTYPE is ready before list of vars
-                varParamReset yTYPE__ETC                { /*VARRESET-in-varParam*/ VARDTYPE(new AstParseTypeDType{$2}); }
-        |       yTYPE__ETC                              { /*VARRESET-in-varParam*/ VARDTYPE(new AstParseTypeDType{$1}); }
+                yTYPE__ETC                              { /*VARRESET-in-varParam*/ VARDTYPE(new AstParseTypeDType{$1}); }
         ;
 
 net_declaration<nodep>:         // IEEE: net_declaration - excluding implict

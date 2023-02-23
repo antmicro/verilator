@@ -2106,6 +2106,7 @@ class AstClass final : public AstNodeModule {
     MemberNameMap m_members;  // Members or method children
     AstClassPackage* m_classOrPackagep = nullptr;  // Class package this is under
     bool m_extended = false;  // Is extension or extended by other classes
+    bool m_extendsParam = false;  // Has a parameter as its super class
     bool m_interfaceClass = false;  // Interface class
     bool m_virtual = false;  // Virtual class
     void insertCache(AstNode* nodep);
@@ -2135,6 +2136,8 @@ public:
     }
     bool isExtended() const { return m_extended; }
     void isExtended(bool flag) { m_extended = flag; }
+    bool extendsParam() const { return m_extendsParam; }
+    void extendsParam(bool flag) { m_extendsParam = flag; }
     bool isInterfaceClass() const { return m_interfaceClass; }
     void isInterfaceClass(bool flag) { m_interfaceClass = flag; }
     bool isVirtual() const { return m_virtual; }

@@ -2004,9 +2004,6 @@ private:
     //  *::user4()              -> See LinkDotState
     // Cleared on Cell
     //  AstVar::user5()         // bool. True if pin used in this cell
-    //  AstClass::user5()       // bool. True if class has a parameter
-    //                                   as a (possibly indirect) base class.
-    //                                   Used only in LDS_PRIMARY pass
     const VNUser3InUse m_inuser3;
     const VNUser5InUse m_inuser5;
 
@@ -3248,13 +3245,16 @@ private:
             int next = 0;
             for (AstNode* itemp = nodep->extendsp(); itemp; itemp = itemp->nextp()) {
                 if (AstClassExtends* const cextp = VN_CAST(itemp, ClassExtends)) {
-                    // Replace abstract reference with hard pointer
-                    // Will need later resolution when deal with parameters
-                    if (++next == 2 && !nodep->isInterfaceClass() && !cextp->isImplements()) {
-                        cextp->v3error("Multiple inheritance illegal on non-interface classes"
-                                       " (IEEE 1800-2017 8.13)");
+                    if (m_statep->forPrimary()) {
+                        // Replace abstract reference with hard pointer
+                        // Will need later resolution when deal with parameters
+                        if (++next == 2 && !nodep->isInterfaceClass() && !cextp->isImplements()) {
+                            cextp->v3error("Multiple inheritance illegal on non-interface classes"
+                                           " (IEEE 1800-2017 8.13)");
+                        }
                     }
-                    if (cextp->childDTypep() || cextp->dtypep()) continue;  // Already converted
+                    if (cextp->dtypep()) continue;  // Already converted
+                    if (cextp->childDTypep() && !nodep->extendsParam()) continue;
                     if (VN_IS(cextp->classOrPkgsp(), Dot)) {
                         itemp->v3warn(E_UNSUPPORTED, "Unsupported: Hierarchical class references");
                         continue;
@@ -3275,22 +3275,26 @@ private:
                                 // function
                                 iterate(classp);
                             }
-                            if (classp->user5()) {
+                            if (classp->extendsParam() && m_statep->forPrimary()) {
                                 // Has a parameter as its base class
-                                nodep->user5(true);
-                                return;
+                                nodep->extendsParam(true);
+                                // Parameters in extends statement must be linked in the first
+                                // pass of V3LinkDot
+                                iterate(cpackagerefp);
                             }
                             AstPin* paramsp = cpackagerefp->paramsp();
                             if (paramsp) paramsp = paramsp->cloneTree(true);
                             classRefDtypep
                                 = new AstClassRefDType{nodep->fileline(), classp, paramsp};
+                            cextp->childDTypep(classRefDtypep);
+                            if (nodep->extendsParam() && m_statep->forPrimary()) return;
                         } else if (AstParamTypeDType* const paramp
                                    = VN_CAST(foundp->nodep(), ParamTypeDType)) {
                             if (m_statep->forPrimary()) {
                                 // Extending has to be handled after V3Param.cpp, but the type
                                 // reference has to be visited
                                 iterate(paramp);
-                                nodep->user5(true);
+                                nodep->extendsParam(true);
                                 return;
                             } else {
                                 AstNodeDType* const paramTypep = paramp->getChildDTypep();

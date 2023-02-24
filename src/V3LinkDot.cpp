@@ -3234,7 +3234,7 @@ private:
         iterateChildren(nodep);
     }
     void visit(AstClass* nodep) override {
-        nodep->user3SetOnce();
+        if (nodep->user3SetOnce()) return;
         UINFO(5, "   " << nodep << endl);
         checkNoDot(nodep);
         VL_RESTORER(m_curSymp);
@@ -3254,7 +3254,7 @@ private:
                         cextp->v3error("Multiple inheritance illegal on non-interface classes"
                                        " (IEEE 1800-2017 8.13)");
                     }
-                    if (cextp->childDTypep() || cextp->dtypep()) continue;  // Already converted
+                    if (cextp->dtypep()) continue;  // Already converted
                     if (VN_IS(cextp->classOrPkgsp(), Dot)) {
                         itemp->v3warn(E_UNSUPPORTED, "Unsupported: Hierarchical class references");
                         continue;
@@ -3264,89 +3264,86 @@ private:
                     if (VL_UNCOVERABLE(!cpackagerefp)) {
                         // Linking the extend gives an error before this is hit
                         cextp->v3error("Attempting to extend using non-class");  // LCOV_EXCL_LINE
-                    } else {
-                        VSymEnt* const foundp = m_curSymp->findIdFallback(cpackagerefp->name());
-                        if (foundp) {
-                            AstClassRefDType* classRefDtypep = nullptr;
-                            AstClass* classp = VN_CAST(foundp->nodep(), Class);
-                            if (classp) {
-                                if (classp != nodep) {
-                                    // Case with recursive inheritance is handled later in this
-                                    // function
-                                    iterate(classp);
-                                }
-                                if (classp->user5()) {
-                                    // Has a parameter as its base class
-                                    nodep->user5(true);
-                                    return;
-                                }
-                                AstPin* paramsp = cpackagerefp->paramsp();
-                                if (paramsp) paramsp = paramsp->cloneTree(true);
-                                classRefDtypep
-                                    = new AstClassRefDType{nodep->fileline(), classp, paramsp};
-                            } else if (AstParamTypeDType* const paramp
-                                       = VN_CAST(foundp->nodep(), ParamTypeDType)) {
-                                if (m_statep->forPrimary()) {
-                                    // Extending has to be handled after V3Param.cpp, but the type
-                                    // reference has to be visited
-                                    iterate(paramp);
-                                    nodep->user5(true);
-                                    return;
-                                } else {
-                                    AstNodeDType* const paramTypep = paramp->getChildDTypep();
-                                    classRefDtypep
-                                        = VN_CAST(paramTypep->cloneTree(false), ClassRefDType);
-                                    if (!classRefDtypep) {
-                                        paramTypep->v3error(
-                                            "Attempting to extend using non-class");
-                                    } else {
-                                        classp = classRefDtypep->classp();
-                                    }
-                                }
-                            } else {
-                                cextp->v3warn(E_UNSUPPORTED,
-                                              "Unsupported: " << foundp->nodep()->prettyTypeName()
-                                                              << " in AstClassExtends");
+                    }
+                    VSymEnt* const foundp = m_curSymp->findIdFallback(cpackagerefp->name());
+                    AstClass* classp = nullptr;
+                    AstClassRefDType* classRefDtypep = nullptr;
+                    if (foundp) {
+                        classp = VN_CAST(foundp->nodep(), Class);
+                        if (classp) {
+                            if (classp != nodep) {
+                                // Case with recursive inheritance is handled later in this
+                                // function
+                                iterate(classp);
                             }
-
-                            if (classp) {
-                                UINFO(8, "Import to " << nodep << " from export class " << classp
-                                                      << endl);
-                                if (classp == nodep) {
-                                    cextp->v3error("Attempting to extend class "
-                                                   << nodep->prettyNameQ() << " from itself");
-                                } else if (cextp->isImplements() && !classp->isInterfaceClass()) {
-                                    cextp->v3error(
-                                        "Attempting to implement from non-interface class "
-                                        << classp->prettyNameQ() << '\n'
-                                        << "... Suggest use 'extends'");
-                                } else if (!cextp->isImplements() && !nodep->isInterfaceClass()
-                                           && classp->isInterfaceClass()) {
-                                    cextp->v3error("Attempting to extend from interface class "
-                                                   << classp->prettyNameQ() << '\n'
-                                                   << "... Suggest use 'implements'");
+                            if (classp->user5()) {
+                                // Has a parameter as its base class
+                                nodep->user5(true);
+                                return;
+                            }
+                            AstPin* paramsp = cpackagerefp->paramsp();
+                            if (paramsp) paramsp = paramsp->cloneTree(true);
+                            classRefDtypep
+                                = new AstClassRefDType{nodep->fileline(), classp, paramsp};
+                        } else if (AstParamTypeDType* const paramp
+                                   = VN_CAST(foundp->nodep(), ParamTypeDType)) {
+                            if (m_statep->forPrimary()) {
+                                // Extending has to be handled after V3Param.cpp, but the type
+                                // reference has to be visited
+                                iterate(paramp);
+                                nodep->user5(true);
+                                return;
+                            } else {
+                                AstNodeDType* const paramTypep = paramp->getChildDTypep();
+                                classRefDtypep
+                                    = VN_CAST(paramTypep->cloneTree(false), ClassRefDType);
+                                if (!classRefDtypep) {
+                                    paramTypep->v3error("Attempting to extend using non-class");
                                 } else {
-                                    cextp->childDTypep(classRefDtypep);
-                                    classp->isExtended(true);
-                                    nodep->isExtended(true);
-                                    VSymEnt* const srcp = m_statep->getNodeSym(classp);
-                                    if (classp->isInterfaceClass()) {
-                                        importImplementsClass(nodep, srcp, classp);
-                                    } else {
-                                        m_curSymp->importFromClass(m_statep->symsp(), srcp);
-                                    }
-                                    VL_DO_DANGLING(cpackagerefp->unlinkFrBack()->deleteTree(),
-                                                   cpackagerefp);
+                                    classp = classRefDtypep->classp();
                                 }
                             }
                         } else {
-                            const string suggest = m_statep->suggestSymFallback(
-                                m_curSymp, cpackagerefp->name(), LinkNodeMatcherClass{});
-                            cpackagerefp->v3error(
-                                "Class for '"
-                                << cextp->verilogKwd()  // extends/implements
-                                << "' not found: " << cpackagerefp->prettyNameQ() << '\n'
-                                << (suggest.empty() ? "" : cpackagerefp->warnMore() + suggest));
+                            cextp->v3warn(E_UNSUPPORTED,
+                                          "Unsupported: " << foundp->nodep()->prettyTypeName()
+                                                          << " in AstClassExtends");
+                        }
+                    } else {
+                        const string suggest = m_statep->suggestSymFallback(
+                            m_curSymp, cpackagerefp->name(), LinkNodeMatcherClass{});
+                        cpackagerefp->v3error(
+                            "Class for '"
+                            << cextp->verilogKwd()  // extends/implements
+                            << "' not found: " << cpackagerefp->prettyNameQ() << '\n'
+                            << (suggest.empty() ? "" : cpackagerefp->warnMore() + suggest));
+                    }
+
+                    if (classp) {
+                        UINFO(8, "Import to " << nodep << " from export class " << classp << endl);
+                        if (classp == nodep) {
+                            cextp->v3error("Attempting to extend class " << nodep->prettyNameQ()
+                                                                         << " from itself");
+                        } else if (cextp->isImplements() && !classp->isInterfaceClass()) {
+                            cextp->v3error("Attempting to implement from non-interface class "
+                                           << classp->prettyNameQ() << '\n'
+                                           << "... Suggest use 'extends'");
+                        } else if (!cextp->isImplements() && !nodep->isInterfaceClass()
+                                   && classp->isInterfaceClass()) {
+                            cextp->v3error("Attempting to extend from interface class "
+                                           << classp->prettyNameQ() << '\n'
+                                           << "... Suggest use 'implements'");
+                        } else {
+                            cextp->childDTypep(classRefDtypep);
+                            classp->isExtended(true);
+                            nodep->isExtended(true);
+                            VSymEnt* const srcp = m_statep->getNodeSym(classp);
+                            if (classp->isInterfaceClass()) {
+                                importImplementsClass(nodep, srcp, classp);
+                            } else {
+                                m_curSymp->importFromClass(m_statep->symsp(), srcp);
+                            }
+                            VL_DO_DANGLING(cpackagerefp->unlinkFrBack()->deleteTree(),
+                                           cpackagerefp);
                         }
                     }
                 }

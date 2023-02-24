@@ -3254,7 +3254,7 @@ private:
                         cextp->v3error("Multiple inheritance illegal on non-interface classes"
                                        " (IEEE 1800-2017 8.13)");
                     }
-                    if (cextp->dtypep()) continue;  // Already converted
+                    if (cextp->childDTypep() || cextp->dtypep()) continue;  // Already converted
                     if (VN_IS(cextp->classOrPkgsp(), Dot)) {
                         itemp->v3warn(E_UNSUPPORTED, "Unsupported: Hierarchical class references");
                         continue;

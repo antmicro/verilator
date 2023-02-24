@@ -3265,10 +3265,9 @@ private:
                         // Linking the extend gives an error before this is hit
                         cextp->v3error("Attempting to extend using non-class");  // LCOV_EXCL_LINE
                     }
-                    VSymEnt* const foundp = m_curSymp->findIdFallback(cpackagerefp->name());
                     AstClass* classp = nullptr;
                     AstClassRefDType* classRefDtypep = nullptr;
-                    if (foundp) {
+                    if (VSymEnt* const foundp = m_curSymp->findIdFallback(cpackagerefp->name())) {
                         classp = VN_CAST(foundp->nodep(), Class);
                         if (classp) {
                             if (classp != nodep) {

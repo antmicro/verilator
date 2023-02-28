@@ -1467,7 +1467,7 @@ private:
         if (!thensp->lhsp()->sameGateTree(elsesp->lhsp())) return false;
         if (!thensp->rhsp()->gateTree()) return false;
         if (!elsesp->rhsp()->gateTree()) return false;
-        if (m_underRecFunc) return false; // This optimization may lead to infinite recursion
+        if (m_underRecFunc) return false;  // This optimization may lead to infinite recursion
         return true;
     }
     bool operandIfIf(const AstNodeIf* nodep) {

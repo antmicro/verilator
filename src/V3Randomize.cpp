@@ -69,6 +69,7 @@ private:
         const auto it = m_baseToDerivedMap.find(nodep);
         if (it != m_baseToDerivedMap.end()) {
             for (auto* classp : it->second) {
+                if (classp->user1()) continue;
                 classp->user1(true);
                 markMembers(classp);
                 markDerived(classp);

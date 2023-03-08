@@ -90,6 +90,11 @@ module t (/*AUTOARG*/
       static int ist2;
       automatic int iau3;
 
+      repeat(10) begin: repeat_loop
+         static int static_loop_var = 0;
+         static_loop_var++;
+      end
+
       cyc <= cyc + 1;
       if (cyc == 0) begin
          ist1 = 10;
@@ -108,6 +113,8 @@ module t (/*AUTOARG*/
          //TODO v = iau3; `checkh(v, 0);
       end
       else if (cyc == 5) begin
+         if (repeat_loop.static_loop_var != 50) $stop;
+
          $write("*-* All Finished *-*\n");
          $finish;
       end

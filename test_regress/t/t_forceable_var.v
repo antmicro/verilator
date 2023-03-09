@@ -49,6 +49,7 @@ module t (
               `checkh (var_8, 0);
            end
            13: begin
+              bit x = 1;
               `checkh (var_1, 1);
               `checkh ({1'b0, var_8}, (cyc[0 +: 9] - 1) >> 1);
            end

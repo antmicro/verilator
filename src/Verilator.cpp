@@ -152,11 +152,13 @@ static void process() {
     // Remove parameters by cloning modules to de-parameterized versions
     //   This requires some width calculations and constant propagation
     V3Param::param(v3Global.rootp());
-    V3LinkDot::linkDotParamed(v3Global.rootp());  // Cleanup as made new modules
-    V3Error::abortIfErrors();
 
     // Remove any modules that were parameterized and are no longer referenced.
     V3Dead::deadifyModules(v3Global.rootp());
+
+    V3LinkDot::linkDotParamed(v3Global.rootp());  // Cleanup as made new modules
+    V3Error::abortIfErrors();
+
     v3Global.checkTree();
 
     // Create a hierarchical Verilation plan

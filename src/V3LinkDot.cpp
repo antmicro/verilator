@@ -751,7 +751,6 @@ class LinkDotFindVisitor final : public VNVisitor {
     bool m_inRecursion = false;  // Inside a recursive module
     int m_paramNum = 0;  // Parameter number, for position based connection
     bool m_explicitNew = false;  // Hit a "new" function
-    int m_modBlockNum = 0;  // Begin block number in module, 0=none seen
     int m_modWithNum = 0;  // With block number, 0=none seen
 
     // METHODS
@@ -861,7 +860,6 @@ class LinkDotFindVisitor final : public VNVisitor {
         VL_RESTORER(m_modSymp);
         VL_RESTORER(m_curSymp);
         VL_RESTORER(m_paramNum);
-        VL_RESTORER(m_modBlockNum);
         VL_RESTORER(m_modWithNum);
         if (doit && nodep->user2()) {
             nodep->v3warn(E_UNSUPPORTED,
@@ -887,7 +885,6 @@ class LinkDotFindVisitor final : public VNVisitor {
             }
             //
             m_paramNum = 0;
-            m_modBlockNum = 0;
             m_modWithNum = 0;
             // m_modSymp/m_curSymp for non-packages set by AstCell above this module
             // Iterate
@@ -933,7 +930,6 @@ class LinkDotFindVisitor final : public VNVisitor {
         VL_RESTORER(m_modSymp);
         VL_RESTORER(m_curSymp);
         VL_RESTORER(m_paramNum);
-        VL_RESTORER(m_modBlockNum);
         VL_RESTORER(m_modWithNum);
         {
             UINFO(4, "     Link Class: " << nodep << endl);
@@ -946,7 +942,6 @@ class LinkDotFindVisitor final : public VNVisitor {
             UINFO(9, "New module scope " << m_curSymp << endl);
             //
             m_paramNum = 0;
-            m_modBlockNum = 0;
             m_modWithNum = 0;
             m_explicitNew = false;
             // m_modSymp/m_curSymp for non-packages set by AstCell above this module
@@ -1031,13 +1026,8 @@ class LinkDotFindVisitor final : public VNVisitor {
             // are common.
             for (AstNode* stmtp = nodep->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
                 if (VN_IS(stmtp, Var) || VN_IS(stmtp, Foreach)) {
-                    std::string name;
-                    do {
-                        ++m_modBlockNum;
-                        name = "unnamedblk" + cvtToStr(m_modBlockNum);
-                        // Increment again if earlier pass of V3LinkDot claimed this name
-                    } while (m_curSymp->findIdFlat(name));
-                    nodep->name(name);
+                    static int blockCnt = 0;
+                    nodep->name("__Vunnamedblk" + cvtToStr(++blockCnt));
                     break;
                 }
             }

@@ -109,10 +109,10 @@ module Vt_debug_emitv_t;
         end
     endfunction
     initial begin
-        begin : unnamedblk1
+        begin : __Vunnamedblk1
             signed int [31:0]  other;
             begin
-                begin : unnamedblk2
+                begin : __Vunnamedblk2
                     signed int [31:0]  i;
                     i = 'sh0;
                     while ((i < 'sh3)) begin
@@ -184,7 +184,7 @@ module Vt_debug_emitv_t;
             $readmemh(fd, array, 'sh0);
             $readmemh(fd, array, 'sh0, 'sh0);
             sum = 'sh0;
-            begin : unnamedblk3
+            begin : __Vunnamedblk3
                 signed int [31:0]  i;
                 i = 'sh0;
                 begin : label0

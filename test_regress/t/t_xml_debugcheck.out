@@ -57,9 +57,9 @@
         <creset loc="d,27,11,27,14">
           <varref loc="d,27,11,27,14" name="t.all" dtype_id="10"/>
         </creset>
-        <var loc="d,51,17,51,18" name="t.unnamedblk1.e" dtype_id="2" vartype="my_t" origName="t__DOT__unnamedblk1__DOT__e"/>
+        <var loc="d,51,17,51,18" name="t.__Vunnamedblk1.e" dtype_id="2" vartype="my_t" origName="t__DOT____Vunnamedblk1__DOT__e"/>
         <creset loc="d,51,17,51,18">
-          <varref loc="d,51,17,51,18" name="t.unnamedblk1.e" dtype_id="2"/>
+          <varref loc="d,51,17,51,18" name="t.__Vunnamedblk1.e" dtype_id="2"/>
         </creset>
         <var loc="d,48,123,48,127" name="__Vtemp_h########__0" dtype_id="10" vartype="string" origName="__Vtemp_h########__0"/>
         <assign loc="d,31,9,31,10" dtype_id="11">
@@ -526,7 +526,7 @@
         </assign>
         <assign loc="d,51,19,51,20" dtype_id="11">
           <const loc="d,51,23,51,28" name="4&apos;h1" dtype_id="11"/>
-          <varref loc="d,51,17,51,18" name="t.unnamedblk1.e" dtype_id="11"/>
+          <varref loc="d,51,17,51,18" name="t.__Vunnamedblk1.e" dtype_id="11"/>
         </assign>
         <while loc="d,51,7,51,10">
           <begin>
@@ -535,7 +535,7 @@
             <neq loc="d,51,32,51,34" dtype_id="9">
               <const loc="d,51,37,51,41" name="4&apos;h4" dtype_id="11"/>
               <ccast loc="d,51,30,51,31" dtype_id="11">
-                <varref loc="d,51,30,51,31" name="t.unnamedblk1.e" dtype_id="11"/>
+                <varref loc="d,51,30,51,31" name="t.__Vunnamedblk1.e" dtype_id="11"/>
               </ccast>
             </neq>
           </begin>
@@ -548,7 +548,7 @@
                   <and loc="d,52,24,52,28" dtype_id="13">
                     <const loc="d,52,24,52,28" name="32&apos;h7" dtype_id="14"/>
                     <ccast loc="d,52,22,52,23" dtype_id="13">
-                      <varref loc="d,52,22,52,23" name="t.unnamedblk1.e" dtype_id="13"/>
+                      <varref loc="d,52,22,52,23" name="t.__Vunnamedblk1.e" dtype_id="13"/>
                     </ccast>
                   </and>
                 </arraysel>
@@ -563,11 +563,11 @@
                 <and loc="d,51,49,51,53" dtype_id="13">
                   <const loc="d,51,49,51,53" name="32&apos;h7" dtype_id="14"/>
                   <ccast loc="d,51,47,51,48" dtype_id="13">
-                    <varref loc="d,51,47,51,48" name="t.unnamedblk1.e" dtype_id="13"/>
+                    <varref loc="d,51,47,51,48" name="t.__Vunnamedblk1.e" dtype_id="13"/>
                   </ccast>
                 </and>
               </arraysel>
-              <varref loc="d,51,43,51,44" name="t.unnamedblk1.e" dtype_id="11"/>
+              <varref loc="d,51,43,51,44" name="t.__Vunnamedblk1.e" dtype_id="11"/>
             </assign>
           </begin>
         </while>

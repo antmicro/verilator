@@ -37,7 +37,9 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 static void makeVlToString(AstClass* nodep) {
     AstCFunc* const funcp
         = new AstCFunc{nodep->fileline(), "VL_TO_STRING", nullptr, "std::string"};
-    funcp->argTypes("const VlClassRef<" + EmitCBase::prefixNameProtect(nodep) + ">& obj");
+    std::stringstream ss;
+    ss << nodep->fileline();
+    funcp->argTypes("/* " + ss.str() + "*/const VlClassRef<" + EmitCBase::prefixNameProtect(nodep) + ">& obj");
     funcp->isMethod(false);
     funcp->isConst(false);
     funcp->isStatic(false);

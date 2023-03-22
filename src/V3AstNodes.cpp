@@ -735,7 +735,9 @@ AstNodeDType::CTypeRecursed AstNodeDType::cTypeRecurse(bool compound) const VL_M
         const CTypeRecursed sub = adtypep->subDTypep()->cTypeRecurse(true);
         info.m_type = "VlSampleQueue<" + sub.m_type + ">";
     } else if (const auto* const adtypep = VN_CAST(dtypep, ClassRefDType)) {
-        info.m_type = "VlClassRef<" + EmitCBase::prefixNameProtect(adtypep) + ">";
+        std::stringstream ss;
+        ss << dtypep->fileline();
+        info.m_type = "/* " + ss.str() + "*/VlClassRef<" + EmitCBase::prefixNameProtect(adtypep) + ">";
     } else if (const auto* const adtypep = VN_CAST(dtypep, IfaceRefDType)) {
         info.m_type = EmitCBase::prefixNameProtect(adtypep->ifaceViaCellp()) + "*";
     } else if (const auto* const adtypep = VN_CAST(dtypep, UnpackArrayDType)) {

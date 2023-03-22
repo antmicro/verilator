@@ -153,7 +153,7 @@ extern uint32_t VL_THREAD_ID() VL_MT_SAFE;
 /// Mutex, wrapped to allow -fthread_safety checks
 class VL_CAPABILITY("mutex") VerilatedMutex final {
 private:
-    std::mutex m_mutex;  // Mutex
+    std::recursive_mutex m_mutex;  // Mutex
 
 public:
     /// Construct mutex (without locking it)

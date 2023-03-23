@@ -2534,6 +2534,7 @@ private:
             string expectWhat;
             bool allowScope = false;
             bool allowVar = false;
+            bool staticAccess = false;
             if (m_ds.m_dotPos == DP_PACKAGE) {
                 // {package}::{a}
                 AstNodeModule* classOrPackagep = nullptr;
@@ -2546,6 +2547,7 @@ private:
                     = VN_AS(m_ds.m_dotp->lhsp(), ClassOrPackageRef);
                 classOrPackagep = cpackagerefp->classOrPackagep();
                 UASSERT_OBJ(classOrPackagep, m_ds.m_dotp->lhsp(), "Bad package link");
+                staticAccess = m_modp != classOrPackagep;
                 m_ds.m_dotSymp = m_statep->getNodeSym(classOrPackagep);
                 m_ds.m_dotPos = DP_SCOPE;
             } else if (m_ds.m_dotPos == DP_SCOPE) {
@@ -2667,6 +2669,10 @@ private:
                             newp = refp;
                         }
                     } else {
+                        if (staticAccess && !varp->lifetime().isStatic()) {
+                            nodep->v3error("Static access to non-static member variable "
+                                           << varp->prettyNameQ() << endl);
+                        }
                         AstVarRef* const refp = new AstVarRef{
                             nodep->fileline(), varp, VAccess::READ};  // lvalue'ness computed later
                         refp->classOrPackagep(foundp->classOrPackagep());
@@ -2980,6 +2986,7 @@ private:
             iterateChildren(nodep);
         }
 
+        bool staticAccess = false;
         if (m_ds.m_unresolvedClass) {
             // Unable to link before V3Param
             return;
@@ -3003,6 +3010,7 @@ private:
             }
             UASSERT_OBJ(cpackagerefp->classOrPackagep(), m_ds.m_dotp->lhsp(), "Bad package link");
             nodep->classOrPackagep(cpackagerefp->classOrPackagep());
+            staticAccess = m_modp != cpackagerefp->classOrPackagep();
             m_ds.m_dotPos = DP_SCOPE;
             m_ds.m_dotp = nullptr;
         } else if (m_ds.m_dotp && m_ds.m_dotPos == DP_FINAL) {
@@ -3066,6 +3074,10 @@ private:
             AstNodeFTask* const taskp
                 = foundp ? VN_CAST(foundp->nodep(), NodeFTask) : nullptr;  // Maybe nullptr
             if (taskp) {
+                if (staticAccess && !taskp->lifetime().isStatic()) {
+                    nodep->v3error("Static access to non-static task/function "
+                                   << taskp->prettyNameQ() << endl);
+                }
                 nodep->taskp(taskp);
                 nodep->classOrPackagep(foundp->classOrPackagep());
                 UINFO(7, "         Resolved " << nodep << endl);  // Also prints taskp

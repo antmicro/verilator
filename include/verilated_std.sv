@@ -26,10 +26,6 @@
 // verilator lint_off TIMESCALEMOD
 // verilator lint_off UNUSEDSIGNAL
 package std;
-    // The process class is not implemented, but it's predeclared here,
-    // so the linter accepts references to it.
-    typedef class process;
-
     class mailbox #(type T);
         protected int m_bound;
         protected T m_queue[$];
@@ -113,6 +109,47 @@ package std;
                 return 1;
             end
             return 0;
+        endfunction
+    endclass
+
+    class process;
+        typedef enum {
+            FINISHED  = 0,
+            RUNNING   = 1,
+            WAITING   = 2,
+            SUSPENDED = 3,
+            KILLED    = 4
+        } state;
+
+        function new();
+        endfunction
+
+        static function process self();
+            process p = new;
+            return p;
+        endfunction
+
+        function state status();
+            return FINISHED;
+        endfunction
+
+        function void kill();
+        endfunction
+
+        function void suspend();
+        endfunction
+
+        function void resume();
+        endfunction
+
+        task await();
+        endtask
+
+        function string get_randstate();
+            return "";
+        endfunction
+
+        function void set_randstate(string s);
         endfunction
     endclass
 endpackage

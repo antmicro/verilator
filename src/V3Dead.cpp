@@ -46,6 +46,57 @@
 
 VL_DEFINE_DEBUG_FUNCTIONS;
 
+class DeadClassVisitor final : public VNVisitor {
+private:
+    // NODE STATE
+    // Entire Netlist:
+    //  AstClass::user1() -> bool. Class is used (if not, will be removed).
+    //  AstNode::user2()  -> bool. Visited.
+    const VNUser1InUse m_inuser1;
+    const VNUser2InUse m_inuser2;
+
+    // State
+    std::vector<AstClass*> m_classesp;
+
+    // VISITORS
+    void visit(AstNodeModule* nodep) override {
+        if (nodep->user2SetOnce()) return;
+        if (VN_IS(nodep, Class)) nodep->user1(true);
+        for (AstNode* stmtp = nodep->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+            if (AstClass* const classp = VN_CAST(stmtp, Class)) {
+                // Don't step into, because it's a definition.
+                m_classesp.push_back(classp);
+            } else {
+                iterate(stmtp);
+            }
+        }
+    }
+    void visit(AstNodeFTaskRef* nodep) override {
+        if (nodep->user2SetOnce()) return;
+        if (nodep->taskp()) iterate(nodep->taskp());
+        iterateChildren(nodep);
+    }
+    void visit(AstClassRefDType* nodep) override {
+        if (nodep->user2SetOnce()) return;
+        iterate(nodep->classp());
+    }
+    void visit(AstNode* nodep) override {
+        if (nodep->user2SetOnce()) return;
+        iterateChildren(nodep);
+    }
+
+public:
+    // CONSTRUCTORS
+    DeadClassVisitor(AstNetlist* nodep) {
+        iterate(nodep);
+        for (AstClass* classp : m_classesp) {
+            if (!classp->user1()) {
+                VL_DO_DANGLING(pushDeletep(classp->unlinkFrBack()), classp);
+            }
+        }
+    }
+};
+
 //######################################################################
 // Dead state, as a visitor of each AstNode
 
@@ -537,6 +588,7 @@ public:
 void V3Dead::deadifyModules(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     {
+        DeadClassVisitor{nodep};
         DeadVisitor{nodep, false, false, false, false, !v3Global.opt.topIfacesSupported()};
     }  // Destruct before checking
     V3Global::dumpCheckGlobalTree("deadModules", 0, dumpTree() >= 6);

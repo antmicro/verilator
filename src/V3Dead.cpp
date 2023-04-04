@@ -71,15 +71,16 @@ private:
             }
         }
     }
+    void visit(AstVarRef* nodep) override {
+        iterate(nodep->varp());
+        if (nodep->classOrPackagep()) iterate(nodep->classOrPackagep());
+    }
     void visit(AstNodeFTaskRef* nodep) override {
-        if (nodep->user2SetOnce()) return;
         if (nodep->taskp()) iterate(nodep->taskp());
+        if (nodep->classOrPackagep()) iterate(nodep->classOrPackagep());
         iterateChildren(nodep);
     }
-    void visit(AstClassRefDType* nodep) override {
-        if (nodep->user2SetOnce()) return;
-        iterate(nodep->classp());
-    }
+    void visit(AstClassRefDType* nodep) override { iterate(nodep->classp()); }
     void visit(AstNode* nodep) override {
         if (nodep->user2SetOnce()) return;
         iterateChildren(nodep);
@@ -90,9 +91,7 @@ public:
     DeadClassVisitor(AstNetlist* nodep) {
         iterate(nodep);
         for (AstClass* classp : m_classesp) {
-            if (!classp->user1()) {
-                VL_DO_DANGLING(pushDeletep(classp->unlinkFrBack()), classp);
-            }
+            if (!classp->user1()) VL_DO_DANGLING(pushDeletep(classp->unlinkFrBack()), classp);
         }
     }
 };

@@ -77,8 +77,8 @@ private:
         iterateNull(nodep->inlinesp());
         iterateNull(nodep->activesp());
     }
-    void visit(AstVarRef* nodep) override {
-        iterate(nodep->varp());
+    void visit(AstNodeVarRef* nodep) override {
+        iterateNull(nodep->varp());
         iterateNull(nodep->classOrPackagep());
     }
     void visit(AstNodeFTaskRef* nodep) override {

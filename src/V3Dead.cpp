@@ -59,9 +59,13 @@ private:
     std::vector<AstClass*> m_classesp;
 
     // VISITORS
+    void visit(AstClass* nodep) override {
+        if (nodep->user2SetOnce()) return;
+        nodep->user1(true);
+        iterateChildren(nodep);
+    }
     void visit(AstNodeModule* nodep) override {
         if (nodep->user2SetOnce()) return;
-        if (VN_IS(nodep, Class)) nodep->user1(true);
         for (AstNode* stmtp = nodep->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
             if (AstClass* const classp = VN_CAST(stmtp, Class)) {
                 // Don't step into, because it's a definition.
@@ -70,14 +74,16 @@ private:
                 iterate(stmtp);
             }
         }
+        iterateNull(nodep->inlinesp());
+        iterateNull(nodep->activesp());
     }
     void visit(AstVarRef* nodep) override {
         iterate(nodep->varp());
-        if (nodep->classOrPackagep()) iterate(nodep->classOrPackagep());
+        iterateNull(nodep->classOrPackagep());
     }
     void visit(AstNodeFTaskRef* nodep) override {
-        if (nodep->taskp()) iterate(nodep->taskp());
-        if (nodep->classOrPackagep()) iterate(nodep->classOrPackagep());
+        iterateNull(nodep->taskp());
+        iterateNull(nodep->classOrPackagep());
         iterateChildren(nodep);
     }
     void visit(AstClassRefDType* nodep) override { iterate(nodep->classp()); }

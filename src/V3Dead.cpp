@@ -169,7 +169,6 @@ private:
                 checkAll(nodep);
                 if (AstClass* const classp = VN_CAST(nodep, Class)) {
                     if (classp->classOrPackagep()) classp->classOrPackagep()->user1Inc();
-                    classp->user1Inc();
                 }
             }
         }
@@ -391,6 +390,8 @@ private:
             AstNodeModule* nextmodp;
             for (AstNodeModule* modp = v3Global.rootp()->modulesp(); modp; modp = nextmodp) {
                 nextmodp = VN_AS(modp->nextp(), NodeModule);
+                // Classes are removed in DeadClassVisitor
+                if (VN_IS(modp, Class)) continue;
                 if (modp->dead()
                     || (modp->level() > 2 && modp->user1() == 0 && !modp->internal())) {
                     // > 2 because L1 is the wrapper, L2 is the top user module

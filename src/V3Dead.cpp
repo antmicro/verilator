@@ -127,7 +127,6 @@ private:
     std::vector<AstVarScope*> m_vscsp;
     std::vector<AstScope*> m_scopesp;
     std::vector<AstCell*> m_cellsp;
-    std::vector<AstClass*> m_classesp;
     std::vector<AstTypedef*> m_typedefsp;
 
     AssignMap m_assignMap;  // List of all simple assignments for each variable
@@ -169,10 +168,7 @@ private:
                 iterateChildren(nodep);
                 checkAll(nodep);
                 if (AstClass* const classp = VN_CAST(nodep, Class)) {
-                    if (classp->extendsp()) classp->extendsp()->user1Inc();
                     if (classp->classOrPackagep()) classp->classOrPackagep()->user1Inc();
-                    m_classesp.push_back(classp);
-                    // TODO we don't reclaim dead classes yet - graph implementation instead?
                     classp->user1Inc();
                 }
             }
@@ -446,22 +442,6 @@ private:
             }
         }
     }
-    void deadCheckClasses() {
-        for (bool retry = true; retry;) {
-            retry = false;
-            for (auto& itr : m_classesp) {
-                if (AstClass* const nodep = itr) {  // nullptr if deleted earlier
-                    if (nodep->user1() == 0) {
-                        if (nodep->extendsp()) nodep->extendsp()->user1Inc(-1);
-                        if (nodep->classOrPackagep()) nodep->classOrPackagep()->user1Inc(-1);
-                        VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
-                        itr = nullptr;
-                        retry = true;
-                    }
-                }
-            }
-        }
-    }
 
     void deadCheckVar() {
         // Delete any unused varscopes
@@ -576,7 +556,6 @@ public:
         // Otherwise we have no easy way to know if a scope is used
         if (elimScopes) deadCheckScope();
         if (elimCells) deadCheckCells();
-        deadCheckClasses();
         // Modules after vars, because might be vars we delete inside a mod we delete
         if (!elimTopIfaces) preserveTopIfaces(nodep);
         deadCheckMod();

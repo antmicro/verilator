@@ -13,6 +13,9 @@ package PkgImp;
    export Pkg::*;
 endpackage
 
+class Unused;
+endclass
+
 class Cls;
    int member = 1;
    function void method;
@@ -65,6 +68,8 @@ module t (/*AUTOARG*/
    int            q[$];
    int            assoc[string];
    int            dyn[];
+
+   Cls cls;
 
    task t;
       $display("stmt");

@@ -20,3 +20,7 @@ package Pkg;
       endfunction
    endclass
 endpackage
+
+module t;
+   Pkg::Ext ext;
+endmodule

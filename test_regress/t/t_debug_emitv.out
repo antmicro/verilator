@@ -23,6 +23,8 @@ module Vt_debug_emitv_t;
     ???? // UNSIZEDARRAYDTYPE
 
     ???? // DYNARRAYDTYPE
+
+    ???? // CLASSREFDTYPE 'Cls'
     signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed realstringIData [31:0] signed logic [31:0] signed int [31:0] bit [0:0] logic [0:0]  e_t;
     typedef struct packed 
     {signed int [31:0]  a;}signed logic [2:0] struct 
@@ -40,6 +42,8 @@ module Vt_debug_emitv_t;
     ???? // UNSIZEDARRAYDTYPE
 
     ???? // DYNARRAYDTYPE
+
+    ???? // CLASSREFDTYPE 'Cls'
     signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed realstringIData [31:0] signed logic [31:0] signed int [31:0] bit [0:0] logic [0:0]  ps_t;
     typedef struct 
     {signed logic [2:0]  a;}logicunion 
@@ -56,6 +60,8 @@ module Vt_debug_emitv_t;
     ???? // UNSIZEDARRAYDTYPE
 
     ???? // DYNARRAYDTYPE
+
+    ???? // CLASSREFDTYPE 'Cls'
     signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed realstringIData [31:0] signed logic [31:0] signed int [31:0] bit [0:0] logic [0:0]  us_t;
     typedef union 
     {logic a;}struct packed 
@@ -71,6 +77,8 @@ module Vt_debug_emitv_t;
     ???? // UNSIZEDARRAYDTYPE
 
     ???? // DYNARRAYDTYPE
+
+    ???? // CLASSREFDTYPE 'Cls'
     signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed int [31:0] signed realstringIData [31:0] signed logic [31:0] signed int [31:0] bit [0:0] logic [0:0]  union_t;
     struct packed 
     {signed int [31:0]  a;} ps[0:2];
@@ -97,6 +105,9 @@ module Vt_debug_emitv_t;
 
     ???? // DYNARRAYDTYPE
      dyn;
+
+    ???? // CLASSREFDTYPE 'Cls'
+     cls;
     task t;
         $display("stmt");
     endtask

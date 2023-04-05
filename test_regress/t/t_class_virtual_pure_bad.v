@@ -7,3 +7,7 @@
 class VBase;
    pure virtual task pure_task;
 endclass
+
+module t;
+   VBase vbase;
+endmodule

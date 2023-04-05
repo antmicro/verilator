@@ -593,9 +593,10 @@ public:
 void V3Dead::deadifyModules(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     {
+        // Destruct before checking
         DeadClassVisitor{nodep};
         DeadVisitor{nodep, false, false, false, false, !v3Global.opt.topIfacesSupported()};
-    }  // Destruct before checking
+    }
     V3Global::dumpCheckGlobalTree("deadModules", 0, dumpTree() >= 6);
 }
 
@@ -613,12 +614,20 @@ void V3Dead::deadifyDTypesScoped(AstNetlist* nodep) {
 
 void V3Dead::deadifyAll(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
-    { DeadVisitor{nodep, true, true, false, true, false}; }  // Destruct before checking
+    {
+        // Destruct before checking
+        DeadVisitor{nodep, true, true, false, true, false};
+        DeadClassVisitor{nodep};
+    }
     V3Global::dumpCheckGlobalTree("deadAll", 0, dumpTree() >= 3);
 }
 
 void V3Dead::deadifyAllScoped(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
-    { DeadVisitor{nodep, true, true, true, true, false}; }  // Destruct before checking
+    {
+        // Destruct before checking
+        DeadVisitor{nodep, true, true, true, true, false};
+        DeadClassVisitor{nodep};
+    }
     V3Global::dumpCheckGlobalTree("deadAllScoped", 0, dumpTree() >= 3);
 }

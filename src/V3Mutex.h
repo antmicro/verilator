@@ -33,6 +33,8 @@
 
 #include "verilatedos.h"
 
+#include <cassert>
+#include <condition_variable>
 #include <cstdlib>
 #include <functional>
 #include <mutex>
@@ -130,6 +132,77 @@ public:
     }
 };
 
+using V3Mutex = V3MutexImp<std::mutex>;
+using V3RecursiveMutex = V3MutexImp<std::recursive_mutex>;
+
+class VL_CAPABILITY("shared_mutex") V3SharedMutex final {
+    std::mutex m_mutex;
+    std::condition_variable m_noExclusiveLocksCond;
+    std::condition_variable m_noSharedLocksCond;
+    bool m_exclusiveLockRequested : 1;
+    unsigned m_sharedCount : (sizeof(unsigned) * 8 - 1);
+
+    static constexpr unsigned SHARED_COUNT_MAX = (1u << (sizeof(unsigned) * 8 - 1)) - 1;
+
+public:
+    V3SharedMutex()
+        : m_exclusiveLockRequested{false}
+        , m_sharedCount{0} {}
+    ~V3SharedMutex();
+
+    V3SharedMutex(const V3SharedMutex&) = delete;
+    V3SharedMutex(V3SharedMutex&&) = delete;
+
+    V3SharedMutex& operator=(const V3SharedMutex&) = delete;
+    V3SharedMutex& operator=(V3SharedMutex&&) = delete;
+
+    // Exclusive locking
+
+    void lock() VL_ACQUIRE() {
+        std::unique_lock<std::mutex> l{m_mutex};
+        while (m_exclusiveLockRequested) { m_noExclusiveLocksCond.wait(l); }
+        m_exclusiveLockRequested = true;
+        while (m_sharedCount) { m_noSharedLocksCond.wait(l); }
+    }
+
+    // TODO(mglb): bool try_lock();
+
+    void unlock() VL_RELEASE() {
+        {
+            std::unique_lock<std::mutex> l{m_mutex};
+            // m_exclusiveLockRequested and m_sharedCount are bitfields sharing single memory word.
+            // Letting compiler know that m_sharedCount is 0 allows it to zero whole word instead
+            // of just a single bit.
+            if (m_sharedCount != 0) VL_UNREACHABLE;
+            m_exclusiveLockRequested = false;
+        }
+        m_noExclusiveLocksCond.notify_all();
+    }
+
+    // Shared locking
+
+    void lock_shared() VL_ACQUIRE_SHARED() {
+        std::unique_lock<std::mutex> l{m_mutex};
+        while (m_exclusiveLockRequested) { m_noExclusiveLocksCond.wait(l); }
+        assert((m_sharedCount < SHARED_COUNT_MAX)
+               && "Maximum number of simultaneously held shared locks exceeded.");
+        ++m_sharedCount;
+    }
+
+    // TODO(mglb): bool try_lock_shared();
+
+    void unlock_shared() VL_RELEASE_SHARED() {
+        std::unique_lock<std::mutex> l{m_mutex};
+        assert((m_sharedCount > 0)
+               && "Number of held shared locks can never become lower than 0. "
+                  "Double unlock_shared() called somewhere?");
+        --m_sharedCount;
+        if (m_exclusiveLockRequested) {
+            if (m_sharedCount == 0) { m_noSharedLocksCond.notify_one(); }
+        }
+    }
+};
+
 /// Lock guard for mutex (ala std::unique_lock), wrapped to allow -fthread_safety checks
 template <typename T>
 class VL_SCOPED_CAPABILITY V3LockGuardImp final {
@@ -153,9 +226,30 @@ public:
     ~V3LockGuardImp() VL_RELEASE() { m_mutexr.unlock(); }
 };
 
-using V3Mutex = V3MutexImp<std::mutex>;
-using V3RecursiveMutex = V3MutexImp<std::recursive_mutex>;
 using V3LockGuard = V3LockGuardImp<V3Mutex>;
 using V3RecursiveLockGuard = V3LockGuardImp<V3RecursiveMutex>;
+using V3ExclusiveLockGuard = V3LockGuardImp<V3SharedMutex>;
+
+class VL_SCOPED_CAPABILITY V3SharedLockGuard final {
+    VL_UNCOPYABLE(V3SharedLockGuard);
+
+private:
+    V3SharedMutex& m_mutexr;
+
+public:
+    /// Acquire shared lock on given mutex and hold it for the object lifetime.
+    explicit V3SharedLockGuard(V3SharedMutex& mutexr) VL_ACQUIRE_SHARED(mutexr) VL_MT_SAFE
+        : m_mutexr(mutexr) {  // Need () or GCC 4.8 false warning
+        mutexr.lock_shared();
+    }
+    /// Take already locked mutex, and and hold the lock for the object lifetime.
+    explicit V3SharedLockGuard(V3SharedMutex& mutexr, std::adopt_lock_t)
+        VL_REQUIRES_SHARED(mutexr) VL_MT_SAFE
+        : m_mutexr(mutexr) {  // Need () or GCC 4.8 false warning
+    }
+
+    /// Unlock the mutex
+    ~V3SharedLockGuard() VL_RELEASE() { m_mutexr.unlock_shared(); }
+};
 
 #endif  // guard

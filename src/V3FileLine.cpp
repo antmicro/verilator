@@ -157,7 +157,7 @@ void VFileContent::pushText(const string& text) {
     m_lines.emplace_back(string(leftover, line_start));  // Might be ""
 }
 
-string VFileContent::getLine(int lineno) const VL_MT_SAFE {
+string VFileContent::getLine(int lineno) const {
     // Return error text rather than asserting so the user isn't left without a message
     // cppcheck-suppress negativeContainerIndex
     if (VL_UNCOVERABLE(lineno < 0 || lineno >= (int)m_lines.size())) {

@@ -445,7 +445,7 @@ public:
     void buildDepBin(const string& flag) { m_buildDepBin = flag; }
     bool cmake() const { return m_cmake; }
     bool context() const VL_MT_SAFE { return m_context; }
-    bool coverage() const VL_MT_SAFE {
+    bool coverage() const {
         return m_coverageLine || m_coverageToggle || m_coverageUser;
     }
     bool coverageLine() const { return m_coverageLine; }

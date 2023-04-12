@@ -146,7 +146,7 @@ class EmitCGatherDependencies final : VNVisitorConst {
     }
 
 public:
-    static const std::set<std::string> gather(AstCFunc* cfuncp) VL_MT_STABLE {
+    static const std::set<std::string> gather(AstCFunc* cfuncp) {
         const EmitCGatherDependencies visitor{cfuncp};
         return std::move(visitor.m_dependencies);
     }
@@ -565,7 +565,7 @@ class EmitCImp final : EmitCFunc {
 
 public:
     static void main(const AstNodeModule* modp, bool slow,
-                     std::deque<AstCFile*>& cfilesr) VL_MT_STABLE {
+                     std::deque<AstCFile*>& cfilesr) {
         EmitCImp{modp, slow, cfilesr};
     }
 };
@@ -909,7 +909,7 @@ class EmitCTrace final : EmitCFunc {
     ~EmitCTrace() override = default;
 
 public:
-    static void main(AstNodeModule* modp, bool slow, std::deque<AstCFile*>& cfilesr) VL_MT_STABLE {
+    static void main(AstNodeModule* modp, bool slow, std::deque<AstCFile*>& cfilesr) {
         EmitCTrace{modp, slow, cfilesr};
     }
 };
@@ -931,7 +931,7 @@ void V3EmitC::emitcImp() {
         cfiles.emplace_back();
         auto& slow = cfiles.back();
         futures.push_back(V3ThreadPool::s().enqueue<void>(
-            [modp, &slow]() { EmitCImp::main(modp, /* slow: */ true, slow); }));
+            [modp, &slow]() VL_MT_START { EmitCImp::main(modp, /* slow: */ true, slow); }));
         cfiles.emplace_back();
         auto& fast = cfiles.back();
         futures.push_back(V3ThreadPool::s().enqueue<void>(

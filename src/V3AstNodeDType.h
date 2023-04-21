@@ -117,7 +117,9 @@ public:
     }
     int widthPow2() const;
     void widthMinFromWidth() { m_widthMin = m_width; }
-    bool widthSized() const VL_MT_SAFE { return m_width && (!m_widthMin || m_widthMin == m_width); }
+    bool widthSized() const VL_MT_SAFE {
+        return m_width && (!m_widthMin || m_widthMin == m_width);
+    }
     bool generic() const VL_MT_SAFE { return m_generic; }
     void generic(bool flag) { m_generic = flag; }
     std::pair<uint32_t, uint32_t> dimensions(bool includeBasic);

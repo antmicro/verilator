@@ -2118,6 +2118,7 @@ class AstClass final : public AstNodeModule {
     bool m_interfaceClass = false;  // Interface class
     bool m_needRNG = false;  // Need RNG, uses srandom/randomize
     bool m_virtual = false;  // Virtual class
+    bool m_paramed = false;  // Is a parameterized class
     void insertCache(AstNode* nodep);
 
 public:
@@ -2151,6 +2152,8 @@ public:
     void isVirtual(bool flag) { m_virtual = flag; }
     bool needRNG() const { return m_needRNG; }
     void needRNG(bool flag) { m_needRNG = flag; }
+    bool isParamed() const { return m_paramed; }
+    void isParamed(bool flag) { m_paramed = flag; }
     // Return true if this class is an extension of base class (SLOW)
     // Accepts nullptrs
     static bool isClassExtendedFrom(const AstClass* refClassp, const AstClass* baseClassp);

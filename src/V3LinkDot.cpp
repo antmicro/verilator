@@ -2314,6 +2314,7 @@ private:
         checkNoDot(nodep);
         AstNode::user5ClearTree();
         UASSERT_OBJ(nodep->classp(), nodep, "ClassRef has unlinked class");
+
         UASSERT_OBJ(m_statep->forPrimary() || !nodep->paramsp(), nodep,
                     "class reference parameter not removed by V3Param");
         VL_RESTORER(m_pinSymp);
@@ -3286,10 +3287,22 @@ private:
         // No checknodot(nodep), visit(AstScope) will check for LambdaArgRef
         iterateChildren(nodep);
     }
+    bool isParameterizedClass(const AstClass* const nodep) {
+        // Global parameters are at the beginning of the members list,
+        // so we need to check only the first node.
+        if (const AstParamTypeDType* const parp = VN_CAST(nodep->stmtsp(), ParamTypeDType)) {
+            if (parp->isGParam()) return true;
+        } else if (const AstVar* const varp = VN_CAST(nodep->stmtsp(), Var)) {
+            if (varp->isGParam()) return true;
+        }
+        return false;
+    }
+
     void visit(AstClass* nodep) override {
         if (nodep->user3SetOnce()) return;
         UINFO(5, "   " << nodep << endl);
         checkNoDot(nodep);
+        if (isParameterizedClass(nodep)) nodep->isParamed(true);
         VL_RESTORER(m_curSymp);
         VL_RESTORER(m_modSymp);
         VL_RESTORER(m_ifClassImpNames);

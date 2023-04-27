@@ -621,6 +621,7 @@ class ParamProcessor final {
         }
         // Assign parameters to the constants specified
         // DOES clone() so must be finished with module clonep() before here
+        if (!paramsp) srcModp->user2p(newmodp);
         for (AstPin* pinp = paramsp; pinp; pinp = VN_AS(pinp->nextp(), Pin)) {
             if (pinp->exprp()) {
                 if (AstVar* const modvarp = pinp->modVarp()) {
@@ -810,6 +811,13 @@ class ParamProcessor final {
 
         if (!any_overrides) {
             UINFO(8, "Cell parameters all match original values, skipping expansion.\n");
+            if (AstClass* newClassp = VN_CAST(srcModpr, Class)) {
+                if (newClassp->isParamed()) {
+                    if (!srcModpr->user2p())
+                        deepCloneModule(srcModpr, nodep, nullptr, srcModpr->name(), ifaceRefRefs);
+                    srcModpr = VN_AS(srcModpr->user2p(), Class);
+                }
+            }
         } else if (AstNodeModule* const paramedModp
                    = m_hierBlocks.findByParams(srcModpr->name(), paramsp, m_modp)) {
             paramedModp->dead(false);
@@ -844,7 +852,7 @@ class ParamProcessor final {
 
         // Delete the parameters from the cell; they're not relevant any longer.
         if (paramsp) paramsp->unlinkFrBackWithNext()->deleteTree();
-        return any_overrides;
+        return true;
     }
 
     void cellDeparam(AstCell* nodep, AstNodeModule*& srcModpr) {
@@ -917,7 +925,8 @@ public:
 class ParamVisitor final : public VNVisitor {
     // NODE STATE
     // AstNodeModule::user1 -> bool: already fixed level
-
+    // AstClass::user2      -> AstClass*: a parameterized class instance
+    //                                    with the default values of parameters
     // STATE
     ParamProcessor m_processor;  // De-parameterize a cell, build modules
     UnrollStateful m_unroller;  // Loop unroller

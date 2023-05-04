@@ -638,6 +638,7 @@ class ParamProcessor final {
                 } else if (AstParamTypeDType* const modptp = pinp->modPTypep()) {
                     AstNodeDType* const dtypep = VN_AS(pinp->exprp(), NodeDType);
                     UASSERT_OBJ(dtypep, pinp, "unlinked param dtype");
+                    modptp->dtypep(nullptr);
                     if (modptp->childDTypep()) modptp->childDTypep()->unlinkFrBack()->deleteTree();
                     // Set this parameter to value requested by cell
                     modptp->childDTypep(dtypep->cloneTree(false));

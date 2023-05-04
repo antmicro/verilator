@@ -921,6 +921,7 @@ class ParamVisitor final : public VNVisitor {
     // NODE STATE
     // AstNodeModule::user1 -> bool: already fixed level
     // AstClass::user2      -> bool: Referenced (value read only in parameterized classes)
+    //                               Means that the default instance is used.
     // STATE
     ParamProcessor m_processor;  // De-parameterize a cell, build modules
     UnrollStateful m_unroller;  // Loop unroller
@@ -1053,7 +1054,7 @@ class ParamVisitor final : public VNVisitor {
         if (nodep->recursiveClone()) nodep->dead(true);  // Fake, made for recursive elimination
         if (nodep->dead()) return;  // Marked by LinkDot (and above)
         if (AstClass* const classp = VN_CAST(nodep, Class)) {
-            if (classp->isParameterized()) {
+            if (classp->isParameterized() && !classp->user2()) {
                 // Don't enter into a definition.
                 // If a class is used, it will be visited through a reference
                 m_paramClasses.push_back(classp);
@@ -1337,6 +1338,19 @@ class ParamVisitor final : public VNVisitor {
             nodep->unlinkFrBack();
         }
         VL_DO_DANGLING(nodep->deleteTree(), nodep);
+    }
+
+    void visit(AstRefDType* nodep) override {
+        if (AstClass* classp = VN_CAST(nodep->classOrPackagep(), Class)) {
+            if (classp->isParameterized()) {
+                // Reference to a class instance with the default parameter values.
+                // Mark the default instance as used and iterate through its body,
+                // because it may have references to other parameterized classes.
+                classp->user2(true);
+                iterate(classp);
+            }
+        }
+        iterateChildren(nodep);
     }
 
     void visit(AstNode* nodep) override { iterateChildren(nodep); }

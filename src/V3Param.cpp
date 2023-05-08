@@ -812,7 +812,16 @@ class ParamProcessor final {
             UINFO(8, "Cell parameters all match original values, skipping expansion.\n");
             // Mark that the defeult instance is used.
             // It will be checked only if srcModpr is a class.
-            srcModpr->user2(true);
+            if (AstClass* newClassp = VN_CAST(srcModpr, Class)) {
+                if (newClassp->isParameterized()) {
+                    if (!srcModpr->user2p()) {
+                        AstClass* defClassp = newClassp->cloneTree(false);
+                        defClassp->isParameterized(false);
+                        srcModpr->user2p(defClassp);
+                    }
+                    srcModpr = VN_AS(srcModpr->user2p(), Class);
+                }
+            }
         } else if (AstNodeModule* const paramedModp
                    = m_hierBlocks.findByParams(srcModpr->name(), paramsp, m_modp)) {
             paramedModp->dead(false);
@@ -847,7 +856,7 @@ class ParamProcessor final {
 
         // Delete the parameters from the cell; they're not relevant any longer.
         if (paramsp) paramsp->unlinkFrBackWithNext()->deleteTree();
-        return any_overrides;
+        return true;
     }
 
     void cellDeparam(AstCell* nodep, AstNodeModule*& srcModpr) {
@@ -1378,13 +1387,13 @@ public:
             for (AstNodeModule* const modp : modps) netlistp->addModulesp(modp);
 
             for (AstClass* const classp : m_paramClasses) {
-                if (!classp->user2()) {
+                if (!classp->user2p()) {
                     // Unreferenced, so it can be removed
                     VL_DO_DANGLING(pushDeletep(classp->unlinkFrBack()), classp);
                 } else {
                     // Referenced. classp became a specialized class with the default
                     // values of parameters and is not a parameterized class anymore
-                    classp->isParameterized(false);
+                    classp->replaceWith(classp->user2p());
                 }
             }
         }

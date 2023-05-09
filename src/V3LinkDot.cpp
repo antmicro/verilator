@@ -2020,9 +2020,10 @@ private:
     int m_modportNum = 0;  // Uniqueify modport numbers
     bool m_inSens = false;  // True if in senitem
     std::set<std::string> m_ifClassImpNames;  // Names imported from interface class
-    std::set<AstClass*> m_extendsParam;  // Classes that has a parameter as its super class
-    bool m_insideClassExtParam = false;  // Inside a class that extends a parameter.
-                                         // It may be set only in linkDotPrimary.
+    std::set<AstClass*> m_extendsParam;  // Classes that have a parameterized super class
+                                         // (except the default instances)
+                                         // They are added to the set only in linkDotPrimary.
+    bool m_insideClassExtParam = false;  // Inside a class from m_extendsParam
 
     struct DotStates {
         DotPosition m_dotPos;  // Scope part of dotted resolution
@@ -3289,6 +3290,7 @@ private:
             int next = 0;
             for (AstClassExtends* cextp = nodep->extendsp(); cextp;
                  cextp = VN_AS(cextp->nextp(), ClassExtends)) {
+                bool param_extends = false;
                 // Replace abstract reference with hard pointer
                 // Will need later resolution when deal with parameters
                 if (++next == 2 && !nodep->isInterfaceClass() && !cextp->isImplements()) {
@@ -3339,7 +3341,12 @@ private:
                                 m_insideClassExtParam = true;
                             }
                             AstPin* paramsp = cpackagerefp->paramsp();
-                            if (paramsp) paramsp = paramsp->cloneTree(true);
+                            if (paramsp) {
+                                paramsp = paramsp->cloneTree(true);
+                                m_extendsParam.insert(nodep);
+                                m_insideClassExtParam = true;
+                                param_extends = true;
+                            }
                             classRefDtypep
                                 = new AstClassRefDType{nodep->fileline(), classp, paramsp};
                         } else if (AstParamTypeDType* const paramp
@@ -3384,7 +3391,7 @@ private:
                                 cextp->childDTypep(classRefDtypep);
                                 classp->isExtended(true);
                                 nodep->isExtended(true);
-                                importSymbolsFromExtended(nodep, cextp);
+                                if (!param_extends) importSymbolsFromExtended(nodep, cextp);
                                 VL_DO_DANGLING(cextp->classOrPkgsp()->unlinkFrBack()->deleteTree(),
                                                cpackagerefp);
                             }
@@ -3490,6 +3497,8 @@ private:
                 newp->classOrPackagep(foundp->classOrPackagep());
                 nodep->replaceWith(newp);
                 VL_DO_DANGLING(nodep->deleteTree(), nodep);
+                return;
+            } else if (m_insideClassExtParam) {
                 return;
             } else {
                 if (foundp) UINFO(1, "Found sym node: " << foundp->nodep() << endl);

@@ -3301,7 +3301,9 @@ private:
                     // Already converted. Update symbol table to link unlinked members.
                     // Base class has to be visited in a case if its extends statement
                     // needs to be handled. Recursive inheritance was already checked.
-                    iterate(cextp->classp());
+                    AstClass* const classp = cextp->classp();
+                    iterate(classp);
+                    classp->isExtended(true);
                     importSymbolsFromExtended(nodep, cextp);
                     continue;
                 }
@@ -3389,9 +3391,11 @@ private:
                                                << "... Suggest use 'implements'");
                             } else {
                                 cextp->childDTypep(classRefDtypep);
-                                classp->isExtended(true);
                                 nodep->isExtended(true);
-                                if (!param_extends) importSymbolsFromExtended(nodep, cextp);
+                                if (!param_extends) {
+                                    classp->isExtended(true);
+                                    importSymbolsFromExtended(nodep, cextp);
+                                }
                                 VL_DO_DANGLING(cextp->classOrPkgsp()->unlinkFrBack()->deleteTree(),
                                                cpackagerefp);
                             }

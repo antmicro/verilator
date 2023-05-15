@@ -3176,6 +3176,7 @@ private:
     void visit(AstSelBit* nodep) override {
         if (nodep->user3SetOnce()) return;
         iterateAndNextNull(nodep->fromp());
+        if (m_ds.m_unresolvedClass) return;
         if (m_ds.m_dotPos
             == DP_SCOPE) {  // Already under dot, so this is {modulepart} DOT {modulepart}
             UINFO(9, "  deferring until after a V3Param pass: " << nodep << endl);

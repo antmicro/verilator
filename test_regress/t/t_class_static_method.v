@@ -44,6 +44,9 @@ module t (/*AUTOARG*/);
       oc = OCls::create();
       OCls::test_obj(oc);
 
+      oc = OCls::create;
+      OCls::test_obj(oc);
+
       $write("*-* All Finished *-*\n");
       $finish;
    end

@@ -2757,19 +2757,22 @@ private:
                 m_ds.m_dotSymp = foundp;
                 ok = m_ds.m_dotPos == DP_SCOPE;
             } else if (const AstNodeFTask* const ftaskp = VN_CAST(foundp->nodep(), NodeFTask)) {
-
                 if (!ftaskp->isFunction() || ftaskp->classMethod()) {
-                    ok = m_ds.m_dotPos == DP_NONE;
-                    if (ok) {
-                        // The condition is true for tasks,
-                        // properties and void functions.
-                        // In these cases, the parentheses may be skipped.
-                        // Also SV class methods can be called without parens
-                        AstFuncRef* const funcRefp
-                            = new AstFuncRef{nodep->fileline(), nodep->name(), nullptr};
-                        nodep->replaceWith(funcRefp);
-                        VL_DO_DANGLING(pushDeletep(nodep), nodep);
+                    // The condition is true for tasks, properties and void functions.
+                    // In these cases, the parentheses may be skipped.
+                    // Also SV class methods can be called without parens
+                    UASSERT_OBJ(m_ds.m_dotPos == DP_NONE || m_ds.m_dotPos == DP_SCOPE, nodep,
+                                "Unexpected dot state");
+                    ok = true;
+                    AstFuncRef* const funcRefp
+                        = new AstFuncRef{nodep->fileline(), nodep->name(), nullptr};
+                    nodep->replaceWith(funcRefp);
+                    if (m_ds.m_dotPos == DP_SCOPE) {
+                        // Func ref node will be iterated next,
+                        // so set the dot pos to the previous state.
+                        m_ds.m_dotPos = DP_PACKAGE;
                     }
+                    VL_DO_DANGLING(pushDeletep(nodep), nodep);
                 }
             }
             // Don't throw error ifthe reference is inside a class that extends a param, because

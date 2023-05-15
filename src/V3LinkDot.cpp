@@ -2769,7 +2769,7 @@ private:
                     if (m_ds.m_dotPos == DP_SCOPE) {
                         // Func ref node will be iterated next,
                         // so set the dot pos to the previous state.
-                        m_ds.m_dotPos = DP_PACKAGE;
+                        m_ds.m_dotPos = lastStates.m_dotPos;
                     }
                     VL_DO_DANGLING(pushDeletep(nodep), nodep);
                 }

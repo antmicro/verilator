@@ -3173,15 +3173,6 @@ private:
     void visit(AstSelBit* nodep) override {
         if (nodep->user3SetOnce()) return;
         iterateAndNextNull(nodep->fromp());
-        if (m_ds.m_dotPos
-            == DP_SCOPE) {  // Already under dot, so this is {modulepart} DOT {modulepart}
-            UINFO(9, "  deferring until after a V3Param pass: " << nodep << endl);
-            m_ds.m_dotText += "__BRA__??__KET__";
-            m_ds.m_unresolvedCell = true;
-            // And pass up m_ds.m_dotText
-        }
-        // Pass dot state down to fromp()
-        iterateAndNextNull(nodep->fromp());
         {
             VL_RESTORER(m_ds);
             {
@@ -3189,13 +3180,6 @@ private:
                 iterateAndNextNull(nodep->bitp());
                 iterateAndNextNull(nodep->attrp());
             }
-        }
-        if (m_ds.m_unresolvedCell && m_ds.m_dotPos == DP_SCOPE) {
-            AstNodeExpr* const exprp = nodep->bitp()->unlinkFrBack();
-            AstCellArrayRef* const newp
-                = new AstCellArrayRef{nodep->fileline(), nodep->fromp()->name(), exprp};
-            nodep->replaceWith(newp);
-            VL_DO_DANGLING(pushDeletep(nodep), nodep);
         }
     }
     void visit(AstNodePreSel* nodep) override {

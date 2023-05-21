@@ -21,6 +21,8 @@
 #include "config_build.h"
 #include "verilatedos.h"
 
+#include "V3ThreadSafety.h"
+
 class AstNetlist;
 
 //============================================================================
@@ -32,7 +34,7 @@ public:
     static void makeDynamicScopes(AstNetlist* nodep);
     // Create tasks out of blocks/statments that can outlive processes in which they were forked.
     // Return value: number of tasks created
-    static void makeTasks(AstNetlist* nodep);
+    static void makeTasks(AstNetlist* nodep) VL_MT_DISABLED;
 };
 
 #endif  // Guard

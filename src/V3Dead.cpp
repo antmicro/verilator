@@ -49,6 +49,8 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Dead state, as a visitor of each AstNode
 
+namespace {
+
 class DeadVisitor final : public VNVisitor {
 private:
     // NODE STATE
@@ -534,6 +536,8 @@ public:
     }
     ~DeadVisitor() override = default;
 };
+
+}  // namespace
 
 //######################################################################
 // Dead class functions

@@ -21,6 +21,8 @@
 #include "config_build.h"
 #include "verilatedos.h"
 
+#include "V3ThreadSafety.h"
+
 class AstNetlist;
 
 //============================================================================
@@ -29,7 +31,7 @@ class V3Fork final {
 public:
     // Create tasks out of begin blocks that can outlive processes in which they were forked.
     // Return value: number of tasks created
-    static int makeTasks(AstNetlist* nodep);
+    static int makeTasks(AstNetlist* nodep) VL_MT_DISABLED;
 };
 
 #endif  // Guard

@@ -2843,9 +2843,9 @@ private:
         VL_RESTORER(m_pinSymp);
         {
             m_ds.init(m_curSymp);
+            iterate(nodep->classOrPackageNodep());
             // ClassRef's have pins, so track
             if (nodep->classOrPackagep()) {
-                if (VN_IS(nodep->classOrPackagep(), Class)) iterate(nodep->classOrPackagep());
                 m_pinSymp = m_statep->getNodeSym(nodep->classOrPackagep());
             }
             UINFO(4, "(Backto) Link ClassOrPackageRef: " << nodep << endl);

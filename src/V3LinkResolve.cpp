@@ -155,6 +155,19 @@ private:
             }
         }
     }
+    void visit(AstNodeAssign* nodep) override {
+        if (AstNodeStream* const lhsStreamp = VN_CAST(nodep->lhsp(), NodeStream)) {
+            lhsStreamp->unlinkFrBack();
+            AstNodeExpr* const streamOperandp = lhsStreamp->lhsp()->unlinkFrBack();
+            AstNodeExpr* const rhsp = nodep->rhsp()->unlinkFrBack();
+            lhsStreamp->lhsp(rhsp);
+            AstRefDType* const refDTypep = new AstRefDType{
+                rhsp->fileline(), AstRefDType::FlagTypeOfExpr{}, streamOperandp->cloneTree(false)};
+            nodep->rhsp(new AstCast{rhsp->fileline(), lhsStreamp, VFlagChildDType{}, refDTypep});
+            nodep->lhsp(streamOperandp);
+        }
+        iterateChildren(nodep);
+    }
 
     void visit(AstCaseItem* nodep) override {
         // Move default caseItems to the bottom of the list

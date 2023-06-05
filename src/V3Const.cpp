@@ -2166,7 +2166,7 @@ private:
             AstNodeExpr* const srcp = nodep->rhsp()->unlinkFrBack();
             // Connect the rhs to the stream operator and update its width
             VN_AS(streamp, StreamL)->lhsp(srcp);
-            streamp->dtypeSetStream();
+            streamp->dtypeSetLogicUnsized(srcp->width(), srcp->widthMin(), VSigning::UNSIGNED);
             // Shrink the RHS if necessary
             if (sWidth > dWidth && dWidth != 0) {
                 streamp = new AstSel{streamp->fileline(), streamp, sWidth - dWidth, dWidth};

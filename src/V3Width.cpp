@@ -848,15 +848,7 @@ private:
             } else {
                 nodep->v3error("Slice size isn't a constant or basic data type.");
             }
-            nodep->dtypeSetLogicUnsized(nodep->lhsp()->width(), nodep->lhsp()->widthMin(),
-                                        VSigning::UNSIGNED);
-        }
-        if (m_vup->final()) {
-            if (!nodep->dtypep()->widthSized()) {
-                // See also error in V3Number
-                nodeForUnsizedWarning(nodep)->v3warn(
-                    WIDTHCONCAT, "Unsized numbers/parameters not allowed in streams.");
-            }
+            nodep->dtypeSetStream();
         }
     }
     void visit(AstRange* nodep) override {

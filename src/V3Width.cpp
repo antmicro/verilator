@@ -854,7 +854,7 @@ private:
                 nodep->dtypeSetStream();
             } else {
                 nodep->dtypeSetLogicUnsized(nodep->lhsp()->width(), nodep->lhsp()->widthMin(),
-                                        VSigning::UNSIGNED);
+                                            VSigning::UNSIGNED);
             }
         }
         if (m_vup->final()) {

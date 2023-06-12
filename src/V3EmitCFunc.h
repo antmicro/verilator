@@ -1118,6 +1118,21 @@ public:
     }
     void visit(AstStreamL* nodep) override {
         // Attempt to use a "fast" stream function for slice size = power of 2
+        if (VN_IS(nodep->dtypep()->skipRefp(), StreamDType)) {
+            puts("VL_STREAML_WDI(");
+            puts(cvtToStr(m_wideTempRefp->widthMin()));
+            puts(", ");
+            puts(m_wideTempRefp->varp()->nameProtect());
+            m_wideTempRefp = nullptr;
+            puts(", ");
+            iterateAndNextConstNull(nodep->lhsp());
+            puts(", ");
+            iterateAndNextConstNull(nodep->rhsp());
+            puts(", ");
+            puts(cvtToStr(nodep->lhsp()->dtypep()->subDTypep()->widthMin()));
+            puts(")");
+            return;
+        }
         if (!nodep->isWide()) {
             const uint32_t isPow2 = VN_AS(nodep->rhsp(), Const)->num().countOnes() == 1;
             const uint32_t sliceSize = VN_AS(nodep->rhsp(), Const)->toUInt();

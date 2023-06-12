@@ -1526,6 +1526,12 @@ static inline WDataOutP VL_STREAML_WWI(int lbits, WDataOutP owp, WDataInP const 
     return owp;
 }
 
+static inline WDataOutP VL_STREAML_WDI(int lbits, WDataOutP owp, const VlQueue<CData> q,
+                                       IData rd, int q_elem_size) VL_MT_SAFE {
+    VL_ZERO_W(lbits, owp);
+    return owp;
+}
+
 // Because concats are common and wide, it's valuable to always have a clean output.
 // Thus we specify inputs must be clean, so we don't need to clean the output.
 // Note the bit shifts are always constants, so the adds in these constify out.

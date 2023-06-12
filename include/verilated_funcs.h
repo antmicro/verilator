@@ -1526,8 +1526,8 @@ static inline WDataOutP VL_STREAML_WWI(int lbits, WDataOutP owp, WDataInP const 
     return owp;
 }
 
-static inline WDataOutP VL_STREAML_WDI(int lbits, WDataOutP owp, const VlQueue<CData> q,
-                                       IData rd, int q_elem_size) VL_MT_SAFE {
+static inline WDataOutP VL_STREAML_WDI(int lbits, WDataOutP owp, const VlQueue<CData> q, IData rd,
+                                       int q_elem_size) VL_MT_SAFE {
     VL_ZERO_W(lbits, owp);
     return owp;
 }

@@ -79,6 +79,7 @@ extern std::string VL_TO_STRING_W(int words, const WDataInP obj);
 class VlProcess final {
     // MEMBERS
     int m_state;  // Current state of the process
+    VlRNG m_rng;  // Random Number Generator of the process
 
 public:
     // TYPES
@@ -97,6 +98,7 @@ public:
     // METHODS
     int state() { return m_state; }
     void state(int s) { m_state = s; }
+    VlRNG& rng() { return m_rng; };
 };
 
 using VlProcessRef = std::shared_ptr<VlProcess>;

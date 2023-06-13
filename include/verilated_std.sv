@@ -173,20 +173,18 @@ package std;
       // function void srandom(int seed);
       // endfunction
 
-      // The methods below work only if set_randstate is never applied to
-      // a state string created before another such string. Full support
-      // could use VlRNG class to store the state per process in VlProcess
-      // objects.
       function string get_randstate();
          string s;
-
-         s.itoa($random);  // Get a random number
-         set_randstate(s);  // Pretend it's the state of RNG
+`ifdef VERILATOR_TIMING
+         $c(s, "= ", m_process, "->rng().get_randstate();");
+`endif
          return s;
       endfunction
 
       function void set_randstate(string s);
-         $urandom(s.atoi());  // Set the seed using a string
+`ifdef VERILATOR_TIMING
+         $c(m_process, "->rng().set_randstate(", s, ");");
+`endif
       endfunction
    endclass
 endpackage

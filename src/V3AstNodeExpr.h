@@ -1629,16 +1629,22 @@ public:
 class AstRandRNG final : public AstNodeExpr {
     // Random used in a class using VlRNG
     // Return a random number, based upon width()
+    const string m_rngName = "__Vm_rng";
 public:
     AstRandRNG(FileLine* fl, AstNodeDType* dtp)
         : ASTGEN_SUPER_RandRNG(fl) {
         dtypep(dtp);
     }
+    AstRandRNG(FileLine* fl, AstNodeDType* dtp, string rngName)
+        : ASTGEN_SUPER_RandRNG(fl)
+        , m_rngName(rngName) {
+        dtypep(dtp);
+    }
     ASTGEN_MEMBERS_AstRandRNG;
     string emitVerilog() override { return "%f$rngrandom()"; }
     string emitC() override {
-        return isWide() ? "VL_RANDOM_RNG_%nq(__Vm_rng, %nw, %P)"  //
-                        : "VL_RANDOM_RNG_%nq(__Vm_rng)";
+        return isWide() ? "VL_RANDOM_RNG_%nq(" + m_rngName + ", %nw, %P)"  //
+                        : "VL_RANDOM_RNG_%nq(" + m_rngName + ")";
     }
     bool cleanOut() const override { return false; }
     bool isGateOptimizable() const override { return false; }

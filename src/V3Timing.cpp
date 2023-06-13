@@ -368,8 +368,10 @@ private:
     //                                                                   been processed.
     //  AstSenTree::user1()                             -> AstVarScope*. Trigger scheduler assigned
     //                                                                   to this sentree
-    //  Ast{NodeProcedure,CFunc,Begin}::user2()         -> bool.         Set true if process/task
-    //                                                                   is suspendable
+    //  Ast{NodeProcedure,CFunc,Begin}::user2()         -> int.          Set to >= T_SUSP if
+    //                                                                   process/task suspendable
+    //                                                                   and to T_PROC if it
+    //                                                                   needs process metadata.
     //  Ast{EventControl}::user2()                      -> bool.         Set true if event control
     //                                                                   should immediately be
     //                                                                   committed
@@ -894,6 +896,7 @@ private:
     void visit(AstNodeAssign* nodep) override {
         // Only process once to avoid infinite loops (due to the net delay)
         if (nodep->user1SetOnce()) return;
+        iterateChildren(nodep);
         AstNode* const controlp = factorOutTimingControl(nodep);
         if (!controlp) return;
         // Handle the intra assignment timing control
@@ -1050,6 +1053,14 @@ private:
             beginp->name(nodep->name() + "__" + cvtToStr(idx++));
         }
         if (!nodep->joinType().joinNone()) makeForkJoin(nodep);
+    }
+    void visit(AstRand* nodep) override {
+        if (nodep->user1SetOnce()) return;
+        if (m_procp->user2() >= T_PROC) {
+            AstRandRNG* const randp = new AstRandRNG{nodep->fileline(), nodep->dtypep(), "vlProcess->rng()"};
+            nodep->replaceWith(randp);
+            VL_DO_DANGLING(pushDeletep(nodep), nodep);
+        }
     }
 
     //--------------------

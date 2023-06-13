@@ -8,12 +8,14 @@ module t;
    process p;
 
    integer seed;
-   string state;
+   string state, stateB;
    int a;
    int b;
 
    initial begin
       p = process::self();
+
+      $display("%s", p.get_randstate());
 
       // Test setting RNG state with state string
       state = p.get_randstate();
@@ -42,6 +44,16 @@ module t;
       p.set_randstate(state);
       for (int i = 0; i < 10; i++)
          $random;
+      b = $random;
+      $display("a=%d, b=%d", a, b);
+      if (a != b) $stop;
+
+      // Test using two state variables at the same time
+      state = p.get_randstate();
+      stateB = p.get_randstate();
+      p.set_randstate(state);
+      a = $random;
+      p.set_randstate(stateB);
       b = $random;
       $display("a=%d, b=%d", a, b);
       if (a != b) $stop;

@@ -400,12 +400,6 @@ private:
     }
     void visit(AstCFunc* nodep) override {
         m_hash += hashNodeAndIterate(nodep, HASH_DTYPE, HASH_CHILDREN, [=]() {  //
-            // We might be in a recursive function, if so on *second* call
-            // here we need to break what would be an infinite loop.
-            nodep->user4(V3Hash{1}.value());  // Set this "first" call
-            // So that a second call will then exit hashNodeAndIterate
-            // Having a constant in the hash just means the recursion will
-            // end, it shouldn't change the CFunc having a unique hash itself.
             m_hash += nodep->isLoose();
         });
     }

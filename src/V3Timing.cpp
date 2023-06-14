@@ -63,12 +63,11 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 // ######################################################################
 
-enum TimingFlag : uint8_t {
+enum TimingFlags : uint8_t {
     // Properties of flags with higher numbers include properties of flags with
     // lower numbers
-    T_NORM = 0,  // Normal non-suspendable process
     T_SUSP = 1,  // Suspendable
-    T_PROC = 2  // Suspendable with process metadata
+    T_PROC = 2  // Contains process metadata
 };
 
 // ######################################################################
@@ -126,11 +125,9 @@ private:
         return nodep->user3u().to<TimingDependencyVertex*>();
     }
     // Set timing flag of a node
-    bool setTimingFlag(AstNode* nodep, int flag) {
-        // Properties of flags with higher numbers include properties of flags with lower
-        // numbers, so modify nodep->user2() only if it will increase.
-        if (nodep->user2() < flag) {
-            nodep->user2(flag);
+    bool setTimingFlags(AstNode* nodep, TimingFlags flags) {
+        if (~nodep->user2() & (int)flags) {
+            nodep->user2(nodep->user2() | flags);
             return true;
         }
         return false;
@@ -141,7 +138,7 @@ private:
         for (V3GraphEdge* edgep = vxp->inBeginp(); edgep; edgep = edgep->inNextp()) {
             auto* const depVxp = static_cast<TimingDependencyVertex*>(edgep->fromp());
             AstNode* const depp = depVxp->nodep();
-            if (setTimingFlag(depp, parentp->user2())) propagateTimingFlags(depVxp);
+            if (setTimingFlags(depp, TimingFlags(parentp->user2()))) propagateTimingFlags(depVxp);
         }
     }
 
@@ -185,9 +182,9 @@ private:
                 if (!cextp->classp()->user1SetOnce()) cextp->classp()->repairCache();
                 if (auto* const overriddenp
                     = VN_CAST(cextp->classp()->findMember(nodep->name()), CFunc)) {
-                    setTimingFlag(nodep, overriddenp->user2());
-                    if (nodep->user2()
-                        < T_PROC) {  // Add a vertex only if the flag can still change
+                    setTimingFlags(nodep, TimingFlags(overriddenp->user2()));
+                    if (nodep->user2() & (T_SUSP | T_PROC) != T_SUSP | T_PROC) {
+                        // Add a vertex only if the flag can still change
                         // Make a dependency cycle, as being suspendable should propagate both up
                         // and down the inheritance tree
                         TimingDependencyVertex* const overriddenVxp
@@ -203,8 +200,9 @@ private:
         }
     }
     void visit(AstNodeCCall* nodep) override {
-        setTimingFlag(m_procp, nodep->funcp()->user2());
-        if (m_procp->user2() < T_PROC) {  // Add a vertex only if the flag can still change
+        setTimingFlags(m_procp, TimingFlags(nodep->funcp()->user2()));
+        if (m_procp->user2() & (T_SUSP | T_PROC) != T_SUSP | T_PROC) {
+            // Add a vertex only if the flag can still change
             TimingDependencyVertex* const procVxp = getDependencyVertex(m_procp);
             TimingDependencyVertex* const funcVxp = getDependencyVertex(nodep->funcp());
             new V3GraphEdge{&m_depGraph, procVxp, funcVxp, 1};
@@ -488,7 +486,7 @@ private:
     void addProcessInfo(AstCMethodHard* const methodp) const {
         FileLine* const flp = methodp->fileline();
         AstCExpr* const ap = new AstCExpr{
-            flp, m_procp && m_procp->user2() == T_PROC ? "vlProcess" : "nullptr", 0};
+            flp, (m_procp && (m_procp->user2() & T_PROC)) ? "vlProcess" : "nullptr", 0};
         ap->dtypeSetVoid();
         methodp->addPinsp(ap);
     }
@@ -580,8 +578,8 @@ private:
         VL_RESTORER(m_procp);
         m_procp = nodep;
         iterateChildren(nodep);
-        if (nodep->user2() >= T_SUSP) nodep->setSuspendable();
-        if (nodep->user2() >= T_PROC) nodep->setNeedProcess();
+        if (nodep->user2() & T_SUSP) nodep->setSuspendable();
+        if (nodep->user2() & T_PROC) nodep->setNeedProcess();
     }
     void visit(AstInitial* nodep) override {
         visit(static_cast<AstNodeProcedure*>(nodep));
@@ -594,7 +592,7 @@ private:
         if (nodep->user1SetOnce()) return;
         iterateChildren(nodep);
         if (!nodep->user2()) return;
-        if (nodep->user2() == T_PROC) nodep->setNeedProcess();
+        if (nodep->user2() & T_PROC) nodep->setNeedProcess();
         nodep->setSuspendable();
         FileLine* const flp = nodep->fileline();
         AstSenTree* const sensesp = m_activep->sensesp();
@@ -635,7 +633,7 @@ private:
             firstCoStmtp->v3warn(E_UNSUPPORTED,
                                  "Unsupported: Timing controls inside DPI-exported tasks");
         }
-        if (nodep->user2() == T_PROC) nodep->setNeedProcess();
+        if (nodep->user2() & T_PROC) nodep->setNeedProcess();
     }
     void visit(AstNodeCCall* nodep) override {
         if (nodep->funcp()->user2() && !nodep->user1SetOnce()) {  // If suspendable

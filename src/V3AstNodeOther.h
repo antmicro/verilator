@@ -1500,6 +1500,7 @@ class AstTypeTable final : public AstNode {
     AstEmptyQueueDType* m_emptyQueuep = nullptr;
     AstQueueDType* m_queueIndexp = nullptr;
     AstVoidDType* m_voidp = nullptr;
+    AstStreamDType* m_streamp = nullptr;
     AstBasicDType* m_basicps[VBasicDTypeKwd::_ENUM_MAX]{};
     //
     using DetailedMap = std::map<VBasicTypeKey, AstBasicDType*>;
@@ -1525,6 +1526,7 @@ public:
     AstEmptyQueueDType* findEmptyQueueDType(FileLine* fl);
     AstQueueDType* findQueueIndexDType(FileLine* fl);
     AstVoidDType* findVoidDType(FileLine* fl);
+    AstStreamDType* findStreamDType(FileLine* fl);
     void clearCache();
     void repairCache();
     void dump(std::ostream& str = std::cout) const override;

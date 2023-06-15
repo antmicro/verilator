@@ -685,6 +685,10 @@ class ParamProcessor final : public VNDeleter {
             } else {
                 V3Const::constifyParamsEdit(pinp->exprp());
                 AstConst* const exprp = VN_CAST(pinp->exprp(), Const);
+                // Set it a correct type to properly recognize if the requested instance
+                // was already created.
+                if (!modvarp->dtypep()) V3Width::widthParamsEdit(modvarp);
+                exprp->dtypeFrom(modvarp);
                 const AstConst* const origp = VN_CAST(modvarp->valuep(), Const);
                 if (!exprp) {
                     if (debug()) pinp->dumpTree("-  ");
@@ -696,14 +700,9 @@ class ParamProcessor final : public VNDeleter {
                     // Setting parameter to its default value.  Just ignore it.
                     // This prevents making additional modules, and makes coverage more
                     // obvious as it won't show up under a unique module page name.
-                } else if (exprp->num().isDouble() || exprp->num().isString()
-                           || exprp->num().isFourState() || exprp->num().width() != 32) {
-                    longnamer
-                        += ("_" + paramSmallName(srcModp, modvarp) + paramValueNumber(exprp));
-                    any_overridesr = true;
                 } else {
                     longnamer
-                        += ("_" + paramSmallName(srcModp, modvarp) + exprp->num().ascii(false));
+                        += ("_" + paramSmallName(srcModp, modvarp) + paramValueNumber(exprp));
                     any_overridesr = true;
                 }
             }

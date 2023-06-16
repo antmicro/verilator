@@ -344,7 +344,7 @@ private:
         // if (debug() >= 9) { UINFO(0, "\n"); beginp->dumpTree("-  labelo: "); }
     }
     void visit(AstVarRef* nodep) override {
-        //if (m_loopInc && nodep->varp()) nodep->varp()->usedLoopIdx(true);
+        // if (m_loopInc && nodep->varp()) nodep->varp()->usedLoopIdx(true);
     }
     void visit(AstConst*) override {}
     void visit(AstNode* nodep) override { iterateChildren(nodep); }

@@ -64,10 +64,9 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 // ######################################################################
 
 enum TimingFlags : uint8_t {
-    // Properties of flags with higher numbers include properties of flags with
-    // lower numbers
     T_SUSP = 1,  // Suspendable
-    T_PROC = 2  // Contains process metadata
+    T_PROC = 2,  // Contains process metadata
+    T_SUSPENDER = 4
 };
 
 // ######################################################################
@@ -79,24 +78,38 @@ private:
     // Vertex of a dependency graph of suspendable nodes, e.g. if a node (process or task) is
     // suspendable, all its dependents should also be suspendable
     class TimingDependencyVertex final : public V3GraphVertex {
+        AstClass* const m_classp; // Class associated with a method
         AstNode* const m_nodep;  // AST node represented by this graph vertex
 
         // ACCESSORS
         string name() const override VL_MT_STABLE {
+            if (m_classp) {
+                if (AstCFunc* cfunc = VN_CAST(nodep(), CFunc)) {
+                    return cvtToHex(nodep()) + ' ' + classp()->name() + "::" + nodep()->name();
+                }
+            }
             return cvtToHex(nodep()) + ' ' + nodep()->prettyTypeName();
         }
         FileLine* fileline() const override { return nodep()->fileline(); }
-        string dotColor() const override { return nodep()->user2() ? "red" : "black"; }
+        string dotColor() const override {
+            if (nodep()->user2() & T_SUSPENDER)
+                return "red";
+            if (nodep()->user2() & T_SUSP)
+                return "blue";
+            return "black";
+        }
 
     public:
         // CONSTRUCTORS
-        TimingDependencyVertex(V3Graph* graphp, AstNode* nodep)
+        TimingDependencyVertex(V3Graph* graphp, AstNode* nodep, AstClass* classp)
             : V3GraphVertex{graphp}
+            , m_classp{classp}
             , m_nodep{nodep} {}
         ~TimingDependencyVertex() override = default;
 
         // ACCESSORS
         virtual AstNode* nodep() const VL_MT_STABLE { return m_nodep; }
+        virtual AstNode* classp() const VL_MT_STABLE { return m_classp; }
     };
 
     // NODE STATE
@@ -121,13 +134,19 @@ private:
     // METHODS
     // Get or create the dependency vertex for the given node
     TimingDependencyVertex* getDependencyVertex(AstNode* const nodep) {
-        if (!nodep->user3p()) nodep->user3p(new TimingDependencyVertex{&m_depGraph, nodep});
+        AstClass* classp = nullptr;
+        if (AstCFunc* funcp = VN_CAST(nodep, CFunc)) {
+            if (funcp->scopep() && funcp->scopep()->modp()) {
+                classp = VN_CAST(funcp->scopep()->modp(), Class);
+            }
+        }
+        if (!nodep->user3p()) nodep->user3p(new TimingDependencyVertex{&m_depGraph, nodep, classp});
         return nodep->user3u().to<TimingDependencyVertex*>();
     }
     // Set timing flag of a node
     bool setTimingFlags(AstNode* nodep, TimingFlags flags) {
-        if (~nodep->user2() & (int)flags) {
-            nodep->user2(nodep->user2() | flags);
+        if (~nodep->user2() & ((int)flags & ~((int)T_SUSPENDER))) {
+            nodep->user2(nodep->user2() | (flags & ~((int)T_SUSPENDER)));
             return true;
         }
         return false;
@@ -159,7 +178,7 @@ private:
         m_procp = nodep;
         iterateChildren(nodep);
         TimingDependencyVertex* const vxp = getDependencyVertex(nodep);
-        if (nodep->needProcess()) nodep->user2(T_PROC);
+        if (nodep->needProcess()) nodep->user2(nodep->user2() | T_PROC);
         if (!m_classp) return;
         // If class method (possibly overrides another method)
         if (!m_classp->user1SetOnce()) m_classp->repairCache();
@@ -198,6 +217,10 @@ private:
                 }
             }
         }
+
+        if (nodep->isConstructor() && (nodep->user2() & T_SUSP)) {
+            v3fatal("constuctor is supendable: " << nodep);
+        }
     }
     void visit(AstNodeCCall* nodep) override {
         setTimingFlags(m_procp, TimingFlags(nodep->funcp()->user2()));
@@ -224,7 +247,7 @@ private:
     void visit(AstNode* nodep) override {
         if (nodep->isTimingControl()) {
             v3Global.setUsesTiming();
-            if (m_procp) m_procp->user2(T_SUSP);
+            if (m_procp) m_procp->user2(m_procp->user2() | T_SUSP | T_SUSPENDER);
         }
         iterateChildren(nodep);
     }
@@ -591,8 +614,8 @@ private:
     void visit(AstAlways* nodep) override {
         if (nodep->user1SetOnce()) return;
         iterateChildren(nodep);
-        if (!nodep->user2()) return;
         if (nodep->user2() & T_PROC) nodep->setNeedProcess();
+        if (!(nodep->user2() & T_SUSP)) return;
         nodep->setSuspendable();
         FileLine* const flp = nodep->fileline();
         AstSenTree* const sensesp = m_activep->sensesp();
@@ -769,8 +792,9 @@ private:
                 "trigger"};
             triggerMethodp->dtypeSetVoid();
             // If it should be committed immediately, pass true, otherwise false
-            triggerMethodp->addPinsp(nodep->user2() ? new AstConst{flp, AstConst::BitTrue{}}
-                                                    : new AstConst{flp, AstConst::BitFalse{}});
+            triggerMethodp->addPinsp((nodep->user2() & T_SUSP)
+                                         ? new AstConst{flp, AstConst::BitTrue{}}
+                                         : new AstConst{flp, AstConst::BitFalse{}});
             addProcessInfo(triggerMethodp);
             addEventDebugInfo(triggerMethodp, sensesp);
             // Create the co_await

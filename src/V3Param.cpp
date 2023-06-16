@@ -683,12 +683,16 @@ class ParamProcessor final : public VNDeleter {
                 longnamer += "_" + paramSmallName(srcModp, modvarp) + paramValueNumber(exprp);
                 any_overridesr = true;
             } else {
-                V3Const::constifyParamsEdit(pinp->exprp());
-                AstConst* const exprp = VN_CAST(pinp->exprp(), Const);
-                // Set it a correct type to properly recognize if the requested instance
-                // was already created.
-                if (!modvarp->dtypep()) V3Width::widthParamsEdit(modvarp);
-                exprp->dtypeFrom(modvarp);
+                AstConst* exprp;
+                if ((exprp = VN_CAST(pinp->exprp(), Const))) {
+                    // Is already a constant. Set the dtype of the parameter to correctly check
+                    // if the requested instance is already created.
+                    if (!modvarp->dtypep()) V3Width::widthParamsEdit(modvarp);
+                    exprp->dtypeFrom(modvarp);
+                } else {
+                    V3Const::constifyParamsEdit(pinp->exprp());
+                    exprp = VN_CAST(pinp->exprp(), Const);
+                }
                 const AstConst* const origp = VN_CAST(modvarp->valuep(), Const);
                 if (!exprp) {
                     if (debug()) pinp->dumpTree("-  ");

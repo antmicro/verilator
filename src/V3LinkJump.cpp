@@ -60,6 +60,7 @@ private:
     bool m_loopInc = false;  // In loop increment
     bool m_inFork = false;  // Under fork
     int m_modRepeatNum = 0;  // Repeat counter
+    AstNode* m_varDeclp = nullptr;  // Node holding variable declaration for the current scope
     std::vector<AstNodeBlock*> m_blockStack;  // All begin blocks above current node
 
     // METHODS
@@ -173,9 +174,16 @@ private:
         }
     }
     void visit(AstNodeFTask* nodep) override {
+        VL_RESTORER(m_varDeclp);
+        m_varDeclp = nodep->stmtsp();
         m_ftaskp = nodep;
         iterateChildren(nodep);
         m_ftaskp = nullptr;
+    }
+    void visit(AstBegin* nodep) override {
+        VL_RESTORER(m_varDeclp);
+        m_varDeclp = nodep->stmtsp();
+        visit(static_cast<AstNodeBlock*>(nodep));
     }
     void visit(AstNodeBlock* nodep) override {
         UINFO(8, "  " << nodep << endl);
@@ -197,7 +205,9 @@ private:
         AstVar* const varp
             = new AstVar{nodep->fileline(), VVarType::BLOCKTEMP, name, nodep->findSigned32DType()};
         varp->usedLoopIdx(true);
-        m_modp->addStmtsp(varp);
+        varp->funcLocal(true);
+        varp->lifetime(VLifetime::AUTOMATIC);
+        m_varDeclp->addNextHere(varp);
         AstNode* initsp = new AstAssign{
             nodep->fileline(), new AstVarRef{nodep->fileline(), varp, VAccess::WRITE}, countp};
         AstNode* const decp = new AstAssign{
@@ -334,7 +344,7 @@ private:
         // if (debug() >= 9) { UINFO(0, "\n"); beginp->dumpTree("-  labelo: "); }
     }
     void visit(AstVarRef* nodep) override {
-        if (m_loopInc && nodep->varp()) nodep->varp()->usedLoopIdx(true);
+        //if (m_loopInc && nodep->varp()) nodep->varp()->usedLoopIdx(true);
     }
     void visit(AstConst*) override {}
     void visit(AstNode* nodep) override { iterateChildren(nodep); }

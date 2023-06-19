@@ -202,7 +202,7 @@ private:
                 if (auto* const overriddenp
                     = VN_CAST(cextp->classp()->findMember(nodep->name()), CFunc)) {
                     setTimingFlags(nodep, TimingFlags(overriddenp->user2()));
-                    if (nodep->user2() & (T_SUSP | T_PROC) != T_SUSP | T_PROC) {
+                    if ((nodep->user2() & (T_SUSP | T_PROC)) != (T_SUSP | T_PROC)) {
                         // Add a vertex only if the flag can still change
                         // Make a dependency cycle, as being suspendable should propagate both up
                         // and down the inheritance tree
@@ -224,7 +224,7 @@ private:
     }
     void visit(AstNodeCCall* nodep) override {
         setTimingFlags(m_procp, TimingFlags(nodep->funcp()->user2()));
-        if (m_procp->user2() & (T_SUSP | T_PROC) != T_SUSP | T_PROC) {
+        if ((m_procp->user2() & (T_SUSP | T_PROC)) != (T_SUSP | T_PROC)) {
             // Add a vertex only if the flag can still change
             TimingDependencyVertex* const procVxp = getDependencyVertex(m_procp);
             TimingDependencyVertex* const funcVxp = getDependencyVertex(nodep->funcp());
@@ -636,7 +636,8 @@ private:
         VL_RESTORER(m_procp);
         m_procp = nodep;
         iterateChildren(nodep);
-        if (!nodep->user2()) return;
+        if (nodep->user2() & T_PROC) nodep->setNeedProcess();
+        if (!(nodep->user2() & T_SUSP)) return;
         nodep->rtnType("VlCoroutine");
         // If in a class, create a shared pointer to 'this'
         if (m_classp) nodep->addInitsp(new AstCStmt{nodep->fileline(), "VL_KEEP_THIS;\n"});
@@ -656,10 +657,9 @@ private:
             firstCoStmtp->v3warn(E_UNSUPPORTED,
                                  "Unsupported: Timing controls inside DPI-exported tasks");
         }
-        if (nodep->user2() & T_PROC) nodep->setNeedProcess();
     }
     void visit(AstNodeCCall* nodep) override {
-        if (nodep->funcp()->user2() && !nodep->user1SetOnce()) {  // If suspendable
+        if ((nodep->funcp()->user2() & T_SUSP) && !nodep->user1SetOnce()) {  // If suspendable
             VNRelinker relinker;
             nodep->unlinkFrBack(&relinker);
             AstCAwait* const awaitp = new AstCAwait{nodep->fileline(), nodep};

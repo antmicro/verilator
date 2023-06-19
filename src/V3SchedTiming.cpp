@@ -354,7 +354,7 @@ void transformForks(AstNetlist* const netlistp) {
             m_beginHasAwaits = false;
             m_beginNeedProcess = false;
             iterateChildrenConst(nodep);
-            if (m_beginHasAwaits || m_beginNeedProcess) {
+            if (m_beginHasAwaits) {
                 UASSERT_OBJ(!nodep->name().empty(), nodep, "Begin needs a name");
                 // Create a function to put this begin's statements in
                 FileLine* const flp = nodep->fileline();
@@ -388,8 +388,11 @@ void transformForks(AstNetlist* const netlistp) {
                 }
                 remapLocals(newfuncp, callp);
             } else {
-                // The begin has neither awaits nor a process::self call, just inline the
-                // statements
+                if (m_beginNeedProcess) {
+                    nodep->addStmtsp(new AstCStmt{nodep->fileline(),
+                                                  "vlProcess->state(VlProcess::FINISHED);\n"});
+                }
+                // Just inline the statements
                 nodep->replaceWith(nodep->stmtsp()->unlinkFrBackWithNext());
             }
             VL_DO_DANGLING(nodep->deleteTree(), nodep);

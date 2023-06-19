@@ -247,7 +247,6 @@ void orderSequentially(AstCFunc* funcp, const LogicByScope& lbs) {
                         subFuncp = createNewSubFuncp(scopep);
                         subFuncp->name(subFuncp->name() + "__" + cvtToStr(scopep->user2Inc()));
                         subFuncp->rtnType("VlCoroutine");
-                        if (procp->needProcess()) subFuncp->setNeedProcess();
                         if (VN_IS(procp, Always)) {
                             subFuncp->slow(false);
                             FileLine* const flp = procp->fileline();
@@ -256,10 +255,15 @@ void orderSequentially(AstCFunc* funcp, const LogicByScope& lbs) {
                         }
                     }
                     subFuncp->addStmtsp(bodyp);
+                    if (procp->needProcess()) subFuncp->setNeedProcess();
                 }
             } else {
                 logicp->unlinkFrBack();
                 subFuncp->addStmtsp(logicp);
+                if (AstAlways* initialp = VN_CAST(logicp, Always)) {
+                    if (initialp->needProcess())
+                        subFuncp->setNeedProcess();
+                }
             }
         }
         if (activep->backp()) activep->unlinkFrBack();

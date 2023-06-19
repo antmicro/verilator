@@ -88,7 +88,10 @@ private:
                     return cvtToHex(nodep()) + ' ' + classp()->name() + "::" + nodep()->name();
                 }
             }
-            return cvtToHex(nodep()) + ' ' + nodep()->prettyTypeName();
+            string name = cvtToHex(nodep()) + ' ' + nodep()->prettyTypeName();
+            if (nodep()->user2() & T_PROC)
+                name += " (w/ PROC)";
+            return name;
         }
         FileLine* fileline() const override { return nodep()->fileline(); }
         string dotColor() const override {
@@ -143,10 +146,11 @@ private:
         if (!nodep->user3p()) nodep->user3p(new TimingDependencyVertex{&m_depGraph, nodep, classp});
         return nodep->user3u().to<TimingDependencyVertex*>();
     }
-    // Set timing flag of a node
-    bool setTimingFlags(AstNode* nodep, TimingFlags flags) {
-        if (~nodep->user2() & ((int)flags & ~((int)T_SUSPENDER))) {
-            nodep->user2(nodep->user2() | (flags & ~((int)T_SUSPENDER)));
+    // Copy timing flags from one node to another. Does not copy T_SUSPENDER.
+    bool passTimingFlags(AstNode* to, const AstNode* from) {
+        const TimingFlags tf = TimingFlags(from->user2());
+        if (~to->user2() & ((int)tf & ~((int)T_SUSPENDER))) {
+            to->user2(to->user2() | (tf & ~((int)T_SUSPENDER)));
             return true;
         }
         return false;
@@ -157,7 +161,7 @@ private:
         for (V3GraphEdge* edgep = vxp->inBeginp(); edgep; edgep = edgep->inNextp()) {
             auto* const depVxp = static_cast<TimingDependencyVertex*>(edgep->fromp());
             AstNode* const depp = depVxp->nodep();
-            if (setTimingFlags(depp, TimingFlags(parentp->user2()))) propagateTimingFlags(depVxp);
+            if (passTimingFlags(depp, parentp)) propagateTimingFlags(depVxp);
         }
     }
 
@@ -201,7 +205,7 @@ private:
                 if (!cextp->classp()->user1SetOnce()) cextp->classp()->repairCache();
                 if (auto* const overriddenp
                     = VN_CAST(cextp->classp()->findMember(nodep->name()), CFunc)) {
-                    setTimingFlags(nodep, TimingFlags(overriddenp->user2()));
+                    passTimingFlags(nodep, overriddenp);
                     if ((nodep->user2() & (T_SUSP | T_PROC)) != (T_SUSP | T_PROC)) {
                         // Add a vertex only if the flag can still change
                         // Make a dependency cycle, as being suspendable should propagate both up
@@ -218,12 +222,11 @@ private:
             }
         }
 
-        if (nodep->isConstructor() && (nodep->user2() & T_SUSP)) {
-            v3fatal("constuctor is supendable: " << nodep);
-        }
+        UASSERT_OBJ(!(nodep->isConstructor() && (nodep->user2() & T_SUSP)), nodep,
+                    "Constuctor is supendable");
     }
     void visit(AstNodeCCall* nodep) override {
-        setTimingFlags(m_procp, TimingFlags(nodep->funcp()->user2()));
+        passTimingFlags(m_procp, nodep->funcp());
         if ((m_procp->user2() & (T_SUSP | T_PROC)) != (T_SUSP | T_PROC)) {
             // Add a vertex only if the flag can still change
             TimingDependencyVertex* const procVxp = getDependencyVertex(m_procp);
@@ -606,17 +609,21 @@ private:
     }
     void visit(AstInitial* nodep) override {
         visit(static_cast<AstNodeProcedure*>(nodep));
-        if (nodep->needProcess() && !nodep->user1SetOnce()) {
-            nodep->addStmtsp(
-                new AstCStmt{nodep->fileline(), "vlProcess->state(VlProcess::FINISHED);\n"});
+        if (!nodep->user1SetOnce()) {
+            if (nodep->needProcess()) {
+                nodep->user2(nodep->user2() | T_PROC);
+                nodep->addStmtsp(
+                    new AstCStmt{nodep->fileline(), "vlProcess->state(VlProcess::FINISHED);\n"});
+            }
+            if (nodep->isSuspendable())
+                nodep->user2(nodep->user2() | T_SUSP | T_SUSPENDER);
         }
     }
     void visit(AstAlways* nodep) override {
         if (nodep->user1SetOnce()) return;
         iterateChildren(nodep);
         if (nodep->user2() & T_PROC) nodep->setNeedProcess();
-        if (!(nodep->user2() & T_SUSP)) return;
-        nodep->setSuspendable();
+        if (nodep->user2() & T_SUSP) nodep->setSuspendable();
         FileLine* const flp = nodep->fileline();
         AstSenTree* const sensesp = m_activep->sensesp();
         if (sensesp->hasClocked()) {
@@ -624,6 +631,8 @@ private:
             auto* const controlp = new AstEventControl{flp, sensesp->cloneTree(false), bodysp};
             nodep->addStmtsp(controlp);
             iterate(controlp);
+            nodep->user2(nodep->user2() | T_SUSP);
+            nodep->setSuspendable();
         }
         // Note: The 'while (true)' outer loop will be added in V3Sched
         auto* const activep = new AstActive{

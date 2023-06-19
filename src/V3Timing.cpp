@@ -78,7 +78,7 @@ private:
     // Vertex of a dependency graph of suspendable nodes, e.g. if a node (process or task) is
     // suspendable, all its dependents should also be suspendable
     class TimingDependencyVertex final : public V3GraphVertex {
-        AstClass* const m_classp; // Class associated with a method
+        AstClass* const m_classp;  // Class associated with a method
         AstNode* const m_nodep;  // AST node represented by this graph vertex
 
         // ACCESSORS
@@ -89,16 +89,13 @@ private:
                 }
             }
             string name = cvtToHex(nodep()) + ' ' + nodep()->prettyTypeName();
-            if (nodep()->user2() & T_PROC)
-                name += " (w/ PROC)";
+            if (nodep()->user2() & T_PROC) name += " (w/ PROC)";
             return name;
         }
         FileLine* fileline() const override { return nodep()->fileline(); }
         string dotColor() const override {
-            if (nodep()->user2() & T_SUSPENDER)
-                return "red";
-            if (nodep()->user2() & T_SUSP)
-                return "blue";
+            if (nodep()->user2() & T_SUSPENDER) return "red";
+            if (nodep()->user2() & T_SUSP) return "blue";
             return "black";
         }
 
@@ -143,7 +140,8 @@ private:
                 classp = VN_CAST(funcp->scopep()->modp(), Class);
             }
         }
-        if (!nodep->user3p()) nodep->user3p(new TimingDependencyVertex{&m_depGraph, nodep, classp});
+        if (!nodep->user3p())
+            nodep->user3p(new TimingDependencyVertex{&m_depGraph, nodep, classp});
         return nodep->user3u().to<TimingDependencyVertex*>();
     }
     // Copy timing flags from one node to another. Does not copy T_SUSPENDER.
@@ -615,8 +613,7 @@ private:
                 nodep->addStmtsp(
                     new AstCStmt{nodep->fileline(), "vlProcess->state(VlProcess::FINISHED);\n"});
             }
-            if (nodep->isSuspendable())
-                nodep->user2(nodep->user2() | T_SUSP | T_SUSPENDER);
+            if (nodep->isSuspendable()) nodep->user2(nodep->user2() | T_SUSP | T_SUSPENDER);
         }
     }
     void visit(AstAlways* nodep) override {

@@ -261,8 +261,7 @@ void orderSequentially(AstCFunc* funcp, const LogicByScope& lbs) {
                 logicp->unlinkFrBack();
                 subFuncp->addStmtsp(logicp);
                 if (AstAlways* initialp = VN_CAST(logicp, Always)) {
-                    if (initialp->needProcess())
-                        subFuncp->setNeedProcess();
+                    if (initialp->needProcess()) subFuncp->setNeedProcess();
                 }
             }
         }

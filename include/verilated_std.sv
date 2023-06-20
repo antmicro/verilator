@@ -176,7 +176,8 @@ package std;
       function string get_randstate();
          string s = "NOT_SUPPORTED";
 `ifdef VERILATOR_TIMING
-         $c(s, "= ", m_process, "->rng().get_randstate();");
+         s.itoa($c(0));
+         $c(s, " = ", m_process, "->rng().get_randstate();");
 `endif
          return s;
       endfunction

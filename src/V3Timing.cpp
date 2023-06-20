@@ -896,7 +896,7 @@ private:
     void visit(AstNodeAssign* nodep) override {
         // Only process once to avoid infinite loops (due to the net delay)
         if (nodep->user1SetOnce()) return;
-        iterateChildren(nodep);
+        iterate(nodep->rhsp());  // We deal with LHS and control here, so don't visit it.
         AstNode* const controlp = factorOutTimingControl(nodep);
         if (!controlp) return;
         // Handle the intra assignment timing control

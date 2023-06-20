@@ -684,6 +684,7 @@ class ParamProcessor final : public VNDeleter {
                 any_overridesr = true;
             } else {
                 V3Const::constifyParamsEdit(pinp->exprp());
+                V3Const::constifyParamsEdit(modvarp);
                 AstConst* const exprp = VN_CAST(pinp->exprp(), Const);
                 const AstConst* const origp = VN_CAST(modvarp->valuep(), Const);
                 if (!exprp) {

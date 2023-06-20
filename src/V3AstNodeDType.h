@@ -1076,6 +1076,7 @@ public:
     AstRefDType(FileLine* fl, FlagTypeOfExpr, AstNode* typeofp)
         : ASTGEN_SUPER_RefDType(fl) {
         this->typeofp(typeofp);
+        if (AstNodeDType* const dtp = VN_CAST(typeofp, NodeDType)) refDTypep(dtp);
     }
     ASTGEN_MEMBERS_AstRefDType;
     // METHODS

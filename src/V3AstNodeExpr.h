@@ -913,7 +913,7 @@ public:
     class VerilogStringLiteral {};  // for creator type-overload selection
     AstConst(FileLine* fl, VerilogStringLiteral, const string& str)
         : ASTGEN_SUPER_Const(fl)
-        , m_num(V3Number::VerilogStringLiteral{}, this, str) {
+        , m_num(V3Number::String{}, this, str) {
         initWithNumber();
     }
     AstConst(FileLine* fl, uint32_t num)

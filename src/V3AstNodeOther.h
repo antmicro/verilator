@@ -1659,7 +1659,6 @@ class AstVar final : public AstNode {
     bool m_isConst : 1;  // Table contains constant data
     bool m_isContinuously : 1;  // Ever assigned continuously (for force/release)
     bool m_hasStrengthAssignment : 1;  // Is on LHS of assignment with strength specifier
-    bool m_isStatic : 1;  // Static C variable (for Verilog see instead isAutomatic)
     bool m_isPulldown : 1;  // Tri0
     bool m_isPullup : 1;  // Tri1
     bool m_isIfaceParent : 1;  // dtype is reference to interface present in this module
@@ -1703,7 +1702,6 @@ class AstVar final : public AstNode {
         m_isConst = false;
         m_isContinuously = false;
         m_hasStrengthAssignment = false;
-        m_isStatic = false;
         m_isPulldown = false;
         m_isPullup = false;
         m_isIfaceParent = false;
@@ -1854,7 +1852,7 @@ public:
     void isRand(bool flag) { m_isRand = flag; }
     void isConst(bool flag) { m_isConst = flag; }
     void isContinuously(bool flag) { m_isContinuously = flag; }
-    void isStatic(bool flag) { m_isStatic = flag; }
+    void isStatic(bool flag) { m_lifetime = flag ? VLifetime::STATIC : VLifetime::AUTOMATIC; }
     void isIfaceParent(bool flag) { m_isIfaceParent = flag; }
     void funcLocal(bool flag) {
         m_funcLocal = flag;
@@ -1938,7 +1936,7 @@ public:
     bool isTrace() const { return m_trace; }
     bool isRand() const { return m_isRand; }
     bool isConst() const VL_MT_SAFE { return m_isConst; }
-    bool isStatic() const VL_MT_SAFE { return m_isStatic; }
+    bool isStatic() const VL_MT_SAFE { return m_lifetime.isStatic(); }
     bool isLatched() const { return m_isLatched; }
     bool isFuncLocal() const { return m_funcLocal; }
     bool isFuncLocalSticky() const { return m_funcLocalSticky; }

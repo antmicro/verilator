@@ -692,6 +692,8 @@ private:
     }
     void visit(AstAlways* nodep) override {
         if (nodep->user1SetOnce()) return;
+        VL_RESTORER(m_procp);
+        m_procp = nodep;
         iterateChildren(nodep);
         if (nodep->user2() & T_HAS_PROC) nodep->setNeedProcess();
         if (!(nodep->user2() & T_SUSPENDEE)) return;

@@ -92,13 +92,16 @@
 #define VL_TRY_ACQUIRE_SHARED(...) \
         VL_CLANG_ATTR(try_acquire_shared_capability(__VA_ARGS__))
 // Function requires a capability inbound (-fthread-safety)
+// FIXME(mglb)
 #define VL_CAPABILITY(x) \
         VL_CLANG_ATTR(capability(x))
 // Name of mutex protecting this variable (-fthread-safety)
+// FIXME(mglb)
 #define VL_EXCLUDES(x) \
         VL_CLANG_ATTR(annotate("EXCLUDES")) \
         VL_CLANG_ATTR(locks_excluded(x))
 // Scoped threaded capability/lock (-fthread-safety)
+// FIXME(mglb)
 #define VL_SCOPED_CAPABILITY \
         VL_CLANG_ATTR(scoped_lockable)
 // Annotated function returns reference to the given capability.
@@ -112,11 +115,12 @@
 
 // Require mutex locks only in code units which work with enabled multi-threading.
 #if !defined(VL_MT_DISABLED_CODE_UNIT)
-// Function requires not having a capability inbound (-fthread-safety)
+// Calling thread must have exclusive access to the given capabilities
 # define VL_REQUIRES(x) \
         VL_CLANG_ATTR(annotate("REQUIRES")) \
         VL_CLANG_ATTR(requires_capability(x))
 // Name of capability/lock (-fthread-safety)
+// FIXME(mglb)
 # define VL_GUARDED_BY(x) \
         VL_CLANG_ATTR(annotate("GUARDED_BY")) \
         VL_CLANG_ATTR(guarded_by(x))

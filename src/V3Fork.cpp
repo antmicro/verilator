@@ -648,11 +648,11 @@ public:
 void V3Fork::makeDynamicScopes(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     { DynScopeVisitor{nodep}; }
-    V3Global::dumpCheckGlobalTree("fork_dynscope", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("fork_dynscope", 0, dumpTreeLevel() >= 3);
 }
 
 void V3Fork::makeTasks(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     { ForkVisitor{nodep}; }
-    V3Global::dumpCheckGlobalTree("fork", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("fork", 0, dumpTreeLevel() >= 3);
 }

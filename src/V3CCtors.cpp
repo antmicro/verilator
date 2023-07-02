@@ -254,5 +254,5 @@ void V3CCtors::cctorsAll() {
     UINFO(2, __FUNCTION__ << ": " << endl);
     evalAsserts();
     { CCtorsVisitor{v3Global.rootp()}; }
-    V3Global::dumpCheckGlobalTree("cctors", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("cctors", 0, dumpTreeLevel() >= 3);
 }

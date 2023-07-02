@@ -232,5 +232,5 @@ public:
 void V3WidthCommit::widthCommit(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     { WidthCommitVisitor{nodep}; }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("widthcommit", 0, dumpTreeLevel() >= 6);
+    v3Global.dumpCheckGlobalTree("widthcommit", 0, dumpTreeLevel() >= 6);
 }

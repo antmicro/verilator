@@ -114,5 +114,5 @@ void V3Interface::interfaceAll(AstNetlist* nodep) {
 
     { InlineIntfRefVisitor{nodep}; }
 
-    V3Global::dumpCheckGlobalTree("interface", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("interface", 0, dumpTreeLevel() >= 3);
 }

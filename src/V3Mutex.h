@@ -252,4 +252,22 @@ public:
     ~V3SharedLockGuard() VL_RELEASE() { m_mutexr.unlock_shared(); }
 };
 
+// clang-format off
+
+#define VL_LOCK_GUARD(sym, mutex) \
+    V3LockGuardImp<std::remove_const<std::remove_reference<decltype(mutex)>::type>::type> \
+            sym{mutex}
+#define VL_LOCK_GUARD_ADOPT(sym, mutex) \
+    V3LockGuardImp<std::remove_const<std::remove_reference<decltype(mutex)>::type>::type> \
+            sym {mutex, std::adopt_lock_t {}}
+
+// Even through there is only one shared mutex type currently, provide macro-wrappers for
+// consistency.
+#define VL_SHARED_LOCK_GUARD(sym, mutex) \
+    V3SharedLockGuard sym{mutex}
+#define VL_SHARED_LOCK_GUARD_ADOPT(sym, mutex) \
+    V3SharedLockGuard sym{mutex, std::adopt_lock_t {}}
+
+// clang-format on
+
 #endif  // guard

@@ -1974,7 +1974,7 @@ AstPackage* AstNetlist::dollarUnitPkgAddp() {
     }
     return m_dollarUnitPkgp;
 }
-void AstNetlist::createTopScope(AstScope* scopep) {
+void AstNetlist::createTopScope(AstScope* scopep) VL_MT_DISABLED {
     UASSERT(scopep, "Must not be nullptr");
     UASSERT_OBJ(!m_topScopep, scopep, "TopScope already exits");
     m_topScopep = new AstTopScope{scopep->modp()->fileline(), scopep};

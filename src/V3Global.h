@@ -36,6 +36,8 @@
 #include <unordered_map>
 
 class AstNetlist;
+class AstTypeTable;
+class AstConstPool;
 class V3HierBlockPlan;
 
 //======================================================================
@@ -121,6 +123,11 @@ class V3Global final {
     std::unordered_map<const void*, std::string>
         m_ptrToId;  // The actual 'address' <=> 'short string' bijection
 
+    // Mutexes protecting access to parts of global Netlist.
+    // Do not use directly. Use accessor methods instead.
+    mutable V3SharedMutex m_constPoolMutex;
+    mutable V3SharedMutex m_typeTableMutex;
+
 public:
     // Options
     V3Options opt;  // All options; let user see them directly
@@ -131,7 +138,27 @@ public:
     void shutdown();  // Release allocated resources
 
     // ACCESSORS (general)
-    AstNetlist* rootp() const VL_MT_SAFE { return m_rootp; }
+    AstNetlist* rootp() const VL_MT_DISABLED { return m_rootp; }
+
+    // Protects access to Netlist's Const Pool. Has to be locked before typeTableMutex.
+    V3SharedMutex& constPoolMutex() const VL_RETURN_CAPABILITY(m_constPoolMutex)
+        VL_EXCLUDES(typeTableMutex()) {
+        return m_constPoolMutex;
+    }
+    AstConstPool* constPoolp() const VL_REQUIRES(constPoolMutex());
+    const AstConstPool* constPoolcp() const VL_REQUIRES_SHARED(constPoolMutex());
+
+    // Protects access to Netlist's Type Table.
+    V3SharedMutex& typeTableMutex() const VL_RETURN_CAPABILITY(m_typeTableMutex) {
+        return m_typeTableMutex;
+    }
+    AstTypeTable* typeTablep() const VL_REQUIRES(typeTableMutex());
+    const AstTypeTable* typeTablecp() const VL_REQUIRES_SHARED(m_typeTableMutex);
+
+    AstNetlist* netlistp() const VL_REQUIRES(m_constPoolMutex, m_typeTableMutex) {
+        return m_rootp;
+    }
+
     VWidthMinUsage widthMinUsage() const { return m_widthMinUsage; }
     bool assertDTypesResolved() const { return m_assertDTypesResolved; }
     bool assertScoped() const { return m_assertScoped; }
@@ -139,8 +166,9 @@ public:
     // METHODS
     void readFiles() VL_MT_DISABLED;
     void removeStd() VL_MT_DISABLED;
-    void checkTree() const;
-    void dumpCheckGlobalTree(const string& stagename, int newNumber = 0, bool doDump = true);
+    void checkTree() const VL_EXCLUDES(constPoolMutex(), typeTableMutex());
+    void dumpCheckGlobalTree(const string& stagename, int newNumber = 0, bool doDump = true)
+        VL_EXCLUDES(constPoolMutex(), typeTableMutex());
     void assertDTypesResolved(bool flag) { m_assertDTypesResolved = flag; }
     void assertScoped(bool flag) { m_assertScoped = flag; }
     void widthMinUsage(const VWidthMinUsage& flag) { m_widthMinUsage = flag; }

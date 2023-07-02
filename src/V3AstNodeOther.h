@@ -1223,7 +1223,7 @@ public:
     void stdPackagep(AstPackage* const packagep) { m_stdPackagep = packagep; }
     AstPackage* stdPackagep() const { return m_stdPackagep; }
     AstTopScope* topScopep() const { return m_topScopep; }
-    void createTopScope(AstScope* scopep);
+    void createTopScope(AstScope* scopep) VL_MT_DISABLED;
     VTimescale timeunit() const { return m_timeunit; }
     void timeunit(const VTimescale& value) { m_timeunit = value; }
     VTimescale timeprecision() const { return m_timeprecision; }

@@ -23,6 +23,7 @@
 #include "V3File.h"
 #include "V3HierBlock.h"
 #include "V3LinkCells.h"
+#include "V3Mutex.h"
 #include "V3Parse.h"
 #include "V3ParseSym.h"
 #include "V3Stats.h"
@@ -42,7 +43,27 @@ void V3Global::shutdown() {
 #endif
 }
 
-void V3Global::checkTree() const { rootp()->checkTree(); }
+AstTypeTable* V3Global::typeTablep() const VL_REQUIRES(typeTableMutex()) {
+    return m_rootp->typeTablep();
+}
+
+const AstTypeTable* V3Global::typeTablecp() const VL_REQUIRES_SHARED(typeTableMutex()) {
+    return m_rootp->typeTablep();
+}
+
+AstConstPool* V3Global::constPoolp() const VL_REQUIRES(constPoolMutex()) {
+    return m_rootp->constPoolp();
+}
+
+const AstConstPool* V3Global::constPoolcp() const VL_REQUIRES_SHARED(constPoolMutex()) {
+    return m_rootp->constPoolp();
+}
+
+void V3Global::checkTree() const VL_EXCLUDES(constPoolMutex(), typeTableMutex()) {
+    VL_LOCK_GUARD(constPoolMutexLockGuard, constPoolMutex());
+    VL_LOCK_GUARD(typeTableMutexLockGuard, typeTableMutex());
+    netlistp()->checkTree();
+}
 
 void V3Global::readFiles() {
     // NODE STATE
@@ -108,10 +129,13 @@ string V3Global::digitsFilename(int number) {
     return ss.str();
 }
 
-void V3Global::dumpCheckGlobalTree(const string& stagename, int newNumber, bool doDump) {
+void V3Global::dumpCheckGlobalTree(const string& stagename, int newNumber, bool doDump)
+    VL_EXCLUDES(constPoolMutex(), typeTableMutex()) {
+    VL_LOCK_GUARD(constPoolLock, constPoolMutex());
+    VL_LOCK_GUARD(typeTableLock, typeTableMutex());
     const string treeFilename = v3Global.debugFilename(stagename + ".tree", newNumber);
-    rootp()->dumpTreeFile(treeFilename, false, doDump);
-    if (opt.dumpTreeDot()) { rootp()->dumpTreeDotFile(treeFilename + ".dot", false, doDump); }
+    netlistp()->dumpTreeFile(treeFilename, false, doDump);
+    if (opt.dumpTreeDot()) { netlistp()->dumpTreeDotFile(treeFilename + ".dot", false, doDump); }
     if (opt.stats()) V3Stats::statsStage(stagename);
 }
 

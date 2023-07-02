@@ -72,8 +72,9 @@ public:
                && !VN_IS(varp->dtypep()->skipRefp(), SampleQueueDType)  // Aggregates can't be anon
                && (varp->basicp() && !varp->basicp()->isOpaque());  // Aggregates can't be anon
     }
-    static bool isConstPoolMod(const AstNode* modp) {
-        return modp == v3Global.rootp()->constPoolp()->modp();
+    static bool isConstPoolMod(const AstNode* modp) VL_EXCLUDES(v3Global.constPoolMutex()) {
+        VL_SHARED_LOCK_GUARD(constPoolLock, v3Global.constPoolMutex());
+        return modp == v3Global.constPoolcp()->modp();
     }
 };
 

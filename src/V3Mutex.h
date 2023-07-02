@@ -135,7 +135,7 @@ public:
 using V3Mutex = V3MutexImp<std::mutex>;
 using V3RecursiveMutex = V3MutexImp<std::recursive_mutex>;
 
-class VL_CAPABILITY("shared_mutex") V3SharedMutex final {
+class VL_CAPABILITY("shared mutex") V3SharedMutex final {
     std::mutex m_mutex;
     std::condition_variable m_noExclusiveLocksCond;
     std::condition_variable m_noSharedLocksCond;

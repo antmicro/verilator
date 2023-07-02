@@ -140,7 +140,7 @@ class VlAnnotations:
                     result.acquire = True
                 elif node.displayname in ["RELEASE", "RELEASE_SHARED"]:
                     result.release = True
-                elif node.displayname == "REQUIRES":
+                elif node.displayname in ["REQUIRES", "REQUIRES_SHARED"]:
                     result.requires = True
                 elif node.displayname in ["EXCLUDES", "MT_SAFE_EXCLUDES"]:
                     result.excludes = True

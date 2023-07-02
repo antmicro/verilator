@@ -21,6 +21,7 @@
 #include "verilatedos.h"
 
 #include "V3Error.h"
+#include "V3Global.h"
 
 class AstNetlist;
 
@@ -117,8 +118,9 @@ public:
     /// Called each stage
     static void statsStage(const string& name);
     /// Called by the top level to collect statistics
-    static void statsStageAll(AstNetlist* nodep, const string& stage, bool fast = false);
-    static void statsFinalAll(AstNetlist* nodep);
+    static void statsStageAll(const string& stage, bool fast = false)
+        VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex());
+    static void statsFinalAll() VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex());
     /// Called by the top level to dump the statistics
     static void statsReport();
     /// Called by debug dumps

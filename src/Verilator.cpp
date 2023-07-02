@@ -110,9 +110,10 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 V3Global v3Global;
 
-static void reportStatsIfEnabled() {
+static void reportStatsIfEnabled()
+    VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
     if (v3Global.opt.stats()) {
-        V3Stats::statsFinalAll(v3Global.rootp());
+        V3Stats::statsFinalAll();
         V3Stats::statsReport();
     }
 }
@@ -146,7 +147,7 @@ static void process() {
         V3LinkInc::linkIncrements(v3Global.rootp());
         V3Error::abortIfErrors();
 
-        if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "Link");
+        if (v3Global.opt.stats()) V3Stats::statsStageAll("Link");
         if (v3Global.opt.debugExitUvm23()) {
             V3Error::abortIfErrors();
             if (v3Global.opt.xmlOnly()) V3EmitXml::emitxml();
@@ -410,7 +411,7 @@ static void process() {
             // down to a module and now be identical
             V3ActiveTop::activeTopAll(v3Global.rootp());
 
-            if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "PreOrder");
+            if (v3Global.opt.stats()) V3Stats::statsStageAll("PreOrder");
 
             // Schedule the logic
             V3Sched::schedule(v3Global.rootp());
@@ -438,7 +439,7 @@ static void process() {
             // "effectively" activate the same way.)
             if (v3Global.opt.trace()) V3Trace::traceAll(v3Global.rootp());
 
-            if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "Scoped");
+            if (v3Global.opt.stats()) V3Stats::statsStageAll("Scoped");
         }
 
         // --MODULE OPTIMIZATIONS--------------

@@ -282,11 +282,14 @@ public:
 //######################################################################
 // Top Stats class
 
-void V3Stats::statsStageAll(AstNetlist* nodep, const string& stage, bool fast) {
-    { StatsVisitor{nodep, stage, fast}; }
+void V3Stats::statsStageAll(const string& stage, bool fast)
+    VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
+    VL_LOCK_GUARD(constPoolLock, v3Global.constPoolMutex());
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    StatsVisitor{v3Global.netlistp(), stage, fast};
 }
 
-void V3Stats::statsFinalAll(AstNetlist* nodep) {
-    statsStageAll(nodep, "Final");
-    statsStageAll(nodep, "Final_Fast", true);
+void V3Stats::statsFinalAll() VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
+    statsStageAll("Final");
+    statsStageAll("Final_Fast", true);
 }

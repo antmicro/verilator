@@ -239,7 +239,7 @@ int V3Fork::makeTasks(AstNetlist* nodep) {
         ForkVisitor fork_visitor(nodep);
         createdTasksCount = fork_visitor.createdTasksCount();
     }
-    V3Global::dumpCheckGlobalTree("fork", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("fork", 0, dumpTreeLevel() >= 3);
 
     return createdTasksCount;
 }

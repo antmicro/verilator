@@ -515,5 +515,5 @@ void V3Life::lifeAll(AstNetlist* nodep) {
         LifeState state;
         LifeTopVisitor{nodep, &state};
     }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("life", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("life", 0, dumpTreeLevel() >= 3);
 }

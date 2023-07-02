@@ -234,5 +234,5 @@ public:
 void V3Cast::castAll(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     { CastVisitor{nodep}; }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("cast", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("cast", 0, dumpTreeLevel() >= 3);
 }

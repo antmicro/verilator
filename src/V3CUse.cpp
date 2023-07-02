@@ -138,5 +138,5 @@ void V3CUse::cUseAll() {
         // for each output file and put under that
         CUseVisitor{modp};
     }
-    V3Global::dumpCheckGlobalTree("cuse", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("cuse", 0, dumpTreeLevel() >= 3);
 }

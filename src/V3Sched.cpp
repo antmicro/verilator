@@ -1254,7 +1254,7 @@ void schedule(AstNetlist* netlistp) {
 
     netlistp->dpiExportTriggerp(nullptr);
 
-    V3Global::dumpCheckGlobalTree("sched", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("sched", 0, dumpTreeLevel() >= 3);
 }
 
 }  // namespace V3Sched

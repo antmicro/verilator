@@ -1003,10 +1003,10 @@ private:
 void V3Split::splitReorderAll(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     { ReorderVisitor{nodep}; }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("reorder", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("reorder", 0, dumpTreeLevel() >= 3);
 }
 void V3Split::splitAlwaysAll(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     { SplitVisitor{nodep}; }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("split", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("split", 0, dumpTreeLevel() >= 3);
 }

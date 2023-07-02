@@ -309,5 +309,5 @@ public:
 void V3LinkInc::linkIncrements(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     { LinkIncVisitor{nodep}; }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("linkinc", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("linkinc", 0, dumpTreeLevel() >= 3);
 }

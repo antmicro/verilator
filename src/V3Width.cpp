@@ -7549,7 +7549,7 @@ void V3Width::width(AstNetlist* nodep) {
         WidthRemoveVisitor rvisitor;
         (void)rvisitor.mainAcceptEdit(nodep);
     }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("width", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("width", 0, dumpTreeLevel() >= 3);
 }
 
 //! Single node parameter propagation
@@ -7585,5 +7585,5 @@ AstNode* V3Width::widthGenerateParamsEdit(
 void V3Width::widthCommit(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     { WidthCommitVisitor{nodep}; }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("widthcommit", 0, dumpTreeLevel() >= 6);
+    v3Global.dumpCheckGlobalTree("widthcommit", 0, dumpTreeLevel() >= 6);
 }

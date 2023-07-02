@@ -207,5 +207,5 @@ void V3VariableOrder::orderAll() {
          modp = VN_AS(modp->nextp(), NodeModule)) {
         VariableOrder::processModule(modp);
     }
-    V3Global::dumpCheckGlobalTree("variableorder", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("variableorder", 0, dumpTreeLevel() >= 3);
 }

@@ -1489,5 +1489,5 @@ void GateVisitor::decomposeClkVectors() {
 void V3Gate::gateAll(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     { const GateVisitor visitor{nodep}; }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("gate", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("gate", 0, dumpTreeLevel() >= 3);
 }

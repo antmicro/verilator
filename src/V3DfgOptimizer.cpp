@@ -237,7 +237,7 @@ void V3DfgOptimizer::extract(AstNetlist* netlistp) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     // Extract more optimization candidates
     DataflowExtractVisitor::apply(netlistp);
-    V3Global::dumpCheckGlobalTree("dfg-extract", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("dfg-extract", 0, dumpTreeLevel() >= 3);
 }
 
 void V3DfgOptimizer::optimize(AstNetlist* netlistp, const string& label) {
@@ -304,5 +304,5 @@ void V3DfgOptimizer::optimize(AstNetlist* netlistp, const string& label) {
         AstModule* const resultModp = V3DfgPasses::dfgToAst(*dfg, ctx);
         UASSERT_OBJ(resultModp == modp, modp, "Should be the same module");
     }
-    V3Global::dumpCheckGlobalTree("dfg-optimize", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("dfg-optimize", 0, dumpTreeLevel() >= 3);
 }

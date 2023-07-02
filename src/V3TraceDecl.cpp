@@ -556,5 +556,5 @@ public:
 void V3TraceDecl::traceDeclAll(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     { TraceDeclVisitor{nodep}; }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("tracedecl", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("tracedecl", 0, dumpTreeLevel() >= 3);
 }

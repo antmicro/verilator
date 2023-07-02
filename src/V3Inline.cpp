@@ -731,5 +731,5 @@ void V3Inline::inlineAll(AstNetlist* nodep) {
     }
 
     { InlineIntfRefVisitor{nodep}; }
-    V3Global::dumpCheckGlobalTree("inline", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("inline", 0, dumpTreeLevel() >= 3);
 }

@@ -972,5 +972,5 @@ void V3Expand::expandAll(AstNetlist* nodep) {
         ExpandOkVisitor okVisitor{nodep};
         ExpandVisitor{nodep};
     }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("expand", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("expand", 0, dumpTreeLevel() >= 3);
 }

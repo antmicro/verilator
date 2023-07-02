@@ -426,5 +426,5 @@ void V3Scope::scopeAll(AstNetlist* nodep) {
         const ScopeVisitor visitor{nodep};
         ScopeCleanupVisitor{nodep};
     }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("scope", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("scope", 0, dumpTreeLevel() >= 3);
 }

@@ -1250,9 +1250,9 @@ void V3SplitVar::splitVariable(AstNetlist* nodep) {
         const SplitUnpackedVarVisitor visitor{nodep};
         refs = visitor.getPackedVarRefs();
     }
-    V3Global::dumpCheckGlobalTree("split_var", 0, dumpTreeLevel() >= 9);
+    v3Global.dumpCheckGlobalTree("split_var", 0, dumpTreeLevel() >= 9);
     { SplitPackedVarVisitor{nodep, refs}; }
-    V3Global::dumpCheckGlobalTree("split_var", 0, dumpTreeLevel() >= 9);
+    v3Global.dumpCheckGlobalTree("split_var", 0, dumpTreeLevel() >= 9);
 }
 
 bool V3SplitVar::canSplitVar(const AstVar* varp) {

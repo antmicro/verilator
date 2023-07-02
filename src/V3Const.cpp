@@ -3817,7 +3817,7 @@ void V3Const::constifyAllLint(AstNetlist* nodep) {
         ConstVisitor visitor{ConstVisitor::PROC_V_WARN, /* globalPass: */ true};
         (void)visitor.mainAcceptEdit(nodep);
     }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("const", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("const", 0, dumpTreeLevel() >= 3);
 }
 
 void V3Const::constifyCpp(AstNetlist* nodep) {
@@ -3826,7 +3826,7 @@ void V3Const::constifyCpp(AstNetlist* nodep) {
         ConstVisitor visitor{ConstVisitor::PROC_CPP, /* globalPass: */ true};
         (void)visitor.mainAcceptEdit(nodep);
     }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("const_cpp", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("const_cpp", 0, dumpTreeLevel() >= 3);
 }
 
 AstNode* V3Const::constifyEdit(AstNode* nodep) {
@@ -3850,7 +3850,7 @@ void V3Const::constifyAllLive(AstNetlist* nodep) {
         ConstVisitor visitor{ConstVisitor::PROC_LIVE, /* globalPass: */ true};
         (void)visitor.mainAcceptEdit(nodep);
     }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("const", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("const", 0, dumpTreeLevel() >= 3);
 }
 
 void V3Const::constifyAll(AstNetlist* nodep) {
@@ -3860,7 +3860,7 @@ void V3Const::constifyAll(AstNetlist* nodep) {
         ConstVisitor visitor{ConstVisitor::PROC_V_EXPENSIVE, /* globalPass: */ true};
         (void)visitor.mainAcceptEdit(nodep);
     }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("const", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("const", 0, dumpTreeLevel() >= 3);
 }
 
 AstNode* V3Const::constifyExpensiveEdit(AstNode* nodep) {

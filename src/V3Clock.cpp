@@ -226,5 +226,5 @@ public:
 void V3Clock::clockAll(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     { ClockVisitor{nodep}; }  // Destruct before checking
-    V3Global::dumpCheckGlobalTree("clock", 0, dumpTreeLevel() >= 3);
+    v3Global.dumpCheckGlobalTree("clock", 0, dumpTreeLevel() >= 3);
 }

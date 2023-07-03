@@ -273,11 +273,11 @@ public:
             const AstClass* const classp = VN_CAST(nodep->scopep()->modp(), Class);
             bool baseCtorCall = false;
             // Find call to super.new to get the arguments
-                    if (classp && constructorNeedsProcess(classp)) {
-                        puts("(vlProcess, vlSymsp");
-                    } else {
-                        puts("(vlSymsp");
-                    }
+            if (classp && constructorNeedsProcess(classp)) {
+                puts("(vlProcess, vlSymsp");
+            } else {
+                puts("(vlSymsp");
+            }
             const AstCNew* const superNewCallp = getSuperNewCallRecursep(nodep->stmtsp());
             UASSERT_OBJ(superNewCallp, nodep, "super.new call not found");
             putCommaIterateNext(superNewCallp->argsp(), true);

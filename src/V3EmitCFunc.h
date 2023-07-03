@@ -238,10 +238,14 @@ public:
         // Get the super.new call
         if (!nodep) return nullptr;
         if (const AstCNew* const cnewp = VN_CAST(nodep, CNew)) return cnewp;
-        if (const AstCNew* const cnewp = getSuperNewCallRecursep(nodep->op1p())) return cnewp;
-        if (const AstCNew* const cnewp = getSuperNewCallRecursep(nodep->op2p())) return cnewp;
-        if (const AstCNew* const cnewp = getSuperNewCallRecursep(nodep->op3p())) return cnewp;
-        if (const AstCNew* const cnewp = getSuperNewCallRecursep(nodep->op4p())) return cnewp;
+        if (const AstStmtExpr* const stmtp = VN_CAST(nodep, StmtExpr)) {
+            if (const AstCNew* const cnewp = VN_CAST(stmtp->exprp(), CNew)) return cnewp;
+        }
+        if (const AstJumpBlock* const blockp = VN_CAST(nodep, JumpBlock)) {
+            if (const AstCNew* const cnewp = getSuperNewCallRecursep(blockp->stmtsp())) {
+                return cnewp;
+            }
+        }
         if (const AstCNew* const cnewp = getSuperNewCallRecursep(nodep->nextp())) return cnewp;
         return nullptr;
     }

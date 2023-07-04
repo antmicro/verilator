@@ -536,9 +536,7 @@ private:
             }
         }
         if (m_vup->final()) {
-            AstNodeDType* const expDTypep = m_vup->dtypeOverridep(nodep->dtypep());
-            AstNodeDType* const subDTypep = expDTypep;
-            nodep->dtypep(expDTypep);
+            AstNodeDType* const subDTypep = nodep->dtypep();
             // Error report and change sizes for suboperands of this node.
             iterateCheck(nodep, "Conditional True", nodep->thenp(), CONTEXT_DET, FINAL, subDTypep,
                          EXTEND_EXP);

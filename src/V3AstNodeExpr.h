@@ -362,11 +362,9 @@ class AstNodeCond VL_NOT_FINAL : public AstNodeTriop {
 protected:
     AstNodeCond(VNType t, FileLine* fl, AstNodeExpr* condp, AstNodeExpr* thenp, AstNodeExpr* elsep)
         : AstNodeTriop{t, fl, condp, thenp, elsep} {
-        if (thenp) {
-            dtypeFrom(thenp);
-        } else if (elsep) {
-            dtypeFrom(elsep);
-        }
+      UASSERT_OBJ(thenp, this, "No thenp expression");
+      UASSERT_OBJ(elsep, this, "No elsep expression");
+      dtypeFrom(thenp);
     }
 
 public:

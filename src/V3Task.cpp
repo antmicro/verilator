@@ -1658,23 +1658,6 @@ V3TaskConnects V3Task::taskConnects(AstNodeFTaskRef* nodep, AstNode* taskStmtsp)
                                << portp->prettyNameQ() << " in function call to "
                                << nodep->taskp()->prettyTypeName());
                 newvaluep = new AstConst{nodep->fileline(), AstConst::Unsized32{}, 0};
-            } else if (!VN_IS(portp->valuep(), Const)) {
-                // The default value for this port might be a constant
-                // expression that hasn't been folded yet. Try folding it
-                // now; we don't have much to lose if it fails.
-                newvaluep = V3Const::constifyParamsEdit(VN_AS(portp->valuep(), NodeExpr));
-                if (!VN_IS(newvaluep, Const)) {
-                    // Problem otherwise is we might have a varref, task
-                    // call, or something else that only makes sense in the
-                    // domain of the function, not the callee.
-                    nodep->v3warn(E_UNSUPPORTED,
-                                  "Unsupported: Non-constant default value in missing argument "
-                                      << portp->prettyNameQ() << " in function call to "
-                                      << nodep->taskp()->prettyTypeName());
-                    newvaluep = new AstConst{nodep->fileline(), AstConst::Unsized32{}, 0};
-                } else {
-                    newvaluep = newvaluep->cloneTree(true);
-                }
             } else {
                 newvaluep = VN_AS(portp->valuep(), NodeExpr)->cloneTree(true);
             }

@@ -7337,7 +7337,7 @@ private:
         if (nodep->subDTypep()) return hasOpenArrayIterateDType(nodep->subDTypep()->skipRefp());
         return false;
     }
-    AstNodeDType* getCommonClassTypep(AstNode* nodep1, AstNode* nodep2) {
+    static AstNodeDType* getCommonClassTypep(AstNode* nodep1, AstNode* nodep2) {
         // Return the class type that both nodep1 and nodep2 are castable to.
         // If both are null, return the type of null constant.
         // If one is a class and one is null, return AstClassRefDType that points to that class.

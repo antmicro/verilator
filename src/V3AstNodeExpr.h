@@ -365,9 +365,9 @@ protected:
         UASSERT_OBJ(thenp, this, "No thenp expression");
         UASSERT_OBJ(elsep, this, "No elsep expression");
         if (thenp->isClassHandleValue() && elsep->isClassHandleValue()) {
-          setClassDType();
+            setClassDType();
         } else {
-          dtypeFrom(thenp);
+            dtypeFrom(thenp);
         }
     }
 

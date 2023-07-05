@@ -512,7 +512,7 @@ private:
                        || nodep->elsep()->isClassHandleValue()) {
                 AstNodeDType* commonClassTypep = nullptr;
                 if (nodep->thenp()->isClassHandleValue() && nodep->elsep()->isClassHandleValue()) {
-                  nodep->setClassDType();
+                    nodep->setClassDType();
                 }
             } else if (nodep->thenp()->isDouble() || nodep->elsep()->isDouble()) {
                 nodep->dtypeSetDouble();

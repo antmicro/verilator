@@ -163,6 +163,19 @@ void AstNodeCond::numberOperate(V3Number& out, const V3Number& lhs, const V3Numb
         out.opAssign(ths);
     }
 }
+void AstNodeCond::setClassDType() {
+  // Get the most-deriving class type that both arguments can be casted to.
+  commonClassTypep = getCommonClassTypep(thenp(), elsep());
+                if (commonClassTypep) {
+                    dtypep(commonClassTypep);
+                } else {
+                    v3error("Incompatible types of operands of condition operator: "
+                            << thenp()->dtypep()->prettyTypeName() << " and "
+                            << elsep()->dtypep()->prettyTypeName());
+                    dtypeFrom(thenp());
+                }
+
+}
 
 void AstBasicDType::init(VBasicDTypeKwd kwd, VSigning numer, int wantwidth, int wantwidthmin,
                          AstRange* rangep) {

@@ -364,7 +364,11 @@ protected:
         : AstNodeTriop{t, fl, condp, thenp, elsep} {
         UASSERT_OBJ(thenp, this, "No thenp expression");
         UASSERT_OBJ(elsep, this, "No elsep expression");
-        dtypeFrom(thenp);
+        if (thenp->isClassHandleValue() && elsep->isClassHandleValue()) {
+          setClassDType();
+        } else {
+          dtypeFrom(thenp);
+        }
     }
 
 public:
@@ -381,6 +385,7 @@ public:
     bool sizeMattersRhs() const override { return false; }
     bool sizeMattersThs() const override { return false; }
     int instrCount() const override { return INSTR_COUNT_BRANCH; }
+    void setClassDType();
     virtual AstNodeExpr* cloneType(AstNodeExpr* condp, AstNodeExpr* thenp, AstNodeExpr* elsep) = 0;
 };
 class AstNodeDistTriop VL_NOT_FINAL : public AstNodeTriop {

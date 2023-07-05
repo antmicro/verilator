@@ -512,16 +512,7 @@ private:
                        || nodep->elsep()->isClassHandleValue()) {
                 AstNodeDType* commonClassTypep = nullptr;
                 if (nodep->thenp()->isClassHandleValue() && nodep->elsep()->isClassHandleValue()) {
-                    // Get the most-deriving class type that both arguments can be casted to.
-                    commonClassTypep = getCommonClassTypep(nodep->thenp(), nodep->elsep());
-                }
-                if (commonClassTypep) {
-                    nodep->dtypep(commonClassTypep);
-                } else {
-                    nodep->v3error("Incompatible types of operands of condition operator: "
-                                   << thenDTypep->prettyTypeName() << " and "
-                                   << elseDTypep->prettyTypeName());
-                    nodep->dtypeFrom(thenDTypep);
+                  nodep->setClassDType();
                 }
             } else if (nodep->thenp()->isDouble() || nodep->elsep()->isDouble()) {
                 nodep->dtypeSetDouble();

@@ -24,7 +24,7 @@
 
 // Limited V3 headers here - this is a base class for Vlc etc
 #include "V3String.h"
-#ifndef V3ERROR_NO_GLOBAL_
+#if !defined(V3ERROR_NO_GLOBAL_) && !defined(VL_MT_DISABLED_CODE_UNIT)
 #include "V3ThreadPool.h"
 #endif
 
@@ -548,7 +548,7 @@ inline void v3errorEndFatal(std::ostringstream& sstr)
     VL_UNREACHABLE;
 }
 
-#ifndef V3ERROR_NO_GLOBAL_
+#if !defined(V3ERROR_NO_GLOBAL_) && !defined(VL_MT_DISABLED_CODE_UNIT)
 #define V3ErrorLockAndCheckStopRequested \
     V3Error::s().m_mutex.lockCheckStopRequest( \
         []() -> void { V3ThreadPool::s().waitIfStopRequested(); })

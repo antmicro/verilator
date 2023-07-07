@@ -24,7 +24,7 @@
 
 // Limited V3 headers here - this is a base class for Vlc etc
 #include "V3String.h"
-#ifndef V3ERROR_NO_GLOBAL_
+#if !defined(V3ERROR_NO_GLOBAL_) && !defined(VL_MT_DISABLED_CODE_UNIT)
 #include "V3ThreadPool.h"
 #endif
 
@@ -530,8 +530,8 @@ public:
 };
 
 // Global versions, so that if the class doesn't define an operator, we get the functions anyway.
-void v3errorEnd(std::ostringstream& sstr) VL_RELEASE(V3Error::s().m_mutex);
-void v3errorEndFatal(std::ostringstream& sstr) VL_RELEASE(V3Error::s().m_mutex) VL_ATTR_NORETURN;
+void v3errorEnd(std::ostringstream& sstr) VL_RELEASE(V3Error::s().m_mutex) VL_MT_SAFE;
+void v3errorEndFatal(std::ostringstream& sstr) VL_RELEASE(V3Error::s().m_mutex) VL_MT_SAFE VL_ATTR_NORETURN;
 
 // Theses allow errors using << operators: v3error("foo"<<"bar");
 // Careful, you can't put () around msg, as you would in most macro definitions.

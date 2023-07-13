@@ -6,13 +6,21 @@
 
 `define checkd(gotv,expv) do if ((gotv) !== (expv)) begin $write("%%Error: %s:%0d:  got=%0d exp=%0d\n", `__FILE__,`__LINE__, (gotv), (expv)); $stop; end while(0);
 
+class Multiplier;
+   function int multBy2(int x);
+      return 2 * x;
+  endfunction
+endclass
+
 module t(/*AUTOARG*/);
 
    int a;
    int b;
    int i;
+   Multiplier mult;
 
    initial begin
+      mult = new;
       a = 10;
       i = (a = 2);
       `checkd(a, 2); `checkd(i, 2);
@@ -69,6 +77,22 @@ module t(/*AUTOARG*/);
       b = 6;
       i = ((a += (b += 1) + 1));
       `checkd(a, 18); `checkd(i, 18); `checkd(b, 7);
+
+      a = 1;
+      i = mult.multBy2(a) + (a = 5);
+      `checkd(a, 5); `checkd(i, 7);
+
+      a = 1;
+      i = (a = 5) + mult.multBy2(a);
+      `checkd(a, 5); `checkd(i, 15);
+
+      a = 1;
+      i = (a = 5) + mult.multBy2(a) + (a = 3);
+      `checkd(a, 3); `checkd(i, 18);
+
+      a = 1;
+      i = (a = 5) + mult.multBy2(a) + (a = 3) + mult.multBy2(a);
+      `checkd(a, 3); `checkd(i, 24);
 
       $write("*-* All Finished *-*\n");
       $finish;

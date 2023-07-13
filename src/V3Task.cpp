@@ -1546,6 +1546,13 @@ private:
         iterateChildren(nodep);
         m_insStmtp = nullptr;  // Next thing should be new statement
     }
+    void visit(AstExprStmt* nodep) override {
+        // Statement node inside an expression. Values of these fields need to be saved,
+        // because they are overwritten by statement nodes.
+        VL_RESTORER(m_insMode);
+        VL_RESTORER(m_insStmtp);
+        iterateChildren(nodep);
+    }
     void visit(AstStmtExpr* nodep) override {
         m_insMode = IM_BEFORE;
         m_insStmtp = nodep;

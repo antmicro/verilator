@@ -1346,7 +1346,7 @@ private:
     AstNode* insertBeforeStmt(AstNode* nodep, AstNode* newp) {
         // Return node that must be visited, if any
         if (debug() >= 9) nodep->dumpTree("-  newstmt: ");
-        UASSERT_OBJ(m_insStmtp, nodep, "Function not underneath a statement");
+        UASSERT_OBJ(m_insStmtp, nodep, "Function call not underneath a statement");
         AstNode* visitp = nullptr;
         if (m_insMode == IM_BEFORE) {
             // Add the whole thing before insertAt

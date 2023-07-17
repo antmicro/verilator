@@ -179,7 +179,8 @@ private:
         funcp->dtypep(returnVarp->dtypep());
         m_modp->stmtsp()->addHereThisAsNext(funcp);
 
-        AstFuncRef* const funcRefp = new AstFuncRef{fl, funcName, new AstArg{fl, "", exprStmtp->lhsp()->unlinkFrBack()}};
+        AstFuncRef* const funcRefp
+            = new AstFuncRef{fl, funcName, new AstArg{fl, "", exprStmtp->lhsp()->unlinkFrBack()}};
         funcRefp->taskp(funcp);
         // Need to set classOrPackagep
         funcRefp->dtypep(returnVarp->dtypep());

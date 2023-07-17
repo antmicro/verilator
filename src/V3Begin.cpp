@@ -106,6 +106,7 @@ private:
     int m_ifDepth = 0;  // Current if depth
     bool m_keepBegins = false;  // True if begins should not be inlined
     std::set<AstVar*> m_staticFuncVars;  // Static variables from m_ftaskp
+    int m_modAssignExprNum;  // number of assignment expressions
 
     // METHODS
 
@@ -157,6 +158,35 @@ private:
         }
     }
 
+    void moveAssignmentInExpressionToFunctionp(AstExprStmt* nodep) {
+        // Convert assignment within an expression to a function
+        // as section 11.3.6 of IEEE Std 1800-2017 describes
+        AstNodeAssign* exprStmtp = VN_AS(nodep->stmtsp(), NodeAssign);
+        FileLine* const fl = exprStmtp->fileline();
+        const std::string funcName = "assign_" + cvtToStr(m_modAssignExprNum);
+
+        AstVar* const returnVarp = new AstVar{fl, VVarType::VAR, funcName, exprStmtp->dtypep()};
+        returnVarp->lifetime(VLifetime::AUTOMATIC);
+        returnVarp->funcLocal(true);
+        returnVarp->funcReturn(true);
+        returnVarp->direction(VDirection::OUTPUT);
+
+        AstVar* const argp = new AstVar{fl, VVarType::PORT, "arg", exprStmtp->lhsp()->dtypep()};
+        argp->funcLocal(true);
+        argp->direction(VDirection::REF);
+
+        AstFunc* const funcp = new AstFunc{fl, funcName, argp, returnVarp};
+        funcp->dtypep(returnVarp->dtypep());
+        m_modp->stmtsp()->addHereThisAsNext(funcp);
+
+        AstFuncRef* const funcRefp = new AstFuncRef{fl, funcName, new AstArg{fl, "", exprStmtp->lhsp()->unlinkFrBack()}};
+        funcRefp->taskp(funcp);
+        // Need to set classOrPackagep
+        funcRefp->dtypep(returnVarp->dtypep());
+        nodep->replaceWith(funcRefp);
+        nodep->deleteTree();
+    }
+
     // VISITORS
     void visit(AstFork* nodep) override {
         // Keep begins in forks to group their statements together
@@ -184,10 +214,10 @@ private:
     }
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
-        {
-            m_modp = nodep;
-            iterateChildren(nodep);
-        }
+        VL_RESTORER(m_modAssignExprNum);
+        m_modp = nodep;
+        m_modAssignExprNum = 0;
+        iterateChildren(nodep);
     }
     void visit(AstNodeFTask* nodep) override {
         UINFO(8, "  " << nodep << endl);
@@ -225,6 +255,11 @@ private:
             m_staticFuncVars.clear();
             m_ftaskp = nullptr;
         }
+    }
+    void visit(AstExprStmt* nodep) override {
+        ++m_modAssignExprNum;
+        moveAssignmentInExpressionToFunctionp(nodep);
+        // should be visited as next
     }
     void visit(AstBegin* nodep) override {
         // Begin blocks were only useful in variable creation, change names and delete

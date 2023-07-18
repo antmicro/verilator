@@ -161,18 +161,17 @@ private:
     void moveAssignmentInExpressionToFunctionp(AstExprStmt* nodep) {
         // Convert assignment within an expression to a function
         // as section 11.3.6 of IEEE Std 1800-2017 describes
-        AstNodeAssign* exprStmtp = VN_AS(nodep->stmtsp(), NodeAssign);
-        UASSERT_OBJ(!exprStmtp->nextp(), nodep, "More than one statements in AstExprStmt");
-        FileLine* const fl = exprStmtp->fileline();
-        const std::string funcName = "assign_" + cvtToStr(m_modAssignExprNum);
+        FileLine* const fl = nodep->fileline();
+        const std::string funcName = "expr_stmt_" + cvtToStr(m_modAssignExprNum);
 
-        AstVar* const returnVarp = new AstVar{fl, VVarType::VAR, funcName, exprStmtp->dtypep()};
+        AstVar* const returnVarp = new AstVar{fl, VVarType::VAR, funcName, nodep->dtypep()};
         returnVarp->lifetime(VLifetime::AUTOMATIC);
         returnVarp->funcLocal(true);
         returnVarp->funcReturn(true);
         returnVarp->direction(VDirection::OUTPUT);
 
-        AstFunc* const funcp = new AstFunc{fl, funcName, exprStmtp->unlinkFrBack(), returnVarp};
+        AstFunc* const funcp
+            = new AstFunc{fl, funcName, nodep->stmtsp()->unlinkFrBackWithNext(), returnVarp};
         funcp->dtypep(returnVarp->dtypep());
         funcp->addStmtsp(new AstAssign{fl, new AstVarRef{fl, returnVarp, VAccess::WRITE},
                                        nodep->resultp()->unlinkFrBack()});

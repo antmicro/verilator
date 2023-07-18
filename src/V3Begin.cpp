@@ -162,6 +162,7 @@ private:
         // Convert assignment within an expression to a function
         // as section 11.3.6 of IEEE Std 1800-2017 describes
         AstNodeAssign* exprStmtp = VN_AS(nodep->stmtsp(), NodeAssign);
+        UASSERT_OBJ(!exprStmtp->nextp(), nodep, "More than one statements in AstExprStmt");
         FileLine* const fl = exprStmtp->fileline();
         const std::string funcName = "assign_" + cvtToStr(m_modAssignExprNum);
 

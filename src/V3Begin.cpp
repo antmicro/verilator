@@ -172,19 +172,16 @@ private:
         returnVarp->funcReturn(true);
         returnVarp->direction(VDirection::OUTPUT);
 
-        AstVar* const argp = new AstVar{fl, VVarType::PORT, "arg", exprStmtp->lhsp()->dtypep()};
-        argp->funcLocal(true);
-        argp->direction(VDirection::REF);
-
-        AstFunc* const funcp = new AstFunc{fl, funcName, argp, returnVarp};
+        AstFunc* const funcp = new AstFunc{fl, funcName, exprStmtp->unlinkFrBack(), returnVarp};
         funcp->dtypep(returnVarp->dtypep());
+        funcp->addStmtsp(new AstAssign{fl, new AstVarRef{fl, returnVarp, VAccess::WRITE},
+                                       nodep->resultp()->unlinkFrBack()});
         m_modp->stmtsp()->addHereThisAsNext(funcp);
 
-        AstFuncRef* const funcRefp
-            = new AstFuncRef{fl, funcName, new AstArg{fl, "", exprStmtp->lhsp()->unlinkFrBack()}};
+        AstFuncRef* const funcRefp = new AstFuncRef{fl, funcName, nullptr};
         funcRefp->taskp(funcp);
-        // Need to set classOrPackagep
         funcRefp->dtypep(returnVarp->dtypep());
+
         nodep->replaceWith(funcRefp);
         nodep->deleteTree();
     }

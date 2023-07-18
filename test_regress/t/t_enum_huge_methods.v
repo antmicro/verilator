@@ -26,6 +26,8 @@ module t (/*AUTOARG*/
 
    // Check runtime
    always @ (posedge clk) begin
+      // verilator lint_off BLKANDNBLK
+      // $cast opearations are converted to blocking assignments
       cyc <= cyc + 1;
       if (cyc == 0) begin
          // Setup

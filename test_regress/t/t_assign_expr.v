@@ -79,6 +79,10 @@ module t(/*AUTOARG*/);
       `checkd(a, 18); `checkd(i, 18); `checkd(b, 7);
 
       a = 1;
+      i = (a = 5) + (a = 3);
+      `checkd(a, 3); `checkd(i, 8);
+
+      a = 1;
       i = mult.multBy2(a) + (a = 5);
       `checkd(a, 5); `checkd(i, 7);
 

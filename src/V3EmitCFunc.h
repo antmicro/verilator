@@ -923,15 +923,6 @@ public:
             }
         }
     }
-    void visit(AstExprStmt* nodep) override {
-        // GCC allows compound statements in expressions, but this is not standard.
-        // So we use an immediate-evaluation lambda and comma operator
-        putbs("([&]() {\n");
-        iterateAndNextConstNull(nodep->stmtsp());
-        puts("}(), ");
-        iterateAndNextConstNull(nodep->resultp());
-        puts(")");
-    }
     void visit(AstStop* nodep) override {
         puts("VL_STOP_MT(");
         putsQuoted(protect(nodep->fileline()->filename()));

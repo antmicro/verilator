@@ -255,6 +255,7 @@ private:
         }
     }
     void visit(AstExprStmt* nodep) override {
+        iterateChildren(nodep);
         ++m_modExprStmtNum;
         moveExprStmtToFunction(nodep);
     }

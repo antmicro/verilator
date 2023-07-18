@@ -106,7 +106,7 @@ private:
     int m_ifDepth = 0;  // Current if depth
     bool m_keepBegins = false;  // True if begins should not be inlined
     std::set<AstVar*> m_staticFuncVars;  // Static variables from m_ftaskp
-    int m_modAssignExprNum;  // number of assignment expressions
+    int m_modExprStmtNum;  // number of assignment expressions
 
     // METHODS
 
@@ -158,11 +158,11 @@ private:
         }
     }
 
-    void moveAssignmentInExpressionToFunctionp(AstExprStmt* nodep) {
-        // Convert assignment within an expression to a function
+    void moveExprStmtToFunction(AstExprStmt* nodep) {
+        // Convert a statement within an expression to a function
         // as section 11.3.6 of IEEE Std 1800-2017 describes
         FileLine* const fl = nodep->fileline();
-        const std::string funcName = "expr_stmt_" + cvtToStr(m_modAssignExprNum);
+        const std::string funcName = "expr_stmt_" + cvtToStr(m_modExprStmtNum);
 
         AstVar* const returnVarp = new AstVar{fl, VVarType::VAR, funcName, nodep->dtypep()};
         returnVarp->lifetime(VLifetime::AUTOMATIC);
@@ -212,9 +212,9 @@ private:
     }
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
-        VL_RESTORER(m_modAssignExprNum);
+        VL_RESTORER(m_modExprStmtNum);
         m_modp = nodep;
-        m_modAssignExprNum = 0;
+        m_modExprStmtNum = 0;
         iterateChildren(nodep);
     }
     void visit(AstNodeFTask* nodep) override {
@@ -255,9 +255,8 @@ private:
         }
     }
     void visit(AstExprStmt* nodep) override {
-        ++m_modAssignExprNum;
-        moveAssignmentInExpressionToFunctionp(nodep);
-        // should be visited as next
+        ++m_modExprStmtNum;
+        moveExprStmtToFunction(nodep);
     }
     void visit(AstBegin* nodep) override {
         // Begin blocks were only useful in variable creation, change names and delete

@@ -2173,7 +2173,7 @@ private:
                 streamp->dtypeSetLogicUnsized(srcp->width(), srcp->widthMin(), VSigning::UNSIGNED);
             }
             // Shrink the RHS if necessary
-            if (sWidth > dWidth) {
+            if (sWidth > dWidth && dWidth > 0) {
                 streamp = new AstSel{streamp->fileline(), streamp, sWidth - dWidth, dWidth};
             }
             // Link the nodes back in

@@ -299,9 +299,7 @@ private:
         if (m_ftaskp && m_ftaskp->classMethod() && nodep->lifetime().isNone()) {
             nodep->lifetime(VLifetime::AUTOMATIC);
         }
-        if (nodep->lifetime().isNone() && nodep->varType() != VVarType::PORT) {
-            nodep->lifetime(m_lifetime);
-        }
+        if (nodep->lifetime().isNone()) nodep->lifetime(m_lifetime);
         if (nodep->isGParam() && m_modp) m_modp->hasGParam(true);
         if (nodep->isParam() && !nodep->valuep()
             && nodep->fileline()->language() < V3LangCode::L1800_2009) {

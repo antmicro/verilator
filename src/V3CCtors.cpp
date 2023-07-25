@@ -117,7 +117,7 @@ public:
                     callp->argTypes("vlSymsp");
                 } else {
                     if (m_type.isCoverage()) callp->argTypes("first");
-                    callp->selfPointer("this");
+                    callp->selfPointer(VSelfPointer::makeThis());
                 }
                 rootFuncp->addStmtsp(callp->makeStmt());
             }
@@ -229,7 +229,7 @@ void V3CCtors::evalAsserts() {
                         // if (signal & CONST(upper_non_clean_mask)) { fail; }
                         AstVarRef* const vrefp
                             = new AstVarRef{varp->fileline(), varp, VAccess::READ};
-                        vrefp->selfPointer("this");
+                        vrefp->selfPointer(VSelfPointer::makeThis());
                         AstNodeExpr* newp = vrefp;
                         if (varp->isWide()) {
                             newp = new AstWordSel{

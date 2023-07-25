@@ -1232,6 +1232,43 @@ public:
     ~VBasicTypeKey() = default;
 };
 
+// ######################################################################
+//  VSelfPointer - Represents a pointer to a 'self' object to be emitted before a given var
+//  reference, call, etc. For example, it could be empty (no self pointer), or the string 'this',
+//  or 'vlSymsp->...'
+
+class VSelfPointer final {
+private:
+    // STATIC MEMBERS
+    // Keep these in shared pointers to avoid branching for special cases
+    static const std::shared_ptr<const string> s_nonep;
+    static const std::shared_ptr<const string> s_thisp;
+
+    // MEMBERS
+    std::shared_ptr<const string> m_strp;
+
+    // CONSTRUCTORS
+    VSelfPointer(std::shared_ptr<const string> strp)
+        : m_strp{strp} {}
+    VSelfPointer(string&& str)
+        : m_strp{std::make_shared<const string>(std::move(str))} {}
+
+public:
+    // METHODS
+    bool isNone() const { return m_strp == s_nonep; }
+    bool isVlSym() const { return m_strp->find("vlSymsp") != string::npos; }
+    bool hasThis() const { return m_strp == s_thisp || VString::startsWith(*m_strp, "this"); }
+    string protect(bool useSelfForThis, bool protect) const;
+    const std::string& asString() const { return *m_strp; }
+    bool operator==(const VSelfPointer& other) const { return *m_strp == *other.m_strp; }
+
+    // STATIC METHODS
+    static VSelfPointer makeNone() { return {s_nonep}; }
+    static VSelfPointer makeThis() { return {s_thisp}; }
+    static VSelfPointer makeThis(const string& field) { return {"this->" + field}; }
+    static VSelfPointer makeVlSyms(const string& field) { return {"(&vlSymsp->" + field + ')'}; }
+};
+
 //######################################################################
 // AstNUser - Generic base class for AST User nodes.
 //          - Also used to allow parameter passing up/down iterate calls

@@ -444,8 +444,8 @@ class AstNodeVarRef VL_NOT_FINAL : public AstNodeExpr {
     AstVar* m_varp;  // [AfterLink] Pointer to variable itself
     AstVarScope* m_varScopep = nullptr;  // Varscope for hierarchy
     AstNodeModule* m_classOrPackagep = nullptr;  // Class/package of the variable
-    string m_selfPointer;  // Output code object pointer (e.g.: 'this')
-
+    VSelfPointer m_selfPointer = VSelfPointer::makeNone();  // Output code
+                                                            // object pointer (e.g.: 'this')
 protected:
     AstNodeVarRef(VNType t, FileLine* fl, const VAccess& access)
         : AstNodeExpr{t, fl}
@@ -474,9 +474,11 @@ public:
     }
     AstVarScope* varScopep() const { return m_varScopep; }
     void varScopep(AstVarScope* varscp) { m_varScopep = varscp; }
-    string selfPointer() const { return m_selfPointer; }
-    void selfPointer(const string& value) { m_selfPointer = value; }
-    string selfPointerProtect(bool useSelfForThis) const;
+    const VSelfPointer& selfPointer() const { return m_selfPointer; }
+    void selfPointer(const VSelfPointer& selfPointer) { m_selfPointer = selfPointer; }
+    string selfPointerProtect(bool useSelfForThis) const {
+        return selfPointer().protect(useSelfForThis, protect());
+    }
     AstNodeModule* classOrPackagep() const { return m_classOrPackagep; }
     void classOrPackagep(AstNodeModule* nodep) { m_classOrPackagep = nodep; }
     // Know no children, and hot function, so skip iterator for speed
@@ -4017,16 +4019,18 @@ public:
 // === AstNodeCCall ===
 class AstCCall final : public AstNodeCCall {
     // C++ function call
-    string m_selfPointer;  // Output code object pointer (e.g.: 'this')
-
+    VSelfPointer m_selfPointer = VSelfPointer::makeNone();  // Output code
+                                                            // object pointer (e.g.: 'this')
 public:
     AstCCall(FileLine* fl, AstCFunc* funcp, AstNodeExpr* argsp = nullptr)
         : ASTGEN_SUPER_CCall(fl, funcp, argsp) {}
     ASTGEN_MEMBERS_AstCCall;
 
-    string selfPointer() const { return m_selfPointer; }
-    void selfPointer(const string& value) { m_selfPointer = value; }
-    string selfPointerProtect(bool useSelfForThis) const;
+    const VSelfPointer& selfPointer() const { return m_selfPointer; }
+    void selfPointer(const VSelfPointer& selfPointer) { m_selfPointer = selfPointer; }
+    string selfPointerProtect(bool useSelfForThis) const {
+        return selfPointer().protect(useSelfForThis, protect());
+    }
 };
 class AstCMethodCall final : public AstNodeCCall {
     // C++ method call

@@ -60,6 +60,18 @@ int AstNodeDType::s_uniqueNum = 0;
 std::ostream& operator<<(std::ostream& os, VNType rhs);
 
 //######################################################################
+// VSelfPointer
+
+const std::shared_ptr<const string> VSelfPointer::s_nonep = std::make_shared<string>("");
+const std::shared_ptr<const string> VSelfPointer::s_thisp = std::make_shared<string>("this");
+
+string VSelfPointer::protect(bool useSelfForThis, bool protect) const {
+    const string& sp
+        = useSelfForThis ? VString::replaceWord(asString(), "this", "vlSelf") : asString();
+    return VIdProtect::protectWordsIf(sp, protect);
+}
+
+//######################################################################
 // Creators
 
 AstNode::AstNode(VNType t, FileLine* fl)

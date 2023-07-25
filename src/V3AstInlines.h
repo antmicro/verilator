@@ -176,7 +176,7 @@ bool AstVarRef::sameNoLvalue(AstVarRef* samep) const {
         return (varScopep() == samep->varScopep());
     } else {
         return (selfPointer() == samep->selfPointer()
-                && (!selfPointer().empty() || !samep->selfPointer().empty())
+                && (!selfPointer().isNone() || !samep->selfPointer().isNone())
                 && varp()->name() == samep->varp()->name());
     }
 }

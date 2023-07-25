@@ -300,7 +300,14 @@ private:
             nodep->lifetime(VLifetime::AUTOMATIC);
         }
         if (nodep->lifetime().isNone()) {
-            nodep->lifetime(m_lifetime);
+            if (nodep->varType() == VVarType::PORT && m_ftaskp) {
+                // Ports of static tasks are static (section 13.3.3 of the IEEE Std 1800-2017).
+                // However, Verilator handles static variables by moving them outside the function,
+                // which can't be done with ports, so their lifetime is set to automatic.
+                nodep->lifetime(VLifetime::AUTOMATIC);
+            } else {
+                nodep->lifetime(m_lifetime);
+            }
         }
         if (nodep->isGParam() && m_modp) m_modp->hasGParam(true);
         if (nodep->isParam() && !nodep->valuep()

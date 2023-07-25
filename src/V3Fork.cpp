@@ -173,26 +173,24 @@ private:
         if (m_forkDepth) m_forkLocalsp.insert(nodep);
     }
     void visit(AstVarRef* nodep) override {
-
+        AstVar* const varp = nodep->varp();
         // VL_KEEP_THIS ensures that we hold a handle to the class
-        if (m_forkDepth && !nodep->varp()->isFuncLocal() && nodep->varp()->isClassMember()) return;
+        if (m_forkDepth && !varp->isFuncLocal() && varp->isClassMember()) return;
 
-        if (m_forkDepth && (m_forkLocalsp.count(nodep->varp()) == 0)
-            && !nodep->varp()->lifetime().isStatic()) {
+        if (m_forkDepth && (m_forkLocalsp.count(varp) == 0) && !varp->lifetime().isStatic()) {
             if (nodep->access().isWriteOrRW()
                 && (!nodep->isClassHandleValue() || nodep->user2())) {
                 nodep->v3warn(
                     E_LIFETIME,
                     "Invalid reference: Process might outlive variable `"
-                        << nodep->varp()->name() << "`.\n"
-                        << nodep->varp()->warnMore()
+                        << varp->name() << "`.\n"
+                        << varp->warnMore()
                         << "... Suggest use it as read-only to initialize a local copy at the "
                            "beginning of the process, or declare it as static. It is also "
                            "possible to refer by reference to objects and their members.");
                 return;
             }
-            if (nodep->varp()->lifetime().isNone()
-                && !nodep->varp()->varType() != VVarType::PORT) {
+            if (varp->lifetime().isNone() && !varp->varType() != VVarType::PORT) {
                 // Currently, Verilator doesn't set lifetime to ports. They are captured as
                 // automatic variables.
                 nodep->v3fatalSrc(

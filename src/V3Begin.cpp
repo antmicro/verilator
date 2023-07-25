@@ -261,10 +261,20 @@ private:
     void visit(AstVar* nodep) override {
         // If static variable, move it outside a function.
         if (nodep->lifetime().isStatic() && m_ftaskp) {
+            if (nodep->varType() == VVarType::PORT) {
+                AstVar* const argp = nodep->cloneTree(false);
+                argp->lifetime(VLifetime::AUTOMATIC);
+                nodep->replaceWith(argp);
+                FileLine* const fl = argp->fileline();
+                ((AstNode*)argp)
+                    ->addNext(new AstAssign{fl, new AstVarRef{fl, nodep, VAccess::WRITE},
+                                            new AstVarRef{fl, argp, VAccess::READ}});
+            } else {
+                nodep->unlinkFrBack();
+            }
             const std::string newName
                 = m_ftaskp->name() + "__Vstatic__" + dot(m_unnamedScope, nodep->name());
             nodep->name(newName);
-            nodep->unlinkFrBack();
             m_ftaskp->addHereThisAsNext(nodep);
             m_staticFuncVars.insert(nodep);
             nodep->funcLocal(false);

@@ -191,9 +191,13 @@ private:
                            "possible to refer by reference to objects and their members.");
                 return;
             }
-            UASSERT_OBJ(
-                !nodep->varp()->lifetime().isNone(), nodep,
-                "Variable's lifetime is unknown. Can't determine if a capture is necessary.");
+            if (nodep->varp()->lifetime().isNone()
+                && !nodep->varp()->varType() != VVarType::PORT) {
+                // Currently, Verilator doesn't set lifetime to ports. They are captured as
+                // automatic variables.
+                nodep->v3fatalSrc(
+                    "Variable's lifetime is unknown. Can't determine if a capture is necessary.");
+            }
 
             AstVar* const varp = captureRef(nodep);
             nodep->varp(varp);

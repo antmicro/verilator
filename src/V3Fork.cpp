@@ -190,7 +190,7 @@ private:
                            "possible to refer by reference to objects and their members.");
                 return;
             }
-            if (varp->lifetime().isNone() && !varp->varType() != VVarType::PORT) {
+            if (varp->lifetime().isNone() && varp->varType() != VVarType::PORT) {
                 // Currently, Verilator doesn't set lifetime to ports. They are captured as
                 // automatic variables.
                 nodep->v3fatalSrc(

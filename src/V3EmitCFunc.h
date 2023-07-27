@@ -1180,10 +1180,12 @@ public:
             puts("I(");
             puts(m_wideTempRefp->varp()->nameProtect());
             puts(", ");
+            puts(cvtToStr(nodep->lhsp()->widthMin()));
+            puts(", ");
             iterateAndNextConstNull(nodep->lhsp());
             puts(", ");
-            const uint32_t rd_log2 = V3Number::log2b(VN_AS(nodep->rhsp(), Const)->toUInt());
-            puts(cvtToStr(rd_log2) + ")");
+            iterateAndNextConstNull(nodep->rhsp());
+            puts(")");
             return;
         }
         if (!nodep->isWide()) {

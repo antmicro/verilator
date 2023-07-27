@@ -1526,6 +1526,17 @@ static inline WDataOutP VL_STREAML_WWI(int lbits, WDataOutP owp, WDataInP const 
     return owp;
 }
 
+static inline void VL_STREAML_DQI(VlQueue<unsigned char>& q, int lbits, QData ld, IData rd) {
+    q.renew(lbits);
+    const int ssize = (rd < static_cast<IData>(lbits)) ? rd : (static_cast<IData>(lbits));
+    for (int istart = 0; istart < lbits; istart += rd) {
+        for (int sbit = 0; sbit < ssize && sbit < lbits - istart; ++sbit) {
+            const EData bit = (ld & (1 << (istart + sbit))) >> (istart + sbit);
+            q.at(lbits - istart + sbit) = bit;
+        }
+    }
+}
+
 // Because concats are common and wide, it's valuable to always have a clean output.
 // Thus we specify inputs must be clean, so we don't need to clean the output.
 // Note the bit shifts are always constants, so the adds in these constify out.

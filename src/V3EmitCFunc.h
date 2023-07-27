@@ -417,6 +417,9 @@ public:
             puts(cvtToStr(nodep->widthMin()) + ",");
             iterateAndNextConstNull(nodep->lhsp());
             puts(", ");
+        } else if (nodep->lhsp()->widthMin() == 0 && VN_IS(nodep->lhsp(), VarRef) && VN_IS(nodep->rhsp(), StreamL)) {
+            m_wideTempRefp = VN_AS(nodep->lhsp(), VarRef);
+            paren = false;            
         } else {
             paren = false;
             iterateAndNextConstNull(nodep->lhsp());

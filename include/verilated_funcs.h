@@ -1531,7 +1531,7 @@ static inline void VL_STREAML_DQI(VlQueue<unsigned char>& q, int lbits, QData ld
     const int ssize = (rd < static_cast<IData>(lbits)) ? rd : (static_cast<IData>(lbits));
     for (int istart = 0; istart < lbits; istart += rd) {
         for (int sbit = 0; sbit < ssize && sbit < lbits - istart; ++sbit) {
-            const EData bit = (ld & (1 << (istart + sbit))) >> (istart + sbit);
+            const bool bit = ld & (1LL << (istart + sbit)) != 0;
             q.at(lbits - istart + sbit) = bit;
         }
     }

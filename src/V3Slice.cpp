@@ -47,7 +47,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //*************************************************************************
 
-class SliceVisitor final : public VNVisitor {
+class SliceVisitor final : public VNVisitor<SliceVisitor> {
     // NODE STATE
     // Cleared on netlist
     //  AstNodeAssign::user1()      -> bool.  True if find is complete
@@ -132,6 +132,7 @@ class SliceVisitor final : public VNVisitor {
         return newp;
     }
 
+public:
     void visit(AstNodeAssign* nodep) override {
         // Called recursively on newly created assignments
         if (!nodep->user1() && !VN_IS(nodep, AssignAlias)) {

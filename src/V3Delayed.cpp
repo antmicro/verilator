@@ -66,7 +66,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Delayed state, as a visitor of each AstNode
 
-class DelayedVisitor final : public VNVisitor {
+class DelayedVisitor final : public VNVisitor<DelayedVisitor> {
 private:
     // NODE STATE
     // Cleared each module:
@@ -413,7 +413,9 @@ private:
         return newlhsp;
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override {
         // VV*****  We reset all userp() on the netlist
         m_modVarMap.clear();

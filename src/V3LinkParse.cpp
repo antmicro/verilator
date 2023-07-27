@@ -37,7 +37,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Link state, as a visitor of each AstNode
 
-class LinkParseVisitor final : public VNVisitor {
+class LinkParseVisitor final : public VNVisitor<LinkParseVisitor> {
 private:
     // NODE STATE
     // Cleared on netlist
@@ -179,7 +179,8 @@ private:
                           << nodep->warnContextSecondary());
     }
 
-    // VISITs
+    public:
+// VISITs
     void visit(AstNodeFTask* nodep) override {
         if (!nodep->user1SetOnce()) {  // Process only once.
             // Mark class methods

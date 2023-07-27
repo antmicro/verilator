@@ -86,7 +86,7 @@ enum PropagationType : uint8_t {
 // ######################################################################
 //  Detect nodes affected by timing and/or requiring a process
 
-class TimingSuspendableVisitor final : public VNVisitor {
+class TimingSuspendableVisitor final : public VNVisitor<TimingSuspendableVisitor> {
 private:
     // TYPES
     // Vertex of a dependency graph of suspendable nodes, e.g. if a node (process or task) is
@@ -220,7 +220,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstClass* nodep) override {
         UASSERT(!m_classp, "Class under class");
         VL_RESTORER(m_classp);
@@ -361,7 +363,7 @@ public:
 // ######################################################################
 //  Transform nodes affected by timing
 
-class TimingControlVisitor final : public VNVisitor {
+class TimingControlVisitor final : public VNVisitor<TimingControlVisitor> {
 private:
     // NODE STATE
     //  Ast{Always,NodeCCall,Fork,NodeAssign}::user1()  -> bool.         Set true if the node has
@@ -651,7 +653,9 @@ private:
         forkp->addNextHere(awaitp->makeStmt());
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         UASSERT(!m_classp, "Module or class under class");
         VL_RESTORER(m_classp);

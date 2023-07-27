@@ -94,7 +94,7 @@ public:
 
 //######################################################################
 
-class TaskStateVisitor final : public VNVisitor {
+class TaskStateVisitor final : public VNVisitor<TaskStateVisitor> {
 private:
     // NODE STATE
     //  Output:
@@ -167,7 +167,9 @@ private:
         return static_cast<TaskFTaskVertex*>(nodep->user4u().toGraphVertex());
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstScope* nodep) override {
         // Each FTask is unique per-scope, so AstNodeFTaskRefs do not need
         // pointers to what scope the FTask is to be invoked under.
@@ -336,7 +338,7 @@ struct TaskDpiUtils {
 //######################################################################
 // Task state, as a visitor of each AstNode
 
-class TaskVisitor final : public VNVisitor {
+class TaskVisitor final : public VNVisitor<TaskVisitor> {
 private:
     // NODE STATE
     // Each module:
@@ -1364,7 +1366,9 @@ private:
         return visitp;
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         VL_RESTORER(m_modNCalls);

@@ -39,7 +39,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // LocalizeVisitor
 
-class LocalizeVisitor final : public VNVisitor {
+class LocalizeVisitor final : public VNVisitor<LocalizeVisitor> {
 private:
     // NODE STATE
     //  AstVarScope::user1()    ->  Bool indicating VarScope is not optimizable.
@@ -125,7 +125,9 @@ private:
         m_varScopeps.clear();
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override {
         iterateChildrenConst(nodep);
         moveVarScopes();

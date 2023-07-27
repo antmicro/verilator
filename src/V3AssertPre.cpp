@@ -35,7 +35,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Assert class functions
 
-class AssertPreVisitor final : public VNVisitor {
+class AssertPreVisitor final : public VNVisitor<AssertPreVisitor> {
     // Removes clocks and other pre-optimizations
     // Eventually inlines calls to sequences, properties, etc.
     // We're not parsing the tree, or anything more complicated.
@@ -151,7 +151,9 @@ private:
         return nodep;
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     //========== Statements
     void visit(AstClocking* const nodep) override {
         VL_RESTORER(m_clockingp);

@@ -70,7 +70,7 @@ static int countTrailingZeroes(uint64_t val) {
 // This visitor can be used in the post-expanded Ast from V3Expand, where the Ast satisfies:
 // - Constants are 64 bit at most (because words are accessed via AstWordSel)
 // - Variables are scoped.
-class ConstBitOpTreeVisitor final : public VNVisitorConst {
+class ConstBitOpTreeVisitor final : public VNVisitorConst<ConstBitOpTreeVisitor> {
     // NODE STATE
     // AstVarRef::user4u      -> Base index of m_varInfos that points VarInfo
     // AstVarScope::user4u    -> Same as AstVarRef::user4
@@ -428,7 +428,9 @@ class ConstBitOpTreeVisitor final : public VNVisitorConst {
         return ok ? info : LeafInfo{};
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNode* nodep) override { CONST_BITOP_SET_FAILED("Hit unexpected op", nodep); }
     void visit(AstCCast* nodep) override {
         iterateChildrenConst(nodep);
@@ -875,7 +877,7 @@ public:
 //######################################################################
 // Const state, as a visitor of each AstNode
 
-class ConstVisitor final : public VNVisitor {
+class ConstVisitor final : public VNVisitor<ConstVisitor> {
 private:
     // CONSTANTS
     static constexpr unsigned CONCAT_MERGABLE_MAX_DEPTH = 10;  // Limit alg recursion
@@ -2266,7 +2268,9 @@ private:
 
     //----------------------------------------
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override {
         // Iterate modules backwards, in bottom-up order.  That's faster
         iterateChildrenBackwardsConst(nodep);

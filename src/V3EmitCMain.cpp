@@ -32,7 +32,9 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 class EmitCMain final : EmitCBaseVisitorConst {
     // METHODS
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     // This visitor doesn't really iterate, but exist to appease base class
     void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }  // LCOV_EXCL_LINE
 

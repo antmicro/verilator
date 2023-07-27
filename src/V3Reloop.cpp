@@ -44,7 +44,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
-class ReloopVisitor final : public VNVisitor {
+class ReloopVisitor final : public VNVisitor<ReloopVisitor> {
 private:
     // NODE STATE
     // AstCFunc::user1p      -> Var* for temp var, 0=not set yet
@@ -154,7 +154,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstCFunc* nodep) override {
         VL_RESTORER(m_cfuncp);
         {

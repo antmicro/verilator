@@ -362,7 +362,7 @@ public:
     void add(AstVarRef* nodep) { m_refs.insert(nodep); }
     void add(AstSel* nodep) { m_sels.insert(nodep); }
     void remove(AstNode* nodep) {
-        struct Visitor : public VNVisitor {
+        struct Visitor : public VNVisitor<Visitor> {
             RefsInModule& m_parent;
             void visit(AstNode* nodep) override { iterateChildren(nodep); }
             void visit(AstVar* nodep) override { m_parent.m_vars.erase(nodep); }
@@ -376,7 +376,8 @@ public:
         } v(*this);
         v.iterate(nodep);
     }
-    void visit(VNVisitor* visitor) {
+    template<typename Visitor>
+    void visit(Visitor* visitor) {
         for (AstVar* const varp : m_vars) visitor->iterate(varp);
         for (AstSel* const selp : m_sels) {
             // If m_refs includes VarRef from ArraySel, remove it
@@ -400,7 +401,7 @@ public:
 
 using SplitVarRefsMap = std::map<AstNodeModule*, RefsInModule, AstNodeComparator>;
 
-class SplitUnpackedVarVisitor final : public VNVisitor, public SplitVarImpl {
+class SplitUnpackedVarVisitor final : public VNVisitor<SplitUnpackedVarVisitor>, public SplitVarImpl {
     using VarSet = std::set<AstVar*, AstNodeComparator>;
     VarSet m_foundTargetVar;
     UnpackRefMap m_refs;
@@ -458,6 +459,7 @@ class SplitUnpackedVarVisitor final : public VNVisitor, public SplitVarImpl {
         return refp;
     }
 
+public:
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
     void visit(AstNodeModule* nodep) override {
         UINFO(4, "Start checking " << nodep->prettyNameQ() << "\n");
@@ -601,6 +603,8 @@ class SplitUnpackedVarVisitor final : public VNVisitor, public SplitVarImpl {
             iterateChildren(nodep);
         }
     }
+
+public:
     AstVarRef* createTempVar(AstNode* context, AstNode* nodep, AstUnpackArrayDType* dtypep,
                              const std::string& name_prefix, std::vector<AstVar*>& vars,
                              int start_idx, bool lvalue, bool /*ftask*/) {
@@ -951,12 +955,13 @@ public:
     }
 };
 
-class SplitPackedVarVisitor final : public VNVisitor, public SplitVarImpl {
+class SplitPackedVarVisitor final : public VNVisitor<SplitPackedVarVisitor>, public SplitVarImpl {
     AstNetlist* const m_netp;
     const AstNodeModule* m_modp = nullptr;  // Current module (just for log)
     int m_numSplit = 0;  // Total number of split variables
     // key:variable to be split. value:location where the variable is referenced.
     std::map<AstVar*, PackedVarRef, AstNodeComparator> m_refs;
+public:
     void visit(AstNodeFTask* nodep) override {
         if (!cannotSplitTaskReason(nodep)) iterateChildren(nodep);
     }
@@ -1025,6 +1030,7 @@ class SplitPackedVarVisitor final : public VNVisitor, public SplitVarImpl {
     }
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
+private:
     // Extract necessary bit range from a newly created variable to meet ref
     static AstNodeExpr* extractBits(const PackedVarRefEntry& ref, const SplitNewVar& var,
                                     const VAccess access) {

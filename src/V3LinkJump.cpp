@@ -45,7 +45,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
-class LinkJumpVisitor final : public VNVisitor {
+class LinkJumpVisitor final : public VNVisitor<LinkJumpVisitor> {
 private:
     // NODE STATE
     //  AstNode::user1()    -> AstJumpLabel*, for this block if endOfIter
@@ -161,7 +161,9 @@ private:
         if (nodep->nextp()) addPrefixToBlocksRecurse(nodep->nextp());
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         if (nodep->dead()) return;
         VL_RESTORER(m_modp);

@@ -146,7 +146,7 @@ bool V3Broken::isLinkable(const AstNode* nodep) { return s_linkableTable.isLinka
 //######################################################################
 // Check every node in tree
 
-class BrokenCheckVisitor final : public VNVisitorConst {
+class BrokenCheckVisitor final : public VNVisitorConst<BrokenCheckVisitor> {
     bool m_inScope = false;  // Under AstScope
 
     // Constants for marking we are under/not under a node
@@ -220,6 +220,8 @@ private:
         }
         return false;
     }
+
+public:
     void visit(AstNodeAssign* nodep) override {
         processAndIterate(nodep);
         UASSERT_OBJ(!(v3Global.assertDTypesResolved() && nodep->brokeLhsMustBeLvalue()

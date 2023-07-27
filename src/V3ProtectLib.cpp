@@ -31,7 +31,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // ProtectLib top-level visitor
 
-class ProtectVisitor final : public VNVisitor {
+class ProtectVisitor final : public VNVisitor<ProtectVisitor> {
 private:
     AstVFile* m_vfilep = nullptr;  // DPI-enabled Verilog wrapper
     AstCFile* m_cfilep = nullptr;  // C implementation of DPI functions
@@ -65,7 +65,9 @@ private:
     bool m_foundTop = false;  // Have seen the top module
     bool m_hasClk = false;  // True if the top module has sequential logic
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override {
         m_vfilep
             = new AstVFile{nodep->fileline(), v3Global.opt.makeDir() + "/" + m_libName + ".sv"};

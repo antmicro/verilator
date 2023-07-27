@@ -192,7 +192,7 @@ public:
 // ######################################################################
 //  Is this a simple expression with a single input and single output?
 
-class GateOkVisitor final : public VNVisitorConst {
+class GateOkVisitor final : public VNVisitorConst<GateOkVisitor> {
 private:
     // RETURN STATE
     bool m_isSimple = true;  // Set false when we know it isn't simple
@@ -213,7 +213,9 @@ private:
             UINFO(9, "Clear simple " << because << endl);
         }
     }
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeVarRef* nodep) override {
         ++m_ops;
         iterateChildrenConst(nodep);
@@ -310,7 +312,7 @@ static void eliminate(AstNode* logicp,
 // ######################################################################
 //  Gate class functions
 
-class GateVisitor final : public VNVisitor {
+class GateVisitor final : public VNVisitor<GateVisitor> {
 private:
     // NODE STATE
     // Entire netlist:
@@ -420,7 +422,9 @@ private:
     void mergeAssigns();
     void decomposeClkVectors();
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override {
         iterateChildren(nodep);
         if (dumpGraphLevel() >= 3) m_graph.dumpDotFilePrefixed("gate_pre");
@@ -896,7 +900,7 @@ public:
 //######################################################################
 // Have we seen the rhs of this assign before?
 
-class GateDedupeVarVisitor final : public VNVisitor {
+class GateDedupeVarVisitor final : public VNVisitor<GateDedupeVarVisitor> {
     // Given a node, it is visited to try to find the AstNodeAssign under
     // it that can used for dedupe.
     // Right now, only the following node trees are supported for dedupe.
@@ -915,7 +919,9 @@ private:
     bool m_always = false;  // Assign is under an always
     bool m_dedupable = true;  // Determined the assign to be dedupable
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeAssign* assignp) override {
         if (m_dedupable) {
             // I think we could safely dedupe an always block with multiple
@@ -1293,7 +1299,7 @@ void GateVisitor::mergeAssigns() {
 //######################################################################
 // Find a var's offset in a concatenation
 
-class GateConcatVisitor final : public VNVisitorConst {
+class GateConcatVisitor final : public VNVisitorConst<GateConcatVisitor> {
 private:
     // STATE
     const AstVarScope* m_vscp = nullptr;  // Varscope we're trying to find
@@ -1301,7 +1307,9 @@ private:
     int m_found_offset = 0;  // Found offset of varscope
     bool m_found = false;  // Offset found
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeVarRef* nodep) override {
         UINFO(9, "CLK DECOMP Concat search var (off = " << m_offset << ") - " << nodep << endl);
         if (nodep->varScopep() == m_vscp && !nodep->user2() && !m_found) {

@@ -33,7 +33,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
-class ClassVisitor final : public VNVisitor {
+class ClassVisitor final : public VNVisitor<ClassVisitor> {
 private:
     // NODE STATE
     //  AstClass::user1()       -> bool.  True if iterated already
@@ -51,6 +51,7 @@ private:
     std::vector<std::pair<AstNode*, AstScope*>> m_toScopeMoves;
     std::vector<std::pair<AstNode*, AstNodeModule*>> m_toPackageMoves;
 
+public:
     // METHODS
 
     void visit(AstClass* nodep) override {

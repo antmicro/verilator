@@ -133,7 +133,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
-class TristateBaseVisitor VL_NOT_FINAL : public VNVisitor {
+class TristateBaseVisitor VL_NOT_FINAL : public VNVisitor<TristateBaseVisitor> {
 public:
     // METHODS
 };
@@ -353,7 +353,9 @@ public:
 class TristatePinVisitor final : public TristateBaseVisitor {
     TristateGraph& m_tgraph;
     const bool m_lvalue;  // Flip to be an LVALUE
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstVarRef* nodep) override {
         UASSERT_OBJ(!nodep->access().isRW(), nodep, "Tristate unexpected on R/W access flip");
         if (m_lvalue && !nodep->access().isWriteOrRW()) {
@@ -981,7 +983,9 @@ class TristateVisitor final : public TristateBaseVisitor {
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstConst* nodep) override {
         UINFO(9, dbgState() << nodep << endl);
         if (m_graphing) {

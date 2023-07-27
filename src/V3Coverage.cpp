@@ -40,7 +40,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Coverage state, as a visitor of each AstNode
 
-class CoverageVisitor final : public VNVisitor {
+class CoverageVisitor final : public VNVisitor<CoverageVisitor> {
 private:
     // TYPES
     using LinenoSet = std::set<int>;
@@ -213,7 +213,9 @@ private:
         return out;
     }
 
-    // VISITORS - BOTH
+    public:
+public:
+// VISITORS - BOTH
     void visit(AstNodeModule* nodep) override {
         const AstNodeModule* const origModp = m_modp;
         VL_RESTORER(m_modp);
@@ -262,7 +264,9 @@ private:
         }
     }
 
-    // VISITORS - TOGGLE COVERAGE
+    public:
+public:
+// VISITORS - TOGGLE COVERAGE
     void visit(AstVar* nodep) override {
         iterateChildren(nodep);
         if (m_modp && !m_inToggleOff && !m_state.m_inModOff && nodep->fileline()->coverageOn()
@@ -402,7 +406,9 @@ private:
         }
     }
 
-    // VISITORS - LINE COVERAGE
+    public:
+public:
+// VISITORS - LINE COVERAGE
     // Note not AstNodeIf; other types don't get covered
     void visit(AstIf* nodep) override {
         UINFO(4, " IF: " << nodep << endl);
@@ -549,7 +555,9 @@ private:
         }
     }
 
-    // VISITORS - BOTH
+    public:
+public:
+// VISITORS - BOTH
     void visit(AstNode* nodep) override {
         iterateChildren(nodep);
         lineTrack(nodep);

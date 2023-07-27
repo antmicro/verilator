@@ -39,7 +39,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Width state, as a visitor of each AstNode
 
-class WidthSelVisitor final : public VNVisitor {
+class WidthSelVisitor final : public VNVisitor<WidthSelVisitor> {
 private:
     // IMPORTANT
     //**** This is not a normal visitor, in that all iteration is instead
@@ -209,7 +209,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     // If adding new visitors, ensure V3Width's visit(TYPE) calls into here
 
     void visit(AstSelBit* nodep) override {

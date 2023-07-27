@@ -38,7 +38,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Branch state, as a visitor of each AstNode
 
-class BranchVisitor final : public VNVisitorConst {
+class BranchVisitor final : public VNVisitorConst<BranchVisitor> {
 private:
     // NODE STATE
     // Entire netlist:
@@ -65,7 +65,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeIf* nodep) override {
         UINFO(4, " IF: " << nodep << endl);
         VL_RESTORER(m_likely);

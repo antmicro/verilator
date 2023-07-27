@@ -40,13 +40,15 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
-class RenameStaticVisitor final : public VNVisitor {
+class RenameStaticVisitor final : public VNVisitor<RenameStaticVisitor> {
 private:
     // STATE
     const std::set<AstVar*>& m_staticFuncVarsr;  // Static variables from m_ftaskp
     AstNodeFTask* const m_ftaskp;  // Current function/task
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstVarRef* nodep) override {
         const auto it = m_staticFuncVarsr.find(nodep->varp());
         if (it != m_staticFuncVarsr.end()) nodep->name((*it)->name());
@@ -93,7 +95,7 @@ public:
 
 //######################################################################
 
-class BeginVisitor final : public VNVisitor {
+class BeginVisitor final : public VNVisitor<BeginVisitor> {
 private:
     // STATE
     BeginState* const m_statep;  // Current global state
@@ -157,7 +159,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstFork* nodep) override {
         // Keep begins in forks to group their statements together
         VL_RESTORER(m_keepBegins);
@@ -325,7 +329,9 @@ private:
         // any BEGINs, but V3Coverage adds them all under the module itself.
         iterateChildren(nodep);
     }
-    // VISITORS - LINT CHECK
+    public:
+public:
+// VISITORS - LINT CHECK
     void visit(AstIf* nodep) override {  // not AstNodeIf; other types not covered
         VL_RESTORER(m_keepBegins);
         m_keepBegins = false;
@@ -359,14 +365,16 @@ public:
 
 //######################################################################
 
-class BeginRelinkVisitor final : public VNVisitor {
+class BeginRelinkVisitor final : public VNVisitor<BeginRelinkVisitor> {
     // Replace tasks with new pointer
 private:
     // NODE STATE
     //  Input:
     //   AstNodeFTask::user1p           // Node replaced, rename it
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeFTaskRef* nodep) override {
         if (nodep->taskp()->user1()) {  // It was converted
             UINFO(9, "    relinkFTask " << nodep << endl);

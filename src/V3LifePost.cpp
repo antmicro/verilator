@@ -43,7 +43,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // LifePost class functions
 
-class LifePostElimVisitor final : public VNVisitor {
+class LifePostElimVisitor final : public VNVisitor<LifePostElimVisitor> {
 private:
     bool m_tracingCall = false;  // Iterating into a CCall to a CFunc
 
@@ -53,7 +53,9 @@ private:
     //                             varscope with specified new one
     // STATE
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstVarRef* nodep) override {
         const AstVarScope* const vscp = nodep->varScopep();
         UASSERT_OBJ(vscp, nodep, "Scope not assigned");
@@ -129,7 +131,7 @@ struct LifePostLocation {
 //######################################################################
 // LifePost delay elimination
 
-class LifePostDlyVisitor final : public VNVisitor {
+class LifePostDlyVisitor final : public VNVisitor<LifePostDlyVisitor> {
 private:
     // NODE STATE
     // AstVarScope::user1()    -> bool: referenced outside _eval__nba
@@ -253,7 +255,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstTopScope* nodep) override {
         AstNode::user4ClearTree();  // user4p() used on entire tree
 

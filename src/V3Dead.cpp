@@ -49,7 +49,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Dead state, as a visitor of each AstNode
 
-class DeadVisitor final : public VNVisitor {
+class DeadVisitor final : public VNVisitor<DeadVisitor> {
 private:
     // NODE STATE
     // Entire Netlist:
@@ -105,7 +105,9 @@ private:
         if (AstNode* const subnodep = nodep->virtRefDType2p()) subnodep->user1Inc();
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         if (m_modp) m_modp->user1Inc();  // e.g. Class under Package
         VL_RESTORER(m_modp);

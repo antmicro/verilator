@@ -93,7 +93,7 @@ public:
 //######################################################################
 // TraceDecl state, as a visitor of each AstNode
 
-class TraceDeclVisitor final : public VNVisitor {
+class TraceDeclVisitor final : public VNVisitor<TraceDeclVisitor> {
 private:
     // NODE STATE
 
@@ -246,7 +246,9 @@ private:
         addToSubFunc(new AstComment{m_traVscp->fileline(), cmt, true});
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstScope* nodep) override {
         UASSERT_OBJ(!m_currScopep, nodep, "Should not nest");
         UASSERT_OBJ(m_subFuncps.empty(), nodep, "Should not nest");
@@ -350,7 +352,9 @@ private:
         m_signals.emplace_back(nodep);
     }
 
-    // VISITORS - Data types when tracing
+    public:
+public:
+// VISITORS - Data types when tracing
     void visit(AstConstDType* nodep) override {
         if (m_traVscp) iterate(nodep->subDTypep()->skipRefToEnump());
     }

@@ -1389,6 +1389,7 @@ public:
 // This only has the constant fuctions for non-modifying visitors.
 // For more typical usage see VNVisitor
 
+template<typename Visitor>
 class VNVisitorConst VL_NOT_FINAL : public VNDeleter {
     friend class AstNode;
 
@@ -1414,7 +1415,8 @@ public:
 // VNVisitor -- Allows new functions to be called on each node
 // type without changing the base classes.  See "Modern C++ Design".
 
-class VNVisitor VL_NOT_FINAL : public VNVisitorConst {
+template<typename Visitor>
+class VNVisitor VL_NOT_FINAL : public VNVisitorConst<Visitor> {
 public:
     /// Call visit()s on nodep
     inline void iterate(AstNode* nodep);
@@ -1997,27 +1999,40 @@ public:
     virtual const char* broken() const { return nullptr; }
 
     // INVOKERS
-    virtual void accept(VNVisitorConst& v) = 0;
+    template <typename Visitor>
+    void accept(Visitor& v) {
+#include "V3Ast__accept.h"  // From ./astgen
+    }
 
 protected:
     // All VNVisitor related functions are called as methods off the visitor
-    friend class VNVisitor;
-    friend class VNVisitorConst;
+    template<typename Visitor> friend class VNVisitor;
+    template<typename Visitor> friend class VNVisitorConst;
     // Use instead VNVisitor::iterateChildren
-    void iterateChildren(VNVisitor& v);
+    template<typename Visitor>
+    void iterateChildren(Visitor& v);
     // Use instead VNVisitor::iterateChildrenBackwardsConst
-    void iterateChildrenBackwardsConst(VNVisitorConst& v);
+    template<typename Visitor>
+    void iterateChildrenBackwardsConst(Visitor& v);
     // Use instead VNVisitor::iterateChildrenConst
-    void iterateChildrenConst(VNVisitorConst& v);
+    template<typename Visitor>
+    void iterateChildrenConst(Visitor& v);
+
     // Use instead VNVisitor::iterateAndNextNull
-    void iterateAndNext(VNVisitor& v);
+    template<typename Visitor>
+    void iterateAndNext(Visitor& v);
+
     // Use instead VNVisitor::iterateAndNextConstNull
-    void iterateAndNextConst(VNVisitorConst& v);
+    template<typename Visitor>
+    void iterateAndNextConst(Visitor& v);
+
     // Use instead VNVisitor::iterateSubtreeReturnEdits
-    AstNode* iterateSubtreeReturnEdits(VNVisitor& v);
+    template<typename Visitor>
+    AstNode* iterateSubtreeReturnEdits(Visitor& v);
 
 private:
-    void iterateListBackwardsConst(VNVisitorConst& v);
+    template<typename Visitor>
+    void iterateListBackwardsConst(Visitor& v);
 
     // For internal use only.
     // Note: specializations for particular node types are provided by 'astgen'
@@ -2517,31 +2532,42 @@ struct std::equal_to<VNRef<T_Node>> final {
 //######################################################################
 // Inline VNVisitor METHODS
 
-void VNVisitorConst::iterateConst(AstNode* nodep) { nodep->accept(*this); }
-void VNVisitorConst::iterateConstNull(AstNode* nodep) {
+template<typename Visitor>
+void VNVisitorConst<Visitor>::iterateConst(AstNode* nodep) { nodep->accept(reinterpret_cast<Visitor&>(*this)); }
+template<typename Visitor>
+void VNVisitorConst<Visitor>::iterateConstNull(AstNode* nodep) {
     if (VL_LIKELY(nodep)) nodep->accept(*this);
 }
-void VNVisitorConst::iterateChildrenConst(AstNode* nodep) { nodep->iterateChildrenConst(*this); }
-void VNVisitorConst::iterateChildrenBackwardsConst(AstNode* nodep) {
-    nodep->iterateChildrenBackwardsConst(*this);
+template<typename Visitor>
+void VNVisitorConst<Visitor>::iterateChildrenConst(AstNode* nodep) { nodep->iterateChildrenConst(reinterpret_cast<Visitor&>(*this)); }
+template<typename Visitor>
+void VNVisitorConst<Visitor>::iterateChildrenBackwardsConst(AstNode* nodep) {
+    nodep->iterateChildrenBackwardsConst(reinterpret_cast<Visitor&>(*this));
 }
-void VNVisitorConst::iterateAndNextConstNullBackwards(AstNode* nodep) {
-    if (VL_LIKELY(nodep)) nodep->iterateListBackwardsConst(*this);
+template<typename Visitor>
+void VNVisitorConst<Visitor>::iterateAndNextConstNullBackwards(AstNode* nodep) {
+    if (VL_LIKELY(nodep)) nodep->iterateListBackwardsConst(reinterpret_cast<Visitor&>(*this));
 }
-void VNVisitorConst::iterateAndNextConstNull(AstNode* nodep) {
-    if (VL_LIKELY(nodep)) nodep->iterateAndNextConst(*this);
+template<typename Visitor>
+void VNVisitorConst<Visitor>::iterateAndNextConstNull(AstNode* nodep) {
+    if (VL_LIKELY(nodep)) nodep->iterateAndNextConst(reinterpret_cast<Visitor&>(*this));
 }
 
-void VNVisitor::iterate(AstNode* nodep) { nodep->accept(*this); }
-void VNVisitor::iterateNull(AstNode* nodep) {
-    if (VL_LIKELY(nodep)) nodep->accept(*this);
+template<typename Visitor>
+void VNVisitor<Visitor>::iterate(AstNode* nodep) { nodep->accept(reinterpret_cast<Visitor&>(*this)); }
+template<typename Visitor>
+void VNVisitor<Visitor>::iterateNull(AstNode* nodep) {
+    if (VL_LIKELY(nodep)) nodep->accept(reinterpret_cast<Visitor&>(*this));
 }
-void VNVisitor::iterateChildren(AstNode* nodep) { nodep->iterateChildren(*this); }
-void VNVisitor::iterateAndNextNull(AstNode* nodep) {
-    if (VL_LIKELY(nodep)) nodep->iterateAndNext(*this);
+template<typename Visitor>
+void VNVisitor<Visitor>::iterateChildren(AstNode* nodep) { nodep->iterateChildren(reinterpret_cast<Visitor&>(*this)); }
+template<typename Visitor>
+void VNVisitor<Visitor>::iterateAndNextNull(AstNode* nodep) {
+    if (VL_LIKELY(nodep)) nodep->iterateAndNext(reinterpret_cast<Visitor&>(*this));
 }
-AstNode* VNVisitor::iterateSubtreeReturnEdits(AstNode* nodep) {
-    return nodep->iterateSubtreeReturnEdits(*this);
+template<typename Visitor>
+AstNode* VNVisitor<Visitor>::iterateSubtreeReturnEdits(AstNode* nodep) {
+    return nodep->iterateSubtreeReturnEdits(reinterpret_cast<Visitor&>(*this));
 }
 
 // Include macros generated by 'astgen'. These include ASTGEN_MEMBERS_Ast<Node>
@@ -2560,5 +2586,7 @@ AstNode* VNVisitor::iterateSubtreeReturnEdits(AstNode* nodep) {
 
 // Inline function definitions need to go last
 #include "V3AstInlines.h"
+
+#include "V3Ast__gen_visitor_defns.h"  // From ./astgen
 
 #endif  // Guard

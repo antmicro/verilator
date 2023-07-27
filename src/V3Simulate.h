@@ -64,7 +64,7 @@ public:
     ~SimStackNode() = default;
 };
 
-class SimulateVisitor VL_NOT_FINAL : public VNVisitorConst {
+class SimulateVisitor VL_NOT_FINAL : public VNVisitorConst<SimulateVisitor> {
     // Simulate a node tree, returning value of variables
     // Two major operating modes:
     //   Test the tree to see if it is conformant
@@ -396,7 +396,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstAlways* nodep) override {
         if (jumpingOver(nodep)) return;
         checkNodeInfo(nodep);

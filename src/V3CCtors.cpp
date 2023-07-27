@@ -132,7 +132,7 @@ private:
 
 // Link state, as a visitor of each AstNode
 
-class CCtorsVisitor final : public VNVisitor {
+class CCtorsVisitor final : public VNVisitor<CCtorsVisitor> {
 private:
     // NODE STATE
 
@@ -141,7 +141,8 @@ private:
     AstCFunc* m_cfuncp = nullptr;  // Current function
     V3CCtorsBuilder* m_varResetp = nullptr;  // Builder of _ctor_var_reset
 
-    // VISITs
+    public:
+// VISITs
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         VL_RESTORER(m_varResetp);

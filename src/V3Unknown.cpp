@@ -45,7 +45,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
-class UnknownVisitor final : public VNVisitor {
+class UnknownVisitor final : public VNVisitor<UnknownVisitor> {
 private:
     // NODE STATE
     // Cleared on Netlist
@@ -141,7 +141,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         UINFO(4, " MOD   " << nodep << endl);
         VL_RESTORER(m_modp);

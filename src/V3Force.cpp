@@ -51,7 +51,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Convert force/release statements and signals marked 'forceable'
 
-class ForceConvertVisitor final : public VNVisitor {
+class ForceConvertVisitor final : public VNVisitor<ForceConvertVisitor> {
     // TYPES
     struct ForceComponentsVar {
         AstVar* const m_rdVarp;  // New variable to replace read references with
@@ -171,7 +171,8 @@ class ForceConvertVisitor final : public VNVisitor {
         });
     }
 
-    // VISIT methods
+    public:
+// VISIT methods
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
     void visit(AstAssignForce* nodep) override {

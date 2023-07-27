@@ -34,7 +34,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Visitor that gathers the headers required by an AstCFunc
 
-class EmitCGatherDependencies final : VNVisitorConst {
+class EmitCGatherDependencies final : VNVisitorConst<EmitCGatherDependencies> {
     // Ordered set, as it is used as a key in another map.
     std::set<string> m_dependencies;  // Header names to be included in output C++ file
 
@@ -76,7 +76,9 @@ class EmitCGatherDependencies final : VNVisitorConst {
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstCCall* nodep) override {
         addSelfDependency(nodep->selfPointer(), nodep->funcp());
         iterateChildrenConst(nodep);
@@ -530,7 +532,9 @@ class EmitCImp final : EmitCFunc {
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstCFunc* nodep) override {
         if (splitNeeded()) {
             // Splitting file, so using parallel build.
@@ -846,7 +850,9 @@ class EmitCTrace final : EmitCFunc {
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     using EmitCFunc::visit;  // Suppress hidden overloaded virtual function warning
     void visit(AstCFunc* nodep) override {
         if (!nodep->isTrace()) return;

@@ -35,7 +35,7 @@ constexpr int EMITC_NUM_CONSTW = 8;
 //######################################################################
 // Emit lazy forward declarations
 
-class EmitCLazyDecls final : public VNVisitorConst {
+class EmitCLazyDecls final : public VNVisitorConst<EmitCLazyDecls> {
     // NODE STATE/TYPES
     // None allowed to support threaded emitting
 
@@ -70,7 +70,9 @@ class EmitCLazyDecls final : public VNVisitorConst {
         m_needsBlankLine = true;
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeCCall* nodep) override {
         lazyDeclare(nodep->funcp());
         iterateChildrenConst(nodep);
@@ -250,7 +252,9 @@ public:
         return nullptr;
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     using EmitCConstInit::visit;
     void visit(AstCFunc* nodep) override {
         VL_RESTORER(m_useSelfForThis);

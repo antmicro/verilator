@@ -115,7 +115,7 @@ public:
     // LCOV_EXCL_STOP
 };
 
-class SchedGraphBuilder final : public VNVisitor {
+class SchedGraphBuilder final : public VNVisitor<SchedGraphBuilder> {
     // NODE STATE
     // AstVarScope::user1() -> SchedVarVertex
     // AstSenItem::user1p() -> SchedSenVertex
@@ -216,7 +216,8 @@ class SchedGraphBuilder final : public VNVisitor {
         }
     }
 
-    // VISIT methods
+    public:
+// VISIT methods
     void visit(AstActive* nodep) override {
         AstSenTree* const senTreep = nodep->sensesp();
         UASSERT_OBJ(senTreep->hasClocked() || senTreep->hasCombo() || senTreep->hasHybrid(), nodep,

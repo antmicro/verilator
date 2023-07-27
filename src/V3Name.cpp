@@ -33,7 +33,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Name state, as a visitor of each AstNode
 
-class NameVisitor final : public VNVisitor {
+class NameVisitor final : public VNVisitor<NameVisitor> {
 private:
     // NODE STATE
     // Cleared on Netlist
@@ -67,7 +67,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         {

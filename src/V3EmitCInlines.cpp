@@ -33,7 +33,9 @@ class EmitCInlines final : EmitCBaseVisitorConst {
 
     // METHODS
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstCNew* nodep) override {
         if (v3Global.opt.savable())
             v3warn(E_UNSUPPORTED, "Unsupported: --savable with dynamic new");

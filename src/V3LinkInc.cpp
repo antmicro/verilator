@@ -50,7 +50,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
-class LinkIncVisitor final : public VNVisitor {
+class LinkIncVisitor final : public VNVisitor<LinkIncVisitor> {
 private:
     // TYPES
     enum InsertMode : uint8_t {
@@ -86,7 +86,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modIncrementsNum);
         m_modIncrementsNum = 0;

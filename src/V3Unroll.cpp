@@ -42,7 +42,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Unroll state, as a visitor of each AstNode
 
-class UnrollVisitor final : public VNVisitor {
+class UnrollVisitor final : public VNVisitor<UnrollVisitor> {
 private:
     // STATE
     AstVar* m_forVarp;  // Iterator variable
@@ -60,7 +60,9 @@ private:
 
     // METHODS
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     bool cantUnroll(AstNode* nodep, const char* reason) const {
         if (m_generate)
             nodep->v3warn(E_UNSUPPORTED, "Unsupported: Can't unroll generate for; " << reason);

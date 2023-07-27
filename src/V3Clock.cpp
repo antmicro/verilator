@@ -43,7 +43,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Convert every WRITE AstVarRef to a READ ref
 
-class ConvertWriteRefsToRead final : public VNVisitor {
+class ConvertWriteRefsToRead final : public VNVisitor<ConvertWriteRefsToRead> {
 private:
     // MEMBERS
     AstNodeExpr* m_result = nullptr;
@@ -53,7 +53,9 @@ private:
         m_result = VN_AS(iterateSubtreeReturnEdits(nodep), NodeExpr);
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstVarRef* nodep) override {
         UASSERT_OBJ(!nodep->access().isRW(), nodep, "Cannot handle a READWRITE reference");
         if (nodep->access().isWriteOnly()) {
@@ -71,7 +73,7 @@ public:
 //######################################################################
 // Clock state, as a visitor of each AstNode
 
-class ClockVisitor final : public VNVisitor {
+class ClockVisitor final : public VNVisitor<ClockVisitor> {
 private:
     // STATE
     AstCFunc* m_evalp = nullptr;  // The '_eval' function
@@ -120,7 +122,9 @@ private:
         m_lastSenp = nullptr;
         m_lastIfp = nullptr;
     }
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstCoverToggle* nodep) override {
         // nodep->dumpTree("-  ct: ");
         // COVERTOGGLE(INC, ORIG, CHANGE) ->

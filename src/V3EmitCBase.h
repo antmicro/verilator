@@ -77,7 +77,7 @@ public:
     }
 };
 
-class EmitCBaseVisitorConst VL_NOT_FINAL : public VNVisitorConst, public EmitCBase {
+class EmitCBaseVisitorConst VL_NOT_FINAL : public VNVisitorConst<EmitCBaseVisitorConst>, public EmitCBase {
 public:
     // STATE
     V3OutCFile* m_ofp = nullptr;

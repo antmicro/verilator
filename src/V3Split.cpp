@@ -238,7 +238,7 @@ public:
 //######################################################################
 // Split class functions
 
-class SplitReorderBaseVisitor VL_NOT_FINAL : public VNVisitor {
+class SplitReorderBaseVisitor VL_NOT_FINAL : public VNVisitor<SplitReorderBaseVisitor> {
 private:
     // NODE STATE
     // AstVarScope::user1p      -> Var SplitNodeVertex* for usage var, 0=not set yet
@@ -334,7 +334,9 @@ protected:
 
     virtual void makeRvalueEdges(SplitVarStdVertex* vstdp) = 0;
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstAlways* nodep) override = 0;
     void visit(AstNodeIf* nodep) override = 0;
 
@@ -622,7 +624,7 @@ private:
 using ColorSet = std::unordered_set<uint32_t>;
 using AlwaysVec = std::vector<AstAlways*>;
 
-class IfColorVisitor final : public VNVisitorConst {
+class IfColorVisitor final : public VNVisitorConst<IfColorVisitor> {
     // MEMBERS
     ColorSet m_colors;  // All colors in the original always block
 
@@ -663,7 +665,7 @@ private:
         }
     }
 
-protected:
+public:
     void visit(AstNodeIf* nodep) override {
         m_ifStack.push_back(nodep);
         trackNode(nodep);
@@ -679,7 +681,7 @@ private:
     VL_UNCOPYABLE(IfColorVisitor);
 };
 
-class EmitSplitVisitor final : public VNVisitor {
+class EmitSplitVisitor final : public VNVisitor<EmitSplitVisitor> {
     // MEMBERS
     const AstAlways* const m_origAlwaysp;  // Block that *this will split
     const IfColorVisitor* const m_ifColorp;  // Digest of results of prior coloring
@@ -730,6 +732,7 @@ protected:
         return new AstSplitPlaceholder{m_origAlwaysp->fileline()};
     }
 
+public:
     void visit(AstNode* nodep) override {
         // Anything that's not an if/else we assume is a leaf
         // (that is, something we won't split.) Don't visit further
@@ -789,7 +792,7 @@ private:
     VL_UNCOPYABLE(EmitSplitVisitor);
 };
 
-class RemovePlaceholdersVisitor final : public VNVisitor {
+class RemovePlaceholdersVisitor final : public VNVisitor<RemovePlaceholdersVisitor> {
     // MEMBERS
     bool m_isPure = true;
     int m_emptyAlways = 0;
@@ -798,7 +801,9 @@ class RemovePlaceholdersVisitor final : public VNVisitor {
     RemovePlaceholdersVisitor() = default;
     ~RemovePlaceholdersVisitor() override = default;
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstSplitPlaceholder* nodep) override { pushDeletep(nodep->unlinkFrBack()); }
     void visit(AstNodeIf* nodep) override {
         VL_RESTORER(m_isPure);

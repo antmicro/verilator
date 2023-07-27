@@ -73,7 +73,7 @@ DfgSliceSel* makeVertex<DfgSliceSel, AstSliceSel>(const AstSliceSel*, DfgGraph&)
 
 }  // namespace
 
-class AstToDfgVisitor final : public VNVisitor {
+class AstToDfgVisitor final : public VNVisitor<AstToDfgVisitor> {
     // NODE STATE
 
     // AstNode::user1p   // DfgVertex for this AstNode
@@ -430,7 +430,9 @@ class AstToDfgVisitor final : public VNVisitor {
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNode* nodep) override {
         // Conservatively treat this node as unhandled
         if (!m_foundUnhandled && m_converting) ++m_ctx.m_nonRepUnknown;

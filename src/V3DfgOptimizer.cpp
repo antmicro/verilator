@@ -37,7 +37,7 @@
 VL_DEFINE_DEBUG_FUNCTIONS;
 
 // Extract more combinational logic equations from procedures for better optimization opportunities
-class DataflowExtractVisitor final : public VNVisitor {
+class DataflowExtractVisitor final : public VNVisitor<DataflowExtractVisitor> {
     // NODE STATE
     // AstVar::user3            -> bool: Flag indicating variable is subject of force or release
     // statement AstVar::user4  -> bool: Flag indicating variable is combinationally driven
@@ -96,7 +96,8 @@ class DataflowExtractVisitor final : public VNVisitor {
         m_candidatesp->emplace_back(VN_AS(nodep, NodeExpr), std::move(m_readVars));
     }
 
-    // VISIT methods
+    public:
+// VISIT methods
 
     void visit(AstNetlist* nodep) override {
         // Analyse the whole design

@@ -33,7 +33,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Link state, as a visitor of each AstNode
 
-class LinkLValueVisitor final : public VNVisitor {
+class LinkLValueVisitor final : public VNVisitor<LinkLValueVisitor> {
 private:
     // NODE STATE
 
@@ -42,7 +42,8 @@ private:
     bool m_setStrengthSpecified = false;  // Set that var has assignment with strength specified.
     VAccess m_setRefLvalue;  // Set VarRefs to lvalues for pin assignments
 
-    // VISITs
+    public:
+// VISITs
     // Result handing
     void visit(AstNodeVarRef* nodep) override {
         // VarRef: LValue its reference

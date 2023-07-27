@@ -970,7 +970,7 @@ public:
 //######################################################################
 // Process parameter visitor
 
-class ParamVisitor final : public VNVisitor {
+class ParamVisitor final : public VNVisitor<ParamVisitor> {
     // NODE STATE
     // AstNodeModule::user1 -> bool: already fixed level
     // AstClass::user2p     -> AstClass*: Unchanged copy of the parameterized class node.
@@ -1105,7 +1105,9 @@ class ParamVisitor final : public VNVisitor {
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         if (nodep->recursiveClone()) nodep->dead(true);  // Fake, made for recursive elimination
         if (nodep->dead()) return;  // Marked by LinkDot (and above)

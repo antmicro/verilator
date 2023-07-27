@@ -43,7 +43,9 @@ class EmitCConstInit VL_NOT_FINAL : public EmitCBaseVisitorConst {
     }
 
 protected:
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstInitArray* nodep) override {
         VL_RESTORER(m_inUnpacked);
         VL_RESTORER(m_unpackedWord);

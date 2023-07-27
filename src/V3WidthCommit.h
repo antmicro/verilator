@@ -34,7 +34,7 @@
 /// Remove all $signed, $unsigned, we're done with them.
 /// This step is only called on real V3Width, not intermediate e.g. widthParams
 
-class WidthRemoveVisitor final : public VNVisitor {
+class WidthRemoveVisitor final : public VNVisitor<WidthRemoveVisitor> {
     // METHODS
     VL_DEFINE_DEBUG_FUNCTIONS;
 
@@ -45,7 +45,9 @@ class WidthRemoveVisitor final : public VNVisitor {
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstSigned* nodep) override {
         VL_DO_DANGLING(replaceWithSignedVersion(nodep, nodep->lhsp()->unlinkFrBack()), nodep);
     }
@@ -65,7 +67,7 @@ public:
 // Now that all widthing is complete,
 // Copy all width() to widthMin().  V3Const expects this
 
-class WidthCommitVisitor final : public VNVisitor {
+class WidthCommitVisitor final : public VNVisitor<WidthCommitVisitor> {
     // NODE STATE
     // AstVar::user1p           -> bool, processed
     const VNUser1InUse m_inuser1;
@@ -154,7 +156,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         {

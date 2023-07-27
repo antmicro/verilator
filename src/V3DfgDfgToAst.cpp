@@ -311,7 +311,9 @@ class DfgToAstVisitor final : DfgVisitor {
         ++m_ctx.m_resultEquations;
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(DfgVertex* vtxp) override {  // LCOV_EXCL_START
         vtxp->v3fatal("Unhandled DfgVertex: " << vtxp->typeName());
     }  // LCOV_EXCL_STOP

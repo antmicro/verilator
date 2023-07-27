@@ -38,7 +38,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Clean state, as a visitor of each AstNode
 
-class CleanVisitor final : public VNVisitor {
+class CleanVisitor final : public VNVisitor<CleanVisitor> {
 private:
     // NODE STATE
     // Entire netlist:
@@ -177,7 +177,9 @@ private:
         // no setClean.. must do it in each user routine.
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         {

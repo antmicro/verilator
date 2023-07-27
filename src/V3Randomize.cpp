@@ -37,7 +37,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Visitor that marks classes needing a randomize() method
 
-class RandomizeMarkVisitor final : public VNVisitorConst {
+class RandomizeMarkVisitor final : public VNVisitorConst<RandomizeMarkVisitor> {
 private:
     // NODE STATE
     // Cleared on Netlist
@@ -87,7 +87,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstClass* nodep) override {
         VL_RESTORER(m_classp);
         m_classp = nodep;
@@ -128,7 +130,7 @@ public:
 //######################################################################
 // Visitor that defines a randomize method where needed
 
-class RandomizeVisitor final : public VNVisitor {
+class RandomizeVisitor final : public VNVisitor<RandomizeVisitor> {
 private:
     // NODE STATE
     // Cleared on Netlist
@@ -223,7 +225,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         VL_RESTORER(m_randCaseNum);

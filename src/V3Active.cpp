@@ -198,7 +198,7 @@ public:
 //######################################################################
 // Collect existing active names
 
-class ActiveNamer final : public VNVisitor {
+class ActiveNamer final : public VNVisitor<ActiveNamer> {
 private:
     // STATE
     AstScope* m_scopep = nullptr;  // Current scope to add statement to
@@ -216,7 +216,9 @@ private:
         m_scopep->addBlocksp(nodep);
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstScope* nodep) override {
         m_scopep = nodep;
         m_sActivep = nullptr;
@@ -309,7 +311,7 @@ AstActive*& ActiveNamer::getSpecialActive<AstSenItem::Combo>() {
 //######################################################################
 // Latch checking visitor
 
-class ActiveLatchCheckVisitor final : public VNVisitorConst {
+class ActiveLatchCheckVisitor final : public VNVisitorConst<ActiveLatchCheckVisitor> {
 private:
     // NODE STATE
     // Input:
@@ -317,7 +319,9 @@ private:
     const VNUser1InUse m_inuser1;
     // STATE
     LatchDetectGraph m_graph;  // Graph used to detect latches in combo always
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstVarRef* nodep) override {
         const AstVar* const varp = nodep->varp();
         if (nodep->access().isWriteOrRW() && varp->isSignal() && !varp->isUsedLoopIdx()
@@ -354,7 +358,7 @@ public:
 //######################################################################
 // Replace unsupported non-blocking assignments with blocking assignments
 
-class ActiveDlyVisitor final : public VNVisitor {
+class ActiveDlyVisitor final : public VNVisitor<ActiveDlyVisitor> {
 public:
     enum CheckType : uint8_t { CT_SEQ, CT_COMB, CT_INITIAL };
 
@@ -362,7 +366,9 @@ private:
     // MEMBERS
     const CheckType m_check;  // Process type we are checking
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstAssignDly* nodep) override {
         // Non-blocking assignments are OK in sequential processes
         if (m_check == CT_SEQ) return;
@@ -426,7 +432,7 @@ public:
 //######################################################################
 // Active class functions
 
-class ActiveVisitor final : public VNVisitor {
+class ActiveVisitor final : public VNVisitor<ActiveVisitor> {
 private:
     // NODE STATE
     //  Each call to V3Const::constify
@@ -512,7 +518,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstScope* nodep) override {
         m_namer.main(nodep);  // Clear last scope's names, and collect this scope's existing names
         iterateChildren(nodep);

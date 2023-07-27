@@ -147,7 +147,7 @@ public:
 //######################################################################
 // Table class functions
 
-class TableVisitor final : public VNVisitor {
+class TableVisitor final : public VNVisitor<TableVisitor> {
 private:
     // NODE STATE
     // Cleared on each always/assignw
@@ -379,7 +379,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);

@@ -273,7 +273,7 @@ public:
 //######################################################################
 // Life state, as a visitor of each AstNode
 
-class LifeVisitor final : public VNVisitor {
+class LifeVisitor final : public VNVisitor<LifeVisitor> {
 private:
     // STATE
     LifeState* const m_statep;  // Current state
@@ -293,7 +293,9 @@ private:
         m_lifep->clear();
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstVarRef* nodep) override {
         // Consumption/generation of a variable,
         // it's used so can't elim assignment before this use.
@@ -474,14 +476,16 @@ public:
 
 //######################################################################
 
-class LifeTopVisitor final : public VNVisitor {
+class LifeTopVisitor final : public VNVisitor<LifeTopVisitor> {
     // Visit all top nodes searching for functions that are entry points we want to start
     // finding code within.
 private:
     // STATE
     LifeState* const m_statep;  // Current state
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstCFunc* nodep) override {
         if (nodep->entryPoint()) {
             // Usage model 1: Simulate all C code, doing lifetime analysis

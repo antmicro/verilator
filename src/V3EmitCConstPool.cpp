@@ -100,7 +100,9 @@ class EmitCConstPool final : public EmitCConstInit {
         VL_DO_DANGLING(delete m_ofp, m_ofp);
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstConst* nodep) override {
         m_outFileSize += nodep->num().isString() ? 10 : nodep->isWide() ? nodep->widthWords() : 1;
         EmitCConstInit::visit(nodep);

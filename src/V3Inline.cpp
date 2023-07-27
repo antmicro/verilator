@@ -63,7 +63,7 @@ using ModuleStateUser1Allocator = AstUser1Allocator<AstNodeModule, ModuleState>;
 //######################################################################
 // Visitor that determines which modules will be inlined
 
-class InlineMarkVisitor final : public VNVisitor {
+class InlineMarkVisitor final : public VNVisitor<InlineMarkVisitor> {
 private:
     // NODE STATE
     // Output
@@ -112,7 +112,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         UASSERT_OBJ(!m_modp, nodep, "Unsupported: Nested modules");
         m_modp = nodep;
@@ -246,7 +248,7 @@ public:
 //######################################################################
 // After cell is cloned, relink the new module's contents
 
-class InlineRelinkVisitor final : public VNVisitor {
+class InlineRelinkVisitor final : public VNVisitor<InlineRelinkVisitor> {
 private:
     // NODE STATE
     //  Input:
@@ -257,7 +259,9 @@ private:
     AstNodeModule* const m_modp;  // Current module
     const AstCell* const m_cellp;  // Cell being cloned
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstCellInline* nodep) override {
         // Inlined cell under the inline cell, need to move to avoid conflicts
         nodep->unlinkFrBack();
@@ -453,7 +457,7 @@ public:
 //######################################################################
 // Inline state, as a visitor of each AstNode
 
-class InlineVisitor final : public VNVisitor {
+class InlineVisitor final : public VNVisitor<InlineVisitor> {
 private:
     // NODE STATE
     // Cleared entire netlist
@@ -571,7 +575,9 @@ private:
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override {
         // Iterate modules backwards, in bottom-up order.  Required!
         iterateAndNextConstNullBackwards(nodep->modulesp());
@@ -622,7 +628,7 @@ public:
 //######################################################################
 // Track interface references under the Cell they reference
 
-class InlineIntfRefVisitor final : public VNVisitor {
+class InlineIntfRefVisitor final : public VNVisitor<InlineIntfRefVisitor> {
 private:
     // NODE STATE
     //   AstVar::user1p()   // AstCell which this Var points to
@@ -631,7 +637,9 @@ private:
 
     string m_scope;  // Scope name
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override { iterateChildren(nodep->topModulep()); }
     void visit(AstCell* nodep) override {
         VL_RESTORER(m_scope);

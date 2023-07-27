@@ -94,7 +94,7 @@ void LinkCellsGraph::loopsMessageCb(V3GraphVertex* vertexp) {
 //######################################################################
 // Link state, as a visitor of each AstNode
 
-class LinkCellsVisitor final : public VNVisitor {
+class LinkCellsVisitor final : public VNVisitor<LinkCellsVisitor> {
 private:
     // NODE STATE
     //  Entire netlist:
@@ -161,7 +161,8 @@ private:
         return modp;
     }
 
-    // VISITs
+    public:
+// VISITs
     void visit(AstNetlist* nodep) override {
         AstNode::user1ClearTree();
         readModNames();

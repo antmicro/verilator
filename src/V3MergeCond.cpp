@@ -158,7 +158,7 @@ using StmtPropertiesAllocator = AstUser3Allocator<AstNodeStmt, StmtProperties>;
 
 // Pure analysis visitor that build the StmtProperties for each statement in the given
 // AstNode list (following AstNode::nextp())
-class CodeMotionAnalysisVisitor final : public VNVisitorConst {
+class CodeMotionAnalysisVisitor final : public VNVisitorConst<CodeMotionAnalysisVisitor> {
     // NODE STATE
     // AstNodeStmt::user3   -> StmtProperties (accessed via m_stmtProperties, managed externally,
     //                         see MergeCondVisitor::process)
@@ -255,7 +255,9 @@ class CodeMotionAnalysisVisitor final : public VNVisitorConst {
         iterateChildrenConst(nodep);
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNode* nodep) override {
         // Push a new stack entry at the start of a list, but only if the list is not a
         // single element (this saves a lot of allocations in expressions)
@@ -291,7 +293,7 @@ public:
     }
 };
 
-class CodeMotionOptimizeVisitor final : public VNVisitor {
+class CodeMotionOptimizeVisitor final : public VNVisitor<CodeMotionOptimizeVisitor> {
     // Do not move a node more than this many statements.
     // This bounds complexity at O(N), rather than O(N^2).
     static constexpr unsigned MAX_DISTANCE = 500;
@@ -323,7 +325,9 @@ class CodeMotionOptimizeVisitor final : public VNVisitor {
         return true;
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeStmt* nodep) override {
         // Process only on first encounter
         if (nodep->user4SetOnce()) return;
@@ -428,7 +432,7 @@ public:
 //######################################################################
 // Conditional merging
 
-class MergeCondVisitor final : public VNVisitor {
+class MergeCondVisitor final : public VNVisitor<MergeCondVisitor> {
 private:
     // NODE STATE
     // AstVar::user1        -> bool: Set for variables referenced by m_mgCondp
@@ -827,7 +831,8 @@ private:
         }
     }
 
-    // VISITORS
+public:
+// VISITORS
     void visit(AstNodeAssign* nodep) override {
         if (AstNodeExpr* const condp = (*m_stmtPropertiesp)(nodep).m_condp) {
             // Check if mergeable

@@ -1830,10 +1830,11 @@ private:
 
 // Scan node, indicate whether it contains a call to a DPI imported
 // routine.
-class DpiImportCallVisitor final : public VNVisitor {
+class DpiImportCallVisitor final : public VNVisitor<DpiImportCallVisitor> {
 private:
     bool m_hasDpiHazard = false;  // Found a DPI import call.
     bool m_tracingCall = false;  // Iterating into a CCall to a CFunc
+public:
     // METHODS
     void visit(AstCFunc* nodep) override {
         if (!m_tracingCall) return;
@@ -1854,7 +1855,6 @@ private:
     }
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
-public:
     // CONSTRUCTORS
     explicit DpiImportCallVisitor(AstNode* nodep) { iterate(nodep); }
     bool hasDpiHazard() const { return m_hasDpiHazard; }

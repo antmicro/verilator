@@ -42,7 +42,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Find nodes with side effects, to mark as non-expandable
 
-class ExpandOkVisitor final : public VNVisitor {
+class ExpandOkVisitor final : public VNVisitor<ExpandOkVisitor> {
 private:
     // NODE STATE
     //  AstNode::user2()        -> bool.  Is pure (along with all children)
@@ -53,6 +53,7 @@ private:
     // False = pure, as nodes that ExpandVisitor inserts preserve pureness
     bool m_isImpure = true;  // Currently pure
 
+public:
     void visit(AstNode* nodep) override {
         bool selfImpure = !nodep->isPure();
         {
@@ -74,7 +75,7 @@ public:
 //######################################################################
 // Expand state, as a visitor of each AstNode
 
-class ExpandVisitor final : public VNVisitor {
+class ExpandVisitor final : public VNVisitor<ExpandVisitor> {
 private:
     // NODE STATE
     //  AstNode::user1()        -> bool.  Processed
@@ -356,7 +357,9 @@ private:
         return true;
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstExtend* nodep) override {
         if (nodep->user1SetOnce()) return;  // Process once
         iterateChildren(nodep);

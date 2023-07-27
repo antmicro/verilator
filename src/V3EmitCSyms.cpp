@@ -275,7 +275,9 @@ class EmitCSyms final : EmitCBaseVisitorConst {
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override {
         // Collect list of scopes
         iterateChildrenConst(nodep);

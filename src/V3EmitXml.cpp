@@ -31,7 +31,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 // ######################################################################
 //  Emit statements and expressions
 
-class EmitXmlFileVisitor final : public VNVisitorConst {
+class EmitXmlFileVisitor final : public VNVisitorConst<EmitXmlFileVisitor> {
     // NODE STATE
     // Entire netlist:
     // AstNode::user1           -> uint64_t, number to connect crossrefs
@@ -101,7 +101,9 @@ class EmitXmlFileVisitor final : public VNVisitorConst {
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstAssignW* nodep) override {
         outputTag(nodep, "contassign");  // IEEE: vpiContAssign
         outputChildrenEnd(nodep, "contassign");
@@ -322,7 +324,7 @@ public:
 //######################################################################
 // List of module files xml visitor
 
-class ModuleFilesXmlVisitor final : public VNVisitorConst {
+class ModuleFilesXmlVisitor final : public VNVisitorConst<ModuleFilesXmlVisitor> {
 private:
     // MEMBERS
     std::ostream& m_os;
@@ -331,7 +333,9 @@ private:
 
     // METHODS
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override {
         // Children are iterated backwards to ensure correct compilation order
         iterateChildrenBackwardsConst(nodep);
@@ -369,7 +373,7 @@ public:
 //######################################################################
 // Hierarchy of Cells visitor
 
-class HierCellsXmlVisitor final : public VNVisitorConst {
+class HierCellsXmlVisitor final : public VNVisitorConst<HierCellsXmlVisitor> {
 private:
     // MEMBERS
     std::ostream& m_os;
@@ -378,7 +382,9 @@ private:
 
     // METHODS
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstConstPool*) override {}
 
     void visit(AstNodeModule* nodep) override {

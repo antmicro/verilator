@@ -35,7 +35,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
-class DepthBlockVisitor final : public VNVisitor {
+class DepthBlockVisitor final : public VNVisitor<DepthBlockVisitor> {
 private:
     // NODE STATE
 
@@ -72,7 +72,9 @@ private:
         return funcp;
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         UINFO(4, " MOD   " << nodep << endl);
         VL_RESTORER(m_modp);

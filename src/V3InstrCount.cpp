@@ -32,7 +32,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 /// we'll count instructions from either the 'if' or the 'else' branch,
 /// whichever is larger. We know we won't run both.
 
-class InstrCountVisitor final : public VNVisitorConst {
+class InstrCountVisitor final : public VNVisitorConst<InstrCountVisitor> {
 private:
     // NODE STATE
     //  AstNode::user4()        -> int.  Path cost + 1, 0 means don't dump
@@ -124,7 +124,8 @@ private:
         if (m_osp) nodep->user4(m_instrCount + 1);  // Else don't mark to avoid writeback
     }
 
-    // VISITORS
+public:
+// VISITORS
     void visit(AstNodeSel* nodep) override {
         if (m_ignoreRemaining) return;
         // This covers both AstArraySel and AstWordSel
@@ -290,7 +291,7 @@ private:
 };
 
 // Iterate the graph printing the critical path marked by previous visitation
-class InstrCountDumpVisitor final : public VNVisitorConst {
+class InstrCountDumpVisitor final : public VNVisitorConst<InstrCountDumpVisitor> {
 private:
     // NODE STATE
     //  AstNode::user4()        -> int.  Path cost, 0 means don't dump
@@ -312,6 +313,7 @@ public:
 private:
     // METHODS
     string indent() const { return string(m_depth, ':') + " "; }
+public:
     void visit(AstNode* nodep) override {
         ++m_depth;
         if (unsigned costPlus1 = nodep->user4()) {
@@ -322,6 +324,7 @@ private:
         --m_depth;
     }
 
+private:
     VL_UNCOPYABLE(InstrCountDumpVisitor);
 };
 

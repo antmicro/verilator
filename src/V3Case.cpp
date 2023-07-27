@@ -53,11 +53,12 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
-class CaseLintVisitor final : public VNVisitorConst {
+class CaseLintVisitor final : public VNVisitorConst<CaseLintVisitor> {
 private:
     const AstNodeCase* m_caseExprp
         = nullptr;  // Under a CASE value node, if so the relevant case statement
 
+public:
     // METHODS
 
     void visit(AstNodeCase* nodep) override {
@@ -119,7 +120,7 @@ public:
 //######################################################################
 // Case state, as a visitor of each AstNode
 
-class CaseVisitor final : public VNVisitor {
+class CaseVisitor final : public VNVisitor<CaseVisitor> {
 private:
     // NODE STATE
     // Cleared each Case
@@ -525,7 +526,9 @@ private:
         return false;
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstCase* nodep) override {
         V3Case::caseLint(nodep);
         iterateChildren(nodep);

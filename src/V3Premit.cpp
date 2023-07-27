@@ -43,7 +43,7 @@ constexpr int STATIC_CONST_MIN_WIDTH = 256;  // Minimum size to extract to stati
 //######################################################################
 // Premit state, as a visitor of each AstNode
 
-class PremitVisitor final : public VNVisitor {
+class PremitVisitor final : public VNVisitor<PremitVisitor> {
 private:
     // NODE STATE
     //  AstNodeExpr::user()     -> bool.  True if iterated already
@@ -151,7 +151,9 @@ private:
         relinker.relink(new AstVarRef{fl, varp, VAccess::READ});
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         UINFO(4, " MOD   " << nodep << endl);
         iterateChildren(nodep);

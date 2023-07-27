@@ -37,7 +37,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Inst state, as a visitor of each AstNode
 
-class InstVisitor final : public VNVisitor {
+class InstVisitor final : public VNVisitor<InstVisitor> {
 private:
     // NODE STATE
     // Cleared each Cell:
@@ -47,7 +47,9 @@ private:
     // STATE
     AstCell* m_cellp = nullptr;  // Current cell
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstCell* nodep) override {
         UINFO(4, "  CELL   " << nodep << endl);
         m_cellp = nodep;
@@ -139,13 +141,15 @@ public:
 
 //######################################################################
 
-class InstDeModVarVisitor final : public VNVisitorConst {
+class InstDeModVarVisitor final : public VNVisitorConst<InstDeModVarVisitor> {
     // Expand all module variables, and save names for later reference
 private:
     // STATE
     std::map<const std::string, AstVar*> m_modVarNameMap;  // Per module, name of cloned variables
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstVar* nodep) override {
         if (VN_IS(nodep->dtypep(), IfaceRefDType)) {
             UINFO(8, "   dm-1-VAR    " << nodep << endl);
@@ -188,7 +192,7 @@ public:
 
 //######################################################################
 
-class InstDeVisitor final : public VNVisitor {
+class InstDeVisitor final : public VNVisitor<InstDeVisitor> {
     // Find all cells with arrays, and convert to non-arrayed
 private:
     // STATE
@@ -197,7 +201,9 @@ private:
     int m_instSelNum = 0;  // Current instantiation count 0..N-1
     InstDeModVarVisitor m_deModVars;  // State of variables for current cell module
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstVar* nodep) override {
         if (VN_IS(nodep->dtypep(), UnpackArrayDType)
             && VN_IS(VN_AS(nodep->dtypep(), UnpackArrayDType)->subDTypep(), IfaceRefDType)) {

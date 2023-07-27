@@ -37,7 +37,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
-class DescopeVisitor final : public VNVisitor {
+class DescopeVisitor final : public VNVisitor<DescopeVisitor> {
 private:
     // NODE STATE
     //  Cleared entire netlist
@@ -190,7 +190,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         {

@@ -33,7 +33,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Stats class functions
 
-class StatsVisitor final : public VNVisitorConst {
+class StatsVisitor final : public VNVisitorConst<StatsVisitor> {
 private:
     // NODE STATE/TYPES
 
@@ -76,7 +76,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         allNodes(nodep);
         if (!m_fast) {

@@ -150,7 +150,7 @@ public:
 // OrderBuildVisitor builds the ordering graph of the entire netlist, and
 // removes any nodes that are no longer required once the graph is built
 
-class OrderBuildVisitor final : public VNVisitor {
+class OrderBuildVisitor final : public VNVisitor<OrderBuildVisitor> {
     // TYPES
     enum VarUsage : uint8_t { VU_CON = 0x1, VU_GEN = 0x2 };
     using VarVertexType = OrderUser::VarVertexType;
@@ -201,7 +201,9 @@ class OrderBuildVisitor final : public VNVisitor {
         return m_orderUser(varscp).getVarVertex(m_graphp, varscp, type);
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstActive* nodep) override {
         UASSERT_OBJ(!nodep->sensesStorep(), nodep,
                     "AstSenTrees should have been made global in V3ActiveTop");

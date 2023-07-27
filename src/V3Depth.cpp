@@ -38,7 +38,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
-class DepthVisitor final : public VNVisitor {
+class DepthVisitor final : public VNVisitor<DepthVisitor> {
 private:
     // NODE STATE
 
@@ -73,7 +73,9 @@ private:
         m_stmtp->addHereThisAsNext(assp);
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstCFunc* nodep) override {
         VL_RESTORER(m_cfuncp);
         VL_RESTORER(m_mtaskbodyp);

@@ -52,7 +52,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Cast state, as a visitor of each AstNode
 
-class CastVisitor final : public VNVisitor {
+class CastVisitor final : public VNVisitor<CastVisitor> {
 private:
     // NODE STATE
     // Entire netlist:
@@ -110,7 +110,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeUniop* nodep) override {
         iterateChildren(nodep);
         nodep->user1(nodep->lhsp()->user1());

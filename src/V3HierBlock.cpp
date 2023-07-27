@@ -239,7 +239,7 @@ string V3HierBlock::commandArgsFileName(bool forCMake) const {
 
 //######################################################################
 // Collect how hierarchical blocks are used
-class HierBlockUsageCollectVisitor final : public VNVisitor {
+class HierBlockUsageCollectVisitor final : public VNVisitor<HierBlockUsageCollectVisitor> {
     // NODE STATE
     // AstNode::user1()            -> bool. Processed
     const VNUser1InUse m_inuser1;
@@ -252,6 +252,7 @@ class HierBlockUsageCollectVisitor final : public VNVisitor {
     ModuleSet m_referred;  // Modules that have hier_block pragma
     V3HierBlock::GParams m_gparams;  // list of variables that is VVarType::GPARAM
 
+public:
     void visit(AstModule* nodep) override {
         // Don't visit twice
         if (nodep->user1SetOnce()) return;

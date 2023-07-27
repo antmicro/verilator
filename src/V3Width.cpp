@@ -216,7 +216,7 @@ public:
 
 //######################################################################
 
-class WidthVisitor final : public VNVisitor {
+class WidthVisitor final : public VNVisitor<WidthVisitor> {
 private:
     // TYPES
     using TableMap = std::map<std::pair<const AstNodeDType*, VAttrType>, AstVar*>;
@@ -252,7 +252,9 @@ private:
         EXTEND_OFF  // No extension
     };
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     //   Naming:  width_O{outputtype}_L{lhstype}_R{rhstype}_W{widthing}_S{signing}
     //          Where type:
     //                  _O1=boolean (width 1 unsigned)

@@ -33,7 +33,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // CoverageJoin state, as a visitor of each AstNode
 
-class CoverageJoinVisitor final : public VNVisitor {
+class CoverageJoinVisitor final : public VNVisitor<CoverageJoinVisitor> {
 private:
     // NODE STATE
     // VNUser4InUse     In V3Hasher via V3DupFinder
@@ -88,7 +88,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override {
         // Find all Coverage's
         iterateChildren(nodep);

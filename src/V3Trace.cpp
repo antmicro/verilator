@@ -154,7 +154,7 @@ public:
 //######################################################################
 // Trace state, as a visitor of each AstNode
 
-class TraceVisitor final : public VNVisitor {
+class TraceVisitor final : public VNVisitor<TraceVisitor> {
 private:
     // NODE STATE
     // V3Hasher in V3DupFinder
@@ -805,7 +805,9 @@ private:
         return vertexp;
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override {
         m_code = 1;  // Multiple TopScopes will require fixing how code#s
         // are assigned as duplicate varscopes must result in the same tracing code#.

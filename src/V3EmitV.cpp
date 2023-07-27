@@ -53,7 +53,9 @@ class EmitVBaseVisitorConst VL_NOT_FINAL : public EmitCBaseVisitorConst {
         putsNoTracking("\"");
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override { iterateAndNextConstNull(nodep->modulesp()); }
     void visit(AstNodeModule* nodep) override {
         putfs(nodep, nodep->verilogKwd() + " " + prefixNameProtect(nodep) + ";\n");

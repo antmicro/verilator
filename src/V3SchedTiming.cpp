@@ -136,7 +136,7 @@ AstCCall* TimingKit::createCommit(AstNetlist* const netlistp) {
 
 TimingKit prepareTiming(AstNetlist* const netlistp) {
     if (!v3Global.usesTiming()) return {};
-    class AwaitVisitor final : public VNVisitor {
+    class AwaitVisitor final : public VNVisitor<AwaitVisitor> {
     private:
         // NODE STATE
         //  AstSenTree::user1()  -> bool.  Set true if the sentree has been visited.
@@ -198,7 +198,9 @@ TimingKit prepareTiming(AstNetlist* const netlistp) {
             m_lbs.emplace_back(m_scopeTopp, activep);
         }
 
-        // VISITORS
+        public:
+public:
+// VISITORS
         void visit(AstNodeProcedure* const nodep) override {
             UASSERT_OBJ(!m_inProcess && !m_gatherVars && m_processDomains.empty()
                             && m_writtenBySuspendable.empty(),
@@ -266,7 +268,7 @@ TimingKit prepareTiming(AstNetlist* const netlistp) {
 void transformForks(AstNetlist* const netlistp) {
     if (!v3Global.usesTiming()) return;
     // Transform all forked processes into functions
-    class ForkVisitor final : public VNVisitor {
+    class ForkVisitor final : public VNVisitor<ForkVisitor> {
     private:
         // NODE STATE
         //  AstVar::user1()  -> bool.  Set true if the variable was declared before the current
@@ -325,7 +327,9 @@ void transformForks(AstNetlist* const netlistp) {
             });
         }
 
-        // VISITORS
+        public:
+public:
+// VISITORS
         void visit(AstNodeModule* nodep) override {
             VL_RESTORER(m_inClass);
             m_inClass = VN_IS(nodep, Class);

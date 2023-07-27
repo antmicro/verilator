@@ -39,7 +39,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Scope class functions
 
-class ScopeVisitor final : public VNVisitor {
+class ScopeVisitor final : public VNVisitor<ScopeVisitor> {
 private:
     // NODE STATE
     // AstVar::user1p           -> AstVarScope replacement for this variable
@@ -83,7 +83,9 @@ private:
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override {
         AstNodeModule* const modp = nodep->topModulep();
         if (!modp) {
@@ -340,14 +342,16 @@ public:
 //######################################################################
 // Scope cleanup -- remove unused activates
 
-class ScopeCleanupVisitor final : public VNVisitor {
+class ScopeCleanupVisitor final : public VNVisitor<ScopeCleanupVisitor> {
 private:
     // STATE
     AstScope* m_scopep = nullptr;  // Current scope we are building
 
     // METHODS
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstScope* nodep) override {
         // Want to ignore blocks under it
         VL_RESTORER(m_scopep);

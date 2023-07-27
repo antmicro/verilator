@@ -39,7 +39,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 // Visit within a module all nodes and data types they reference, finding
 // any classes so we can make sure they are defined when Verilated code
 // compiles
-class CUseVisitor final : public VNVisitor {
+class CUseVisitor final : public VNVisitor<CUseVisitor> {
     // NODE STATE
     //  AstNode::user1()     -> bool.  True if already visited
     const VNUser1InUse m_inuser1;
@@ -62,7 +62,9 @@ class CUseVisitor final : public VNVisitor {
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstClassRefDType* nodep) override {
         if (nodep->user1SetOnce()) return;  // Process once
         addNewUse(nodep, VUseType::INT_FWD_CLASS, nodep->classp()->name());

@@ -168,7 +168,7 @@ public:
 // See if any variables have changed value since we determined subst value,
 // as a visitor of each AstNode
 
-class SubstUseVisitor final : public VNVisitor {
+class SubstUseVisitor final : public VNVisitor<SubstUseVisitor> {
 private:
     // NODE STATE
     // See SubstVisitor
@@ -181,7 +181,9 @@ private:
     SubstVarEntry* findEntryp(AstVarRef* nodep) {
         return reinterpret_cast<SubstVarEntry*>(nodep->varp()->user1p());  // Might be nullptr
     }
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstVarRef* nodep) override {
         const SubstVarEntry* const entryp = findEntryp(nodep);
         if (entryp) {
@@ -215,7 +217,7 @@ public:
 //######################################################################
 // Subst state, as a visitor of each AstNode
 
-class SubstVisitor final : public VNVisitor {
+class SubstVisitor final : public VNVisitor<SubstVisitor> {
 private:
     // NODE STATE
     // Passed to SubstUseVisitor
@@ -250,7 +252,9 @@ private:
     }
     bool isSubstVar(AstVar* nodep) { return nodep->isStatementTemp() && !nodep->noSubst(); }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeAssign* nodep) override {
         VL_RESTORER(m_ops);
         m_ops = 0;

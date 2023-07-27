@@ -43,7 +43,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Fork visitor, transforms asynchronous blocks into separate tasks
 
-class ForkVisitor final : public VNVisitor {
+class ForkVisitor final : public VNVisitor<ForkVisitor> {
 private:
     // NODE STATE
     // AstNode::user1()         -> bool, 1 = Node was created as a call to an asynchronous task
@@ -146,7 +146,9 @@ private:
         taskcallp->user1(true);
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstFork* nodep) override {
         bool nested = m_newProcess;
 

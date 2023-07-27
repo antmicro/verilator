@@ -38,7 +38,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Active class functions
 
-class ActiveTopVisitor final : public VNVisitor {
+class ActiveTopVisitor final : public VNVisitor<ActiveTopVisitor> {
     // STATE
     SenTreeFinder m_finder;  // Find global sentree's / add them under the AstTopScope
 
@@ -60,7 +60,9 @@ class ActiveTopVisitor final : public VNVisitor {
         });
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNodeModule* nodep) override {
         // Create required actives and add to module
         // We can start ordering at a module, or a scope

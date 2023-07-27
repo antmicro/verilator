@@ -35,7 +35,7 @@
 
 VL_DEFINE_DEBUG_FUNCTIONS;
 
-class CombineVisitor final : VNVisitor {
+class CombineVisitor final : VNVisitor<CombineVisitor> {
     // NODE STATE
     // AstNodeModule::user1()   List of AstCFuncs in this module (via m_cfuncs)
     // AstCFunc::user1()        List of AstCCalls to this function (via m_callSites)
@@ -182,7 +182,9 @@ class CombineVisitor final : VNVisitor {
         }
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstNetlist* nodep) override {
         // Gather functions and references
         iterateChildrenConst(nodep);

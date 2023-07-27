@@ -37,11 +37,12 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Find all split variables in a block
 
-class SplitAsFindVisitor final : public VNVisitor {
+class SplitAsFindVisitor final : public VNVisitor<SplitAsFindVisitor> {
 private:
     // STATE - across all visitors
     AstVarScope* m_splitVscp = nullptr;  // Variable we want to split
 
+public:
     // METHODS
     void visit(AstVarRef* nodep) override {
         if (nodep->access().isWriteOrRW() && !m_splitVscp && nodep->varp()->attrIsolateAssign()) {
@@ -56,7 +57,6 @@ private:
     }
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
-public:
     // CONSTRUCTORS
     explicit SplitAsFindVisitor(AstAlways* nodep) { iterate(nodep); }
     ~SplitAsFindVisitor() override = default;
@@ -67,7 +67,7 @@ public:
 //######################################################################
 // Remove nodes not containing proper references
 
-class SplitAsCleanVisitor final : public VNVisitor {
+class SplitAsCleanVisitor final : public VNVisitor<SplitAsCleanVisitor> {
 private:
     // STATE - across all visitors
     const AstVarScope* const m_splitVscp;  // Variable we want to split
@@ -76,6 +76,7 @@ private:
     bool m_keepStmt = false;  // Current Statement must be preserved
     bool m_matches = false;  // Statement below has matching lvalue reference
 
+public:
     // METHODS
     void visit(AstVarRef* nodep) override {
         if (nodep->access().isWriteOrRW()) {
@@ -116,7 +117,6 @@ private:
     }
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
-public:
     // CONSTRUCTORS
     SplitAsCleanVisitor(AstAlways* nodep, AstVarScope* vscp, bool modeMatch)
         : m_splitVscp{vscp}
@@ -129,7 +129,7 @@ public:
 //######################################################################
 // SplitAs class functions
 
-class SplitAsVisitor final : public VNVisitor {
+class SplitAsVisitor final : public VNVisitor<SplitAsVisitor> {
 private:
     // NODE STATE
     //  AstAlways::user()       -> bool.  True if already processed
@@ -138,6 +138,7 @@ private:
     // STATE - across all visitors
     VDouble0 m_statSplits;  // Statistic tracking
 
+public:
     // METHODS
     void splitAlways(AstAlways* nodep, AstVarScope* splitVscp) {
         if (debug() >= 9) nodep->dumpTree("-  in: ");
@@ -184,7 +185,6 @@ private:
     void visit(AstNodeExpr*) override {}  // Accelerate
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
-public:
     // CONSTRUCTORS
     explicit SplitAsVisitor(AstNetlist* nodep) { iterate(nodep); }
     ~SplitAsVisitor() override {

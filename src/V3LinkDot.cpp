@@ -734,7 +734,7 @@ LinkDotState* LinkDotState::s_errorThisp = nullptr;
 
 //======================================================================
 
-class LinkDotFindVisitor final : public VNVisitor {
+class LinkDotFindVisitor final : public VNVisitor<LinkDotFindVisitor> {
     // STATE
     LinkDotState* const m_statep;  // State to pass between visitors, including symbol table
     AstNodeModule* m_classOrPackagep = nullptr;  // Current package
@@ -766,7 +766,8 @@ class LinkDotFindVisitor final : public VNVisitor {
         return hierBlocks.find(name) != hierBlocks.end();
     }
 
-    // VISITs
+    public:
+// VISITs
     void visit(AstNetlist* nodep) override {
         // Process $unit or other packages
         // Not needed - dotted references not allowed from inside packages
@@ -1535,7 +1536,7 @@ public:
 
 //======================================================================
 
-class LinkDotParamVisitor final : public VNVisitor {
+class LinkDotParamVisitor final : public VNVisitor<LinkDotParamVisitor> {
 private:
     // NODE STATE
     // Cleared on global
@@ -1569,7 +1570,8 @@ private:
         }
     }
 
-    // VISITs
+    public:
+// VISITs
     void visit(AstTypeTable*) override {}
     void visit(AstConstPool*) override {}
     void visit(AstNodeModule* nodep) override {
@@ -1737,14 +1739,15 @@ public:
 
 //======================================================================
 
-class LinkDotScopeVisitor final : public VNVisitor {
+class LinkDotScopeVisitor final : public VNVisitor<LinkDotScopeVisitor> {
 
     // STATE
     LinkDotState* const m_statep;  // State to pass between visitors, including symbol table
     const AstScope* m_scopep = nullptr;  // The current scope
     VSymEnt* m_modSymp = nullptr;  // Symbol entry for current module
 
-    // VISITs
+    public:
+// VISITs
     void visit(AstNetlist* nodep) override {
         // Recurse..., backward as must do packages before using packages
         iterateChildrenBackwardsConst(nodep);
@@ -1902,12 +1905,13 @@ public:
 //======================================================================
 
 // Iterate an interface to resolve modports
-class LinkDotIfaceVisitor final : public VNVisitor {
+class LinkDotIfaceVisitor final : public VNVisitor<LinkDotIfaceVisitor> {
     // STATE
     LinkDotState* const m_statep;  // State to pass between visitors, including symbol table
     VSymEnt* m_curSymp;  // Symbol Entry for current table, where to lookup/insert
 
-    // VISITs
+    public:
+// VISITs
     void visit(AstModport* nodep) override {
         // Modport: Remember its name for later resolution
         UINFO(5, "   fiv: " << nodep << endl);
@@ -1992,7 +1996,7 @@ void LinkDotState::computeIfaceModSyms() {
 
 //======================================================================
 
-class LinkDotResolveVisitor final : public VNVisitor {
+class LinkDotResolveVisitor final : public VNVisitor<LinkDotResolveVisitor> {
 private:
     // NODE STATE
     // Cleared on global
@@ -2253,7 +2257,8 @@ private:
         if (!cextp->isImplements()) m_curSymp->importFromClass(m_statep->symsp(), srcp);
     }
 
-    // VISITs
+    public:
+// VISITs
     void visit(AstNetlist* nodep) override {
         // Recurse..., backward as must do packages before using packages
         iterateChildrenBackwardsConst(nodep);

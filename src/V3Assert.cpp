@@ -29,7 +29,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Assert class functions
 
-class AssertVisitor final : public VNVisitor {
+class AssertVisitor final : public VNVisitor<AssertVisitor> {
 private:
     // NODE STATE/TYPES
     // Cleared on netlist
@@ -221,7 +221,9 @@ private:
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
 
-    // VISITORS
+    public:
+public:
+// VISITORS
     void visit(AstIf* nodep) override {
         if (nodep->user1SetOnce()) return;
         if (nodep->uniquePragma() || nodep->unique0Pragma()) {

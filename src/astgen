@@ -828,19 +828,28 @@ def write_visitor_decls(prefix, nodeList):
                                                                  n=node.name))
 
 
-def write_visitor_defns(prefix, nodeList, visitor):
+def write_visitor_defns(prefix, nodeList, visitor, template):
     with open_file("V3{p}__gen_visitor_defns.h".format(p=prefix)) as fh:
         variable = "nodep" if prefix == "Ast" else "vtxp"
         for node in nodeList:
             base = node.superClass
             if base is not None:
-                fh.write(
-                    "void {c}::visit({p}{n}* {v}) {{ visit(static_cast<{p}{b}*>({v})); }}\n"
-                    .format(c=visitor,
-                            p=prefix,
-                            n=node.name,
-                            b=base.name,
-                            v=variable))
+                if template:
+                    fh.write(
+                        "template<typename Visitor> void {c}<Visitor>::visit({p}{n}* {v}) {{ visit(static_cast<{p}{b}*>({v})); }}\n"
+                        .format(c=visitor,
+                                p=prefix,
+                                n=node.name,
+                                b=base.name,
+                                v=variable))
+                else:
+                    fh.write(
+                        "void {c}::visit({p}{n}* {v}) {{ visit(static_cast<{p}{b}*>({v})); }}\n"
+                        .format(c=visitor,
+                                p=prefix,
+                                n=node.name,
+                                b=base.name,
+                                v=variable))
 
 
 def write_type_enum(prefix, nodeList):
@@ -874,6 +883,24 @@ def write_type_enum(prefix, nodeList):
         fh.write("        };\n")
         fh.write("        return names[m_e];\n")
         fh.write("    }\n")
+
+
+def write_accept(prefix, nodeList):
+    with open_file("V3{p}__accept.h".format(p=prefix)) as fh:
+        fh.write("switch (type()) {")
+        if prefix == "Ast":
+            base = "AstNode"
+            enum = "VNType"
+        elif prefix == "Dfg":
+            base = "DfgVertex"
+            enum = "VDfgType"
+        for node in nodeList:
+            if node.isLeaf:
+                fh.write(
+                    "case {e}::at{t}: v.visit(reinterpret_cast<{p}{t}*>(this)); break;\n"
+                    .format(p=prefix, e=enum, t=node.name))
+        fh.write("default: break;\n")
+        fh.write("}\n")
 
 
 def write_type_tests(prefix, nodeList):
@@ -938,7 +965,6 @@ def write_ast_macros(filename):
 
             if node.isLeaf:
                 emitBlock('''\
-                void accept(VNVisitorConst& v) override {{ v.visit(this); }}
                 AstNode* clone() override {{ return new Ast{t}(*this); }}
                 ''',
                           t=node.name)
@@ -1343,16 +1369,17 @@ if Args.classes:
     # Write Ast code
     write_forward_class_decls("Ast", AstNodeList)
     write_visitor_decls("Ast", AstNodeList)
-    write_visitor_defns("Ast", AstNodeList, "VNVisitorConst")
+    write_visitor_defns("Ast", AstNodeList, "VNVisitorConst", True)
     write_type_enum("Ast", AstNodeList)
     write_type_tests("Ast", AstNodeList)
     write_ast_macros("V3Ast__gen_macros.h")
     write_ast_yystype("V3Ast__gen_yystype.h")
     write_ast_op_checks("V3Ast__gen_op_checks.h")
+    write_accept("Ast", AstNodeList)
     # Write Dfg code
     write_forward_class_decls("Dfg", DfgVertexList)
     write_visitor_decls("Dfg", DfgVertexList)
-    write_visitor_defns("Dfg", DfgVertexList, "DfgVisitor")
+    write_visitor_defns("Dfg", DfgVertexList, "DfgVisitor", False)
     write_type_enum("Dfg", DfgVertexList)
     write_type_tests("Dfg", DfgVertexList)
     write_dfg_macros("V3Dfg__gen_macros.h")

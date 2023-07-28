@@ -323,7 +323,9 @@ private:
         if (m_lifep->replaced()) {
             // We changed something, try to constant propagate, but don't delete the
             // assignment as we still need nodep to remain.
-            V3Const::constifyEdit(nodep->rhsp());  // rhsp may change
+            if (nodep->lhsp()->widthMin() != 0) {
+                V3Const::constifyEdit(nodep->rhsp());  // rhsp may change
+            }
         }
         // Has to be direct assignment without any EXTRACTing.
         if (VN_IS(nodep->lhsp(), VarRef) && !m_sideEffect && !m_noopt) {

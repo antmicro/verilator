@@ -334,9 +334,9 @@ protected:
 
     virtual void makeRvalueEdges(SplitVarStdVertex* vstdp) = 0;
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstAlways* nodep) override = 0;
     void visit(AstNodeIf* nodep) override = 0;
 
@@ -801,9 +801,9 @@ class RemovePlaceholdersVisitor final : public VNVisitor<RemovePlaceholdersVisit
     RemovePlaceholdersVisitor() = default;
     ~RemovePlaceholdersVisitor() override = default;
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstSplitPlaceholder* nodep) override { pushDeletep(nodep->unlinkFrBack()); }
     void visit(AstNodeIf* nodep) override {
         VL_RESTORER(m_isPure);

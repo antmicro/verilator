@@ -151,9 +151,9 @@ private:
         relinker.relink(new AstVarRef{fl, varp, VAccess::READ});
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeModule* nodep) override {
         UINFO(4, " MOD   " << nodep << endl);
         iterateChildren(nodep);

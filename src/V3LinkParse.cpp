@@ -179,8 +179,8 @@ private:
                           << nodep->warnContextSecondary());
     }
 
-    public:
-// VISITs
+public:
+    // VISITs
     void visit(AstNodeFTask* nodep) override {
         if (!nodep->user1SetOnce()) {  // Process only once.
             // Mark class methods

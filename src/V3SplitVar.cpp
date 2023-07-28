@@ -376,7 +376,7 @@ public:
         } v(*this);
         v.iterate(nodep);
     }
-    template<typename Visitor>
+    template <typename Visitor>
     void visit(Visitor* visitor) {
         for (AstVar* const varp : m_vars) visitor->iterate(varp);
         for (AstSel* const selp : m_sels) {
@@ -401,7 +401,8 @@ public:
 
 using SplitVarRefsMap = std::map<AstNodeModule*, RefsInModule, AstNodeComparator>;
 
-class SplitUnpackedVarVisitor final : public VNVisitor<SplitUnpackedVarVisitor>, public SplitVarImpl {
+class SplitUnpackedVarVisitor final : public VNVisitor<SplitUnpackedVarVisitor>,
+                                      public SplitVarImpl {
     using VarSet = std::set<AstVar*, AstNodeComparator>;
     VarSet m_foundTargetVar;
     UnpackRefMap m_refs;
@@ -961,6 +962,7 @@ class SplitPackedVarVisitor final : public VNVisitor<SplitPackedVarVisitor>, pub
     int m_numSplit = 0;  // Total number of split variables
     // key:variable to be split. value:location where the variable is referenced.
     std::map<AstVar*, PackedVarRef, AstNodeComparator> m_refs;
+
 public:
     void visit(AstNodeFTask* nodep) override {
         if (!cannotSplitTaskReason(nodep)) iterateChildren(nodep);

@@ -161,8 +161,8 @@ private:
         return modp;
     }
 
-    public:
-// VISITs
+public:
+    // VISITs
     void visit(AstNetlist* nodep) override {
         AstNode::user1ClearTree();
         readModNames();

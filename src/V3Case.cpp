@@ -526,9 +526,9 @@ private:
         return false;
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstCase* nodep) override {
         V3Case::caseLint(nodep);
         iterateChildren(nodep);

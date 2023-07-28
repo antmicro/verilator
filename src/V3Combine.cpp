@@ -182,9 +182,9 @@ class CombineVisitor final : VNVisitor<CombineVisitor> {
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNetlist* nodep) override {
         // Gather functions and references
         iterateChildrenConst(nodep);

@@ -190,9 +190,9 @@ private:
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         {

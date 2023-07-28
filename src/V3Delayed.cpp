@@ -413,9 +413,9 @@ private:
         return newlhsp;
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNetlist* nodep) override {
         // VV*****  We reset all userp() on the netlist
         m_modVarMap.clear();

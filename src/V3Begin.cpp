@@ -46,9 +46,9 @@ private:
     const std::set<AstVar*>& m_staticFuncVarsr;  // Static variables from m_ftaskp
     AstNodeFTask* const m_ftaskp;  // Current function/task
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstVarRef* nodep) override {
         const auto it = m_staticFuncVarsr.find(nodep->varp());
         if (it != m_staticFuncVarsr.end()) nodep->name((*it)->name());
@@ -159,9 +159,9 @@ private:
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstFork* nodep) override {
         // Keep begins in forks to group their statements together
         VL_RESTORER(m_keepBegins);
@@ -329,9 +329,10 @@ public:
         // any BEGINs, but V3Coverage adds them all under the module itself.
         iterateChildren(nodep);
     }
-    public:
+
 public:
-// VISITORS - LINT CHECK
+public:
+    // VISITORS - LINT CHECK
     void visit(AstIf* nodep) override {  // not AstNodeIf; other types not covered
         VL_RESTORER(m_keepBegins);
         m_keepBegins = false;
@@ -372,9 +373,9 @@ private:
     //  Input:
     //   AstNodeFTask::user1p           // Node replaced, rename it
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeFTaskRef* nodep) override {
         if (nodep->taskp()->user1()) {  // It was converted
             UINFO(9, "    relinkFTask " << nodep << endl);

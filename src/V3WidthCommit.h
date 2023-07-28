@@ -45,9 +45,9 @@ class WidthRemoveVisitor final : public VNVisitor<WidthRemoveVisitor> {
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstSigned* nodep) override {
         VL_DO_DANGLING(replaceWithSignedVersion(nodep, nodep->lhsp()->unlinkFrBack()), nodep);
     }
@@ -156,9 +156,9 @@ private:
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         {

@@ -151,9 +151,9 @@ private:
         return nodep;
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     //========== Statements
     void visit(AstClocking* const nodep) override {
         VL_RESTORER(m_clockingp);

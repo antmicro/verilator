@@ -353,9 +353,9 @@ public:
 class TristatePinVisitor final : public TristateBaseVisitor {
     TristateGraph& m_tgraph;
     const bool m_lvalue;  // Flip to be an LVALUE
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstVarRef* nodep) override {
         UASSERT_OBJ(!nodep->access().isRW(), nodep, "Tristate unexpected on R/W access flip");
         if (m_lvalue && !nodep->access().isWriteOrRW()) {
@@ -983,9 +983,9 @@ class TristateVisitor final : public TristateBaseVisitor {
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstConst* nodep) override {
         UINFO(9, dbgState() << nodep << endl);
         if (m_graphing) {

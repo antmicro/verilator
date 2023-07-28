@@ -671,9 +671,9 @@ class EmitCModel final : public EmitCFunc {
         if (v3Global.dpi()) { emitDpiExportDispatchers(modp); }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
 
 public:
     explicit EmitCModel(AstNetlist* netlistp) { main(netlistp->topModulep()); }

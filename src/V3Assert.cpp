@@ -221,9 +221,9 @@ private:
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstIf* nodep) override {
         if (nodep->user1SetOnce()) return;
         if (nodep->uniquePragma() || nodep->unique0Pragma()) {

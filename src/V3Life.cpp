@@ -293,9 +293,9 @@ private:
         m_lifep->clear();
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstVarRef* nodep) override {
         // Consumption/generation of a variable,
         // it's used so can't elim assignment before this use.
@@ -483,9 +483,9 @@ private:
     // STATE
     LifeState* const m_statep;  // Current state
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstCFunc* nodep) override {
         if (nodep->entryPoint()) {
             // Usage model 1: Simulate all C code, doing lifetime analysis

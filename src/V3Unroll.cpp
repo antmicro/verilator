@@ -60,9 +60,9 @@ private:
 
     // METHODS
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     bool cantUnroll(AstNode* nodep, const char* reason) const {
         if (m_generate)
             nodep->v3warn(E_UNSUPPORTED, "Unsupported: Can't unroll generate for; " << reason);

@@ -56,9 +56,9 @@ private:
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
 
     constexpr static bool HASH_DTYPE = true;
     constexpr static bool HASH_CHILDREN = true;

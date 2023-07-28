@@ -42,8 +42,8 @@ private:
     bool m_setStrengthSpecified = false;  // Set that var has assignment with strength specified.
     VAccess m_setRefLvalue;  // Set VarRefs to lvalues for pin assignments
 
-    public:
-// VISITs
+public:
+    // VISITs
     // Result handing
     void visit(AstNodeVarRef* nodep) override {
         // VarRef: LValue its reference

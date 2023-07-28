@@ -805,9 +805,9 @@ private:
         return vertexp;
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNetlist* nodep) override {
         m_code = 1;  // Multiple TopScopes will require fixing how code#s
         // are assigned as duplicate varscopes must result in the same tracing code#.

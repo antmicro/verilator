@@ -209,9 +209,9 @@ private:
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     // If adding new visitors, ensure V3Width's visit(TYPE) calls into here
 
     void visit(AstSelBit* nodep) override {

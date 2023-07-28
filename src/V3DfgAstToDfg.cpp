@@ -430,9 +430,9 @@ class AstToDfgVisitor final : public VNVisitor<AstToDfgVisitor> {
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNode* nodep) override {
         // Conservatively treat this node as unhandled
         if (!m_foundUnhandled && m_converting) ++m_ctx.m_nonRepUnknown;

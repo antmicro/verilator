@@ -101,9 +101,9 @@ class EmitXmlFileVisitor final : public VNVisitorConst<EmitXmlFileVisitor> {
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstAssignW* nodep) override {
         outputTag(nodep, "contassign");  // IEEE: vpiContAssign
         outputChildrenEnd(nodep, "contassign");
@@ -333,9 +333,9 @@ private:
 
     // METHODS
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNetlist* nodep) override {
         // Children are iterated backwards to ensure correct compilation order
         iterateChildrenBackwardsConst(nodep);
@@ -382,9 +382,9 @@ private:
 
     // METHODS
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstConstPool*) override {}
 
     void visit(AstNodeModule* nodep) override {

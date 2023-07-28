@@ -252,9 +252,9 @@ private:
         EXTEND_OFF  // No extension
     };
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     //   Naming:  width_O{outputtype}_L{lhstype}_R{rhstype}_W{widthing}_S{signing}
     //          Where type:
     //                  _O1=boolean (width 1 unsigned)

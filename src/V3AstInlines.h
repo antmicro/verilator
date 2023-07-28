@@ -189,7 +189,7 @@ AstStmtExpr* AstNodeExpr::makeStmt() { return new AstStmtExpr{fileline(), this};
 //======================================================================
 // Iterators
 
-template<typename Visitor>
+template <typename Visitor>
 void AstNode::iterateChildren(Visitor& v) {
     // This is a very hot function
     // Optimization note: Grabbing m_op#p->m_nextp is a net loss
@@ -203,7 +203,7 @@ void AstNode::iterateChildren(Visitor& v) {
     if (m_op4p) m_op4p->iterateAndNext(v);
 }
 
-template<typename Visitor>
+template <typename Visitor>
 void AstNode::iterateChildrenConst(Visitor& v) {
     // This is a very hot function
     ASTNODE_PREFETCH(m_op1p);
@@ -216,7 +216,7 @@ void AstNode::iterateChildrenConst(Visitor& v) {
     if (m_op4p) m_op4p->iterateAndNextConst(v);
 }
 
-template<typename Visitor>
+template <typename Visitor>
 void AstNode::iterateAndNext(Visitor& v) {
     // This is a very hot function
     // IMPORTANT: If you replace a node that's the target of this iterator,
@@ -252,7 +252,7 @@ void AstNode::iterateAndNext(Visitor& v) {
     }
 }
 
-template<typename Visitor>
+template <typename Visitor>
 void AstNode::iterateListBackwardsConst(Visitor& v) {
     AstNode* nodep = this;
     while (nodep->m_nextp) nodep = nodep->m_nextp;
@@ -267,7 +267,7 @@ void AstNode::iterateListBackwardsConst(Visitor& v) {
     }
 }
 
-template<typename Visitor>
+template <typename Visitor>
 void AstNode::iterateChildrenBackwardsConst(Visitor& v) {
     if (m_op1p) m_op1p->iterateListBackwardsConst(v);
     if (m_op2p) m_op2p->iterateListBackwardsConst(v);
@@ -275,7 +275,7 @@ void AstNode::iterateChildrenBackwardsConst(Visitor& v) {
     if (m_op4p) m_op4p->iterateListBackwardsConst(v);
 }
 
-template<typename Visitor>
+template <typename Visitor>
 void AstNode::iterateAndNextConst(Visitor& v) {
     // Keep following the current list even if edits change it
     AstNode* nodep = this;
@@ -287,7 +287,7 @@ void AstNode::iterateAndNextConst(Visitor& v) {
     } while (nodep);
 }
 
-template<typename Visitor>
+template <typename Visitor>
 AstNode* AstNode::iterateSubtreeReturnEdits(Visitor& v) {
     // Some visitors perform tree edits (such as V3Const), and may even
     // replace/delete the exact nodep that the visitor is called with.  If

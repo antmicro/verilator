@@ -125,7 +125,7 @@ private:
     }
 
 public:
-// VISITORS
+    // VISITORS
     void visit(AstNodeSel* nodep) override {
         if (m_ignoreRemaining) return;
         // This covers both AstArraySel and AstWordSel
@@ -313,6 +313,7 @@ public:
 private:
     // METHODS
     string indent() const { return string(m_depth, ':') + " "; }
+
 public:
     void visit(AstNode* nodep) override {
         ++m_depth;

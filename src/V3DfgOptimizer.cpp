@@ -96,8 +96,8 @@ class DataflowExtractVisitor final : public VNVisitor<DataflowExtractVisitor> {
         m_candidatesp->emplace_back(VN_AS(nodep, NodeExpr), std::move(m_readVars));
     }
 
-    public:
-// VISIT methods
+public:
+    // VISIT methods
 
     void visit(AstNetlist* nodep) override {
         // Analyse the whole design

@@ -167,9 +167,9 @@ private:
         return static_cast<TaskFTaskVertex*>(nodep->user4u().toGraphVertex());
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstScope* nodep) override {
         // Each FTask is unique per-scope, so AstNodeFTaskRefs do not need
         // pointers to what scope the FTask is to be invoked under.
@@ -1366,9 +1366,9 @@ private:
         return visitp;
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         VL_RESTORER(m_modNCalls);

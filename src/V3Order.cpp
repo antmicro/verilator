@@ -201,9 +201,9 @@ class OrderBuildVisitor final : public VNVisitor<OrderBuildVisitor> {
         return m_orderUser(varscp).getVarVertex(m_graphp, varscp, type);
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstActive* nodep) override {
         UASSERT_OBJ(!nodep->sensesStorep(), nodep,
                     "AstSenTrees should have been made global in V3ActiveTop");

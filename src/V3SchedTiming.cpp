@@ -198,9 +198,9 @@ TimingKit prepareTiming(AstNetlist* const netlistp) {
             m_lbs.emplace_back(m_scopeTopp, activep);
         }
 
-        public:
-public:
-// VISITORS
+    public:
+    public:
+        // VISITORS
         void visit(AstNodeProcedure* const nodep) override {
             UASSERT_OBJ(!m_inProcess && !m_gatherVars && m_processDomains.empty()
                             && m_writtenBySuspendable.empty(),
@@ -327,9 +327,9 @@ void transformForks(AstNetlist* const netlistp) {
             });
         }
 
-        public:
-public:
-// VISITORS
+    public:
+    public:
+        // VISITORS
         void visit(AstNodeModule* nodep) override {
             VL_RESTORER(m_inClass);
             m_inClass = VN_IS(nodep, Class);

@@ -171,8 +171,8 @@ class ForceConvertVisitor final : public VNVisitor<ForceConvertVisitor> {
         });
     }
 
-    public:
-// VISIT methods
+public:
+    // VISIT methods
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
     void visit(AstAssignForce* nodep) override {

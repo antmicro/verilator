@@ -76,9 +76,9 @@ class EmitCGatherDependencies final : VNVisitorConst<EmitCGatherDependencies> {
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstCCall* nodep) override {
         addSelfDependency(nodep->selfPointer(), nodep->funcp());
         iterateChildrenConst(nodep);
@@ -532,9 +532,9 @@ class EmitCImp final : EmitCFunc {
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstCFunc* nodep) override {
         if (splitNeeded()) {
             // Splitting file, so using parallel build.
@@ -850,9 +850,9 @@ class EmitCTrace final : EmitCFunc {
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     using EmitCFunc::visit;  // Suppress hidden overloaded virtual function warning
     void visit(AstCFunc* nodep) override {
         if (!nodep->isTrace()) return;

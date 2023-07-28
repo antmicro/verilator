@@ -62,9 +62,9 @@ class CUseVisitor final : public VNVisitor<CUseVisitor> {
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstClassRefDType* nodep) override {
         if (nodep->user1SetOnce()) return;  // Process once
         addNewUse(nodep, VUseType::INT_FWD_CLASS, nodep->classp()->name());

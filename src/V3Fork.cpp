@@ -146,9 +146,9 @@ private:
         taskcallp->user1(true);
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstFork* nodep) override {
         bool nested = m_newProcess;
 

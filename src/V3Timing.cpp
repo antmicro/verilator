@@ -220,9 +220,9 @@ private:
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstClass* nodep) override {
         UASSERT(!m_classp, "Class under class");
         VL_RESTORER(m_classp);
@@ -653,9 +653,9 @@ private:
         forkp->addNextHere(awaitp->makeStmt());
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeModule* nodep) override {
         UASSERT(!m_classp, "Module or class under class");
         VL_RESTORER(m_classp);

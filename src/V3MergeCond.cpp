@@ -255,9 +255,9 @@ class CodeMotionAnalysisVisitor final : public VNVisitorConst<CodeMotionAnalysis
         iterateChildrenConst(nodep);
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNode* nodep) override {
         // Push a new stack entry at the start of a list, but only if the list is not a
         // single element (this saves a lot of allocations in expressions)
@@ -325,9 +325,9 @@ class CodeMotionOptimizeVisitor final : public VNVisitor<CodeMotionOptimizeVisit
         return true;
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeStmt* nodep) override {
         // Process only on first encounter
         if (nodep->user4SetOnce()) return;
@@ -832,7 +832,7 @@ private:
     }
 
 public:
-// VISITORS
+    // VISITORS
     void visit(AstNodeAssign* nodep) override {
         if (AstNodeExpr* const condp = (*m_stmtPropertiesp)(nodep).m_condp) {
             // Check if mergeable

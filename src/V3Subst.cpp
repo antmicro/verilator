@@ -181,9 +181,10 @@ private:
     SubstVarEntry* findEntryp(AstVarRef* nodep) {
         return reinterpret_cast<SubstVarEntry*>(nodep->varp()->user1p());  // Might be nullptr
     }
-    public:
+
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstVarRef* nodep) override {
         const SubstVarEntry* const entryp = findEntryp(nodep);
         if (entryp) {
@@ -252,9 +253,9 @@ private:
     }
     bool isSubstVar(AstVar* nodep) { return nodep->isStatementTemp() && !nodep->noSubst(); }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeAssign* nodep) override {
         VL_RESTORER(m_ops);
         m_ops = 0;

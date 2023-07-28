@@ -73,9 +73,9 @@ private:
         m_stmtp->addHereThisAsNext(assp);
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstCFunc* nodep) override {
         VL_RESTORER(m_cfuncp);
         VL_RESTORER(m_mtaskbodyp);

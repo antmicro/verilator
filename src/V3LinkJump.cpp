@@ -161,9 +161,9 @@ private:
         if (nodep->nextp()) addPrefixToBlocksRecurse(nodep->nextp());
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeModule* nodep) override {
         if (nodep->dead()) return;
         VL_RESTORER(m_modp);

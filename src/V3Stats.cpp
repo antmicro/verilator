@@ -76,9 +76,9 @@ private:
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeModule* nodep) override {
         allNodes(nodep);
         if (!m_fast) {

@@ -60,9 +60,9 @@ class ActiveTopVisitor final : public VNVisitor<ActiveTopVisitor> {
         });
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeModule* nodep) override {
         // Create required actives and add to module
         // We can start ordering at a module, or a scope

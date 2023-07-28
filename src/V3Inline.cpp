@@ -112,9 +112,9 @@ private:
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeModule* nodep) override {
         UASSERT_OBJ(!m_modp, nodep, "Unsupported: Nested modules");
         m_modp = nodep;
@@ -259,9 +259,9 @@ private:
     AstNodeModule* const m_modp;  // Current module
     const AstCell* const m_cellp;  // Cell being cloned
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstCellInline* nodep) override {
         // Inlined cell under the inline cell, need to move to avoid conflicts
         nodep->unlinkFrBack();
@@ -575,9 +575,9 @@ private:
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNetlist* nodep) override {
         // Iterate modules backwards, in bottom-up order.  Required!
         iterateAndNextConstNullBackwards(nodep->modulesp());
@@ -637,9 +637,9 @@ private:
 
     string m_scope;  // Scope name
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNetlist* nodep) override { iterateChildren(nodep->topModulep()); }
     void visit(AstCell* nodep) override {
         VL_RESTORER(m_scope);

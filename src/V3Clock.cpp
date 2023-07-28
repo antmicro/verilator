@@ -53,9 +53,9 @@ private:
         m_result = VN_AS(iterateSubtreeReturnEdits(nodep), NodeExpr);
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstVarRef* nodep) override {
         UASSERT_OBJ(!nodep->access().isRW(), nodep, "Cannot handle a READWRITE reference");
         if (nodep->access().isWriteOnly()) {
@@ -122,9 +122,10 @@ private:
         m_lastSenp = nullptr;
         m_lastIfp = nullptr;
     }
-    public:
+
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstCoverToggle* nodep) override {
         // nodep->dumpTree("-  ct: ");
         // COVERTOGGLE(INC, ORIG, CHANGE) ->

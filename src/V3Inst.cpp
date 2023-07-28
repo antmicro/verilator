@@ -47,9 +47,9 @@ private:
     // STATE
     AstCell* m_cellp = nullptr;  // Current cell
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstCell* nodep) override {
         UINFO(4, "  CELL   " << nodep << endl);
         m_cellp = nodep;
@@ -147,9 +147,9 @@ private:
     // STATE
     std::map<const std::string, AstVar*> m_modVarNameMap;  // Per module, name of cloned variables
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstVar* nodep) override {
         if (VN_IS(nodep->dtypep(), IfaceRefDType)) {
             UINFO(8, "   dm-1-VAR    " << nodep << endl);
@@ -201,9 +201,9 @@ private:
     int m_instSelNum = 0;  // Current instantiation count 0..N-1
     InstDeModVarVisitor m_deModVars;  // State of variables for current cell module
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstVar* nodep) override {
         if (VN_IS(nodep->dtypep(), UnpackArrayDType)
             && VN_IS(VN_AS(nodep->dtypep(), UnpackArrayDType)->subDTypep(), IfaceRefDType)) {

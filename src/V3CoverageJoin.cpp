@@ -88,9 +88,9 @@ private:
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNetlist* nodep) override {
         // Find all Coverage's
         iterateChildren(nodep);

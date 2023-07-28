@@ -65,9 +65,9 @@ private:
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeIf* nodep) override {
         UINFO(4, " IF: " << nodep << endl);
         VL_RESTORER(m_likely);

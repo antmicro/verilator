@@ -213,9 +213,10 @@ private:
             UINFO(9, "Clear simple " << because << endl);
         }
     }
-    public:
+
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeVarRef* nodep) override {
         ++m_ops;
         iterateChildrenConst(nodep);
@@ -422,9 +423,9 @@ private:
     void mergeAssigns();
     void decomposeClkVectors();
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNetlist* nodep) override {
         iterateChildren(nodep);
         if (dumpGraphLevel() >= 3) m_graph.dumpDotFilePrefixed("gate_pre");
@@ -919,9 +920,9 @@ private:
     bool m_always = false;  // Assign is under an always
     bool m_dedupable = true;  // Determined the assign to be dedupable
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeAssign* assignp) override {
         if (m_dedupable) {
             // I think we could safely dedupe an always block with multiple
@@ -1307,9 +1308,9 @@ private:
     int m_found_offset = 0;  // Found offset of varscope
     bool m_found = false;  // Offset found
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeVarRef* nodep) override {
         UINFO(9, "CLK DECOMP Concat search var (off = " << m_offset << ") - " << nodep << endl);
         if (nodep->varScopep() == m_vscp && !nodep->user2() && !m_found) {

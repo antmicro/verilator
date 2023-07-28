@@ -428,9 +428,9 @@ class ConstBitOpTreeVisitor final : public VNVisitorConst<ConstBitOpTreeVisitor>
         return ok ? info : LeafInfo{};
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNode* nodep) override { CONST_BITOP_SET_FAILED("Hit unexpected op", nodep); }
     void visit(AstCCast* nodep) override {
         iterateChildrenConst(nodep);
@@ -2268,9 +2268,9 @@ private:
 
     //----------------------------------------
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNetlist* nodep) override {
         // Iterate modules backwards, in bottom-up order.  That's faster
         iterateChildrenBackwardsConst(nodep);

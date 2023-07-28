@@ -105,9 +105,9 @@ private:
         if (AstNode* const subnodep = nodep->virtRefDType2p()) subnodep->user1Inc();
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeModule* nodep) override {
         if (m_modp) m_modp->user1Inc();  // e.g. Class under Package
         VL_RESTORER(m_modp);

@@ -216,8 +216,8 @@ class SchedGraphBuilder final : public VNVisitor<SchedGraphBuilder> {
         }
     }
 
-    public:
-// VISIT methods
+public:
+    // VISIT methods
     void visit(AstActive* nodep) override {
         AstSenTree* const senTreep = nodep->sensesp();
         UASSERT_OBJ(senTreep->hasClocked() || senTreep->hasCombo() || senTreep->hasHybrid(), nodep,

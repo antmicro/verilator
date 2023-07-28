@@ -213,9 +213,9 @@ private:
         return out;
     }
 
-    public:
 public:
-// VISITORS - BOTH
+public:
+    // VISITORS - BOTH
     void visit(AstNodeModule* nodep) override {
         const AstNodeModule* const origModp = m_modp;
         VL_RESTORER(m_modp);
@@ -264,9 +264,9 @@ public:
         }
     }
 
-    public:
 public:
-// VISITORS - TOGGLE COVERAGE
+public:
+    // VISITORS - TOGGLE COVERAGE
     void visit(AstVar* nodep) override {
         iterateChildren(nodep);
         if (m_modp && !m_inToggleOff && !m_state.m_inModOff && nodep->fileline()->coverageOn()
@@ -406,9 +406,9 @@ public:
         }
     }
 
-    public:
 public:
-// VISITORS - LINE COVERAGE
+public:
+    // VISITORS - LINE COVERAGE
     // Note not AstNodeIf; other types don't get covered
     void visit(AstIf* nodep) override {
         UINFO(4, " IF: " << nodep << endl);
@@ -555,9 +555,9 @@ public:
         }
     }
 
-    public:
 public:
-// VISITORS - BOTH
+public:
+    // VISITORS - BOTH
     void visit(AstNode* nodep) override {
         iterateChildren(nodep);
         lineTrack(nodep);

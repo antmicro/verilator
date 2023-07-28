@@ -246,9 +246,9 @@ private:
         addToSubFunc(new AstComment{m_traVscp->fileline(), cmt, true});
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstScope* nodep) override {
         UASSERT_OBJ(!m_currScopep, nodep, "Should not nest");
         UASSERT_OBJ(m_subFuncps.empty(), nodep, "Should not nest");
@@ -352,9 +352,9 @@ public:
         m_signals.emplace_back(nodep);
     }
 
-    public:
 public:
-// VISITORS - Data types when tracing
+public:
+    // VISITORS - Data types when tracing
     void visit(AstConstDType* nodep) override {
         if (m_traVscp) iterate(nodep->subDTypep()->skipRefToEnump());
     }

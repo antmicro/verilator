@@ -177,9 +177,9 @@ private:
         // no setClean.. must do it in each user routine.
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
         {

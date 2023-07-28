@@ -83,9 +83,9 @@ private:
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNetlist* nodep) override {
         AstNodeModule* const modp = nodep->topModulep();
         if (!modp) {
@@ -349,9 +349,9 @@ private:
 
     // METHODS
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstScope* nodep) override {
         // Want to ignore blocks under it
         VL_RESTORER(m_scopep);

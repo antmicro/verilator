@@ -322,7 +322,7 @@ public:
     ASTGEN_MEMBERS_AstNodeTermop;
     // Know no children, and hot function, so skip iterator for speed
     // cppcheck-suppress functionConst
-    template<typename Visitor>
+    template <typename Visitor>
     void iterateChildren(Visitor& v) {}
     void dump(std::ostream& str) const override;
 };
@@ -493,7 +493,7 @@ public:
     void classOrPackagep(AstNodeModule* nodep) { m_classOrPackagep = nodep; }
     // Know no children, and hot function, so skip iterator for speed
     // cppcheck-suppress functionConst
-    template<typename Visitor>
+    template <typename Visitor>
     void iterateChildren(Visitor& v) {}
 };
 

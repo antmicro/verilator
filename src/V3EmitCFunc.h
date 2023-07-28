@@ -70,9 +70,9 @@ class EmitCLazyDecls final : public VNVisitorConst<EmitCLazyDecls> {
         m_needsBlankLine = true;
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNodeCCall* nodep) override {
         lazyDeclare(nodep->funcp());
         iterateChildrenConst(nodep);
@@ -252,9 +252,9 @@ public:
         return nullptr;
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     using EmitCConstInit::visit;
     void visit(AstCFunc* nodep) override {
         VL_RESTORER(m_useSelfForThis);

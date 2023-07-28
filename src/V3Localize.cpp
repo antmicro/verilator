@@ -125,9 +125,9 @@ private:
         m_varScopeps.clear();
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstNetlist* nodep) override {
         iterateChildrenConst(nodep);
         moveVarScopes();

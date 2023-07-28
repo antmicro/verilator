@@ -357,9 +357,9 @@ private:
         return true;
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstExtend* nodep) override {
         if (nodep->user1SetOnce()) return;  // Process once
         iterateChildren(nodep);

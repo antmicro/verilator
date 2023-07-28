@@ -216,9 +216,9 @@ private:
         m_scopep->addBlocksp(nodep);
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstScope* nodep) override {
         m_scopep = nodep;
         m_sActivep = nullptr;
@@ -319,9 +319,9 @@ private:
     const VNUser1InUse m_inuser1;
     // STATE
     LatchDetectGraph m_graph;  // Graph used to detect latches in combo always
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstVarRef* nodep) override {
         const AstVar* const varp = nodep->varp();
         if (nodep->access().isWriteOrRW() && varp->isSignal() && !varp->isUsedLoopIdx()
@@ -366,9 +366,9 @@ private:
     // MEMBERS
     const CheckType m_check;  // Process type we are checking
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstAssignDly* nodep) override {
         // Non-blocking assignments are OK in sequential processes
         if (m_check == CT_SEQ) return;
@@ -518,9 +518,9 @@ private:
         }
     }
 
-    public:
 public:
-// VISITORS
+public:
+    // VISITORS
     void visit(AstScope* nodep) override {
         m_namer.main(nodep);  // Clear last scope's names, and collect this scope's existing names
         iterateChildren(nodep);

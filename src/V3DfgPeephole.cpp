@@ -607,8 +607,8 @@ class V3DfgPeephole final : public DfgVisitor {
         }
     }
 
-    public:
-// VISIT methods
+public:
+    // VISIT methods
 
     void visit(DfgVertex*) override {}
 

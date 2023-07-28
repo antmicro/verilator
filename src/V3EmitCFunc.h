@@ -1175,7 +1175,7 @@ public:
     }
     void visit(AstStreamL* nodep) override {
         // Attempt to use a "fast" stream function for slice size = power of 2
-        if (m_wideTempRefp->widthMin() == 0) {
+        if (m_wideTempRefp && m_wideTempRefp->widthMin() == 0) {
             puts("VL_STREAML_DQI(");
             puts(m_wideTempRefp->varp()->nameProtect());
             puts(", ");

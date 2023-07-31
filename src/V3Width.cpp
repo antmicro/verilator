@@ -2633,11 +2633,14 @@ private:
         // If the package is std::process, set m_process type to VlProcessRef
         if (m_pkgp && m_pkgp->name() == "std" && nodep->name() == "process") {
             if (AstVar* const varp = VN_CAST(memberMap.findMember(nodep, "m_process"), Var)) {
-                AstBasicDType* const dtypep = new AstBasicDType{
+                AstNodeDType* const dtypep = varp->getChildDTypep();
+                if (!varp->dtypep()) {
+                    VL_DO_DANGLING(pushDeletep(dtypep->unlinkFrBack()), dtypep);
+                }
+                AstBasicDType* const newdtypep = new AstBasicDType{
                     nodep->fileline(), VBasicDTypeKwd::PROCESS_REFERENCE, VSigning::UNSIGNED};
-                v3Global.rootp()->typeTablep()->addTypesp(dtypep);
-                varp->getChildDTypep()->unlinkFrBack();
-                varp->dtypep(dtypep);
+                v3Global.rootp()->typeTablep()->addTypesp(newdtypep);
+                varp->dtypep(newdtypep);
             }
         }
         // Must do extends first, as we may in functions under this class

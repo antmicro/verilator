@@ -5315,7 +5315,6 @@ private:
             nodep->didWidth(true);
             return;
         }
-        if (m_pkgp && m_pkgp->name() == "std") nodep->isFromStd(true);
         if (nodep->classMethod() && nodep->name() == "rand_mode") {
             nodep->v3error("The 'rand_mode' method is built-in and cannot be overridden"
                            " (IEEE 1800-2017 18.8)");
@@ -5592,7 +5591,9 @@ private:
             || (!nodep->taskp()
                 && (nodep->name() == "get_randstate" || nodep->name() == "set_randstate"))) {
             // TODO perhaps this should move to V3LinkDot
-            if (!m_classp) {
+
+            AstClass* const classp = VN_CAST(nodep->classOrPackagep(), Class);
+            if (!classp) {
                 nodep->v3error("Calling implicit class method " << nodep->prettyNameQ()
                                                                 << " without being under class");
                 nodep->replaceWith(new AstConst{nodep->fileline(), 0});
@@ -5600,14 +5601,14 @@ private:
                 return;
             }
             if (nodep->name() == "randomize") {
-                nodep->taskp(V3Randomize::newRandomizeFunc(m_classp));
+                nodep->taskp(V3Randomize::newRandomizeFunc(classp));
                 memberMap.clear();
             } else if (nodep->name() == "srandom") {
-                nodep->taskp(V3Randomize::newSRandomFunc(m_classp));
+                nodep->taskp(V3Randomize::newSRandomFunc(classp));
                 memberMap.clear();
             } else if (nodep->name() == "get_randstate") {
                 methodOkArguments(nodep, 0, 0);
-                m_classp->baseMostClassp()->needRNG(true);
+                classp->baseMostClassp()->needRNG(true);
                 v3Global.useRandomizeMethods(true);
                 AstCExpr* const newp
                     = new AstCExpr{nodep->fileline(), "__Vm_rng.get_randstate()", 1, true};
@@ -5620,7 +5621,7 @@ private:
                 AstNodeExpr* const expr1p = VN_AS(nodep->pinsp(), Arg)->exprp();  // May edit
                 iterateCheckString(nodep, "LHS", expr1p, BOTH);
                 AstNodeExpr* const exprp = VN_AS(nodep->pinsp(), Arg)->exprp();
-                m_classp->baseMostClassp()->needRNG(true);
+                classp->baseMostClassp()->needRNG(true);
                 v3Global.useRandomizeMethods(true);
                 AstCExpr* const newp
                     = new AstCExpr{nodep->fileline(), "__Vm_rng.set_randstate(", 1, true};
@@ -7542,9 +7543,45 @@ public:
 //######################################################################
 // Width class functions
 
+class LinkPackageVisitor final : public VNVisitor {
+private:
+    AstPackage* m_pkgp = nullptr;  // Current package
+    AstNodeModule* m_clpp = nullptr;  // Current class or package
+
+    void visit(AstNodeFTaskRef* nodep) {
+        if (!nodep->classOrPackagep()) nodep->classOrPackagep(m_clpp);
+        iterateChildren(nodep);
+    }
+    void visit(AstNodeFTask* nodep) {
+        // if (!nodep->classOrPackagep()) nodep->classOrPackagep(m_clpp);
+        if (m_pkgp->name() == "std") nodep->isFromStd(true);
+        iterateChildren(nodep);
+    }
+    void visit(AstClass* nodep) override {
+        // if (!nodep->classOrPackagep()) nodep->classOrPackagep(m_clpp);
+        VL_RESTORER(m_clpp);
+        m_clpp = nodep;
+        iterateChildren(nodep);
+    }
+    void visit(AstPackage* nodep) override {
+        VL_RESTORER(m_pkgp);
+        VL_RESTORER(m_clpp);
+        m_clpp = nodep;
+        m_pkgp = nodep;
+        iterateChildren(nodep);
+    }
+
+    void visit(AstNode* nodep) override { iterateChildren(nodep); }
+
+public:
+    // CONSTRUCTORS
+    explicit LinkPackageVisitor(AstNetlist* nodep) { iterate(nodep); }
+};
+
 void V3Width::width(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     {
+        LinkPackageVisitor lpVisitor{nodep};
         // We should do it in bottom-up module order, but it works in any order.
         const WidthClearVisitor cvisitor{nodep};
         WidthVisitor visitor{false, false};

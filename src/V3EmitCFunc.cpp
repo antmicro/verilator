@@ -471,6 +471,7 @@ void EmitCFunc::emitCvtPackStr(AstNode* nodep) {
 }
 
 void EmitCFunc::emitCvtWideArray(AstNode* nodep, AstNode* fromp) {
+    nodep->v3fatalSrc("emitCvtWideArray was called");
     putbs("VL_CVT_W_A(");
     iterateConst(nodep);
     puts(", ");

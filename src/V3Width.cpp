@@ -7551,11 +7551,11 @@ private:
     AstPackage* m_pkgp = nullptr;  // Current package
     AstNodeModule* m_clpp = nullptr;  // Current class or package
 
-    void visit(AstNodeFTaskRef* nodep) {
+    void visit(AstNodeFTaskRef* nodep) override {
         if (!nodep->classOrPackagep()) nodep->classOrPackagep(m_clpp);
         iterateChildren(nodep);
     }
-    void visit(AstNodeFTask* nodep) {
+    void visit(AstNodeFTask* nodep) override {
         // if (!nodep->classOrPackagep()) nodep->classOrPackagep(m_clpp);
         if (m_pkgp->name() == "std") nodep->isFromStd(true);
         iterateChildren(nodep);

@@ -191,23 +191,44 @@ std::ostream& operator<<(std::ostream& str, const WidthVP* vup) {
 }
 
 //######################################################################
+// Clear didWidth and save required context info in nodes
 
-class WidthClearVisitor final {
-    // Rather than a VNVisitor, can just quickly touch every node
-    void clearWidthRecurse(AstNode* nodep) {
-        for (; nodep; nodep = nodep->nextp()) {
-            nodep->didWidth(false);
-            if (nodep->op1p()) clearWidthRecurse(nodep->op1p());
-            if (nodep->op2p()) clearWidthRecurse(nodep->op2p());
-            if (nodep->op3p()) clearWidthRecurse(nodep->op3p());
-            if (nodep->op4p()) clearWidthRecurse(nodep->op4p());
-        }
+class WidthPrepareVisitor final : public VNVisitor {
+private:
+    AstPackage* m_pkgp = nullptr;  // Current package
+    AstNodeModule* m_clpp = nullptr;  // Current class or package
+
+    void clearAndIterate(AstNode* nodep) {
+        nodep->didWidth(false);  
+        iterateChildren(nodep);  
     }
+
+    void visit(AstNodeFTaskRef* nodep) override {
+        if (!nodep->classOrPackagep()) nodep->classOrPackagep(m_clpp);
+        clearAndIterate(nodep);
+    }
+    void visit(AstNodeFTask* nodep) override {
+        if (m_pkgp && m_pkgp->name() == "std") nodep->isFromStd(true);
+        clearAndIterate(nodep);
+    }
+    void visit(AstClass* nodep) override {
+        VL_RESTORER(m_clpp);
+        m_clpp = nodep;
+        clearAndIterate(nodep);
+    }
+    void visit(AstPackage* nodep) override {
+        VL_RESTORER(m_pkgp);
+        VL_RESTORER(m_clpp);
+        m_clpp = nodep;
+        m_pkgp = nodep;
+        clearAndIterate(nodep);
+    }
+
+    void visit(AstNode* nodep) override { clearAndIterate(nodep); }
 
 public:
     // CONSTRUCTORS
-    explicit WidthClearVisitor(AstNetlist* nodep) { clearWidthRecurse(nodep); }
-    virtual ~WidthClearVisitor() = default;
+    explicit WidthPrepareVisitor(AstNetlist* nodep) { iterate(nodep); }
 };
 
 //######################################################################
@@ -226,7 +247,6 @@ private:
     // STATE
     VMemberMap memberMap;  // Member names cached for fast lookup
     WidthVP* m_vup = nullptr;  // Current node state
-    AstClass* m_classp = nullptr;  // Current class
     const AstCell* m_cellp = nullptr;  // Current cell for arrayed instantiations
     const AstEnumItem* m_enumItemp = nullptr;  // Current enum item
     const AstNodeFTask* m_ftaskp = nullptr;  // Current function/task
@@ -234,7 +254,6 @@ private:
     const AstWith* m_withp = nullptr;  // Current 'with' statement
     const AstFunc* m_funcp = nullptr;  // Current function
     const AstAttrOf* m_attrp = nullptr;  // Current attribute
-    AstPackage* m_pkgp = nullptr;  // Current package
     const bool m_paramsOnly;  // Computing parameter value; limit operation
     const bool m_doGenerate;  // Do errors later inside generate statement
     int m_dtTables = 0;  // Number of created data type tables
@@ -2630,30 +2649,28 @@ private:
     }
     void visit(AstClass* nodep) override {
         if (nodep->didWidthAndSet()) return;
+
         // If the package is std::process, set m_process type to VlProcessRef
-        if (m_pkgp && m_pkgp->name() == "std" && nodep->name() == "process") {
-            if (AstVar* const varp = VN_CAST(memberMap.findMember(nodep, "m_process"), Var)) {
-                AstNodeDType* const dtypep = varp->getChildDTypep();
-                if (!varp->dtypep()) {
-                    VL_DO_DANGLING(pushDeletep(dtypep->unlinkFrBack()), dtypep);
+        if (nodep->name() == "process") {
+            AstPackage* const packagep = getItemPackage(nodep);
+            // Check if it's in std
+            if (packagep && packagep->name() == "std") {
+                if (AstVar* const varp = VN_CAST(memberMap.findMember(nodep, "m_process"), Var)) {
+                    AstNodeDType* const dtypep = varp->getChildDTypep();
+                    if (!varp->dtypep()) {
+                        VL_DO_DANGLING(pushDeletep(dtypep->unlinkFrBack()), dtypep);
+                    }
+                    AstBasicDType* const newdtypep = new AstBasicDType{
+                        nodep->fileline(), VBasicDTypeKwd::PROCESS_REFERENCE, VSigning::UNSIGNED};
+                    v3Global.rootp()->typeTablep()->addTypesp(newdtypep);
+                    varp->dtypep(newdtypep);
                 }
-                AstBasicDType* const newdtypep = new AstBasicDType{
-                    nodep->fileline(), VBasicDTypeKwd::PROCESS_REFERENCE, VSigning::UNSIGNED};
-                v3Global.rootp()->typeTablep()->addTypesp(newdtypep);
-                varp->dtypep(newdtypep);
             }
         }
         // Must do extends first, as we may in functions under this class
         // start following a tree of extends that takes us to other classes
-        VL_RESTORER(m_classp);
-        m_classp = nodep;
         userIterateAndNext(nodep->extendsp(), nullptr);
         userIterateChildren(nodep, nullptr);  // First size all members
-    }
-    void visit(AstPackage* nodep) override {
-        VL_RESTORER(m_pkgp);
-        m_pkgp = nodep;
-        userIterateChildren(nodep, nullptr);
     }
     void visit(AstThisRef* nodep) override {
         if (nodep->didWidthAndSet()) return;
@@ -7546,47 +7563,11 @@ public:
 //######################################################################
 // Width class functions
 
-class LinkPackageVisitor final : public VNVisitor {
-private:
-    AstPackage* m_pkgp = nullptr;  // Current package
-    AstNodeModule* m_clpp = nullptr;  // Current class or package
-
-    void visit(AstNodeFTaskRef* nodep) override {
-        if (!nodep->classOrPackagep()) nodep->classOrPackagep(m_clpp);
-        iterateChildren(nodep);
-    }
-    void visit(AstNodeFTask* nodep) override {
-        // if (!nodep->classOrPackagep()) nodep->classOrPackagep(m_clpp);
-        if (m_pkgp && m_pkgp->name() == "std") nodep->isFromStd(true);
-        iterateChildren(nodep);
-    }
-    void visit(AstClass* nodep) override {
-        // if (!nodep->classOrPackagep()) nodep->classOrPackagep(m_clpp);
-        VL_RESTORER(m_clpp);
-        m_clpp = nodep;
-        iterateChildren(nodep);
-    }
-    void visit(AstPackage* nodep) override {
-        VL_RESTORER(m_pkgp);
-        VL_RESTORER(m_clpp);
-        m_clpp = nodep;
-        m_pkgp = nodep;
-        iterateChildren(nodep);
-    }
-
-    void visit(AstNode* nodep) override { iterateChildren(nodep); }
-
-public:
-    // CONSTRUCTORS
-    explicit LinkPackageVisitor(AstNetlist* nodep) { iterate(nodep); }
-};
-
 void V3Width::width(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     {
-        LinkPackageVisitor lpVisitor{nodep};
         // We should do it in bottom-up module order, but it works in any order.
-        const WidthClearVisitor cvisitor{nodep};
+        const WidthPrepareVisitor pvisitor{nodep};
         WidthVisitor visitor{false, false};
         (void)visitor.mainAcceptEdit(nodep);
         WidthRemoveVisitor rvisitor;

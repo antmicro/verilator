@@ -7557,7 +7557,7 @@ private:
     }
     void visit(AstNodeFTask* nodep) override {
         // if (!nodep->classOrPackagep()) nodep->classOrPackagep(m_clpp);
-        if (m_pkgp->name() == "std") nodep->isFromStd(true);
+        if (m_pkgp && m_pkgp->name() == "std") nodep->isFromStd(true);
         iterateChildren(nodep);
     }
     void visit(AstClass* nodep) override {

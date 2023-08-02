@@ -195,7 +195,6 @@ std::ostream& operator<<(std::ostream& str, const WidthVP* vup) {
 
 class WidthPrepareVisitor final : public VNVisitor {
 private:
-    AstPackage* m_pkgp = nullptr;  // Current package
     AstNodeModule* m_clpp = nullptr;  // Current class or package
 
     void clearAndIterate(AstNode* nodep) {
@@ -207,20 +206,14 @@ private:
         if (!nodep->classOrPackagep()) nodep->classOrPackagep(m_clpp);
         clearAndIterate(nodep);
     }
-    void visit(AstNodeFTask* nodep) override {
-        if (m_pkgp && m_pkgp->name() == "std") nodep->isFromStd(true);
-        clearAndIterate(nodep);
-    }
     void visit(AstClass* nodep) override {
         VL_RESTORER(m_clpp);
         m_clpp = nodep;
         clearAndIterate(nodep);
     }
     void visit(AstPackage* nodep) override {
-        VL_RESTORER(m_pkgp);
         VL_RESTORER(m_clpp);
         m_clpp = nodep;
-        m_pkgp = nodep;
         clearAndIterate(nodep);
     }
 
@@ -2650,11 +2643,11 @@ private:
     void visit(AstClass* nodep) override {
         if (nodep->didWidthAndSet()) return;
 
-        // If the package is std::process, set m_process type to VlProcessRef
+        // If the class is std::process
         if (nodep->name() == "process") {
             AstPackage* const packagep = getItemPackage(nodep);
-            // Check if it's in std
             if (packagep && packagep->name() == "std") {
+                // Change type of m_process to VlProcessRef
                 if (AstVar* const varp = VN_CAST(memberMap.findMember(nodep, "m_process"), Var)) {
                     AstNodeDType* const dtypep = varp->getChildDTypep();
                     if (!varp->dtypep()) {
@@ -2665,8 +2658,13 @@ private:
                     v3Global.rootp()->typeTablep()->addTypesp(newdtypep);
                     varp->dtypep(newdtypep);
                 }
+                // Mark that self requires process instance
+                if (AstNodeFTask* const ftp = VN_CAST(memberMap.findMember(nodep, "self"), NodeFTask)) {
+                    ftp->setNeedProcess();
+                }
             }
         }
+
         // Must do extends first, as we may in functions under this class
         // start following a tree of extends that takes us to other classes
         userIterateAndNext(nodep->extendsp(), nullptr);
@@ -5611,7 +5609,6 @@ private:
             || (!nodep->taskp()
                 && (nodep->name() == "get_randstate" || nodep->name() == "set_randstate"))) {
             // TODO perhaps this should move to V3LinkDot
-
             AstClass* const classp = VN_CAST(nodep->classOrPackagep(), Class);
             if (!classp) {
                 nodep->v3error("Calling implicit class method " << nodep->prettyNameQ()

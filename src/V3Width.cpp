@@ -191,37 +191,23 @@ std::ostream& operator<<(std::ostream& str, const WidthVP* vup) {
 }
 
 //######################################################################
-// Clear didWidth and save required context info in nodes
 
-class WidthPrepareVisitor final : public VNVisitor {
-private:
-    AstNodeModule* m_clpp = nullptr;  // Current class or package
-
-    void clearAndIterate(AstNode* nodep) {
-        nodep->didWidth(false);
-        iterateChildren(nodep);
+class WidthClearVisitor final {
+    // Rather than a VNVisitor, can just quickly touch every node
+    void clearWidthRecurse(AstNode* nodep) {
+        for (; nodep; nodep = nodep->nextp()) {
+            nodep->didWidth(false);
+            if (nodep->op1p()) clearWidthRecurse(nodep->op1p());
+            if (nodep->op2p()) clearWidthRecurse(nodep->op2p());
+            if (nodep->op3p()) clearWidthRecurse(nodep->op3p());
+            if (nodep->op4p()) clearWidthRecurse(nodep->op4p());
+        }
     }
-
-    void visit(AstNodeFTaskRef* nodep) override {
-        if (!nodep->classOrPackagep()) nodep->classOrPackagep(m_clpp);
-        clearAndIterate(nodep);
-    }
-    void visit(AstClass* nodep) override {
-        VL_RESTORER(m_clpp);
-        m_clpp = nodep;
-        clearAndIterate(nodep);
-    }
-    void visit(AstPackage* nodep) override {
-        VL_RESTORER(m_clpp);
-        m_clpp = nodep;
-        clearAndIterate(nodep);
-    }
-
-    void visit(AstNode* nodep) override { clearAndIterate(nodep); }
 
 public:
     // CONSTRUCTORS
-    explicit WidthPrepareVisitor(AstNetlist* nodep) { iterate(nodep); }
+    explicit WidthClearVisitor(AstNetlist* nodep) { clearWidthRecurse(nodep); }
+    virtual ~WidthClearVisitor() = default;
 };
 
 //######################################################################
@@ -5611,13 +5597,7 @@ private:
                 && (nodep->name() == "get_randstate" || nodep->name() == "set_randstate"))) {
             // TODO perhaps this should move to V3LinkDot
             AstClass* const classp = VN_CAST(nodep->classOrPackagep(), Class);
-            if (!classp) {
-                nodep->v3error("Calling implicit class method " << nodep->prettyNameQ()
-                                                                << " without being under class");
-                nodep->replaceWith(new AstConst{nodep->fileline(), 0});
-                VL_DO_DANGLING(pushDeletep(nodep), nodep);
-                return;
-            }
+            UASSERT_OBJ(classp, nodep, "Should have failed in V3LinkDot");
             if (nodep->name() == "randomize") {
                 nodep->taskp(V3Randomize::newRandomizeFunc(classp));
                 memberMap.clear();
@@ -7565,7 +7545,7 @@ void V3Width::width(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     {
         // We should do it in bottom-up module order, but it works in any order.
-        const WidthPrepareVisitor pvisitor{nodep};
+        const WidthClearVisitor cvisitor{nodep};
         WidthVisitor visitor{false, false};
         (void)visitor.mainAcceptEdit(nodep);
         WidthRemoveVisitor rvisitor;

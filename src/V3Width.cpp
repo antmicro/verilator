@@ -199,8 +199,8 @@ private:
     AstNodeModule* m_clpp = nullptr;  // Current class or package
 
     void clearAndIterate(AstNode* nodep) {
-        nodep->didWidth(false);  
-        iterateChildren(nodep);  
+        nodep->didWidth(false);
+        iterateChildren(nodep);
     }
 
     void visit(AstNodeFTaskRef* nodep) override {

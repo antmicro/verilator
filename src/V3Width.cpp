@@ -2659,8 +2659,9 @@ private:
                     varp->dtypep(newdtypep);
                 }
                 // Mark that self requires process instance
-                if (AstNodeFTask* const ftp = VN_CAST(memberMap.findMember(nodep, "self"), NodeFTask)) {
-                    ftp->setNeedProcess();
+                if (AstNodeFTask* const ftaskp
+                    = VN_CAST(memberMap.findMember(nodep, "self"), NodeFTask)) {
+                    ftaskp->setNeedProcess();
                 }
             }
         }

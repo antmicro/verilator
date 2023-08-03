@@ -370,8 +370,10 @@ VlRNG& VlRNG::vl_thread_rng() VL_MT_SAFE {
     return t_rng;
 }
 
-WDataOutP VL_RANDOM_W(int obits, WDataOutP outwp) VL_MT_SAFE {
-    for (int i = 0; i < VL_WORDS_I(obits); ++i) outwp[i] = vl_rand64();
+IData VL_RANDOM_I(VlRNG& rng) VL_MT_SAFE { return rng.rand64(); }
+QData VL_RANDOM_Q(VlRNG& rng) VL_MT_SAFE { return rng.rand64(); }
+WDataOutP VL_RANDOM_W(VlRNG& rng, int obits, WDataOutP outwp) VL_MT_SAFE {
+    for (int i = 0; i < VL_WORDS_I(obits); ++i) outwp[i] = rng.rand64();
     // Last word is unclean
     return outwp;
 }
@@ -382,31 +384,33 @@ WDataOutP VL_RANDOM_RNG_W(VlRNG& rngr, int obits, WDataOutP outwp) VL_MT_UNSAFE 
     return outwp;
 }
 
-IData VL_RANDOM_SEEDED_II(IData& seedr) VL_MT_SAFE {
+IData VL_RANDOM_SEEDED_II(VlRNG& rng, IData& seedr) VL_MT_SAFE {
     // $random - seed is a new seed to apply, then we return new seed
-    Verilated::threadContextp()->randSeed(static_cast<int>(seedr));
-    seedr = VL_RANDOM_I();
-    return VL_RANDOM_I();
+    rng.srandom(seedr);
+    seedr = VL_RANDOM_I(rng);
+    return VL_RANDOM_I(rng);
 }
-IData VL_URANDOM_SEEDED_II(IData seed) VL_MT_SAFE {
+IData VL_URANDOM_SEEDED_II(VlRNG& rng, IData seed) VL_MT_SAFE {
     // $urandom - seed is a new seed to apply
-    Verilated::threadContextp()->randSeed(static_cast<int>(seed));
-    return VL_RANDOM_I();
+    rng.srandom(seed);
+    return VL_RANDOM_I(rng);
 }
 IData VL_RAND_RESET_I(int obits) VL_MT_SAFE {
+    VlRNG& rng = VlRNG::vl_thread_rng();
     if (Verilated::threadContextp()->randReset() == 0) return 0;
     IData data = ~0;
     if (Verilated::threadContextp()->randReset() != 1) {  // if 2, randomize
-        data = VL_RANDOM_I();
+        data = VL_RANDOM_I(rng);
     }
     data &= VL_MASK_I(obits);
     return data;
 }
 QData VL_RAND_RESET_Q(int obits) VL_MT_SAFE {
+    VlRNG& rng = VlRNG::vl_thread_rng();
     if (Verilated::threadContextp()->randReset() == 0) return 0;
     QData data = ~0ULL;
     if (Verilated::threadContextp()->randReset() != 1) {  // if 2, randomize
-        data = VL_RANDOM_Q();
+        data = VL_RANDOM_Q(rng);
     }
     data &= VL_MASK_Q(obits);
     return data;

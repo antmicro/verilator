@@ -82,11 +82,11 @@ extern void VL_PRINTF_MT(const char* formatp, ...) VL_ATTR_PRINTF(1) VL_MT_SAFE;
 extern void VL_DBG_MSGF(const char* formatp, ...) VL_ATTR_PRINTF(1) VL_MT_SAFE;
 
 // EMIT_RULE: VL_RANDOM:  oclean=dirty
-inline IData VL_RANDOM_I() VL_MT_SAFE { return vl_rand64(); }
-inline QData VL_RANDOM_Q() VL_MT_SAFE { return vl_rand64(); }
-extern WDataOutP VL_RANDOM_W(int obits, WDataOutP outwp) VL_MT_SAFE;
-extern IData VL_RANDOM_SEEDED_II(IData& seedr) VL_MT_SAFE;
-extern IData VL_URANDOM_SEEDED_II(IData seed) VL_MT_SAFE;
+extern IData VL_RANDOM_I(VlRNG& rng) VL_MT_SAFE;
+extern QData VL_RANDOM_Q(VlRNG& rng) VL_MT_SAFE;
+extern WDataOutP VL_RANDOM_W(VlRNG& rng, int obits, WDataOutP outwp) VL_MT_SAFE;
+extern IData VL_RANDOM_SEEDED_II(VlRNG& rng, IData& seedr) VL_MT_SAFE;
+extern IData VL_URANDOM_SEEDED_II(VlRNG& rng, IData seed) VL_MT_SAFE;
 inline IData VL_URANDOM_RANGE_I(IData hi, IData lo) {
     const uint64_t rnd = vl_rand64();
     if (VL_LIKELY(hi > lo)) {

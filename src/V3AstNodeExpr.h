@@ -1588,6 +1588,7 @@ class AstRand final : public AstNodeExpr {
     // @astgen op1 := seedp : Optional[AstNode]
     const bool m_urandom = false;  // $urandom vs $random
     const bool m_reset = false;  // Random reset, versus always random
+    bool m_needRNG = false;  // Uses local vs global RNG
 public:
     class Reset {};
     AstRand(FileLine* fl, Reset, AstNodeDType* dtp, bool reset)
@@ -1606,13 +1607,15 @@ public:
                        : (m_urandom ? "%f$urandom()" : "%f$random()");
     }
     string emitC() override {
+        string rng = m_needRNG ? "vlProcess()->rng()"  //
+                               : "VlRNG::vl_thread_rng()";
         return m_reset ? "VL_RAND_RESET_%nq(%nw, %P)"
                : seedp()
                    // cppcheck-has-bug-suppress knownConditionTrueFalse
-                   ? (urandom() ? "VL_URANDOM_SEEDED_%nq%lq(%li)"  //
-                                : "VL_RANDOM_SEEDED_%nq%lq(%li)")
-                   : (isWide() ? "VL_RANDOM_%nq(%nw, %P)"  //
-                               : "VL_RANDOM_%nq()");
+                   ? (urandom() ? "VL_URANDOM_SEEDED_%nq%lq(" + rng + "%, %li)"  //
+                                : "VL_RANDOM_SEEDED_%nq%lq(" + rng + "%, %li)")
+                   : (isWide() ? "VL_RANDOM_%nq(" + rng + "%, %nw, %P)"  //
+                               : "VL_RANDOM_%nq(" + rng + ")");
     }
     bool cleanOut() const override { return false; }
     bool isGateOptimizable() const override { return false; }
@@ -1625,6 +1628,7 @@ public:
     }
     bool reset() const { return m_reset; }
     bool urandom() const { return m_urandom; }
+    void setNeedRNG() { m_needRNG = true; }
 };
 class AstRandRNG final : public AstNodeExpr {
     // Random used in a class using VlRNG
@@ -1636,16 +1640,11 @@ public:
         : ASTGEN_SUPER_RandRNG(fl) {
         dtypep(dtp);
     }
-    AstRandRNG(FileLine* fl, AstNodeDType* dtp, string rngName)
-        : ASTGEN_SUPER_RandRNG(fl)
-        , m_rngName(rngName) {
-        dtypep(dtp);
-    }
     ASTGEN_MEMBERS_AstRandRNG;
     string emitVerilog() override { return "%f$rngrandom()"; }
     string emitC() override {
-        return isWide() ? "VL_RANDOM_RNG_%nq(" + m_rngName + ", %nw, %P)"  //
-                        : "VL_RANDOM_RNG_%nq(" + m_rngName + ")";
+        return isWide() ? "VL_RANDOM_RNG_%nq(__Vm_rng, %nw, %P)"  //
+                        : "VL_RANDOM_RNG_%nq(__Vm_rng)";
     }
     bool cleanOut() const override { return false; }
     bool isGateOptimizable() const override { return false; }

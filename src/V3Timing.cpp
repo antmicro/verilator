@@ -1056,12 +1056,7 @@ private:
     }
     void visit(AstRand* nodep) override {
         if (nodep->user1SetOnce()) return;
-        if (m_procp->user2() & T_HAS_PROC) {
-            AstRandRNG* const randp
-                = new AstRandRNG{nodep->fileline(), nodep->dtypep(), "vlProcess->rng()"};
-            nodep->replaceWith(randp);
-            VL_DO_DANGLING(pushDeletep(nodep), nodep);
-        }
+        if (m_procp->user2() & T_HAS_PROC) nodep->setNeedRNG();
     }
 
     //--------------------

@@ -1630,6 +1630,7 @@ class AstRandRNG final : public AstNodeExpr {
     // Random used in a class using VlRNG
     // Return a random number, based upon width()
     const string m_rngName = "__Vm_rng";
+
 public:
     AstRandRNG(FileLine* fl, AstNodeDType* dtp)
         : ASTGEN_SUPER_RandRNG(fl) {

@@ -74,38 +74,6 @@ extern std::string VL_TO_STRING_W(int words, const WDataInP obj);
 #define VL_OUTW(name, msb, lsb, words) VlWide<words> name  ///< Declare output signal, 65+ bits
 
 //===================================================================
-// VlProcess stores metadata of running processes
-
-class VlProcess final {
-    // MEMBERS
-    int m_state;  // Current state of the process
-    VlRNG m_rng;  // Random Number Generator of the process
-
-public:
-    // TYPES
-    enum : int {  // Type int for compatibility with $c
-        FINISHED = 0,
-        RUNNING = 1,
-        WAITING = 2,
-        SUSPENDED = 3,
-        KILLED = 4,
-    };
-
-    // CONSTRUCTORS
-    VlProcess()
-        : m_state{RUNNING} {}
-
-    // METHODS
-    int state() { return m_state; }
-    void state(int s) { m_state = s; }
-    VlRNG& rng() { return m_rng; };
-};
-
-using VlProcessRef = std::shared_ptr<VlProcess>;
-
-inline std::string VL_TO_STRING(const VlProcessRef& p) { return std::string("process"); }
-
-//===================================================================
 // Activity trigger vector
 
 template <std::size_t T_size>  //
@@ -216,6 +184,38 @@ public:
 inline IData VL_RANDOM_RNG_I(VlRNG& rngr) VL_MT_UNSAFE { return rngr.rand64(); }
 inline QData VL_RANDOM_RNG_Q(VlRNG& rngr) VL_MT_UNSAFE { return rngr.rand64(); }
 extern WDataOutP VL_RANDOM_RNG_W(VlRNG& rngr, int obits, WDataOutP outwp) VL_MT_UNSAFE;
+
+//===================================================================
+// Metadata of processes
+
+class VlProcess final {
+    // MEMBERS
+    int m_state;  // Current state of the process
+    VlRNG m_rng;  // Random Number Generator of the process
+
+public:
+    // TYPES
+    enum : int {  // Type int for compatibility with $c
+        FINISHED = 0,
+        RUNNING = 1,
+        WAITING = 2,
+        SUSPENDED = 3,
+        KILLED = 4,
+    };
+
+    // CONSTRUCTORS
+    VlProcess()
+        : m_state{RUNNING} {}
+
+    // METHODS
+    int state() { return m_state; }
+    void state(int s) { m_state = s; }
+    VlRNG& rng() { return m_rng; };
+};
+
+using VlProcessRef = std::shared_ptr<VlProcess>;
+
+inline std::string VL_TO_STRING(const VlProcessRef& p) { return std::string("process"); }
 
 //===================================================================
 // Readmem/Writemem operation classes

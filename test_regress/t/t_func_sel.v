@@ -20,12 +20,13 @@ module t(/*AUTOARG*/
    wire [127:0] result;
 
    wire [103:0] in;
+   logic [103:0] out1;
    reg [103:0]  out;
 
    assign in = {crc[39:0], crc[63:0]};
 
    always @(posedge clk) begin
-      out <= reverse(in);
+      out <= (out1 = reverse(in));
    end
 
    assign result = {24'h0, out };

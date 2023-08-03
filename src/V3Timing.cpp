@@ -552,7 +552,7 @@ private:
         if (!sensesp->user2p()) {
             std::stringstream ss;
             ss << '"';
-            V3EmitV::verilogForTree(sensesp, ss);
+
             ss << '"';
             auto* const commentp = new AstCExpr{sensesp->fileline(), ss.str(), 0};
             commentp->dtypeSetString();

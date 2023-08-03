@@ -17,7 +17,7 @@ scenarios(dist => 1);
 
 our $Release_Ok_Re = qr!(^test_regress/t/|^examples/)!;
 our $Exempt_Author_Re = qr!(^ci/|^nodist/fastcov.py|^nodist/fuzzer|^test_regress/t/.*\.(v|cpp|h)$)!;
-our $Exempt_Files_Re = qr!(^\.|/\.|\.gitignore$|\.dat|\.gprof|\.mem|\.out$|\.png$|\.tree|\.vc$|\.vcd$|^\.)!;
+our $Exempt_Files_Re = qr!(^\.|/\.|\.gitignore$|\.dat|\.gprof|\.mem|\.out$|\.png$|\.tree|\.json|\.vc$|\.vcd$|^\.)!;
 our @Exempt_Files_List = qw(
     Artistic
     CPPLINT.cfg
@@ -51,6 +51,7 @@ our @Exempt_Files_List = qw(
     test_regress/t/tsub/t_flag_f_tsub.v
     test_regress/t/tsub/t_flag_f_tsub_inc.v
     verilator.pc.in
+    bin/jdifflib/__init__.py
     );
 
 my $root = "..";

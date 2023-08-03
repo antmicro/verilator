@@ -333,6 +333,7 @@ detailed descriptions of these arguments.
     --dump-dfg                  Enable dumping DfgGraphs to .dot files
     --dump-graph                Enable dumping V3Graphs to .dot files
     --dump-tree                 Enable dumping Ast .tree files
+    --dump-tree-json            Enable dumping Ast .json files
     --dump-tree-addrids         Use short identifiers instead of addresses
     --dump-<srcfile>            Enable dumping everything in source file
     --dumpi-dfg <level>         Enable dumping DfgGraphs to .dot files at level

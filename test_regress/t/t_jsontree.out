@@ -1,0 +1,10 @@
+[39mTEST [39m"$root" [39m<built-in>:0:0 [39m0x55b700efa000
+ [39mop1:
+   [31mMODULE[39m->[32mMODULe [39m"__024root" [39mt_do_while.v:16:8 [31m0x55b700f366c0[39m->[32m0x55b700f36620
+    [31mop2:
+      [31mCELL [31m"t" [31mt_do_while.v:16:8 [31m0x55b700f50280
+    [32mop3:
+      [32mCELL [32m"t" [32mt_do_while.v:16:8 [32m0x55b700f50280
+ [39mop4:
+   [39m... * 4
+[39m

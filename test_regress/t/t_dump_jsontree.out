@@ -1,0 +1,367 @@
+NETLIST "$root" timeprecision:1ps, timeunit:1ps
+ op1:
+   MODULE "t" level:2, timeunit:1ps
+    op2:
+      PORT "clk"
+      VAR "clk" attrClocker:UNKNOWN, ioDirection:INPUT, lifetime:NONE, varType:PORT
+       op1:
+         BASICDTYPE "LOGIC_IMPLICIT" keyword:LOGIC_IMPLICIT
+      VAR "cyc" attrClocker:UNKNOWN, ioDirection:NONE, lifetime:NONE, varType:VAR
+       op1:
+         BASICDTYPE "integer" keyword:integer, range:31:0
+       op3:
+         CONST "?32?sh0"
+      VAR "crc" attrClocker:UNKNOWN, ioDirection:NONE, lifetime:NONE, varType:VAR
+       op1:
+         BASICDTYPE "logic" keyword:logic
+          op1:
+            RANGE ""
+             op1:
+               CONST "?32?sh3f"
+             op2:
+               CONST "?32?sh0"
+      VAR "sum" attrClocker:UNKNOWN, ioDirection:NONE, lifetime:NONE, varType:VAR
+       op1:
+         BASICDTYPE "logic" keyword:logic
+          op1:
+            RANGE ""
+             op1:
+               CONST "?32?sh3f"
+             op2:
+               CONST "?32?sh0"
+      VAR "in" attrClocker:UNKNOWN, ioDirection:NONE, lifetime:NONE, varType:WIRE
+       op1:
+         BASICDTYPE "logic" keyword:logic
+          op1:
+            RANGE ""
+             op1:
+               CONST "?32?sh1f"
+             op2:
+               CONST "?32?sh0"
+      ASSIGNW ""
+       op1:
+         SELEXTRACT ""
+          op1:
+            PARSEREF "crc" expect:TEXT
+          op2:
+            CONST "?32?sh1f"
+          op3:
+            CONST "?32?sh0"
+       op2:
+         PARSEREF "in" expect:TEXT
+      VAR "out" attrClocker:UNKNOWN, ioDirection:NONE, lifetime:NONE, varType:WIRE
+       op1:
+         BASICDTYPE "logic" keyword:logic
+          op1:
+            RANGE ""
+             op1:
+               CONST "?32?sh1f"
+             op2:
+               CONST "?32?sh0"
+      CELL "test"
+       op1:
+         PIN "out" svDotName:True
+          op1:
+            SELEXTRACT ""
+             op1:
+               PARSEREF "out" expect:TEXT
+             op2:
+               CONST "?32?sh1f"
+             op3:
+               CONST "?32?sh0"
+         PIN "clk" svDotName:True
+          op1:
+            PARSEREF "clk" expect:TEXT
+         PIN "in" svDotName:True
+          op1:
+            SELEXTRACT ""
+             op1:
+               PARSEREF "in" expect:TEXT
+             op2:
+               CONST "?32?sh1f"
+             op3:
+               CONST "?32?sh0"
+      VAR "result" attrClocker:UNKNOWN, ioDirection:NONE, lifetime:NONE, varType:WIRE
+       op1:
+         BASICDTYPE "logic" keyword:logic
+          op1:
+            RANGE ""
+             op1:
+               CONST "?32?sh3f"
+             op2:
+               CONST "?32?sh0"
+      ASSIGNW ""
+       op1:
+         REPLICATE ""
+          op1:
+            CONCAT ""
+             op1:
+               CONST "32'h0"
+             op2:
+               PARSEREF "out" expect:TEXT
+          op2:
+            CONST "32'h1"
+       op2:
+         PARSEREF "result" expect:TEXT
+      ALWAYS "" keyword:always
+       op2:
+         EVENTCONTROL ""
+          op1:
+            SENTREE ""
+             op1:
+               SENITEM "" edgeType:POS
+                op1:
+                  PARSEREF "clk" expect:TEXT
+          op2:
+            BEGIN "" unnamed:True
+             op2:
+               ASSIGNDLY ""
+                op1:
+                  ADD ""
+                   op1:
+                     PARSEREF "cyc" expect:TEXT
+                   op2:
+                     CONST "?32?sh1"
+                op2:
+                  PARSEREF "cyc" expect:TEXT
+               ASSIGNDLY ""
+                op1:
+                  REPLICATE ""
+                   op1:
+                     CONCAT ""
+                      op1:
+                        SELEXTRACT ""
+                         op1:
+                           PARSEREF "crc" expect:TEXT
+                         op2:
+                           CONST "?32?sh3e"
+                         op3:
+                           CONST "?32?sh0"
+                      op2:
+                        XOR ""
+                         op1:
+                           XOR ""
+                            op1:
+                              SELBIT ""
+                               op1:
+                                 PARSEREF "crc" expect:TEXT
+                               op2:
+                                 CONST "?32?sh3f"
+                            op2:
+                              SELBIT ""
+                               op1:
+                                 PARSEREF "crc" expect:TEXT
+                               op2:
+                                 CONST "?32?sh2"
+                         op2:
+                           SELBIT ""
+                            op1:
+                              PARSEREF "crc" expect:TEXT
+                            op2:
+                              CONST "?32?sh0"
+                   op2:
+                     CONST "32'h1"
+                op2:
+                  PARSEREF "crc" expect:TEXT
+               ASSIGNDLY ""
+                op1:
+                  XOR ""
+                   op1:
+                     PARSEREF "result" expect:TEXT
+                   op2:
+                     REPLICATE ""
+                      op1:
+                        CONCAT ""
+                         op1:
+                           SELEXTRACT ""
+                            op1:
+                              PARSEREF "sum" expect:TEXT
+                            op2:
+                              CONST "?32?sh3e"
+                            op3:
+                              CONST "?32?sh0"
+                         op2:
+                           XOR ""
+                            op1:
+                              XOR ""
+                               op1:
+                                 SELBIT ""
+                                  op1:
+                                    PARSEREF "sum" expect:TEXT
+                                  op2:
+                                    CONST "?32?sh3f"
+                               op2:
+                                 SELBIT ""
+                                  op1:
+                                    PARSEREF "sum" expect:TEXT
+                                  op2:
+                                    CONST "?32?sh2"
+                            op2:
+                              SELBIT ""
+                               op1:
+                                 PARSEREF "sum" expect:TEXT
+                               op2:
+                                 CONST "?32?sh0"
+                      op2:
+                        CONST "32'h1"
+                op2:
+                  PARSEREF "sum" expect:TEXT
+               IF ""
+                op1:
+                  EQ ""
+                   op1:
+                     PARSEREF "cyc" expect:TEXT
+                   op2:
+                     CONST "?32?sh0"
+                op2:
+                  BEGIN "" unnamed:True
+                   op2:
+                     ASSIGNDLY ""
+                      op1:
+                        CONST "64'h5aef0c8dd70a4497"
+                      op2:
+                        PARSEREF "crc" expect:TEXT
+                     ASSIGNDLY ""
+                      op1:
+                        CONST "'0"
+                      op2:
+                        PARSEREF "sum" expect:TEXT
+                op3:
+                  IF ""
+                   op1:
+                     LT ""
+                      op1:
+                        PARSEREF "cyc" expect:TEXT
+                      op2:
+                        CONST "?32?sha"
+                   op2:
+                     BEGIN "" unnamed:True
+                      op2:
+                        ASSIGNDLY ""
+                         op1:
+                           CONST "'0"
+                         op2:
+                           PARSEREF "sum" expect:TEXT
+                   op3:
+                     IF ""
+                      op1:
+                        LT ""
+                         op1:
+                           PARSEREF "cyc" expect:TEXT
+                         op2:
+                           CONST "?32?sh5a"
+                      op2:
+                        BEGIN "" unnamed:True
+                      op3:
+                        IF ""
+                         op1:
+                           EQ ""
+                            op1:
+                              PARSEREF "cyc" expect:TEXT
+                            op2:
+                              CONST "?32?sh63"
+                         op2:
+                           BEGIN "" unnamed:True
+                            op2:
+                              DISPLAY ""
+                               op1:
+                                 SFORMATF ""
+                                  op1:
+                                    CONST "232'h5b2530745d206379633d3d253064206372633d25782073756d3d25780a"
+                                    TIME "" timeunit:NONE
+                                    PARSEREF "cyc" expect:TEXT
+                                    PARSEREF "crc" expect:TEXT
+                                    PARSEREF "sum" expect:TEXT
+                              IF ""
+                               op1:
+                                 NEQCASE ""
+                                  op1:
+                                    PARSEREF "crc" expect:TEXT
+                                  op2:
+                                    CONST "64'hc77bb9b3784ea091"
+                               op2:
+                                 STOP ""
+                              IF ""
+                               op1:
+                                 NEQCASE ""
+                                  op1:
+                                    PARSEREF "sum" expect:TEXT
+                                  op2:
+                                    CONST "64'h4afe43fb79d7b71e"
+                               op2:
+                                 STOP ""
+                              DISPLAY ""
+                               op1:
+                                 SFORMATF ""
+                                  op1:
+                                    CONST "168'h2a2d2a20416c6c2046696e6973686564202a2d2a0a"
+                              FINISH ""
+   MODULE "Test" level:3, timeunit:1ps
+    op2:
+      PORT "out"
+      PORT "clk"
+      PORT "in"
+      VAR "clk" attrClocker:UNKNOWN, ioDirection:INPUT, lifetime:NONE, varType:PORT
+       op1:
+         BASICDTYPE "LOGIC_IMPLICIT" keyword:LOGIC_IMPLICIT
+      VAR "in" attrClocker:UNKNOWN, ioDirection:INPUT, lifetime:NONE, varType:PORT
+       op1:
+         BASICDTYPE "logic" keyword:logic
+          op1:
+            RANGE ""
+             op1:
+               CONST "?32?sh1f"
+             op2:
+               CONST "?32?sh0"
+      VAR "out" attrClocker:UNKNOWN, ioDirection:OUTPUT, lifetime:NONE, varType:PORT
+       op1:
+         BASICDTYPE "logic" keyword:logic
+          op1:
+            RANGE ""
+             op1:
+               CONST "?32?sh1f"
+             op2:
+               CONST "?32?sh0"
+      ALWAYS "" keyword:always
+       op2:
+         EVENTCONTROL ""
+          op1:
+            SENTREE ""
+             op1:
+               SENITEM "" edgeType:POS
+                op1:
+                  PARSEREF "clk" expect:TEXT
+          op2:
+            BEGIN "" unnamed:True
+             op2:
+               ASSIGNDLY ""
+                op1:
+                  PARSEREF "in" expect:TEXT
+                op2:
+                  PARSEREF "out" expect:TEXT
+ op3:
+   TYPETABLE ""
+    op1:
+      BASICDTYPE "integer" generic:True, keyword:integer, range:31:0
+      BASICDTYPE "logic" generic:True, keyword:logic, range:31:0
+      BASICDTYPE "logic" generic:True, keyword:logic
+      VOIDDTYPE ""
+      BASICDTYPE "logic" generic:True, keyword:logic, range:31:0
+      BASICDTYPE "logic" generic:True, keyword:logic, range:31:0
+      BASICDTYPE "logic" generic:True, keyword:logic, range:295:0
+      BASICDTYPE "string" generic:True, keyword:string
+      BASICDTYPE "logic" generic:True, keyword:logic, range:31:0
+      BASICDTYPE "logic" generic:True, keyword:logic, range:31:0
+      BASICDTYPE "logic" generic:True, keyword:logic, range:31:0
+      BASICDTYPE "logic" generic:True, keyword:logic
+      BASICDTYPE "logic" generic:True, keyword:logic, range:63:0
+      BASICDTYPE "logic" generic:True, keyword:logic, range:31:0
+      BASICDTYPE "logic" generic:True, keyword:logic, range:31:0
+      BASICDTYPE "logic" generic:True, keyword:logic, range:231:0
+      BASICDTYPE "QData" generic:True, keyword:QData, range:63:0
+      BASICDTYPE "logic" generic:True, keyword:logic, range:167:0
+   CONSTPOOL ""
+    op1:
+      MODULE "@CONST-POOL@" level:0, timeunit:NONE
+       op2:
+         SCOPE "@CONST-POOL@"

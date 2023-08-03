@@ -31,6 +31,7 @@
 #include "V3Ast__gen_forward_class_decls.h"  // From ./astgen
 
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <set>
@@ -2161,6 +2162,9 @@ public:
     string warnOther() const VL_REQUIRES(V3Error::s().m_mutex) { return fileline()->warnOther(); }
 
     virtual void dump(std::ostream& str = std::cout) const;
+    static std::string dumpJsonTreeGdb(const AstNode* nodep);  // For GDB only
+    static const char* dumpJsonTreeGdb(const char* str);  // For GDB only
+    static std::string dumpJsonTreeGdb(intptr_t nodep);  // For GDB only
     static void dumpGdb(const AstNode* nodep);  // For GDB only
     void dumpGdbHeader() const;
 
@@ -2216,6 +2220,9 @@ public:
     static void dumpTreeFileGdb(const AstNode* nodep, const char* filenamep = nullptr);
     void dumpTreeDot(std::ostream& os = std::cout) const;
     void dumpTreeDotFile(const string& filename, bool append = false, bool doDump = true);
+    virtual void dumpExtraJson(std::ostream& os) const {};  // node specific fields
+    void dumpTreeJson(std::ostream& os) const;
+    void dumpTreeJsonFile(const string& filename, bool append = false, bool doDump = true);
 
     // METHODS - static advancement
     static AstNode* afterCommentp(AstNode* nodep) {

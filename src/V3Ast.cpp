@@ -22,6 +22,7 @@
 
 #include <iomanip>
 #include <memory>
+#include <sstream>
 
 VL_DEFINE_DEBUG_FUNCTIONS;
 
@@ -1171,6 +1172,22 @@ void AstNode::checkTreeIter(const AstNode* prevBackp) const VL_MT_STABLE {
 }
 
 // cppcheck-suppress unusedFunction  // Debug only
+std::string AstNode::dumpJsonTreeGdb(const AstNode* nodep) {
+    if (!nodep) return "<nullptr>\n";
+    std::stringstream nodepStream;
+    nodep->dumpTreeJson(nodepStream);
+    return nodepStream.rdbuf()->str();
+}
+// cppcheck-suppress unusedFunction  // Debug only
+// identity func to allow for passing already done dumps to jtree
+const char* AstNode::dumpJsonTreeGdb(const char* str) { return str; }
+// cppcheck-suppress unusedFunction  // Debug only
+// allow for passing pointer literals like 0x42.. without manual cast
+std::string AstNode::dumpJsonTreeGdb(intptr_t nodep) {
+    if (!nodep) return "<nullptr>\n";
+    return dumpJsonTreeGdb((const AstNode*)nodep);
+}
+// cppcheck-suppress unusedFunction  // Debug only
 void AstNode::dumpGdb(const AstNode* nodep) {  // For GDB only  // LCOV_EXCL_LINE
     if (!nodep) {
         cout << "<nullptr>" << endl;
@@ -1326,6 +1343,15 @@ void AstNode::dumpTreeDot(std::ostream& os) const {
     drawChildren(os, this, m_op2p, "op2");
     drawChildren(os, this, m_op3p, "op3");
     drawChildren(os, this, m_op4p, "op4");
+}
+
+void AstNode::dumpTreeJsonFile(const string& filename, bool append, bool doDump) {
+    if (!doDump) return;
+    UINFO(2, "Dumping " << filename << endl);
+    const std::unique_ptr<std::ofstream> treejsonp{V3File::new_ofstream(filename, append)};
+    if (treejsonp->fail()) v3fatal("Can't write " << filename);
+    dumpTreeJson(*treejsonp);
+    *treejsonp << "\n";
 }
 
 void AstNode::dumpTreeDotFile(const string& filename, bool append, bool doDump) {

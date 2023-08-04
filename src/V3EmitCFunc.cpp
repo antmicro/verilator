@@ -85,6 +85,7 @@ void EmitCFunc::emitOpName(AstNode* nodep, const string& format, AstNode* lhsp, 
             bool detail = false;
             AstNode* detailp = nullptr;
             switch (pos[0]) {
+            case ',': puts(","); break;
             case '%': puts("%"); break;
             case 'k': putbs(""); break;
             case 'n':

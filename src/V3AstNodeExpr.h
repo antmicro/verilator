@@ -1607,7 +1607,7 @@ public:
                        : (m_urandom ? "%f$urandom()" : "%f$random()");
     }
     string emitC() override {
-        string rng = m_needRNG ? "vlProcess()->rng()"  //
+        string rng = m_needRNG ? "vlProcess->rng()"  //
                                : "VlRNG::vl_thread_rng()";
         return m_reset ? "VL_RAND_RESET_%nq(%nw, %P)"
                : seedp()

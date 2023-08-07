@@ -9,10 +9,16 @@ module t (/*AUTOARG*/
    clk
    );
    input clk;
-   process p;
+   process p, r;
 
    initial begin
       p = process::self();
+      if (p.status() == process::FINISHED) $stop;
+   end
+
+   initial begin
+      r = process::self();
+      if (r.status() == process::FINISHED) $stop;
    end
 
    always @(posedge clk) begin

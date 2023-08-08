@@ -205,9 +205,15 @@ public:
 
     // CONSTRUCTORS
     VlProcess()
-        : m_state{RUNNING} {}
+        : m_state{RUNNING}
+        , m_rng{vl_rand64()} {}
+    VlProcess(uint64_t seed)
+        : m_state{RUNNING}
+        , m_rng{seed} {}
 
     // METHODS
+    VlProcess* spawn() { return new VlProcess{m_rng.rand64()}; }
+
     int state() { return m_state; }
     void state(int s) { m_state = s; }
     VlRNG& rng() { return m_rng; };

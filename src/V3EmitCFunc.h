@@ -206,7 +206,7 @@ public:
     }
     void emitOpName(AstNode* nodep, const string& format, AstNode* lhsp, AstNode* rhsp,
                     AstNode* thsp);
-    void emitCCallArgs(const AstNodeCCall* nodep, const string& selfPointer);
+    void emitCCallArgs(const AstNodeCCall* nodep, const string& selfPointer, bool inproc);
     void emitDereference(const string& pointer);
     void emitCvtPackStr(AstNode* nodep);
     void emitCvtWideArray(AstNode* nodep, AstNode* fromp);
@@ -474,7 +474,7 @@ public:
             }
             puts(funcp->nameProtect());
         }
-        emitCCallArgs(nodep, nodep->selfPointerProtect(m_useSelfForThis));
+        emitCCallArgs(nodep, nodep->selfPointerProtect(m_useSelfForThis), m_cfuncp->needProcess());
     }
     void visit(AstCMethodCall* nodep) override {
         const AstCFunc* const funcp = nodep->funcp();
@@ -482,7 +482,7 @@ public:
         iterateConst(nodep->fromp());
         putbs("->");
         puts(funcp->nameProtect());
-        emitCCallArgs(nodep, "");
+        emitCCallArgs(nodep, "", m_cfuncp->needProcess());
     }
     void visit(AstCAwait* nodep) override {
         puts("co_await ");

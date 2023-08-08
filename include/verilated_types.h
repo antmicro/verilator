@@ -74,7 +74,7 @@ extern std::string VL_TO_STRING_W(int words, const WDataInP obj);
 #define VL_OUTW(name, msb, lsb, words) VlWide<words> name  ///< Declare output signal, 65+ bits
 
 //===================================================================
-// VlProcess stores metadata of running processes
+// Metadata of processes
 
 class VlProcess final {
     // MEMBERS
@@ -95,6 +95,8 @@ public:
         : m_state{RUNNING} {}
 
     // METHODS
+    VlProcess* spawn() { return new VlProcess{}; }
+
     int state() { return m_state; }
     void state(int s) { m_state = s; }
 };

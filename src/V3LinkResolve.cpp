@@ -51,6 +51,7 @@ private:
     // STATE
     // Below state needs to be preserved between each module call.
     AstNodeModule* m_modp = nullptr;  // Current module
+    AstPackage* m_pkgp = nullptr;  // Current module
     AstClass* m_classp = nullptr;  // Class we're inside
     AstNodeFTask* m_ftaskp = nullptr;  // Function or task we're inside
     AstNodeCoverOrAssert* m_assertp = nullptr;  // Current assertion
@@ -71,6 +72,13 @@ private:
             m_modp = nodep;
             m_senitemCvtNum = 0;
             iterateChildren(nodep);
+        }
+    }
+    void visit(AstPackage* nodep) override {
+        VL_RESTORER(m_pkgp);
+        {
+            m_pkgp = nodep;
+            visit(static_cast<AstNodeModule*>(nodep));
         }
     }
     void visit(AstClass* nodep) override {
@@ -115,7 +123,7 @@ private:
         if (m_underGenerate) nodep->underGenerate(true);
         // Remember the existing symbol table scope
         if (m_classp) {
-            if (nodep->name() == "randomize" || nodep->name() == "srandom") {
+            if (nodep->name() == "randomize" || (nodep->name() == "srandom" && m_pkgp->name() != "std")) {
                 nodep->v3error(nodep->prettyNameQ()
                                << " is a predefined class method; redefinition not allowed"
                                   " (IEEE 1800-2017 18.6.3)");

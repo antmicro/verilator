@@ -404,11 +404,11 @@ AstFunc* V3Randomize::newRandomizeFunc(AstClass* nodep) {
     return funcp;
 }
 
-AstNodeFTask* V3Randomize::newSRandomFunc(AstClass* nodep) {
+AstTask* V3Randomize::newSRandomFunc(AstClass* nodep) {
     VMemberMap memberMap;
     AstClass* const basep = nodep->baseMostClassp();
-    AstNodeFTask* funcp = VN_CAST(memberMap.findMember(basep, "srandom"), NodeFTask);
-    if (!funcp) {
+    AstTask* taskp = VN_CAST(memberMap.findMember(basep, "srandom"), Task);
+    if (!taskp) {
         v3Global.useRandomizeMethods(true);
         AstNodeDType* const dtypep
             = basep->findBitDType(32, 32, VSigning::SIGNED);  // IEEE says argument 0/1
@@ -416,13 +416,12 @@ AstNodeFTask* V3Randomize::newSRandomFunc(AstClass* nodep) {
         ivarp->lifetime(VLifetime::AUTOMATIC);
         ivarp->funcLocal(true);
         ivarp->direction(VDirection::INPUT);
-        funcp = new AstFunc{basep->fileline(), "srandom", ivarp, nullptr};
-        funcp->dtypep(basep->findVoidDType());
-        funcp->classMethod(true);
-        funcp->isVirtual(false);
-        basep->addMembersp(funcp);
-        funcp->addStmtsp(new AstCStmt{basep->fileline(), "__Vm_rng.srandom(seed);\n"});
+        taskp = new AstTask{basep->fileline(), "srandom", ivarp};
+        taskp->classMethod(true);
+        taskp->isVirtual(false);
+        basep->addMembersp(taskp);
+        taskp->addStmtsp(new AstCStmt{basep->fileline(), "__Vm_rng.srandom(seed);\n"});
         basep->needRNG(true);
     }
-    return funcp;
+    return taskp;
 }

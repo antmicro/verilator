@@ -44,13 +44,20 @@
 
 VL_DEFINE_DEBUG_FUNCTIONS;
 
+namespace V3Sched {
+
 // Driving region flags
+// Keeping this in a namespace to avoid name collision of `INPUT` with a symbol from `windows.h`.
 enum RegionFlags : uint8_t {
     NONE = 0x0,  //
     INPUT = 0x1,  // Variable/logic is driven from top level input
     ACTIVE = 0x2,  // Variable/logic is driven from 'act' region logic
     NBA = 0x4  // Variable/logic is driven from 'nba' region logic
 };
+
+}  // namespace V3Sched
+
+using V3Sched::RegionFlags;
 
 //##############################################################################
 // Data structures (graph types)
@@ -69,24 +76,20 @@ public:
     // LCOV_EXCL_START // Debug code
     string dotColor() const override {
         switch (static_cast<unsigned>(m_drivingRegions)) {
-        case NONE: return "black";
-        case INPUT: return "red";
-        case ACTIVE: return "green";
-        case NBA: return "blue";
-        case INPUT | ACTIVE: return "yellow";
-        case INPUT | NBA: return "magenta";
-        case ACTIVE | NBA: return "cyan";
-        case INPUT | ACTIVE | NBA: return "gray80";  // don't want white on white background
+        case RegionFlags::NONE: return "black";
+        case RegionFlags::INPUT: return "red";
+        case RegionFlags::ACTIVE: return "green";
+        case RegionFlags::NBA: return "blue";
+        case RegionFlags::INPUT | RegionFlags::ACTIVE: return "yellow";
+        case RegionFlags::INPUT | RegionFlags::NBA: return "magenta";
+        case RegionFlags::ACTIVE | RegionFlags::NBA: return "cyan";
+        case RegionFlags::INPUT | RegionFlags::ACTIVE | RegionFlags::NBA:
+            return "gray80";  // don't want white on white background
         default: v3fatal("There are only 3 region bits"); return "";
         }
     }
     // LCOV_EXCL_STOP
 };
-
-template <>
-bool V3GraphVertex::privateTypeTest<SchedReplicateVertex>(const V3GraphVertex* vtxp) {
-    return dynamic_cast<const SchedReplicateVertex*>(vtxp);
-}
 
 class SchedReplicateLogicVertex final : public SchedReplicateVertex {
     AstScope* const m_scopep;  // The enclosing AstScope of the logic node
@@ -123,12 +126,12 @@ public:
         , m_vscp{vscp} {
         // Top level inputs are
         if (varp()->isPrimaryInish() || varp()->isSigUserRWPublic() || varp()->isWrittenByDpi()) {
-            addDrivingRegions(INPUT);
+            addDrivingRegions(RegionFlags::INPUT);
         }
         // Currently we always execute suspendable processes at the beginning of
         // the act region, which means combinational logic driven from a suspendable
         // processes must be present in the 'act' region
-        if (varp()->isWrittenBySuspendable()) addDrivingRegions(ACTIVE);
+        if (varp()->isWrittenBySuspendable()) addDrivingRegions(RegionFlags::ACTIVE);
     }
     AstVarScope* vscp() const { return m_vscp; }
     AstVar* varp() const { return m_vscp->varp(); }
@@ -214,9 +217,12 @@ std::unique_ptr<Graph> buildGraph(const LogicRegions& logicRegions) {
         }
     };
 
-    for (const auto& pair : logicRegions.m_pre) addLogic(ACTIVE, pair.first, pair.second);
-    for (const auto& pair : logicRegions.m_act) addLogic(ACTIVE, pair.first, pair.second);
-    for (const auto& pair : logicRegions.m_nba) addLogic(NBA, pair.first, pair.second);
+    for (const auto& pair : logicRegions.m_pre)
+        addLogic(RegionFlags::ACTIVE, pair.first, pair.second);
+    for (const auto& pair : logicRegions.m_act)
+        addLogic(RegionFlags::ACTIVE, pair.first, pair.second);
+    for (const auto& pair : logicRegions.m_nba)
+        addLogic(RegionFlags::NBA, pair.first, pair.second);
 
     return graphp;
 }
@@ -252,9 +258,9 @@ LogicReplicas replicate(Graph* graphp) {
             const uint8_t targetRegions = lvtxp->drivingRegions() & ~lvtxp->assignedRegion();
             UASSERT(!lvtxp->senTreep()->hasClocked() || targetRegions == 0,
                     "replicating clocked logic");
-            if (targetRegions & INPUT) replicateTo(result.m_ico);
-            if (targetRegions & ACTIVE) replicateTo(result.m_act);
-            if (targetRegions & NBA) replicateTo(result.m_nba);
+            if (targetRegions & RegionFlags::INPUT) replicateTo(result.m_ico);
+            if (targetRegions & RegionFlags::ACTIVE) replicateTo(result.m_act);
+            if (targetRegions & RegionFlags::NBA) replicateTo(result.m_nba);
         }
     }
     return result;
@@ -278,3 +284,8 @@ LogicReplicas replicateLogic(LogicRegions& logicRegionsRegions) {
 }
 
 }  // namespace V3Sched
+
+template <>
+bool V3GraphVertex::privateTypeTest<V3Sched::SchedReplicateVertex>(const V3GraphVertex* vtxp) {
+    return dynamic_cast<const V3Sched::SchedReplicateVertex*>(vtxp);
+}

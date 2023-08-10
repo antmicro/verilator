@@ -2233,6 +2233,7 @@ public:
     bool timescaleMatters() const override { return !isDollarUnit(); }
     static string dollarUnitName() { return AstNode::encodeName("$unit"); }
     bool isDollarUnit() const { return name() == dollarUnitName(); }
+    bool isStd() const { return name() == "std"; }
 };
 class AstPrimitive final : public AstNodeModule {
     // A primitive declaration

@@ -2633,7 +2633,7 @@ private:
         // If the class is std::process
         if (nodep->name() == "process") {
             AstPackage* const packagep = getItemPackage(nodep);
-            if (packagep && packagep->name() == "std") {
+            if (packagep && packagep->isStd()) {
                 // Change type of m_process to VlProcessRef
                 if (AstVar* const varp = VN_CAST(memberMap.findMember(nodep, "m_process"), Var)) {
                     AstNodeDType* const dtypep = varp->getChildDTypep();
@@ -3510,7 +3510,7 @@ private:
                     // Find the package the class is in
                     AstPackage* const packagep = getItemPackage(classp);
                     // Check if it's std
-                    if (packagep && packagep->name() == "std") {
+                    if (packagep && packagep->isStd()) {
                         if (classp->name() == "process") {
                             methodCallWarnTiming(nodep, "process");
                         } else if (classp->name() == "semaphore" && nodep->name() == "get") {
@@ -5417,7 +5417,7 @@ private:
             if (nodep->name() == "self" && classp->name() == "process") {
                 // Find if package the class is in is std::
                 AstPackage* const packagep = getItemPackage(classp);
-                if (packagep && packagep->name() == "std") {
+                if (packagep && packagep->isStd()) {
                     methodCallWarnTiming(nodep, "process");
                 }
             }

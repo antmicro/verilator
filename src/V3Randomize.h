@@ -22,6 +22,7 @@
 
 class AstClass;
 class AstFunc;
+class AstNodeFTask;
 class AstNetlist;
 
 class V3Randomize final {
@@ -29,7 +30,7 @@ public:
     static void randomizeNetlist(AstNetlist* nodep);
 
     static AstFunc* newRandomizeFunc(AstClass* nodep);
-    static AstFunc* newSRandomFunc(AstClass* nodep);
+    static AstNodeFTask* newSRandomFunc(AstClass* nodep);
 };
 
 #endif  // Guard

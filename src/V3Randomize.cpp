@@ -404,10 +404,10 @@ AstFunc* V3Randomize::newRandomizeFunc(AstClass* nodep) {
     return funcp;
 }
 
-AstFunc* V3Randomize::newSRandomFunc(AstClass* nodep) {
+AstNodeFTask* V3Randomize::newSRandomFunc(AstClass* nodep) {
     VMemberMap memberMap;
     AstClass* const basep = nodep->baseMostClassp();
-    AstFunc* funcp = VN_AS(memberMap.findMember(basep, "srandom"), Func);
+    AstNodeFTask* funcp = VN_CAST(memberMap.findMember(basep, "srandom"), NodeFTask);
     if (!funcp) {
         v3Global.useRandomizeMethods(true);
         AstNodeDType* const dtypep

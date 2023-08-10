@@ -166,12 +166,11 @@ package std;
 `endif
       endtask
 
-      // When really implemented, srandom must operate on the process, but for
-      // now rely on the srandom() that is automatically generated for all
-      // classes.
-      //
-      // function void srandom(int seed);
-      // endfunction
+      function void srandom(int seed);
+`ifdef VERILATOR_TIMING
+         $c(m_process, "->rng().srandom(", seed, ");");
+`endif
+      endfunction
 
       function string get_randstate();
          string s = "NOT_SUPPORTED";

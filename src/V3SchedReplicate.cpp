@@ -44,6 +44,8 @@
 
 VL_DEFINE_DEBUG_FUNCTIONS;
 
+namespace V3Sched {
+
 // Driving region flags
 enum RegionFlags : uint8_t {
     NONE = 0x0,  //
@@ -82,11 +84,6 @@ public:
     }
     // LCOV_EXCL_STOP
 };
-
-template <>
-bool V3GraphVertex::privateTypeTest<SchedReplicateVertex>(const V3GraphVertex* vtxp) {
-    return dynamic_cast<const SchedReplicateVertex*>(vtxp);
-}
 
 class SchedReplicateLogicVertex final : public SchedReplicateVertex {
     AstScope* const m_scopep;  // The enclosing AstScope of the logic node
@@ -138,8 +135,6 @@ public:
     string name() const override VL_MT_STABLE { return m_vscp->name(); }
     string dotShape() const override { return varp()->isPrimaryInish() ? "invhouse" : "ellipse"; }
 };
-
-namespace V3Sched {
 
 namespace {
 
@@ -278,3 +273,8 @@ LogicReplicas replicateLogic(LogicRegions& logicRegionsRegions) {
 }
 
 }  // namespace V3Sched
+
+template <>
+bool V3GraphVertex::privateTypeTest<V3Sched::SchedReplicateVertex>(const V3GraphVertex* vtxp) {
+    return dynamic_cast<const V3Sched::SchedReplicateVertex*>(vtxp);
+}

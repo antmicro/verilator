@@ -5417,9 +5417,7 @@ private:
             if (nodep->name() == "self" && classp->name() == "process") {
                 // Find if package the class is in is std::
                 AstPackage* const packagep = getItemPackage(classp);
-                if (packagep && packagep->isStd()) {
-                    methodCallWarnTiming(nodep, "process");
-                }
+                if (packagep && packagep->isStd()) { methodCallWarnTiming(nodep, "process"); }
             }
         }
         // if (debug()) nodep->dumpTree("-  FuncOut: ");

@@ -36,7 +36,9 @@ module ac_dig
   // ***************************************************************************
 
   // **** Internal Data Bus ****
+  /*verilator lint_off UNOPTFLAT*/
   logic [15:0] sdata;
+  /*verilator lint_off UNOPTFLAT*/
   logic        ws;
   logic [15:0] mdata;
   logic [15:0] adr;

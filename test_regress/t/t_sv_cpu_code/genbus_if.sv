@@ -37,8 +37,10 @@ interface genbus_if
   // ***************************************************************************
 
   // **** Master ****
+  /*verilator lint_off UNOPTFLAT*/
   logic [DMSB:0] m_sdata[1:NMASTERS];   // Slave data.
   logic          m_ws   [1:NMASTERS];   // Slave wait state.
+  /*verilator lint_on UNOPTFLAT*/
   logic [DMSB:0] m_mdata[1:NMASTERS];   // Master data.
   logic [AMSB:0] m_adr  [1:NMASTERS];   // Address.
   logic [SMSB:0] m_we   [1:NMASTERS];   // Write enable.

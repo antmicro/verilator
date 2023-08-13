@@ -60,7 +60,8 @@ enum RegionFlags : uint8_t {
 // Data structures (graph types)
 
 class SchedReplicateVertex VL_NOT_FINAL : public V3GraphVertex {
-    RegionFlags m_drivingRegions{NONE};  // The regions driving this vertex
+    VL_RTTI_IMPLEMENTATION(SchedReplicateVertex, V3GraphVertex)
+    RegionFlags m_drivingRegions{RegionFlags::NONE};  // The regions driving this vertex
 
 public:
     explicit SchedReplicateVertex(V3Graph* graphp)
@@ -93,6 +94,7 @@ bool V3GraphVertex::privateTypeTest<SchedReplicateVertex>(const V3GraphVertex* v
 }
 
 class SchedReplicateLogicVertex final : public SchedReplicateVertex {
+    VL_RTTI_IMPLEMENTATION(SchedReplicateLogicVertex, SchedReplicateVertex)
     AstScope* const m_scopep;  // The enclosing AstScope of the logic node
     AstSenTree* const m_senTreep;  // The sensitivity of the logic node
     AstNode* const m_logicp;  // The logic node this vertex represents
@@ -119,6 +121,7 @@ public:
 };
 
 class SchedReplicateVarVertex final : public SchedReplicateVertex {
+    VL_RTTI_IMPLEMENTATION(SchedReplicateVarVertex, SchedReplicateVertex)
     AstVarScope* const m_vscp;  // The AstVarScope this vertex represents
 
 public:

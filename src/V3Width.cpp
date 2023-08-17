@@ -710,8 +710,8 @@ private:
         }
     }
     void visit(AstDisableFork* nodep) override {
-        nodep->v3warn(E_UNSUPPORTED, "Unsupported: disable fork statements");
-        VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
+        // nodep->v3warn(E_UNSUPPORTED, "Unsupported: disable fork statements");
+        // VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
     }
     void visit(AstWaitFork* nodep) override {
         nodep->v3warn(E_UNSUPPORTED, "Unsupported: wait fork statements");

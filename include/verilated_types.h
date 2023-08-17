@@ -75,10 +75,15 @@ extern std::string VL_TO_STRING_W(int words, const WDataInP obj);
 
 //===================================================================
 // Metadata of processes
+class VlProcess;
+
+using VlProcessRef = std::shared_ptr<VlProcess>;
 
 class VlProcess final {
     // MEMBERS
     int m_state;  // Current state of the process
+    VlProcess* m_parent = nullptr;  // Parent process, if exists
+    std::set<VlProcess*> m_children;  // Alive child processes
 
 public:
     // TYPES
@@ -91,17 +96,36 @@ public:
     };
 
     // CONSTRUCTORS
+    // Construct independent process
     VlProcess()
         : m_state{RUNNING} {}
+    // Construct child process of parent
+    VlProcess(VlProcess* parent)
+        : m_state{RUNNING}
+        , m_parent{parent} {
+        m_parent->m_children.insert(this);
+    }
+
+    ~VlProcess() {
+        for (auto child : m_children)
+            child->m_parent = nullptr;
+        if (m_parent) m_parent->m_children.erase(this);
+    }
 
     // METHODS
-    VlProcess* spawn() { return new VlProcess{}; }
+    VlProcessRef spawn() { return std::make_shared<VlProcess>(this); }
 
     int state() { return m_state; }
     void state(int s) { m_state = s; }
+    void disable() {
+        disable_fork();
+        state(KILLED);
+    }
+    void disable_fork() {
+        for (auto child : m_children)
+            child->disable();
+    }
 };
-
-using VlProcessRef = std::shared_ptr<VlProcess>;
 
 inline std::string VL_TO_STRING(const VlProcessRef& p) { return std::string("process"); }
 

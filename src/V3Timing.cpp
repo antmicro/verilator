@@ -299,9 +299,12 @@ private:
             new V3GraphEdge{&m_suspGraph, getSuspendDepVtx(nodep->funcp()),
                             getSuspendDepVtx(m_procp), m_underFork ? P_FORK : P_CALL};
 
-        if (!m_underFork)
-            new V3GraphEdge{&m_procGraph, getNeedsProcDepVtx(nodep->funcp()),
-                            getNeedsProcDepVtx(m_procp), P_CALL};
+        if (!m_underFork) {
+            DepVtx* const fVxp = getNeedsProcDepVtx(nodep->funcp());
+            DepVtx* const pVxp = getNeedsProcDepVtx(m_procp);
+            new V3GraphEdge{&m_procGraph, fVxp, pVxp, P_CALL};
+            new V3GraphEdge{&m_procGraph, pVxp, fVxp, P_CALL};
+        }
 
         iterateChildren(nodep);
     }

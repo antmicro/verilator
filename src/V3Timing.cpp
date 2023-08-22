@@ -420,7 +420,7 @@ private:
         if (const AstNodeVarRef* const refp = VN_CAST(nodep, NodeVarRef)) {
             if (refp->varp()->delayp()) return refp->varp()->delayp()->unlinkFrBack();
         } else if (const AstSel* const selp = VN_CAST(nodep, Sel)) {
-            return getLhsNetDelayRecurse(selp);
+            return getLhsNetDelayRecurse(selp->fromp());
         }
         return nullptr;
     }

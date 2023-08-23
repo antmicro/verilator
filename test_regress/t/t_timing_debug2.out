@@ -672,7 +672,7 @@
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:37
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aEventClass::__VnoInFunc_inc_trig_count
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aWaitClass::__VnoInFunc_await
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
@@ -682,7 +682,7 @@
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:101
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:101
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         No triggers active
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -697,7 +697,7 @@
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:101
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:101
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         No triggers active
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -715,7 +715,7 @@
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:101
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:101
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         'act' region trigger index 1 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -739,7 +739,7 @@
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:101
 -V{t#,#}         Process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:101 awaiting resumption
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         'act' region trigger index 2 is active: @([true] __VdynSched.evaluate())
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -752,7 +752,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:58
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         No triggers active
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -761,7 +761,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:58
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         No triggers active
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -775,7 +775,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:58
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         'act' region trigger index 1 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -796,7 +796,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:58
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         No triggers active
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -805,7 +805,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:58
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         No triggers active
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -819,7 +819,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:58
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         'act' region trigger index 1 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -839,7 +839,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:58
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         No triggers active
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -848,7 +848,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:58
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         No triggers active
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -862,7 +862,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:58
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         'act' region trigger index 1 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -883,7 +883,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:58
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
--V{t#,#}         Process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58 awaiting resumption
+-V{t#,#}         Process waiting for @([true] ((32'sh4 == t::WaitClass.a) && (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:58 awaiting resumption
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         'act' region trigger index 2 is active: @([true] __VdynSched.evaluate())
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -893,7 +893,7 @@
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:58
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aLocalWaitClass::__VnoInFunc_await
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aLocalWaitClass::__Vfork_1__0
--V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) || (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aLocalWaitClass::__Vfork_1__1
 -V{t#,#}             Awaiting join of fork at: t/t_timing_class.v:74
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
@@ -901,7 +901,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:75
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:75
--V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) || (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         No triggers active
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -910,7 +910,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:75
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:75
--V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) || (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         No triggers active
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -924,7 +924,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:75
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:75
--V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) || (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         'act' region trigger index 1 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -944,7 +944,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:75
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:75
--V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) || (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         No triggers active
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -953,7 +953,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:75
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:75
--V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) || (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         No triggers active
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -967,7 +967,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:75
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:75
--V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
+-V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) || (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         'act' region trigger index 1 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit
@@ -1000,7 +1000,7 @@
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:75
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:75
--V{t#,#}         Process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75 awaiting resumption
+-V{t#,#}         Process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) || (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:75 awaiting resumption
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}         'act' region trigger index 2 is active: @([true] __VdynSched.evaluate())
 -V{t#,#}+    Vt_timing_debug2___024root___timing_commit

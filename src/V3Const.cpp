@@ -1378,10 +1378,10 @@ private:
 
     bool isTPure(AstNode* nodep) {
         // Pure checks - if this node and all nodes under it are free of
-        // side effects can do this optimization
-        // Eventually we'll recurse through tree when unknown, memoizing results so far,
-        // but for now can disable en masse until V3Purify takes effect.
-        return nodep->isPure();
+        // side effects can do this optimization.
+        // We disable the optimization in if the operand is a function call,
+        // because a call may cost more time than the lack of optimizations.
+        return nodep->isPure() && !VN_IS(nodep, NodeFTaskRef);
     }
 
     // Extraction checks

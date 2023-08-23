@@ -1381,7 +1381,7 @@ private:
         // side effects can do this optimization
         // Eventually we'll recurse through tree when unknown, memoizing results so far,
         // but for now can disable en masse until V3Purify takes effect.
-        return VN_IS(nodep, VarRef) || VN_IS(nodep, Const);
+        return nodep->isPure();
     }
 
     // Extraction checks

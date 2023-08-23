@@ -888,7 +888,6 @@ private:
     // AstEnum::user4           -> bool.  Recursing.
 
     // STATE
-    static constexpr bool m_doShort = true;  // Remove expressions that short circuit
     bool m_params = false;  // If true, propagate parameterized and true numbers only
     bool m_required = false;  // If true, must become a constant
     bool m_wremove = true;  // Inside scope, no assignw removal
@@ -1382,7 +1381,7 @@ private:
         // side effects can do this optimization
         // Eventually we'll recurse through tree when unknown, memoizing results so far,
         // but for now can disable en masse until V3Purify takes effect.
-        return m_doShort || VN_IS(nodep, VarRef) || VN_IS(nodep, Const);
+        return VN_IS(nodep, VarRef) || VN_IS(nodep, Const);
     }
 
     // Extraction checks

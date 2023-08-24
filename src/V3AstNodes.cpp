@@ -1628,10 +1628,6 @@ void AstJumpLabel::dump(std::ostream& str) const {
         str << "%Error:UNLINKED";
     }
 }
-void AstLogOr::dump(std::ostream& str) const {
-    this->AstNodeExpr::dump(str);
-    if (sideEffect()) str << " [SIDE]";
-}
 
 void AstMemberDType::dumpSmall(std::ostream& str) const {
     this->AstNodeDType::dumpSmall(str);

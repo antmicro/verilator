@@ -88,11 +88,6 @@ public:
     // LCOV_EXCL_STOP
 };
 
-template <>
-bool V3GraphVertex::privateTypeTest<SchedReplicateVertex>(const V3GraphVertex* vtxp) {
-    return dynamic_cast<const SchedReplicateVertex*>(vtxp);
-}
-
 class SchedReplicateLogicVertex final : public SchedReplicateVertex {
     VL_RTTI_IMPLEMENTATION(SchedReplicateLogicVertex, SchedReplicateVertex)
     AstScope* const m_scopep;  // The enclosing AstScope of the logic node

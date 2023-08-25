@@ -190,11 +190,6 @@ public:
 };
 uint32_t SplitEdge::s_stepNum = 0;
 
-template <>
-bool V3GraphEdge::privateTypeTest<SplitEdge>(const V3GraphEdge* edgep) {
-    return dynamic_cast<const SplitEdge*>(edgep);
-}
-
 class SplitPostEdge final : public SplitEdge {
     VL_RTTI_IMPLEMENTATION(SplitPostEdge, SplitEdge)
 public:

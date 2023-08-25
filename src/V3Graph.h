@@ -430,14 +430,6 @@ protected:
         init(graphp, fromp, top, old.m_weight, old.m_cutable);
     }
 
-private:
-    // For internal use only.
-    // Note: specializations for some vertex types are provided by 'astgen'
-    template <typename T>
-    static bool privateTypeTest(const V3GraphEdge* edgep) {
-        return typeid(T) == typeid(*edgep);
-    }
-
 public:
     //! Add DAG from one node to the specified node
     V3GraphEdge(V3Graph* graphp, V3GraphVertex* fromp, V3GraphVertex* top, int weight,

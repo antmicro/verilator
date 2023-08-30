@@ -297,6 +297,7 @@ private:
             m_varScopes.emplace(std::make_pair(nodep, m_scopep), varscp);
             m_scopep->addVarsp(varscp);
         }
+        iterateChildren(nodep);
     }
     void visit(AstVarRef* nodep) override {
         // VarRef needs to point to VarScope

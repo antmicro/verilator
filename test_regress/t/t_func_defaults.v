@@ -30,6 +30,11 @@ function int mult2(int x = Foo::get_x());
    return 2 * x;
 endfunction
 
+function int cond_func(int t,
+                       int p = t !== 1 ? 1 : 0);
+   return p;
+endfunction
+
 module t (/*AUTOARG*/);
    logic [1:0] foo_val;
 
@@ -41,6 +46,8 @@ module t (/*AUTOARG*/);
       if (mult2() != 0) $stop;
       Foo::x = 30;
       if (mult2() != 60) $stop;
+      if (cond_func(1) !== 0) $stop;
+      if (cond_func(2) !== 1) $stop;
 
       $write("*-* All Finished *-*\n");
       $finish;

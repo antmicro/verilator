@@ -1556,6 +1556,48 @@ public:
 
 const char* const V3Task::s_dpiTemporaryVarSuffix = "__Vcvt";
 
+class ArgumentsRelinkVisitor final : public VNVisitor {
+    V3TaskConnects& m_tconnectsr;
+    AstNodeModule* const m_modulep;
+    int m_tmpFTaskArgVarCnt;
+    bool m_replaced = false;
+
+    void visit(AstVarRef* nodep) override {
+        for (auto& itr : m_tconnectsr) {
+            if (itr.first->name() == nodep->name()) {
+                auto portp = itr.first;
+                auto pinp = itr.second;
+                UASSERT(pinp->exprp(), "Missing value for ref port");
+                auto fl = pinp->fileline();
+                AstVar* varp = new AstVar{fl, VVarType::STMTTEMP,
+                                          "__VtempFTaskArg_" + cvtToStr(m_tmpFTaskArgVarCnt),
+                                          portp->dtypep()};
+                m_modulep->stmtsp()->addHereThisAsNext(varp);
+                varp->addNextHere(
+                    new AstInitial{fl, new AstAssign{fl, new AstVarRef{fl, varp, VAccess::WRITE},
+                                                     pinp->exprp()->cloneTree(true)}});
+                pinp->replaceWith(
+                    new AstArg{fl, pinp->name(), new AstVarRef{fl, varp, VAccess::READ}});
+                nodep->replaceWith(new AstVarRef{fl, varp, VAccess::READ});
+                m_replaced = true;
+            }
+        }
+    }
+
+    void visit(AstNode* nodep) override { iterateChildren(nodep); }
+
+public:
+    ArgumentsRelinkVisitor(AstNode* argp, AstNodeModule* modulep, V3TaskConnects& tconnectsr,
+                           int tmpFTaskArgVarCnt)
+        : m_tconnectsr(tconnectsr)
+        , m_modulep(modulep)
+        , m_tmpFTaskArgVarCnt(tmpFTaskArgVarCnt) {
+        iterate(argp);
+    }
+
+    bool replaced() const { return m_replaced; }
+};
+
 V3TaskConnects V3Task::taskConnects(AstNodeFTaskRef* nodep, AstNode* taskStmtsp) {
     // Output list will be in order of the port declaration variables (so
     // func calls are made right in C)
@@ -1564,6 +1606,7 @@ V3TaskConnects V3Task::taskConnects(AstNodeFTaskRef* nodep, AstNode* taskStmtsp)
 
     std::map<const std::string, int> nameToIndex;
     V3TaskConnects tconnects;
+    static int tmpFTaskArgVarCnt = 0;
     UASSERT_OBJ(nodep->taskp(), nodep, "unlinked");
 
     // Find ports
@@ -1645,6 +1688,28 @@ V3TaskConnects V3Task::taskConnects(AstNodeFTaskRef* nodep, AstNode* taskStmtsp)
                 if (funcp->classMethod() && funcp->lifetime().isStatic()) newvaluep = funcRefp;
             } else if (AstConst* const constp = VN_CAST(portp->valuep(), Const)) {
                 newvaluep = constp;
+            } else if (AstNodeExpr* const exprp = VN_CAST(portp->valuep(), NodeExpr)) {
+                auto clone = new AstArg{exprp->fileline(), portp->name(), exprp->cloneTree(true)};
+                nodep->addPinsp(clone);
+                AstNodeModule* modulep = nullptr;
+                AstNode* abovep = nodep;
+                while (!modulep && abovep->backp()) {
+                    abovep = abovep->backp();
+                    modulep = VN_CAST(abovep, NodeModule);
+                    if (modulep) break;
+                }
+                UASSERT(modulep, "AstNodeFTaskRef not under AstNodeModule");
+                {
+                    ArgumentsRelinkVisitor v{clone, modulep, tconnects, ++tmpFTaskArgVarCnt};
+                    if (v.replaced()) {
+                        if (tconnects[i].second) {  // Have a "nullptr" pin already defined for it
+                            VL_DO_CLEAR(tconnects[i].second->unlinkFrBack()->deleteTree(),
+                                        tconnects[i].second = nullptr);
+                        }
+                        tconnects[i].second = clone;
+                        continue;
+                    }
+                }
             }
 
             if (!newvaluep) {

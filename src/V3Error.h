@@ -550,9 +550,11 @@ void v3errorEndFatal(std::ostringstream& sstr) VL_RELEASE(V3Error::s().m_mutex) 
 #define v3errorBuildMessage(prep, msg) \
     (prep, static_cast<std::ostringstream&>(V3Error::v3errorStr() << msg))
 #define v3warnCode(code, msg) \
-    v3errorEnd(v3errorBuildMessage(V3Error::v3errorPrep(code, VL_MT_DISABLED_CODE_UNIT_DEFINED), msg))
+    v3errorEnd( \
+        v3errorBuildMessage(V3Error::v3errorPrep(code, VL_MT_DISABLED_CODE_UNIT_DEFINED), msg))
 #define v3warnCodeFatal(code, msg) \
-    v3errorEndFatal(v3errorBuildMessage(V3Error::v3errorPrep(code, VL_MT_DISABLED_CODE_UNIT_DEFINED), msg))
+    v3errorEndFatal( \
+        v3errorBuildMessage(V3Error::v3errorPrep(code, VL_MT_DISABLED_CODE_UNIT_DEFINED), msg))
 #define v3warn(code, msg) v3warnCode(V3ErrorCode::code, msg)
 #define v3info(msg) v3warnCode(V3ErrorCode::EC_INFO, msg)
 #define v3error(msg) v3warnCode(V3ErrorCode::EC_ERROR, msg)
@@ -561,10 +563,10 @@ void v3errorEndFatal(std::ostringstream& sstr) VL_RELEASE(V3Error::s().m_mutex) 
 #define v3fatalExit(msg) v3warnCodeFatal(V3ErrorCode::EC_FATALEXIT, msg)
 // Use this instead of fatal() to mention the source code line.
 #define v3fatalSrc(msg) \
-    v3errorEndFatal( \
-        v3errorBuildMessage(V3Error::v3errorPrepFileLine(V3ErrorCode::EC_FATALSRC, __FILE__, \
-                                                         __LINE__, VL_MT_DISABLED_CODE_UNIT_DEFINED), \
-                            msg))
+    v3errorEndFatal(v3errorBuildMessage( \
+        V3Error::v3errorPrepFileLine(V3ErrorCode::EC_FATALSRC, __FILE__, __LINE__, \
+                                     VL_MT_DISABLED_CODE_UNIT_DEFINED), \
+        msg))
 // Use this when normal v3fatal is called in static method that overrides fileline.
 #define v3fatalStatic(msg) \
     ::v3errorEndFatal(v3errorBuildMessage( \

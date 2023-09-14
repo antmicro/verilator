@@ -120,7 +120,6 @@ static void reportStatsIfEnabled() {
 static void process() {
     {
         const V3MtDisabledLockGuard mtDisabler{v3MtDisabledLock()};
-
         // Sort modules by level so later algorithms don't need to care
         V3LinkLevel::modSortByLevel();
         V3Error::abortIfErrors();
@@ -148,16 +147,22 @@ static void process() {
         V3Error::abortIfErrors();
 
         if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "Link");
-        if (v3Global.opt.debugExitUvm()) {
+        if (v3Global.opt.debugExitUvm23()) {
             V3Error::abortIfErrors();
             if (v3Global.opt.xmlOnly()) V3EmitXml::emitxml();
-            cout << "--debug-exit-uvm: Exiting after UVM-supported pass\n";
+            cout << "--debug-exit-uvm23: Exiting after UVM-supported pass\n";
             std::exit(0);
         }
 
         // Remove parameters by cloning modules to de-parameterized versions
         //   This requires some width calculations and constant propagation
         V3Param::param(v3Global.rootp());
+        if (v3Global.opt.debugExitUvm()) {
+            V3Error::abortIfErrors();
+            if (v3Global.opt.xmlOnly()) V3EmitXml::emitxml();
+            cout << "--debug-exit-uvm: Exiting after UVM-supported pass\n";
+            std::exit(0);
+        }
         V3LinkDot::linkDotParamed(v3Global.rootp());  // Cleanup as made new modules
         V3LinkLValue::linkLValue(v3Global.rootp());  // Resolve new VarRefs
         V3Error::abortIfErrors();
@@ -554,14 +559,13 @@ static void process() {
         } else if (v3Global.opt.dpiHdrOnly()) {
             V3EmitC::emitcSyms(true);
         }
-    }  // End: V3MtDisabledLockGuard{v3MtDisabledLock()};
+    }
     if (!v3Global.opt.xmlOnly()
         && !v3Global.opt.dpiHdrOnly()) {  // Unfortunately we have some lint checks in emitcImp.
         V3EmitC::emitcImp();
     }
     {
         const V3MtDisabledLockGuard mtDisabler{v3MtDisabledLock()};
-
         if (v3Global.opt.xmlOnly()
             // Check XML when debugging to make sure no missing node types
             || (v3Global.opt.debugCheck() && !v3Global.opt.lintOnly()
@@ -598,7 +602,7 @@ static void process() {
             if (v3Global.opt.cmake()) V3EmitCMake::emit();
             if (v3Global.opt.gmake()) V3EmitMk::emitmk();
         }
-    }  // End: V3MtDisabledLockGuard{v3MtDisabledLock()};
+    }
 }
 
 static void verilate(const string& argString) {
@@ -635,18 +639,18 @@ static void verilate(const string& argString) {
     // and after removing files as may make debug output)
     VBasicDTypeKwd::selfTest();
     if (v3Global.opt.debugSelfTest()) {
-        VHashSha256::selfTest();
-        VSpellCheck::selfTest();
         {
             const V3MtDisabledLockGuard mtDisabler{v3MtDisabledLock()};
 
+            VHashSha256::selfTest();
+            VSpellCheck::selfTest();
             V3Graph::selfTest();
             V3TSP::selfTest();
             V3ScoreboardBase::selfTest();
             V3Partition::selfTest();
             V3Partition::selfTestNormalizeCosts();
             V3Broken::selfTest();
-        }  // End: V3MtDisabledLockGuard{v3MtDisabledLock()};
+        }
         V3ThreadPool::selfTest();
         UINFO(2, "selfTest done\n");
     }
@@ -657,7 +661,7 @@ static void verilate(const string& argString) {
         // Read first filename
         v3Global.readFiles();
         v3Global.removeStd();
-    }  // End: V3MtDisabledLockGuard{v3MtDisabledLock()};
+    }
 
     // Link, etc, if needed
     if (!v3Global.opt.preprocOnly()) {  //
@@ -784,7 +788,7 @@ int main(int argc, char** argv) {
         // Validate settings (aka Boost.Program_options)
         v3Global.opt.notify();
         v3Global.rootp()->timeInit();
-    }  // End: V3MtDisabledLockGuard{v3MtDisabledLock()};
+    }
 
     V3Error::abortIfErrors();
 
@@ -807,7 +811,7 @@ int main(int argc, char** argv) {
         V3PreShell::shutdown();
         v3Global.shutdown();
         FileLine::deleteAllRemaining();
-    }  // End: V3MtDisabledLockGuard{v3MtDisabledLock()};
+    }
 
     UINFO(1, "Done, Exiting...\n");
 }

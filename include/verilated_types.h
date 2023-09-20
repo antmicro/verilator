@@ -1475,7 +1475,7 @@ class VlClass VL_NOT_FINAL : public VlDeletable {
     // Atomically decrements the reference counter. Assuming VlClassRef semantics are sound, it
     // should never get called at m_counter == 0.
     void refCountDec() VL_MT_SAFE {
-        if (!--m_counter) m_deleterp->put(this);
+        if (!--m_counter && m_deleterp) m_deleterp->put(this);
     }
 
 public:

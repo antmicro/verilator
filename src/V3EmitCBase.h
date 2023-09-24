@@ -108,8 +108,10 @@ public:
     static string topClassName() VL_MT_SAFE {  // Return name of top wrapper module
         return v3Global.opt.prefix();
     }
-    static AstCFile* newCFile(const string& filename, bool slow, bool source);
-    static AstCFile* createCFile(const string& filename, bool slow, bool source) VL_MT_SAFE;
+    static AstCFile* newCFile(const string& filename, bool slow, bool source)
+        VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex());
+    static AstCFile* createCFile(const string& filename, bool slow, bool source)
+        VL_REQUIRES(v3Global.constPoolMutex(), v3Global.typeTableMutex());
     string cFuncArgs(const AstCFunc* nodep);
     void emitCFuncHeader(const AstCFunc* funcp, const AstNodeModule* modp, bool withScope);
     void emitCFuncDecl(const AstCFunc* funcp, const AstNodeModule* modp, bool cLinkage = false);

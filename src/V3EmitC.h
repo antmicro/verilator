@@ -20,6 +20,7 @@
 #include "config_build.h"
 #include "verilatedos.h"
 
+#include "V3Global.h"
 #include "V3ThreadSafety.h"
 
 //============================================================================
@@ -28,7 +29,7 @@ class V3EmitC final {
 public:
     static void emitcConstPool() VL_MT_DISABLED;
     static void emitcHeaders() VL_MT_DISABLED;
-    static void emitcImp();
+    static void emitcImp() VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex());
     static void emitcInlines() VL_MT_DISABLED;
     static void emitcModel() VL_MT_DISABLED;
     static void emitcSyms(bool dpiHdrOnly = false) VL_MT_DISABLED;

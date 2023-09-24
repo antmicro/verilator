@@ -225,11 +225,17 @@ void V3ErrorGuarded::v3errorEnd(std::ostringstream& sstr, const string& extra)
                     V3Broken::allowMidvisitorCheck(true);
                     const V3ThreadPool::ScopedExclusiveAccess exclusiveAccess;
                     if (dumpTreeLevel()) {
-                        v3Global.rootp()->dumpTreeFile(v3Global.debugFilename("final.tree", 990));
+                        // This code is run in exclusive access mode. Since there are no other
+                        // threads that can hold the mutex right now, it is safe to pretend it is
+                        // already held by this thread.
+                        v3Global.constPoolMutex().assumeLocked();
+                        v3Global.typeTableMutex().assumeLocked();
+                        v3Global.netlistp()->dumpTreeFile(
+                            v3Global.debugFilename("final.tree", 990));
                     }
                     if (debug()) {
                         execErrorExitCb();
-                        V3Stats::statsFinalAll(v3Global.rootp());
+                        V3Stats::statsFinalAll();
                         V3Stats::statsReport();
                     }
                     // Abort in exclusive access to make sure other threads

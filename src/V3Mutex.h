@@ -148,7 +148,7 @@ public:
     V3SharedMutex()
         : m_exclusiveLockRequested{false}
         , m_sharedCount{0} {}
-    ~V3SharedMutex();
+    ~V3SharedMutex() {}
 
     V3SharedMutex(const V3SharedMutex&) = delete;
     V3SharedMutex(V3SharedMutex&&) = delete;
@@ -166,6 +166,9 @@ public:
     }
 
     // TODO(mglb): bool try_lock();
+
+    // Assume that the mutex is already held. Purely for Clang thread safety analyzer.
+    void assumeLocked() VL_ASSERT_CAPABILITY(this) VL_MT_SAFE {}
 
     void unlock() VL_RELEASE() {
         {

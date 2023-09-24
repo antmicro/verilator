@@ -155,7 +155,10 @@ public:
     AstTypeTable* typeTablep() const VL_REQUIRES(typeTableMutex());
     const AstTypeTable* typeTablecp() const VL_REQUIRES_SHARED(m_typeTableMutex);
 
-    AstNetlist* netlistp() const VL_REQUIRES(m_constPoolMutex, m_typeTableMutex) {
+    AstNetlist* netlistp() const VL_REQUIRES(constPoolMutex(), typeTableMutex()) {
+        return m_rootp;
+    }
+    const AstNetlist* netlistcp() const VL_REQUIRES_SHARED(constPoolMutex(), typeTableMutex()) {
         return m_rootp;
     }
 

@@ -2000,17 +2000,21 @@ public:
     AstNodeDType* findUInt32DType() const { return findBasicDType(VBasicDTypeKwd::UINT32); }
     AstNodeDType* findUInt64DType() const { return findBasicDType(VBasicDTypeKwd::UINT64); }
     AstNodeDType* findCHandleDType() const { return findBasicDType(VBasicDTypeKwd::CHANDLE); }
-    AstNodeDType* findEmptyQueueDType() const;
-    AstNodeDType* findVoidDType() const;
-    AstNodeDType* findStreamDType() const;
-    AstNodeDType* findQueueIndexDType() const;
-    AstNodeDType* findBitDType(int width, int widthMin, VSigning numeric) const;
-    AstNodeDType* findLogicDType(int width, int widthMin, VSigning numeric) const;
-    AstNodeDType* findLogicRangeDType(const VNumRange& range, int widthMin,
-                                      VSigning numeric) const;
-    AstNodeDType* findBitRangeDType(const VNumRange& range, int widthMin, VSigning numeric) const;
-    AstNodeDType* findBasicDType(VBasicDTypeKwd kwd) const;
-    static AstBasicDType* findInsertSameDType(AstBasicDType* nodep);
+    AstNodeDType* findEmptyQueueDType() const VL_EXCLUDES(v3Global.typeTableMutex());
+    AstNodeDType* findVoidDType() const VL_EXCLUDES(v3Global.typeTableMutex());
+    AstNodeDType* findStreamDType() const VL_EXCLUDES(v3Global.typeTableMutex());
+    AstNodeDType* findQueueIndexDType() const VL_EXCLUDES(v3Global.typeTableMutex());
+    AstNodeDType* findBitDType(int width, int widthMin, VSigning numeric) const
+        VL_EXCLUDES(v3Global.typeTableMutex());
+    AstNodeDType* findLogicDType(int width, int widthMin, VSigning numeric) const
+        VL_EXCLUDES(v3Global.typeTableMutex());
+    AstNodeDType* findLogicRangeDType(const VNumRange& range, int widthMin, VSigning numeric) const
+        VL_EXCLUDES(v3Global.typeTableMutex());
+    AstNodeDType* findBitRangeDType(const VNumRange& range, int widthMin, VSigning numeric) const
+        VL_EXCLUDES(v3Global.typeTableMutex());
+    AstNodeDType* findBasicDType(VBasicDTypeKwd kwd) const VL_EXCLUDES(v3Global.typeTableMutex());
+    static AstBasicDType* findInsertSameDType(AstBasicDType* nodep)
+        VL_EXCLUDES(v3Global.typeTableMutex());
 
     static VCastable computeCastable(const AstNodeDType* toDtp, const AstNodeDType* fromDtp,
                                     const AstNode* fromConstp);
@@ -2079,7 +2083,8 @@ public:
                          int maxDepth = 0) const;
     void dumpTreeFile(const string& filename, bool append = false, bool doDump = true,
                       bool doCheck = true);
-    static void dumpTreeFileGdb(const AstNode* nodep, const char* filenamep = nullptr);
+    static void dumpTreeFileGdb(const AstNode* nodep, const char* filenamep = nullptr)
+        VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex());
     void dumpTreeDot(std::ostream& os = std::cout) const;
     void dumpTreeDotFile(const string& filename, bool append = false, bool doDump = true);
 

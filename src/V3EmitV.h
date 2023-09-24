@@ -20,6 +20,7 @@
 #include "config_build.h"
 #include "verilatedos.h"
 
+#include "V3Global.h"
 #include "V3ThreadSafety.h"
 
 class AstNode;
@@ -32,8 +33,9 @@ public:
     static void verilogForTree(const AstNode* nodep, std::ostream& os = std::cout);
     static void verilogPrefixedTree(const AstNode* nodep, std::ostream& os, const string& prefix,
                                     int flWidth, AstSenTree* domainp, bool user3mark);
-    static void emitvFiles();
-    static void debugEmitV(const string& filename);
+    static void emitvFiles() VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex());
+    static void debugEmitV(const string& filename)
+        VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex());
 };
 
 #endif  // Guard

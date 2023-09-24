@@ -57,15 +57,18 @@ string EmitCBaseVisitorConst::funcNameProtect(const AstCFunc* nodep, const AstNo
     return name;
 }
 
-AstCFile* EmitCBaseVisitorConst::newCFile(const string& filename, bool slow, bool source) {
+AstCFile* EmitCBaseVisitorConst::newCFile(const string& filename, bool slow, bool source)
+    VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
+    VL_LOCK_GUARD(constPoolLock, v3Global.constPoolMutex());
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
     AstCFile* const cfilep = createCFile(filename, slow, source);
-    v3Global.rootp()->addFilesp(cfilep);
+    v3Global.netlistp()->addFilesp(cfilep);
     return cfilep;
 }
 
-AstCFile* EmitCBaseVisitorConst::createCFile(const string& filename, bool slow,
-                                             bool source) VL_MT_SAFE {
-    AstCFile* const cfilep = new AstCFile{v3Global.rootp()->fileline(), filename};
+AstCFile* EmitCBaseVisitorConst::createCFile(const string& filename, bool slow, bool source)
+    VL_REQUIRES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
+    AstCFile* const cfilep = new AstCFile{v3Global.netlistp()->fileline(), filename};
     cfilep->slow(slow);
     cfilep->source(source);
     return cfilep;

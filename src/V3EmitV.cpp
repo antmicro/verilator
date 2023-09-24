@@ -903,9 +903,11 @@ void V3EmitV::verilogPrefixedTree(const AstNode* nodep, std::ostream& os, const 
     { EmitVPrefixedVisitor{nodep, os, prefix, flWidth, domainp, user3mark}; }
 }
 
-void V3EmitV::emitvFiles() {
+void V3EmitV::emitvFiles() VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
     UINFO(2, __FUNCTION__ << ": " << endl);
-    for (AstNodeFile* filep = v3Global.rootp()->filesp(); filep;
+    VL_LOCK_GUARD(constPoolMutexLockGuard, v3Global.constPoolMutex());
+    VL_LOCK_GUARD(typeTableMutexLockGuard, v3Global.typeTableMutex());
+    for (AstNodeFile* filep = v3Global.netlistp()->filesp(); filep;
          filep = VN_AS(filep->nextp(), NodeFile)) {
         AstVFile* const vfilep = VN_CAST(filep, VFile);
         if (vfilep && vfilep->tblockp()) {
@@ -917,8 +919,11 @@ void V3EmitV::emitvFiles() {
     }
 }
 
-void V3EmitV::debugEmitV(const string& filename) {
+void V3EmitV::debugEmitV(const string& filename)
+    VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     V3OutVFile of{filename};
-    { EmitVFileVisitor{v3Global.rootp(), &of, true, true}; }
+    VL_LOCK_GUARD(constPoolMutexLockGuard, v3Global.constPoolMutex());
+    VL_LOCK_GUARD(typeTableMutexLockGuard, v3Global.typeTableMutex());
+    { EmitVFileVisitor{v3Global.netlistp(), &of, true, true}; }
 }

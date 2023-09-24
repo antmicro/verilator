@@ -1195,13 +1195,16 @@ void AstNode::dumpTreeGdb(const AstNode* nodep) {  // For GDB only  // LCOV_EXCL
 }  // LCOV_EXCL_STOP
 // cppcheck-suppress unusedFunction  // Debug only
 void AstNode::dumpTreeFileGdb(const AstNode* nodep,  // LCOV_EXCL_START
-                              const char* filenamep) {  // For GDB only
+                              const char* filenamep)  // For GDB only
+    VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
     if (!nodep) {
         cout << "<nullptr>" << endl;
         return;
     }
     const string filename = filenamep ? filenamep : v3Global.debugFilename("debug.tree", 98);
-    v3Global.rootp()->dumpTreeFile(filename);
+    VL_LOCK_GUARD(constPoolLock, v3Global.constPoolMutex());
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    v3Global.netlistp()->dumpTreeFile(filename);
 }  // LCOV_EXCL_STOP
 
 // cppcheck-suppress unusedFunction  // Debug only
@@ -1420,43 +1423,59 @@ void AstNode::dtypeChgWidthSigned(int width, int widthMin, VSigning numeric) {
     }
 }
 
-AstNodeDType* AstNode::findBasicDType(VBasicDTypeKwd kwd) const {
+AstNodeDType* AstNode::findBasicDType(VBasicDTypeKwd kwd) const
+    VL_EXCLUDES(v3Global.typeTableMutex()) {
     // For 'simple' types we use the global directory.  These are all unsized.
     // More advanced types land under the module/task/etc
-    return v3Global.rootp()->typeTablep()->findBasicDType(fileline(), kwd);
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    return v3Global.typeTablep()->findBasicDType(fileline(), kwd);
 }
-AstNodeDType* AstNode::findBitDType(int width, int widthMin, VSigning numeric) const {
-    return v3Global.rootp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::BIT,
-                                                             width, widthMin, numeric);
+AstNodeDType* AstNode::findBitDType(int width, int widthMin, VSigning numeric) const
+    VL_EXCLUDES(v3Global.typeTableMutex()) {
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    return v3Global.typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::BIT, width,
+                                                    widthMin, numeric);
 }
-AstNodeDType* AstNode::findLogicDType(int width, int widthMin, VSigning numeric) const {
-    return v3Global.rootp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::LOGIC,
-                                                             width, widthMin, numeric);
+AstNodeDType* AstNode::findLogicDType(int width, int widthMin, VSigning numeric) const
+    VL_EXCLUDES(v3Global.typeTableMutex()) {
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    return v3Global.typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::LOGIC, width,
+                                                    widthMin, numeric);
 }
 AstNodeDType* AstNode::findLogicRangeDType(const VNumRange& range, int widthMin,
-                                           VSigning numeric) const {
-    return v3Global.rootp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::LOGIC,
-                                                             range, widthMin, numeric);
+                                           VSigning numeric) const
+    VL_EXCLUDES(v3Global.typeTableMutex()) {
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    return v3Global.typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::LOGIC, range,
+                                                    widthMin, numeric);
 }
 AstNodeDType* AstNode::findBitRangeDType(const VNumRange& range, int widthMin,
-                                         VSigning numeric) const {
-    return v3Global.rootp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::BIT,
-                                                             range, widthMin, numeric);
+                                         VSigning numeric) const
+    VL_EXCLUDES(v3Global.typeTableMutex()) {
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    return v3Global.typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::BIT, range,
+                                                    widthMin, numeric);
 }
-AstBasicDType* AstNode::findInsertSameDType(AstBasicDType* nodep) {
-    return v3Global.rootp()->typeTablep()->findInsertSameDType(nodep);
+AstBasicDType* AstNode::findInsertSameDType(AstBasicDType* nodep)
+    VL_EXCLUDES(v3Global.typeTableMutex()) {
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    return v3Global.typeTablep()->findInsertSameDType(nodep);
 }
-AstNodeDType* AstNode::findEmptyQueueDType() const {
-    return v3Global.rootp()->typeTablep()->findEmptyQueueDType(fileline());
+AstNodeDType* AstNode::findEmptyQueueDType() const VL_EXCLUDES(v3Global.typeTableMutex()) {
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    return v3Global.typeTablep()->findEmptyQueueDType(fileline());
 }
-AstNodeDType* AstNode::findQueueIndexDType() const {
-    return v3Global.rootp()->typeTablep()->findQueueIndexDType(fileline());
+AstNodeDType* AstNode::findQueueIndexDType() const VL_EXCLUDES(v3Global.typeTableMutex()) {
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    return v3Global.typeTablep()->findQueueIndexDType(fileline());
 }
-AstNodeDType* AstNode::findVoidDType() const {
-    return v3Global.rootp()->typeTablep()->findVoidDType(fileline());
+AstNodeDType* AstNode::findVoidDType() const VL_EXCLUDES(v3Global.typeTableMutex()) {
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    return v3Global.typeTablep()->findVoidDType(fileline());
 }
-AstNodeDType* AstNode::findStreamDType() const {
-    return v3Global.rootp()->typeTablep()->findStreamDType(fileline());
+AstNodeDType* AstNode::findStreamDType() const VL_EXCLUDES(v3Global.typeTableMutex()) {
+    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    return v3Global.typeTablep()->findStreamDType(fileline());
 }
 
 static const AstNodeDType* computeCastableBase(const AstNodeDType* nodep) {

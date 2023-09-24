@@ -994,15 +994,19 @@ public:
     void visit(AstTime* nodep) override {
         puts("VL_TIME_UNITED_Q(");
         if (nodep->timeunit().isNone()) nodep->v3fatalSrc("$time has no units");
+        VL_SHARED_LOCK_GUARD(constPoolMutexLockGuard, v3Global.constPoolMutex());
+        VL_SHARED_LOCK_GUARD(typeTableMutexLockGuard, v3Global.typeTableMutex());
         puts(cvtToStr(nodep->timeunit().multiplier()
-                      / v3Global.rootp()->timeprecision().multiplier()));
+                      / v3Global.netlistcp()->timeprecision().multiplier()));
         puts(")");
     }
     void visit(AstTimeD* nodep) override {
         puts("VL_TIME_UNITED_D(");
         if (nodep->timeunit().isNone()) nodep->v3fatalSrc("$realtime has no units");
+        VL_SHARED_LOCK_GUARD(constPoolMutexLockGuard, v3Global.constPoolMutex());
+        VL_SHARED_LOCK_GUARD(typeTableMutexLockGuard, v3Global.typeTableMutex());
         puts(cvtToStr(nodep->timeunit().multiplier()
-                      / v3Global.rootp()->timeprecision().multiplier()));
+                      / v3Global.netlistcp()->timeprecision().multiplier()));
         puts(")");
     }
     void visit(AstTimeFormat* nodep) override {

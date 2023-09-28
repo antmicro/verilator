@@ -35,9 +35,10 @@
 #include <string>
 #include <unordered_map>
 
-class AstNetlist;
-class AstTypeTable;
 class AstConstPool;
+class AstNetlist;
+class AstNodeFile;
+class AstTypeTable;
 class V3HierBlockPlan;
 
 //======================================================================
@@ -127,6 +128,7 @@ class V3Global final {
     // Do not use directly. Use accessor methods instead.
     mutable V3SharedMutex m_constPoolMutex;
     mutable V3SharedMutex m_typeTableMutex;
+    mutable V3SharedMutex m_filesMutex;
 
 public:
     // Options
@@ -139,6 +141,8 @@ public:
 
     // ACCESSORS (general)
     AstNetlist* rootp() const VL_MT_DISABLED { return m_rootp; }
+
+    // BEGIN: PROTECTED NETLIST ACCESS
 
     // Protects access to Netlist's Const Pool. Has to be locked before typeTableMutex.
     V3SharedMutex& constPoolMutex() const VL_RETURN_CAPABILITY(m_constPoolMutex)
@@ -153,7 +157,16 @@ public:
         return m_typeTableMutex;
     }
     AstTypeTable* typeTablep() const VL_REQUIRES(typeTableMutex());
-    const AstTypeTable* typeTablecp() const VL_REQUIRES_SHARED(m_typeTableMutex);
+    const AstTypeTable* typeTablecp() const VL_REQUIRES_SHARED(typeTablep());
+
+    // Protects access to Netlist's Type Table.
+    V3SharedMutex& filesMutex() const VL_RETURN_CAPABILITY(m_filesMutex) {
+        return m_typeTableMutex;
+    }
+    AstNodeFile* filesp() const VL_REQUIRES(filesMutex());
+    const AstNodeFile* filescp() const VL_REQUIRES_SHARED(filesMutex());
+
+    void addFilesp(AstNodeFile* nodep) const VL_REQUIRES(filesMutex());
 
     AstNetlist* netlistp() const VL_REQUIRES(constPoolMutex(), typeTableMutex()) {
         return m_rootp;
@@ -161,6 +174,10 @@ public:
     const AstNetlist* netlistcp() const VL_REQUIRES_SHARED(constPoolMutex(), typeTableMutex()) {
         return m_rootp;
     }
+
+    FileLine* fileline() const VL_MT_SAFE;
+
+    // END: PROTECTED NETLIST ACCESS
 
     VWidthMinUsage widthMinUsage() const { return m_widthMinUsage; }
     bool assertDTypesResolved() const { return m_assertDTypesResolved; }

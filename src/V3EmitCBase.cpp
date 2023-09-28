@@ -24,16 +24,18 @@
 //######################################################################
 // EmitCParentModule implementation
 
-EmitCParentModule::EmitCParentModule() {
+EmitCParentModule::EmitCParentModule() VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
     const auto setAll = [](AstNodeModule* modp) -> void {
         for (AstNode* nodep = modp->stmtsp(); nodep; nodep = nodep->nextp()) {
             if (VN_IS(nodep, CFunc) || VN_IS(nodep, Var)) { nodep->user4p(modp); }
         }
     };
-    for (AstNode* modp = v3Global.rootp()->modulesp(); modp; modp = modp->nextp()) {
+    VL_LOCK_GUARD(constPoolMutexLockGuard, v3Global.constPoolMutex());
+    VL_LOCK_GUARD(typeTableMutexLockGuard, v3Global.typeTableMutex());
+    for (AstNode* modp = v3Global.netlistp()->modulesp(); modp; modp = modp->nextp()) {
         setAll(VN_AS(modp, NodeModule));
     }
-    setAll(v3Global.rootp()->constPoolp()->modp());
+    setAll(v3Global.constPoolp()->modp());
 }
 
 //######################################################################
@@ -58,17 +60,15 @@ string EmitCBaseVisitorConst::funcNameProtect(const AstCFunc* nodep, const AstNo
 }
 
 AstCFile* EmitCBaseVisitorConst::newCFile(const string& filename, bool slow, bool source)
-    VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
-    VL_LOCK_GUARD(constPoolLock, v3Global.constPoolMutex());
-    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    VL_EXCLUDES(v3Global.filesMutex()) {
+    VL_LOCK_GUARD(filesLock, v3Global.filesMutex());
     AstCFile* const cfilep = createCFile(filename, slow, source);
-    v3Global.netlistp()->addFilesp(cfilep);
+    v3Global.addFilesp(cfilep);
     return cfilep;
 }
 
-AstCFile* EmitCBaseVisitorConst::createCFile(const string& filename, bool slow, bool source)
-    VL_REQUIRES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
-    AstCFile* const cfilep = new AstCFile{v3Global.netlistp()->fileline(), filename};
+AstCFile* EmitCBaseVisitorConst::createCFile(const string& filename, bool slow, bool source) {
+    AstCFile* const cfilep = new AstCFile{v3Global.fileline(), filename};
     cfilep->slow(slow);
     cfilep->source(source);
     return cfilep;

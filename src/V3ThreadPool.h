@@ -307,6 +307,7 @@ auto V3ThreadPool::enqueue(Callable&& f) VL_MT_START {
         job();
     } else {
         {
+            (!m_mutex).assumeLocked();
             const V3LockGuard guard{m_mutex};
             m_queue.push(std::move(job));
         }

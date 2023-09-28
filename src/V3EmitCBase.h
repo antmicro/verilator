@@ -37,7 +37,7 @@ class EmitCParentModule final {
     const VNUser4InUse user4InUse;
 
 public:
-    EmitCParentModule();
+    EmitCParentModule() VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex());
     VL_UNCOPYABLE(EmitCParentModule);
 
     static const AstNodeModule* get(const AstNode* nodep) VL_MT_STABLE {
@@ -109,9 +109,8 @@ public:
         return v3Global.opt.prefix();
     }
     static AstCFile* newCFile(const string& filename, bool slow, bool source)
-        VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex());
-    static AstCFile* createCFile(const string& filename, bool slow, bool source)
-        VL_REQUIRES(v3Global.constPoolMutex(), v3Global.typeTableMutex());
+        VL_EXCLUDES(v3Global.filesMutex());
+    static AstCFile* createCFile(const string& filename, bool slow, bool source);
     string cFuncArgs(const AstCFunc* nodep);
     void emitCFuncHeader(const AstCFunc* funcp, const AstNodeModule* modp, bool withScope);
     void emitCFuncDecl(const AstCFunc* funcp, const AstNodeModule* modp, bool cLinkage = false);

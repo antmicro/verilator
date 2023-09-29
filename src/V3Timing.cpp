@@ -287,9 +287,10 @@ private:
             new V3GraphEdge{&m_suspGraph, getSuspendDepVtx(nodep->funcp()),
                             getSuspendDepVtx(m_procp), m_underFork ? P_FORK : P_CALL};
 
-        if (!m_underFork)
+        {
             new V3GraphEdge{&m_procGraph, getNeedsProcDepVtx(nodep->funcp()),
                             getNeedsProcDepVtx(m_procp), P_CALL};
+        }
 
         iterateChildren(nodep);
     }

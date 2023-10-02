@@ -45,6 +45,7 @@ jobs:
         WIN_FLEX_BISON: ${{ github.workspace }}/.ccache
       run: ./ci/ci-win-compile.ps1
     - name: test build
+      timeout-minutes: 60
       run: ./ci/ci-win-test.ps1
     - name: Zip up repository
       run: Compress-Archive -LiteralPath install -DestinationPath verilator.zip

@@ -129,6 +129,7 @@ jobs:
           - {os: ubuntu-20.04, compiler: { cc: gcc-10, cxx: g++-10 }, m32: 0, suite: vltmt-1}
     runs-on: ${{ matrix.os }}
     name: Test | ${{ matrix.os }} | ${{ matrix.compiler.cc }} | ${{ matrix.suite }} ${{ matrix.m32 && '| -m32' || '' }}
+    timeout-minutes: 60
     env:
       CI_BUILD_STAGE_NAME: test
       CI_RUNS_ON: ${{ matrix.os }}

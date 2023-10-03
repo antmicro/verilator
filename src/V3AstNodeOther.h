@@ -1566,18 +1566,21 @@ public:
         return nullptr;
     }
     void cloneRelink() override { V3ERROR_NA; }
-    AstBasicDType* findBasicDType(FileLine* fl, VBasicDTypeKwd kwd);
+    AstBasicDType* findBasicDType(FileLine* fl, VBasicDTypeKwd kwd)
+        VL_REQUIRES(v3Global.typeTableMutex());
     AstBasicDType* findLogicBitDType(FileLine* fl, VBasicDTypeKwd kwd, int width, int widthMin,
-                                     VSigning numeric);
+                                     VSigning numeric) VL_REQUIRES(v3Global.typeTableMutex());
     AstBasicDType* findLogicBitDType(FileLine* fl, VBasicDTypeKwd kwd, const VNumRange& range,
-                                     int widthMin, VSigning numeric);
-    AstBasicDType* findInsertSameDType(AstBasicDType* nodep);
-    AstEmptyQueueDType* findEmptyQueueDType(FileLine* fl);
-    AstQueueDType* findQueueIndexDType(FileLine* fl);
-    AstVoidDType* findVoidDType(FileLine* fl);
-    AstStreamDType* findStreamDType(FileLine* fl);
-    void clearCache();
-    void repairCache();
+                                     int widthMin, VSigning numeric)
+        VL_REQUIRES(v3Global.typeTableMutex());
+    AstBasicDType* findInsertSameDType(AstBasicDType* nodep)
+        VL_REQUIRES(v3Global.typeTableMutex());
+    AstEmptyQueueDType* findEmptyQueueDType(FileLine* fl) VL_REQUIRES(v3Global.typeTableMutex());
+    AstQueueDType* findQueueIndexDType(FileLine* fl) VL_REQUIRES(v3Global.typeTableMutex());
+    AstVoidDType* findVoidDType(FileLine* fl) VL_REQUIRES(v3Global.typeTableMutex());
+    AstStreamDType* findStreamDType(FileLine* fl) VL_REQUIRES(v3Global.typeTableMutex());
+    void clearCache() VL_REQUIRES(v3Global.typeTableMutex());
+    void repairCache() VL_REQUIRES(v3Global.typeTableMutex());
     void dump(std::ostream& str = std::cout) const override;
 };
 class AstTypedef final : public AstNode {

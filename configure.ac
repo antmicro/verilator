@@ -352,8 +352,8 @@ AC_SUBST(CFG_CXXFLAGS_PROFILE)
 # c++17 is the newest that Verilator is regularly tested to support
 # c++11 is the oldest that Verilator supports
 # gnu is required for Cygwin to compile verilated.h successfully
-#_MY_CXX_CHECK_SET(CFG_CXXFLAGS_STD_NEWEST,-std=gnu++20)
-#_MY_CXX_CHECK_SET(CFG_CXXFLAGS_STD_NEWEST,-std=c++20)
+_MY_CXX_CHECK_SET(CFG_CXXFLAGS_STD_NEWEST,-std=gnu++20)
+_MY_CXX_CHECK_SET(CFG_CXXFLAGS_STD_NEWEST,-std=c++20)
 _MY_CXX_CHECK_SET(CFG_CXXFLAGS_STD_NEWEST,-std=gnu++17)
 _MY_CXX_CHECK_SET(CFG_CXXFLAGS_STD_NEWEST,-std=c++17)
 _MY_CXX_CHECK_SET(CFG_CXXFLAGS_STD_NEWEST,-std=gnu++14)
@@ -371,10 +371,9 @@ _MY_CXX_CHECK_OPT(CFG_CXXFLAGS_WEXTRA,-Wthread-safety)
 AC_SUBST(CFG_CXXFLAGS_WEXTRA)
 
 # Flags for coroutine support for dynamic scheduling
-_MY_CXX_CHECK_IFELSE(
-  -fcoroutines-ts,
-  [CFG_CXXFLAGS_COROUTINES="-fcoroutines-ts"],
-  [CFG_CXXFLAGS_COROUTINES="-fcoroutines"])
+_MY_CXX_CHECK_SET(CFG_CXXFLAGS_COROUTINES,-fcoroutines-ts)
+_MY_CXX_CHECK_SET(CFG_CXXFLAGS_COROUTINES,-fcoroutines)
+_MY_CXX_CHECK_SET(CFG_CXXFLAGS_COROUTINES,-fcoroutines-ts -Wno-deprecated-experimental-coroutine)
 AC_SUBST(CFG_CXXFLAGS_COROUTINES)
 
 # HAVE_COROUTINES

@@ -205,11 +205,17 @@ private:
     const int m_uniqueNum;
     bool m_packed;
     bool m_isFourstate = false;  // V3Width computes
+    AstBasicDType* m_basicp = nullptr;
 
 protected:
     AstNodeUOrStructDType(VNType t, FileLine* fl, VSigning numericUnpack)
         : AstNodeDType{t, fl}
-        , m_uniqueNum{uniqueNumInc()} {
+        , m_uniqueNum{uniqueNumInc()}
+        , m_basicp(isFourstate()
+                       ? VN_AS(findLogicRangeDType(VNumRange{width() - 1, 0}, width(), numeric()),
+                               BasicDType)
+                       : VN_AS(findBitRangeDType(VNumRange{width() - 1, 0}, width(), numeric()),
+                               BasicDType)) {
         // VSigning::NOSIGN overloaded to indicate not packed
         m_packed = (numericUnpack != VSigning::NOSIGN);
         numeric(VSigning::fromBool(numericUnpack.isSigned()));
@@ -222,13 +228,7 @@ public:
     void dump(std::ostream& str) const override;
     bool isCompound() const override { return !packed(); }
     // For basicp() we reuse the size to indicate a "fake" basic type of same size
-    AstBasicDType* basicp() const override {
-        return (isFourstate()
-                    ? VN_AS(findLogicRangeDType(VNumRange{width() - 1, 0}, width(), numeric()),
-                            BasicDType)
-                    : VN_AS(findBitRangeDType(VNumRange{width() - 1, 0}, width(), numeric()),
-                            BasicDType));
-    }
+    AstBasicDType* basicp() const override { return m_basicp; }
     AstNodeDType* skipRefp() const override VL_MT_STABLE { return (AstNodeDType*)this; }
     AstNodeDType* skipRefToConstp() const override { return (AstNodeDType*)this; }
     AstNodeDType* skipRefToEnump() const override { return (AstNodeDType*)this; }

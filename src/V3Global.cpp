@@ -147,11 +147,11 @@ string V3Global::digitsFilename(int number) {
 
 void V3Global::dumpCheckGlobalTree(const string& stagename, int newNumber, bool doDump)
     VL_EXCLUDES(constPoolMutex(), typeTableMutex()) {
-    VL_LOCK_GUARD(constPoolLock, constPoolMutex());
-    VL_LOCK_GUARD(typeTableLock, typeTableMutex());
+    VL_SHARED_LOCK_GUARD(constPoolLock, constPoolMutex());
+    VL_SHARED_LOCK_GUARD(typeTableLock, typeTableMutex());
     const string treeFilename = v3Global.debugFilename(stagename + ".tree", newNumber);
-    netlistp()->dumpTreeFile(treeFilename, false, doDump);
-    if (opt.dumpTreeDot()) { netlistp()->dumpTreeDotFile(treeFilename + ".dot", false, doDump); }
+    netlistcp()->dumpTreeFile(treeFilename, false, doDump);
+    if (opt.dumpTreeDot()) { netlistcp()->dumpTreeDotFile(treeFilename + ".dot", false, doDump); }
     if (opt.stats()) V3Stats::statsStage(stagename);
 }
 

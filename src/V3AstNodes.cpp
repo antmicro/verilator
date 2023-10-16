@@ -1151,9 +1151,11 @@ AstStreamDType* AstTypeTable::findStreamDType(FileLine* fl) {
     return m_streamp;
 }
 
-AstQueueDType* AstTypeTable::findQueueIndexDType(FileLine* fl) VL_REQUIRES(v3Global.typeTableMutex()) {
+AstQueueDType* AstTypeTable::findQueueIndexDType(FileLine* fl)
+    VL_REQUIRES(v3Global.typeTableMutex()) {
     if (VL_UNLIKELY(!m_queueIndexp)) {
-        AstQueueDType* const newp = new AstQueueDType{fl, AstNode::findUInt32DType(), nullptr};
+        AstQueueDType* const newp
+            = new AstQueueDType{fl, findBasicDType(fileline(), VBasicDTypeKwd::UINT32), nullptr};
         addTypesp(newp);
         m_queueIndexp = newp;
     }

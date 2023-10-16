@@ -1982,24 +1982,44 @@ public:
     void dtypeSetLogicSized(int width, VSigning numeric) {
         dtypep(findLogicDType(width, width, numeric));  // Since sized, widthMin is width
     }
-    void dtypeSetBit() { dtypep(findBitDType()); }
-    void dtypeSetDouble() { dtypep(findDoubleDType()); }
-    void dtypeSetString() { dtypep(findStringDType()); }
-    void dtypeSetSigned32() { dtypep(findSigned32DType()); }
-    void dtypeSetUInt32() { dtypep(findUInt32DType()); }  // Twostate
-    void dtypeSetUInt64() { dtypep(findUInt64DType()); }  // Twostate
-    void dtypeSetEmptyQueue() { dtypep(findEmptyQueueDType()); }
-    void dtypeSetVoid() { dtypep(findVoidDType()); }
-    void dtypeSetStream() { dtypep(findStreamDType()); }
+    void dtypeSetBit() VL_EXCLUDES(v3Global.typeTableMutex()) { dtypep(findBitDType()); }
+    void dtypeSetDouble() VL_EXCLUDES(v3Global.typeTableMutex()) { dtypep(findDoubleDType()); }
+    void dtypeSetString() VL_EXCLUDES(v3Global.typeTableMutex()) { dtypep(findStringDType()); }
+    void dtypeSetSigned32() VL_EXCLUDES(v3Global.typeTableMutex()) { dtypep(findSigned32DType()); }
+    void dtypeSetUInt32() VL_EXCLUDES(v3Global.typeTableMutex()) {
+        dtypep(findUInt32DType());
+    }  // Twostate
+    void dtypeSetUInt64() VL_EXCLUDES(v3Global.typeTableMutex()) {
+        dtypep(findUInt64DType());
+    }  // Twostate
+    void dtypeSetEmptyQueue() VL_EXCLUDES(v3Global.typeTableMutex()) {
+        dtypep(findEmptyQueueDType());
+    }
+    void dtypeSetVoid() VL_EXCLUDES(v3Global.typeTableMutex()) { dtypep(findVoidDType()); }
+    void dtypeSetStream() VL_EXCLUDES(v3Global.typeTableMutex()) { dtypep(findStreamDType()); }
 
     // Data type locators
-    AstNodeDType* findBitDType() const { return findBasicDType(VBasicDTypeKwd::LOGIC); }
-    AstNodeDType* findDoubleDType() const { return findBasicDType(VBasicDTypeKwd::DOUBLE); }
-    AstNodeDType* findStringDType() const { return findBasicDType(VBasicDTypeKwd::STRING); }
-    AstNodeDType* findSigned32DType() const { return findBasicDType(VBasicDTypeKwd::INTEGER); }
-    AstNodeDType* findUInt32DType() const { return findBasicDType(VBasicDTypeKwd::UINT32); }
-    AstNodeDType* findUInt64DType() const { return findBasicDType(VBasicDTypeKwd::UINT64); }
-    AstNodeDType* findCHandleDType() const { return findBasicDType(VBasicDTypeKwd::CHANDLE); }
+    AstNodeDType* findBitDType() const VL_EXCLUDES(v3Global.typeTableMutex()) {
+        return findBasicDType(VBasicDTypeKwd::LOGIC);
+    }
+    AstNodeDType* findDoubleDType() const VL_EXCLUDES(v3Global.typeTableMutex()) {
+        return findBasicDType(VBasicDTypeKwd::DOUBLE);
+    }
+    AstNodeDType* findStringDType() const VL_EXCLUDES(v3Global.typeTableMutex()) {
+        return findBasicDType(VBasicDTypeKwd::STRING);
+    }
+    AstNodeDType* findSigned32DType() const VL_EXCLUDES(v3Global.typeTableMutex()) {
+        return findBasicDType(VBasicDTypeKwd::INTEGER);
+    }
+    AstNodeDType* findUInt32DType() const VL_EXCLUDES(v3Global.typeTableMutex()) {
+        return findBasicDType(VBasicDTypeKwd::UINT32);
+    }
+    AstNodeDType* findUInt64DType() const VL_EXCLUDES(v3Global.typeTableMutex()) {
+        return findBasicDType(VBasicDTypeKwd::UINT64);
+    }
+    AstNodeDType* findCHandleDType() const VL_EXCLUDES(v3Global.typeTableMutex()) {
+        return findBasicDType(VBasicDTypeKwd::CHANDLE);
+    }
     AstNodeDType* findEmptyQueueDType() const VL_EXCLUDES(v3Global.typeTableMutex());
     AstNodeDType* findVoidDType() const VL_EXCLUDES(v3Global.typeTableMutex());
     AstNodeDType* findStreamDType() const VL_EXCLUDES(v3Global.typeTableMutex());
@@ -2017,7 +2037,7 @@ public:
         VL_EXCLUDES(v3Global.typeTableMutex());
 
     static VCastable computeCastable(const AstNodeDType* toDtp, const AstNodeDType* fromDtp,
-                                    const AstNode* fromConstp);
+                                     const AstNode* fromConstp);
     static AstNodeDType* getCommonClassTypep(AstNode* nodep1, AstNode* nodep2);
 
     // METHODS - dump and error
@@ -2082,11 +2102,11 @@ public:
     void dumpTreeAndNext(std::ostream& os = std::cout, const string& indent = "    ",
                          int maxDepth = 0) const;
     void dumpTreeFile(const string& filename, bool append = false, bool doDump = true,
-                      bool doCheck = true);
+                      bool doCheck = true) const;
     static void dumpTreeFileGdb(const AstNode* nodep, const char* filenamep = nullptr)
         VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex());
     void dumpTreeDot(std::ostream& os = std::cout) const;
-    void dumpTreeDotFile(const string& filename, bool append = false, bool doDump = true);
+    void dumpTreeDotFile(const string& filename, bool append = false, bool doDump = true) const;
 
     // METHODS - queries
     // Changes control flow, disable some optimizations

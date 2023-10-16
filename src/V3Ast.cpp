@@ -1202,9 +1202,9 @@ void AstNode::dumpTreeFileGdb(const AstNode* nodep,  // LCOV_EXCL_START
         return;
     }
     const string filename = filenamep ? filenamep : v3Global.debugFilename("debug.tree", 98);
-    VL_LOCK_GUARD(constPoolLock, v3Global.constPoolMutex());
-    VL_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
-    v3Global.netlistp()->dumpTreeFile(filename);
+    VL_SHARED_LOCK_GUARD(constPoolLock, v3Global.constPoolMutex());
+    VL_SHARED_LOCK_GUARD(typeTableLock, v3Global.typeTableMutex());
+    v3Global.netlistcp()->dumpTreeFile(filename);
 }  // LCOV_EXCL_STOP
 
 // cppcheck-suppress unusedFunction  // Debug only
@@ -1275,7 +1275,7 @@ void AstNode::dumpTreeAndNext(std::ostream& os, const string& indent, int maxDep
     }
 }
 
-void AstNode::dumpTreeFile(const string& filename, bool append, bool doDump, bool doCheck) {
+void AstNode::dumpTreeFile(const string& filename, bool append, bool doDump, bool doCheck) const {
     // Not const function as calls checkTree
     if (doDump) {
         {  // Write log & close
@@ -1299,7 +1299,7 @@ void AstNode::dumpTreeFile(const string& filename, bool append, bool doDump, boo
         checkTree();
         // Broken isn't part of check tree because it can munge iterp's
         // set by other steps if it is called in the middle of other operations
-        if (AstNetlist* const netp = VN_CAST(this, Netlist)) V3Broken::brokenAll(netp);
+        // if (const AstNetlist* const netp = VN_CAST(this, Netlist)) V3Broken::brokenAll(netp);
     }
 }
 
@@ -1330,7 +1330,7 @@ void AstNode::dumpTreeDot(std::ostream& os) const {
     drawChildren(os, this, m_op4p, "op4");
 }
 
-void AstNode::dumpTreeDotFile(const string& filename, bool append, bool doDump) {
+void AstNode::dumpTreeDotFile(const string& filename, bool append, bool doDump) const {
     if (doDump) {
         UINFO(2, "Dumping " << filename << endl);
         const std::unique_ptr<std::ofstream> treedotp{V3File::new_ofstream(filename, append)};

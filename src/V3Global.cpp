@@ -59,9 +59,7 @@ const AstConstPool* V3Global::constPoolcp() const VL_REQUIRES_SHARED(constPoolMu
     return m_rootp->constPoolp();
 }
 
-AstNodeFile* V3Global::filesp() const VL_REQUIRES(filesMutex()) {
-    return m_rootp->filesp();
-}
+AstNodeFile* V3Global::filesp() const VL_REQUIRES(filesMutex()) { return m_rootp->filesp(); }
 
 const AstNodeFile* V3Global::filescp() const VL_REQUIRES_SHARED(filesMutex()) {
     return m_rootp->filesp();
@@ -71,9 +69,7 @@ void V3Global::addFilesp(AstNodeFile* nodep) const VL_REQUIRES(filesMutex()) {
     return m_rootp->addFilesp(nodep);
 }
 
-FileLine* V3Global::fileline() const VL_MT_SAFE {
-    return m_rootp->fileline();
-}
+FileLine* V3Global::fileline() const VL_MT_SAFE { return m_rootp->fileline(); }
 
 void V3Global::checkTree() const VL_EXCLUDES(constPoolMutex(), typeTableMutex()) {
     VL_LOCK_GUARD(constPoolMutexLockGuard, constPoolMutex());

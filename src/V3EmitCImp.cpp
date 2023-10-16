@@ -176,9 +176,7 @@ class EmitCImp final : EmitCFunc {
             // Unfortunately we have some lint checks here, so we can't just skip processing.
             // We should move them to a different stage.
             const string filename = VL_DEV_NULL;
-            {
-                m_cfilesr.push_back(createCFile(filename, /* slow: */ m_slow, /* source: */ true));
-            }
+            { m_cfilesr.push_back(createCFile(filename, /* slow: */ m_slow, /* source: */ true)); }
             m_ofp = new V3OutCFile{filename};
         } else {
             string filename = v3Global.opt.makeDir() + "/" + prefixNameProtect(m_fileModp);
@@ -188,9 +186,7 @@ class EmitCImp final : EmitCFunc {
             }
             if (m_slow) filename += "__Slow";
             filename += ".cpp";
-            {
-                m_cfilesr.push_back(createCFile(filename, /* slow: */ m_slow, /* source: */ true));
-            }
+            { m_cfilesr.push_back(createCFile(filename, /* slow: */ m_slow, /* source: */ true)); }
             m_ofp = v3Global.opt.systemC() ? new V3OutScFile{filename} : new V3OutCFile{filename};
         }
 

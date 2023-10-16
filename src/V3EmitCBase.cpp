@@ -24,7 +24,8 @@
 //######################################################################
 // EmitCParentModule implementation
 
-EmitCParentModule::EmitCParentModule() VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
+EmitCParentModule::EmitCParentModule()
+    VL_EXCLUDES(v3Global.constPoolMutex(), v3Global.typeTableMutex()) {
     const auto setAll = [](AstNodeModule* modp) -> void {
         for (AstNode* nodep = modp->stmtsp(); nodep; nodep = nodep->nextp()) {
             if (VN_IS(nodep, CFunc) || VN_IS(nodep, Var)) { nodep->user4p(modp); }

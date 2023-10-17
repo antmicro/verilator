@@ -1751,7 +1751,11 @@ public:
         if (nodep) ASTNODE_PREFETCH_NON_NULL(nodep); \
     } while (false)
 
+class AstNetlist;
+
 class AstNode VL_NOT_FINAL {
+    friend class AstNetlist;
+
     // v ASTNODE_PREFETCH depends on below ordering of members
     AstNode* m_nextp = nullptr;  // Next peer in the parent's list
     AstNode* m_backp = nullptr;  // Node that points to this one (via next/op1/op2/...)

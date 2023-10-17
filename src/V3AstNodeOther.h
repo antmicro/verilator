@@ -1208,7 +1208,22 @@ class AstNetlist final : public AstNode {
     uint32_t m_nextFreeMTaskID = 1;  // Next unique MTask ID within netlist
                                      // starts at 1 so 0 means no MTask ID
     uint32_t m_nextFreeMTaskProfilingID = 0;  // Next unique ID to use for PGO
+
+    AstNode* m_realOp3 = nullptr;
+
 public:
+    void mglbBlockMiscp(bool enable) {
+        if (enable) {
+            UASSERT(m_realOp3 == nullptr, "Tried to block already blocked miscp.");
+            m_realOp3 = op3p();
+            m_op3p = reinterpret_cast<AstNode*>(8);
+        } else {
+            UASSERT(m_realOp3 != nullptr, "Tried to restore miscp from nullptr.");
+            m_op3p = m_realOp3;
+            m_realOp3 = nullptr;
+        }
+    }
+
     AstNetlist();
     ASTGEN_MEMBERS_AstNetlist;
     const char* broken() const override;

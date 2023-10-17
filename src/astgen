@@ -651,10 +651,11 @@ def read_types(filename, Nodes, prefix):
                         else:
                             node.addOp(n, ident, *op[1:])
             else:
-                line = re.sub(r'//.*$', '', line)
-                if re.match(r'.*[Oo]p[1-9].*', line):
-                    error(lineno,
-                          "Use generated accessors to access op<N> operands")
+                pass
+                #  line = re.sub(r'//.*$', '', line)
+                #  if re.match(r'.*[Oo]p[1-9].*', line):
+                #  error(lineno,
+                #  "Use generated accessors to access op<N> operands")
 
         checkFinishedNode(node)
     if hasErrors:

@@ -641,7 +641,6 @@ static void verilate(const string& argString) {
     V3Os::unlinkRegexp(v3Global.opt.hierTopDataDir(), v3Global.opt.prefix() + "_*.tree");
     V3Os::unlinkRegexp(v3Global.opt.hierTopDataDir(), v3Global.opt.prefix() + "_*.dot");
     V3Os::unlinkRegexp(v3Global.opt.hierTopDataDir(), v3Global.opt.prefix() + "_*.txt");
-    v3Global.rootp()->mglbBlockMiscp(false);
 
     // Internal tests (after option parsing as need debug() setting,
     // and after removing files as may make debug output)
@@ -663,6 +662,7 @@ static void verilate(const string& argString) {
         V3ThreadPool::selfTest();
         UINFO(2, "selfTest done\n");
     }
+    v3Global.rootp()->mglbBlockMiscp(false);
 
     {
         const V3MtDisabledLockGuard mtDisabler{v3MtDisabledLock()};

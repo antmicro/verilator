@@ -613,6 +613,8 @@ static void process() {
 static void verilate(const string& argString) {
     UINFO(1, "Option --verilate: Start Verilation\n");
 
+    v3Global.rootp()->mglbBlockMiscp(true);
+
     // Can we skip doing everything if times are ok?
     V3File::addSrcDepend(v3Global.opt.buildDepBin());
     if (v3Global.opt.skipIdentical().isTrue()
@@ -627,6 +629,7 @@ static void verilate(const string& argString) {
     if (!V3Os::getenvStr("VERILATOR_DEBUG_SKIP_IDENTICAL", "").empty()) {  // LCOV_EXCL_START
         v3fatalSrc("VERILATOR_DEBUG_SKIP_IDENTICAL w/ --skip-identical: Changes found\n");
     }  // LCOV_EXCL_STOP
+    v3Global.rootp()->mglbBlockMiscp(false);
 
     // Disable mutexes in single-thread verilation
     V3MutexConfig::s().configure(v3Global.opt.verilateJobs() > 1 /*enable*/);

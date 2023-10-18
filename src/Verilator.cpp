@@ -629,7 +629,6 @@ static void verilate(const string& argString) {
     if (!V3Os::getenvStr("VERILATOR_DEBUG_SKIP_IDENTICAL", "").empty()) {  // LCOV_EXCL_START
         v3fatalSrc("VERILATOR_DEBUG_SKIP_IDENTICAL w/ --skip-identical: Changes found\n");
     }  // LCOV_EXCL_STOP
-    v3Global.rootp()->mglbBlockMiscp(false);
 
     // Disable mutexes in single-thread verilation
     V3MutexConfig::s().configure(v3Global.opt.verilateJobs() > 1 /*enable*/);
@@ -642,6 +641,7 @@ static void verilate(const string& argString) {
     V3Os::unlinkRegexp(v3Global.opt.hierTopDataDir(), v3Global.opt.prefix() + "_*.tree");
     V3Os::unlinkRegexp(v3Global.opt.hierTopDataDir(), v3Global.opt.prefix() + "_*.dot");
     V3Os::unlinkRegexp(v3Global.opt.hierTopDataDir(), v3Global.opt.prefix() + "_*.txt");
+    v3Global.rootp()->mglbBlockMiscp(false);
 
     // Internal tests (after option parsing as need debug() setting,
     // and after removing files as may make debug output)

@@ -787,11 +787,11 @@ int main(int argc, char** argv) {
         // Preprocessor
         // Before command parsing so we can handle -Ds on command line.
         V3PreShell::boot();
-        v3Global.rootp()->mglbBlockMiscp(false);
 
         // Command option parsing
         v3Global.opt.buildDepBin(V3Os::filenameCleanup(argv[0]));
         v3Global.opt.parseOpts(new FileLine{FileLine::commandLineFilename()}, argc - 1, argv + 1);
+        v3Global.rootp()->mglbBlockMiscp(false);
 
         // Validate settings (aka Boost.Program_options)
         v3Global.opt.notify();

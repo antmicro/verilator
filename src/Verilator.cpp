@@ -783,9 +783,11 @@ int main(int argc, char** argv) {
         // Post-constructor initialization of netlists
         v3Global.boot();
 
+        v3Global.rootp()->mglbBlockMiscp(true);
         // Preprocessor
         // Before command parsing so we can handle -Ds on command line.
         V3PreShell::boot();
+        v3Global.rootp()->mglbBlockMiscp(false);
 
         // Command option parsing
         v3Global.opt.buildDepBin(V3Os::filenameCleanup(argv[0]));

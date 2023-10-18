@@ -798,7 +798,9 @@ int main(int argc, char** argv) {
         v3Global.rootp()->mglbBlockMiscp(false);
     }
 
+    v3Global.rootp()->mglbBlockMiscp(true);
     V3Error::abortIfErrors();
+    v3Global.rootp()->mglbBlockMiscp(false);
 
     if (v3Global.opt.verilate()) {
         verilate(argString);

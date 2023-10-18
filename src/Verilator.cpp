@@ -662,14 +662,16 @@ static void verilate(const string& argString) {
         V3ThreadPool::selfTest();
         UINFO(2, "selfTest done\n");
     }
-    v3Global.rootp()->mglbBlockMiscp(false);
 
+    v3Global.rootp()->mglbBlockMiscp(false);
     {
         const V3MtDisabledLockGuard mtDisabler{v3MtDisabledLock()};
 
         // Read first filename
+        v3Global.rootp()->mglbBlockMiscp(true);
         v3Global.readFiles();
         v3Global.removeStd();
+        v3Global.rootp()->mglbBlockMiscp(false);
     }
 
     // Link, etc, if needed

@@ -791,11 +791,11 @@ int main(int argc, char** argv) {
         // Command option parsing
         v3Global.opt.buildDepBin(V3Os::filenameCleanup(argv[0]));
         v3Global.opt.parseOpts(new FileLine{FileLine::commandLineFilename()}, argc - 1, argv + 1);
-        v3Global.rootp()->mglbBlockMiscp(false);
 
         // Validate settings (aka Boost.Program_options)
         v3Global.opt.notify();
         v3Global.rootp()->timeInit();
+        v3Global.rootp()->mglbBlockMiscp(false);
     }
 
     V3Error::abortIfErrors();

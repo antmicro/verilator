@@ -380,7 +380,7 @@ public:
 void EmitCSyms::emitSymHdr() {
     UINFO(6, __FUNCTION__ << ": " << endl);
     const string filename = v3Global.opt.makeDir() + "/" + symClassName() + ".h";
-    newCFile(filename, true /*slow*/, false /*source*/);
+    m_cfilep = newCFile(filename, true /*slow*/, false /*source*/);
 
     if (v3Global.opt.systemC()) {
         m_ofp = new V3OutScFile{filename};
@@ -420,6 +420,7 @@ void EmitCSyms::emitSymHdr() {
         for (const auto& itr : m_scopeFuncs) {
             const AstCFunc* const funcp = itr.second.m_cfuncp;
             if (funcp->dpiExportImpl()) {
+                increaseComplexityScore(1);
                 const string cbtype
                     = protect(v3Global.opt.prefix() + "__Vcb_" + funcp->cname() + "_t");
                 const string functype = funcp->rtnTypeVoid() + " (*) (" + cFuncArgs(funcp) + ")";
@@ -429,17 +430,20 @@ void EmitCSyms::emitSymHdr() {
         for (const auto& i : types) puts(i.first);
     }
 
+    increaseComplexityScore(2);
     puts("\n// SYMS CLASS (contains all model state)\n");
     puts("class alignas(VL_CACHE_LINE_BYTES)" + symClassName()
          + " final : public VerilatedSyms {\n");
     ofp()->putsPrivate(false);  // public:
 
     puts("// INTERNAL STATE\n");
+    increaseComplexityScore(1);
     puts(topClassName() + "* const __Vm_modelp;\n");
 
     if (v3Global.needTraceDumper()) {
         // __Vm_dumperp is local, otherwise we wouldn't know what design's eval()
         // should call a global dumpperp
+        increaseComplexityScore(3);
         puts("bool __Vm_dumping = false;  // Dumping is active\n");
         puts("VerilatedMutex __Vm_dumperMutex;  // Protect __Vm_dumperp\n");
         puts(v3Global.opt.traceClassLang()
@@ -447,22 +451,29 @@ void EmitCSyms::emitSymHdr() {
                "  /// Trace class for $dump*\n");
     }
     if (v3Global.opt.trace()) {
+        increaseComplexityScore(2);
         puts("bool __Vm_activity = false;"
              "  ///< Used by trace routines to determine change occurred\n");
         puts("uint32_t __Vm_baseCode = 0;"
              "  ///< Used by trace routines when tracing multiple models\n");
     }
     if (v3Global.hasEvents()) {
+        increaseComplexityScore(1);
         if (v3Global.assignsEvents()) {
             puts("std::vector<VlAssignableEvent> __Vm_triggeredEvents;\n");
         } else {
             puts("std::vector<VlEvent*> __Vm_triggeredEvents;\n");
         }
     }
-    if (v3Global.hasClasses()) puts("VlDeleter __Vm_deleter;\n");
+    if (v3Global.hasClasses()) {
+        increaseComplexityScore(1);
+        puts("VlDeleter __Vm_deleter;\n");
+    }
+    increaseComplexityScore(1);
     puts("bool __Vm_didInit = false;\n");
 
     if (v3Global.opt.mtasks()) {
+        increaseComplexityScore(4);
         puts("\n// MULTI-THREADING\n");
         puts("VlThreadPool* __Vm_threadPoolp;\n");
         puts("bool __Vm_even_cycle__ico = false;\n");
@@ -471,6 +482,7 @@ void EmitCSyms::emitSymHdr() {
     }
 
     if (v3Global.opt.profExec()) {
+        increaseComplexityScore(1);
         puts("\n// EXECUTION PROFILING\n");
         puts("VlExecutionProfiler* const __Vm_executionProfilerp;\n");
     }
@@ -480,6 +492,7 @@ void EmitCSyms::emitSymHdr() {
         const AstScope* const scopep = i.first;
         const AstNodeModule* const modp = i.second;
         if (VN_IS(modp, Class)) continue;
+        increaseComplexityScore(1);
         const string name = prefixNameProtect(modp);
         ofp()->printf("%-30s ", name.c_str());
         puts(protectIf(scopep->nameDotless(), scopep->protect()) + ";\n");
@@ -487,6 +500,7 @@ void EmitCSyms::emitSymHdr() {
 
     if (m_coverBins) {
         puts("\n// COVERAGE\n");
+        increaseComplexityScore(1);
         puts(v3Global.opt.threads() > 1 ? "std::atomic<uint32_t>" : "uint32_t");
         puts(" __Vcoverage[");
         puts(cvtToStr(m_coverBins));
@@ -494,6 +508,7 @@ void EmitCSyms::emitSymHdr() {
     }
 
     if (v3Global.opt.profPgo()) {
+        increaseComplexityScore(1);
         puts("\n// PGO PROFILING\n");
         const uint32_t usedMTaskProfilingIDs = v3Global.rootp()->usedMTaskProfilingIDs();
         puts("VlPgoProfiler<" + cvtToStr(usedMTaskProfilingIDs) + "> _vm_pgoProfiler;\n");
@@ -502,64 +517,77 @@ void EmitCSyms::emitSymHdr() {
     if (!m_scopeNames.empty()) {  // Scope names
         puts("\n// SCOPE NAMES\n");
         for (const auto& itr : m_scopeNames) {
+            increaseComplexityScore(1);
             puts("VerilatedScope " + protect("__Vscope_" + itr.second.m_symName) + ";\n");
         }
     }
 
     if (v3Global.opt.vpi()) {
+        increaseComplexityScore(1);
         puts("\n// SCOPE HIERARCHY\n");
         puts("VerilatedHierarchy __Vhier;\n");
     }
 
     puts("\n// CONSTRUCTORS\n");
+    increaseComplexityScore(1);
     puts(symClassName() + "(VerilatedContext* contextp, const char* namep, " + topClassName()
          + "* modelp);\n");
     puts(string{"~"} + symClassName() + "();\n");
 
     for (const auto& i : m_usesVfinal) {
+        increaseComplexityScore(1);
         puts("void " + symClassName() + "_" + cvtToStr(i.first) + "(");
         if (i.second) { puts("int __Vfinal"); }
         puts(");\n");
     }
 
+    increaseComplexityScore(1);
     puts("\n// METHODS\n");
     puts("const char* name() { return TOP.name(); }\n");
 
     if (v3Global.hasEvents()) {
+        increaseComplexityScore(1);
         if (v3Global.assignsEvents()) {
             puts("void enqueueTriggeredEventForClearing(VlAssignableEvent& event) {\n");
         } else {
             puts("void enqueueTriggeredEventForClearing(VlEvent& event) {\n");
         }
+        increaseComplexityScore(1);
         puts("#ifdef VL_DEBUG\n");
         puts("if (VL_UNLIKELY(!event.isTriggered())) {\n");
         puts("VL_FATAL_MT(__FILE__, __LINE__, __FILE__, \"event passed to "
              "'enqueueTriggeredEventForClearing' was not triggered\");\n");
         puts("}\n");
         puts("#endif\n");
+        increaseComplexityScore(1);
         if (v3Global.assignsEvents()) {
             puts("__Vm_triggeredEvents.push_back(event);\n");
         } else {
             puts("__Vm_triggeredEvents.push_back(&event);\n");
         }
         puts("}\n");
+        increaseComplexityScore(1);
         puts("void clearTriggeredEvents() {\n");
+        increaseComplexityScore(1);
         if (v3Global.assignsEvents()) {
             puts("for (auto& event : __Vm_triggeredEvents) event.clearTriggered();\n");
         } else {
             puts("for (const auto eventp : __Vm_triggeredEvents) eventp->clearTriggered();\n");
         }
+        increaseComplexityScore(1);
         puts("__Vm_triggeredEvents.clear();\n");
         puts("}\n");
     }
 
     if (v3Global.needTraceDumper()) {
+        increaseComplexityScore(2);
         if (!optSystemC()) puts("void _traceDump();\n");
         puts("void _traceDumpOpen();\n");
         puts("void _traceDumpClose();\n");
     }
 
     if (v3Global.opt.savable()) {
+        increaseComplexityScore(2);
         puts("void " + protect("__Vserialize") + "(VerilatedSerialize& os);\n");
         puts("void " + protect("__Vdeserialize") + "(VerilatedDeserialize& os);\n");
     }
@@ -567,6 +595,7 @@ void EmitCSyms::emitSymHdr() {
 
     ofp()->putsEndGuard();
     VL_DO_CLEAR(delete m_ofp, m_ofp = nullptr);
+    m_cfilep = nullptr;
 }
 
 void EmitCSyms::closeSplit() {
@@ -574,6 +603,7 @@ void EmitCSyms::closeSplit() {
 
     puts("}\n");
     VL_DO_CLEAR(delete m_ofp, m_ofp = nullptr);
+    m_cfilep = nullptr;
 }
 
 void EmitCSyms::checkSplit(bool usesVfinal) {
@@ -592,6 +622,7 @@ void EmitCSyms::checkSplit(bool usesVfinal) {
     cfilep->support(true);
     m_usesVfinal[m_funcNum] = usesVfinal;
     closeSplit();
+    m_cfilep = cfilep;
 
     if (v3Global.opt.systemC()) {
         m_ofp = new V3OutScFile{filename};
@@ -599,11 +630,13 @@ void EmitCSyms::checkSplit(bool usesVfinal) {
         m_ofp = new V3OutCFile{filename};
     }
 
+    increaseComplexityScore(1);
     m_ofpBase->puts(symClassName() + "_" + cvtToStr(m_funcNum) + "(");
     if (usesVfinal) { m_ofpBase->puts("__Vfinal"); }
     m_ofpBase->puts(");\n");
 
     emitSymImpPreamble();
+    increaseComplexityScore(2);
     puts("void " + symClassName() + "::" + symClassName() + "_" + cvtToStr(m_funcNum) + "(");
     if (usesVfinal) { puts("int __Vfinal"); }
     puts(") {\n");
@@ -647,6 +680,7 @@ void EmitCSyms::emitScopeHier(bool destroy) {
             const string scopeType = it->second.m_type;
             if ((name.find('.') == string::npos)
                 && (scopeType == "SCOPE_MODULE" || scopeType == "SCOPE_PACKAGE")) {
+                increaseComplexityScore(1);
                 puts("__Vhier." + method + "(0, &" + protect("__Vscope_" + it->second.m_symName)
                      + ");\n");
             }
@@ -661,6 +695,7 @@ void EmitCSyms::emitScopeHier(bool destroy) {
                 const auto to = vlstd::as_const(m_scopeNames).find(toname);
                 UASSERT(from != m_scopeNames.end(), fromname + " not in m_scopeNames");
                 UASSERT(to != m_scopeNames.end(), toname + " not in m_scopeNames");
+                increaseComplexityScore(1);
                 puts("__Vhier." + method + "(");
                 puts("&" + protect("__Vscope_" + from->second.m_symName) + ", ");
                 puts("&" + protect("__Vscope_" + to->second.m_symName) + ");\n");
@@ -675,6 +710,7 @@ void EmitCSyms::emitSymImp() {
     const string filename = v3Global.opt.makeDir() + "/" + symClassName() + ".cpp";
     AstCFile* const cfilep = newCFile(filename, true /*slow*/, true /*source*/);
     cfilep->support(true);
+    m_cfilep = cfilep;
 
     if (v3Global.opt.systemC()) {
         m_ofp = new V3OutScFile{filename};
@@ -687,6 +723,7 @@ void EmitCSyms::emitSymImp() {
 
     if (v3Global.opt.savable()) {
         for (const bool& de : {false, true}) {
+            increaseComplexityScore(2);
             const string classname = de ? "VerilatedDeserialize" : "VerilatedSerialize";
             const string funcname = de ? "__Vdeserialize" : "__Vserialize";
             const string op = de ? ">>" : "<<";
@@ -695,10 +732,12 @@ void EmitCSyms::emitSymImp() {
                  + "& os) {\n");
             puts("// Internal state\n");
             if (v3Global.opt.trace()) puts("os" + op + "__Vm_activity;\n");
+            increaseComplexityScore(1);
             puts("os " + op + " __Vm_didInit;\n");
             puts("// Module instance state\n");
             for (const auto& pair : m_scopes) {
                 const AstScope* const scopep = pair.first;
+                increaseComplexityScore(1);
                 puts(protectIf(scopep->nameDotless(), scopep->protect()) + "." + protect(funcname)
                      + "(os);\n");
             }
@@ -710,15 +749,18 @@ void EmitCSyms::emitSymImp() {
     puts("// FUNCTIONS\n");
 
     // Destructor
+    increaseComplexityScore(2);
     puts(symClassName() + "::~" + symClassName() + "()\n");
     puts("{\n");
     emitScopeHier(true);
     if (v3Global.needTraceDumper()) {
+        increaseComplexityScore(1);
         puts("#ifdef VM_TRACE\n");
         puts("if (__Vm_dumping) _traceDumpClose();\n");
         puts("#endif  // VM_TRACE\n");
     }
     if (v3Global.opt.profPgo()) {
+        increaseComplexityScore(1);
         puts("_vm_pgoProfiler.write(\"" + topClassName()
              + "\", _vm_contextp__->profVltFilename());\n");
     }
@@ -726,6 +768,7 @@ void EmitCSyms::emitSymImp() {
 
     if (v3Global.needTraceDumper()) {
         if (!optSystemC()) {
+            increaseComplexityScore(2);
             puts("\nvoid " + symClassName() + "::_traceDump() {\n");
             // Caller checked for __Vm_dumperp non-nullptr
             puts("const VerilatedLockGuard lock(__Vm_dumperMutex);\n");
@@ -733,6 +776,7 @@ void EmitCSyms::emitSymImp() {
             puts("}\n");
         }
 
+        increaseComplexityScore(6);
         puts("\nvoid " + symClassName() + "::_traceDumpOpen() {\n");
         puts("const VerilatedLockGuard lock(__Vm_dumperMutex);\n");
         puts("if (VL_UNLIKELY(!__Vm_dumperp)) {\n");
@@ -744,6 +788,7 @@ void EmitCSyms::emitSymImp() {
         puts("}\n");
         puts("}\n");
 
+        increaseComplexityScore(3);
         puts("\nvoid " + symClassName() + "::_traceDumpClose() {\n");
         puts("const VerilatedLockGuard lock(__Vm_dumperMutex);\n");
         puts("__Vm_dumping = false;\n");
@@ -753,10 +798,12 @@ void EmitCSyms::emitSymImp() {
     puts("\n");
 
     // Constructor
+    increaseComplexityScore(2);
     puts(symClassName() + "::" + symClassName()
          + "(VerilatedContext* contextp, const char* namep, " + topClassName() + "* modelp)\n");
     puts("    : VerilatedSyms{contextp}\n");
     puts("    // Setup internal state of the Syms class\n");
+    increaseComplexityScore(1);
     puts("    , __Vm_modelp{modelp}\n");
 
     if (v3Global.opt.mtasks()) {
@@ -781,10 +828,12 @@ void EmitCSyms::emitSymImp() {
         // Note we create N-1 threads in the thread pool. The thread
         // that calls eval() becomes the final Nth thread for the
         // duration of the eval call.
+        increaseComplexityScore(1);
         puts("    , __Vm_threadPoolp{static_cast<VlThreadPool*>(contextp->threadPoolp())}\n");
     }
 
     if (v3Global.opt.profExec()) {
+        increaseComplexityScore(2);
         puts("    , "
              "__Vm_executionProfilerp{static_cast<VlExecutionProfiler*>(contextp->"
              "enableExecutionProfiler(&VlExecutionProfiler::construct))}\n");
@@ -794,6 +843,7 @@ void EmitCSyms::emitSymImp() {
     for (const auto& i : m_scopes) {
         const AstScope* const scopep = i.first;
         const AstNodeModule* const modp = i.second;
+        increaseComplexityScore(2);
         puts("    , ");
         puts(protect(scopep->nameDotless()));
         puts("{this");
@@ -816,6 +866,7 @@ void EmitCSyms::emitSymImp() {
             v3Global.rootp()->topModulep()->foreach([&](const AstExecGraph* execGraphp) {
                 for (const V3GraphVertex* vxp = execGraphp->depGraphp()->verticesBeginp(); vxp;
                      vxp = vxp->verticesNextp()) {
+                    increaseComplexityScore(1);
                     const ExecMTask* const mtp = static_cast<const ExecMTask*>(vxp);
                     puts("_vm_pgoProfiler.addCounter(" + cvtToStr(mtp->profilerId()) + ", \""
                          + mtp->hashName() + "\");\n");
@@ -826,11 +877,13 @@ void EmitCSyms::emitSymImp() {
 
     puts("// Configure time unit / time precision\n");
     if (!v3Global.rootp()->timeunit().isNone()) {
+        increaseComplexityScore(1);
         puts("_vm_contextp__->timeunit(");
         puts(cvtToStr(v3Global.rootp()->timeunit().powerOfTen()));
         puts(");\n");
     }
     if (!v3Global.rootp()->timeprecision().isNone()) {
+        increaseComplexityScore(1);
         puts("_vm_contextp__->timeprecision(");
         puts(cvtToStr(v3Global.rootp()->timeprecision().powerOfTen()));
         puts(");\n");
@@ -842,6 +895,7 @@ void EmitCSyms::emitSymImp() {
         const AstNodeModule* const modp = i.second;
         if (const AstScope* const aboveScopep = scopep->aboveScopep()) {
             checkSplit(false);
+            increaseComplexityScore(1);
             const string protName = protectWordsIf(scopep->name(), scopep->protect());
             if (VN_IS(modp, ClassPackage)) {
                 // ClassPackage modules seem to be a bit out of place, so hard code...
@@ -865,6 +919,7 @@ void EmitCSyms::emitSymImp() {
         // first is used by AstCoverDecl's call to __vlCoverInsert
         const bool first = !modp->user1();
         modp->user1(true);
+        increaseComplexityScore(1);
         puts(protectIf(scopep->nameDotless(), scopep->protect()) + "." + protect("__Vconfigure")
              + "(" + (first ? "true" : "false") + ");\n");
         ++m_numStmts;
@@ -874,6 +929,7 @@ void EmitCSyms::emitSymImp() {
         puts("// Setup scopes\n");
         for (ScopeNames::iterator it = m_scopeNames.begin(); it != m_scopeNames.end(); ++it) {
             checkSplit(false);
+            increaseComplexityScore(1);
             puts(protect("__Vscope_" + it->second.m_symName) + ".configure(this, name(), ");
             putsQuoted(protectWordsIf(it->second.m_prettyName, true));
             puts(", ");
@@ -892,6 +948,7 @@ void EmitCSyms::emitSymImp() {
 
     if (v3Global.dpi()) {
         m_ofpBase->puts("// Setup export functions\n");
+        increaseComplexityScore(1);
         m_ofpBase->puts("for (int __Vfinal = 0; __Vfinal < 2; ++__Vfinal) {\n");
         for (auto it = m_scopeFuncs.begin(); it != m_scopeFuncs.end(); ++it) {
             AstScopeName* const scopep = it->second.m_scopep;
@@ -899,6 +956,7 @@ void EmitCSyms::emitSymImp() {
             AstNodeModule* const modp = it->second.m_modp;
             if (funcp->dpiExportImpl()) {
                 checkSplit(true);
+                increaseComplexityScore(2);
                 puts(protect("__Vscope_" + scopep->scopeSymName()) + ".exportInsert(__Vfinal, ");
                 putsQuoted(funcp->cname());  // Not protected - user asked for import/export
                 puts(", (void*)(&");
@@ -922,6 +980,7 @@ void EmitCSyms::emitSymImp() {
             string bounds;
             if (AstBasicDType* const basicp = varp->basicp()) {
                 // Range is always first, it's not in "C" order
+                increaseComplexityScore(2);
                 if (basicp->isRanged()) {
                     bounds += " ,";
                     bounds += cvtToStr(basicp->hi());
@@ -960,6 +1019,7 @@ void EmitCSyms::emitSymImp() {
             if (pdim > 1 || udim > 1) {
                 puts("//UNSUP ");  // VerilatedImp can't deal with >2d or packed arrays
             }
+            increaseComplexityScore(1);
             puts(protect("__Vscope_" + it->second.m_scopeName) + ".varInsert(__Vfinal,");
             putsQuoted(protect(it->second.m_varBasePretty));
 
@@ -968,6 +1028,7 @@ void EmitCSyms::emitSymImp() {
             varName += protect(varp->name());
 
             if (varp->isParam()) {
+                increaseComplexityScore(1);
                 if (varp->vlEnumType() == "VLVT_STRING") {
                     puts(", const_cast<void*>(static_cast<const void*>(");
                     puts(varName);
@@ -1001,6 +1062,7 @@ void EmitCSyms::emitSymImp() {
 
     closeSplit();
     m_ofp = nullptr;
+    m_cfilep = nullptr;
     VL_DO_CLEAR(delete m_ofpBase, m_ofpBase = nullptr);
 }
 
@@ -1013,6 +1075,7 @@ void EmitCSyms::emitDpiHdr() {
     cfilep->support(true);
     V3OutCFile hf{filename};
     m_ofp = &hf;
+    m_cfilep = cfilep;
 
     m_ofp->putsHeader();
     puts("// DESCR"
@@ -1057,6 +1120,7 @@ void EmitCSyms::emitDpiHdr() {
 
     ofp()->putsEndGuard();
     m_ofp = nullptr;
+    m_cfilep = nullptr;
 }
 
 //######################################################################
@@ -1068,6 +1132,7 @@ void EmitCSyms::emitDpiImp() {
     cfilep->support(true);
     V3OutCFile hf(filename);
     m_ofp = &hf;
+    m_cfilep = cfilep;
 
     m_ofp->putsHeader();
     puts("// DESCR"
@@ -1093,6 +1158,7 @@ void EmitCSyms::emitDpiImp() {
             // Prevent multi-definition if used by multiple models
             puts("#ifndef VL_DPIDECL_" + nodep->name() + "_\n");
             puts("#define VL_DPIDECL_" + nodep->name() + "_\n");
+            increaseComplexityScore(2);
             puts(nodep->rtnTypeVoid() + " " + nodep->name() + "(" + cFuncArgs(nodep) + ") {\n");
             puts("// DPI export" + ifNoProtect(" at " + nodep->fileline()->ascii()) + "\n");
             puts("return " + topClassName() + "::" + nodep->name() + "(");
@@ -1112,6 +1178,7 @@ void EmitCSyms::emitDpiImp() {
         }
     }
     m_ofp = nullptr;
+    m_cfilep = nullptr;
 }
 
 //######################################################################

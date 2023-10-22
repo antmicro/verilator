@@ -85,8 +85,18 @@ class EmitCBaseVisitorConst VL_NOT_FINAL : public VNVisitorConst, public EmitCBa
 public:
     // STATE
     V3OutCFile* m_ofp = nullptr;
+    AstCFile* m_cfilep = nullptr;
     bool m_trackText = false;  // Always track AstText nodes
     // METHODS
+    int64_t complexityScore() const {
+        assert(m_cfilep);
+        return m_cfilep->complexityScore();
+    }
+    void increaseComplexityScore(int64_t score) {
+        assert(m_cfilep);
+        m_cfilep->increaseComplexityScore(score);
+    }
+
     V3OutCFile* ofp() const VL_MT_SAFE { return m_ofp; }
     void puts(const string& str) { ofp()->puts(str); }
     void putsHeader() { ofp()->putsHeader(); }

@@ -56,7 +56,7 @@ class EmitCModel final : public EmitCFunc {
         UASSERT(!m_ofp, "Output file should not be open");
 
         const string filename = v3Global.opt.makeDir() + "/" + topClassName() + ".h";
-        newCFile(filename, /* slow: */ false, /* source: */ false);
+        m_cfilep = newCFile(filename, /* slow: */ false, /* source: */ false);
         m_ofp = v3Global.opt.systemC() ? new V3OutScFile{filename} : new V3OutCFile{filename};
 
         ofp()->putsHeader();
@@ -247,6 +247,7 @@ class EmitCModel final : public EmitCFunc {
         ofp()->putsEndGuard();
 
         VL_DO_CLEAR(delete m_ofp, m_ofp = nullptr);
+        m_cfilep = nullptr;
     }
 
     void emitConstructorImplementation(AstNodeModule* modp) {
@@ -608,7 +609,7 @@ class EmitCModel final : public EmitCFunc {
         UASSERT(!m_ofp, "Output file should not be open");
 
         const string filename = v3Global.opt.makeDir() + "/" + topClassName() + ".cpp";
-        newCFile(filename, /* slow: */ false, /* source: */ true);
+        m_cfilep = newCFile(filename, /* slow: */ false, /* source: */ true);
         m_ofp = v3Global.opt.systemC() ? new V3OutScFile{filename} : new V3OutCFile{filename};
 
         ofp()->putsHeader();
@@ -633,6 +634,7 @@ class EmitCModel final : public EmitCFunc {
         if (v3Global.opt.savable()) emitSerializationFunctions();
 
         VL_DO_CLEAR(delete m_ofp, m_ofp = nullptr);
+        m_cfilep = nullptr;
     }
 
     void emitDpiExportDispatchers(AstNodeModule* modp) {
@@ -648,13 +650,14 @@ class EmitCModel final : public EmitCFunc {
                 v3Global.useParallelBuild(true);
                 // Close old file
                 VL_DO_CLEAR(delete m_ofp, m_ofp = nullptr);
+                m_cfilep = nullptr;
             }
 
             if (!m_ofp) {
                 string filename = v3Global.opt.makeDir() + "/" + topClassName() + "__Dpi_Export";
                 filename = m_uniqueNames.get(filename);
                 filename += ".cpp";
-                newCFile(filename, /* slow: */ false, /* source: */ true);
+                m_cfilep = newCFile(filename, /* slow: */ false, /* source: */ true);
                 m_ofp = v3Global.opt.systemC() ? new V3OutScFile{filename}
                                                : new V3OutCFile{filename};
                 splitSizeReset();  // Reset file size tracking
@@ -672,7 +675,10 @@ class EmitCModel final : public EmitCFunc {
             iterateConst(funcp);
         }
 
-        if (m_ofp) { VL_DO_CLEAR(delete m_ofp, m_ofp = nullptr); }
+        if (m_ofp) {
+            VL_DO_CLEAR(delete m_ofp, m_ofp = nullptr);
+            m_cfilep = nullptr;
+        }
     }
 
     void main(AstNodeModule* modp) {

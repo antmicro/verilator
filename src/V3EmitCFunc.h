@@ -256,6 +256,7 @@ public:
         VL_RESTORER(m_instantiatesOwnProcess)
         m_cfuncp = nodep;
         m_instantiatesOwnProcess = false;
+        increaseComplexityScore(1);
 
         splitSizeInc(nodep);
 
@@ -362,6 +363,7 @@ public:
         bool paren = true;
         bool decind = false;
         bool rhs = true;
+        increaseComplexityScore(1);
         if (AstSel* const selp = VN_CAST(nodep->lhsp(), Sel)) {
             if (selp->widthMin() == 1) {
                 putbs("VL_ASSIGNBIT_");
@@ -458,6 +460,7 @@ public:
     }
     void visit(AstAlwaysPublic*) override {}
     void visit(AstAssocSel* nodep) override {
+        increaseComplexityScore(1);
         iterateAndNextConstNull(nodep->fromp());
         putbs(".at(");
         AstAssocArrayDType* const adtypep
@@ -467,6 +470,7 @@ public:
         puts(")");
     }
     void visit(AstWildcardSel* nodep) override {
+        increaseComplexityScore(1);
         iterateAndNextConstNull(nodep->fromp());
         putbs(".at(");
         AstWildcardArrayDType* const adtypep
@@ -476,6 +480,7 @@ public:
         puts(")");
     }
     void visit(AstCCall* nodep) override {
+        increaseComplexityScore(1);
         const AstCFunc* const funcp = nodep->funcp();
         const AstNodeModule* const funcModp = EmitCParentModule::get(funcp);
         if (funcp->dpiImportPrototype()) {
@@ -502,6 +507,7 @@ public:
         emitCCallArgs(nodep, nodep->selfPointerProtect(m_useSelfForThis), m_cfuncp->needProcess());
     }
     void visit(AstCMethodCall* nodep) override {
+        increaseComplexityScore(1);
         const AstCFunc* const funcp = nodep->funcp();
         UASSERT_OBJ(!funcp->isLoose(), nodep, "Loose method called via AstCMethodCall");
         iterateConst(nodep->fromp());
@@ -510,10 +516,12 @@ public:
         emitCCallArgs(nodep, "", m_cfuncp->needProcess());
     }
     void visit(AstCAwait* nodep) override {
+        increaseComplexityScore(1);
         puts("co_await ");
         iterateConst(nodep->exprp());
     }
     void visit(AstCNew* nodep) override {
+        increaseComplexityScore(1);
         if (VN_IS(nodep->dtypep(), VoidDType)) {
             // super.new case
             return;
@@ -525,6 +533,7 @@ public:
         puts(")");
     }
     void visit(AstCMethodHard* nodep) override {
+        increaseComplexityScore(1);
         iterateConst(nodep->fromp());
         puts(".");
         puts(nodep->name());
@@ -544,6 +553,7 @@ public:
     }
     void visit(AstLambdaArgRef* nodep) override { putbs(nodep->nameProtect()); }
     void visit(AstWith* nodep) override {
+        increaseComplexityScore(1);
         // With uses a C++11 lambda
         putbs("[&](");
         if (auto* const argrefp = nodep->indexArgRefp()) {
@@ -558,10 +568,12 @@ public:
         puts("}\n");
     }
     void visit(AstNodeCase* nodep) override {  // LCOV_EXCL_LINE
+        increaseComplexityScore(1);
         // In V3Case...
         nodep->v3fatalSrc("Case statements should have been reduced out");
     }
     void visit(AstComment* nodep) override {
+        increaseComplexityScore(1);
         string at;
         if (nodep->showAt()) {
             at = " at " + nodep->fileline()->ascii();
@@ -574,6 +586,7 @@ public:
         iterateChildrenConst(nodep);
     }
     void visit(AstCoverDecl* nodep) override {
+        increaseComplexityScore(1);
         puts("vlSelf->__vlCoverInsert(");  // As Declared in emitCoverageDecl
         puts("&(vlSymsp->__Vcoverage[");
         puts(cvtToStr(nodep->dataDeclThisp()->binNum()));
@@ -602,6 +615,7 @@ public:
         puts(");\n");
     }
     void visit(AstCoverInc* nodep) override {
+        increaseComplexityScore(1);
         if (v3Global.opt.threads() > 1) {
             puts("vlSymsp->__Vcoverage[");
             puts(cvtToStr(nodep->declp()->dataDeclThisp()->binNum()));
@@ -614,16 +628,19 @@ public:
     }
     void visit(AstDisableFork* nodep) override { puts("vlProcess->disableFork();\n"); }
     void visit(AstCReturn* nodep) override {
+        increaseComplexityScore(1);
         puts("return (");
         iterateAndNextConstNull(nodep->lhsp());
         puts(");\n");
     }
     void visit(AstDisplay* nodep) override {
+        increaseComplexityScore(1);
         string text = nodep->fmtp()->text();
         if (nodep->addNewline()) text += "\n";
         displayNode(nodep, nodep->fmtp()->scopeNamep(), text, nodep->fmtp()->exprsp(), false);
     }
     void visit(AstDumpCtl* nodep) override {
+        increaseComplexityScore(1);
         switch (nodep->ctlType()) {
         case VDumpCtlType::FILE:
             puts("vlSymsp->_vm_contextp__->dumpfile(");
@@ -663,6 +680,7 @@ public:
         }
     }
     void visit(AstScopeName* nodep) override {
+        increaseComplexityScore(1);
         // For use under AstCCalls for dpiImports.  ScopeNames under
         // displays are handled in AstDisplay
         if (!nodep->dpiExport()) {
@@ -672,19 +690,24 @@ public:
         }
     }
     void visit(AstSFormat* nodep) override {
+        increaseComplexityScore(1);
         displayNode(nodep, nodep->fmtp()->scopeNamep(), nodep->fmtp()->text(),
                     nodep->fmtp()->exprsp(), false);
     }
     void visit(AstSFormatF* nodep) override {
+        increaseComplexityScore(1);
         displayNode(nodep, nodep->scopeNamep(), nodep->text(), nodep->exprsp(), false);
     }
     void visit(AstFScanF* nodep) override {
+        increaseComplexityScore(1);
         displayNode(nodep, nullptr, nodep->text(), nodep->exprsp(), true);
     }
     void visit(AstSScanF* nodep) override {
+        increaseComplexityScore(1);
         displayNode(nodep, nullptr, nodep->text(), nodep->exprsp(), true);
     }
     void visit(AstValuePlusArgs* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_VALUEPLUSARGS_IN");
         emitIQW(nodep->outp());
         puts("(");
@@ -697,11 +720,13 @@ public:
         puts(")");
     }
     void visit(AstTestPlusArgs* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_TESTPLUSARGS_I(");
         emitCvtPackStr(nodep->searchp());
         puts(")");
     }
     void visit(AstFError* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_FERROR_I");
         puts(nodep->strp()->isString() ? "N(" : "W(");
         iterateAndNextConstNull(nodep->filep());
@@ -714,6 +739,7 @@ public:
         puts(")");
     }
     void visit(AstFGetS* nodep) override {
+        increaseComplexityScore(1);
         checkMaxWords(nodep);
         emitOpName(nodep, nodep->emitC(), nodep->lhsp(), nodep->rhsp(), nullptr);
     }
@@ -727,6 +753,7 @@ public:
         }
     }
     void visit(AstFOpen* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_FOPEN_NN(");
         emitCvtPackStr(nodep->filenamep());
         putbs(", ");
@@ -736,11 +763,13 @@ public:
         puts(");\n");
     }
     void visit(AstFOpenMcd* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_FOPEN_MCD_N(");
         emitCvtPackStr(nodep->filenamep());
         puts(");\n");
     }
     void visit(AstNodeReadWriteMem* nodep) override {
+        increaseComplexityScore(1);
         puts(nodep->cFuncPrefixp());
         puts("N(");
         puts(nodep->isHex() ? "true" : "false");
@@ -790,11 +819,13 @@ public:
         puts(");\n");
     }
     void visit(AstFClose* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_FCLOSE_I(");
         iterateAndNextConstNull(nodep->filep());
         puts("); ");
     }
     void visit(AstFFlush* nodep) override {
+        increaseComplexityScore(1);
         if (!nodep->filep()) {
             puts("Verilated::runFlushCallbacks();\n");
         } else {
@@ -806,6 +837,7 @@ public:
         }
     }
     void visit(AstFSeek* nodep) override {
+        increaseComplexityScore(1);
         puts("(VL_FSEEK_I(");
         iterateAndNextConstNull(nodep->filep());
         puts(",");
@@ -815,16 +847,19 @@ public:
         puts(") == -1 ? -1 : 0)");
     }
     void visit(AstFTell* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_FTELL_I(");
         iterateAndNextConstNull(nodep->filep());
         puts(")");
     }
     void visit(AstFRewind* nodep) override {
+        increaseComplexityScore(1);
         puts("(VL_FSEEK_I(");
         iterateAndNextConstNull(nodep->filep());
         puts(", 0, 0) == -1 ? -1 : 0)");
     }
     void visit(AstFRead* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_FREAD_I(");
         puts(cvtToStr(nodep->memp()->widthMin()));  // Need real storage width
         putbs(",");
@@ -868,6 +903,7 @@ public:
         puts(")");
     }
     void visit(AstSysFuncAsTask* nodep) override {
+        increaseComplexityScore(1);
         if (!nodep->lhsp()->isWide()) puts("(void)");
         iterateAndNextConstNull(nodep->lhsp());
         if (!nodep->lhsp()->isWide()) puts(";\n");
@@ -875,6 +911,7 @@ public:
     void visit(AstStackTraceF* nodep) override { puts("VL_STACKTRACE_N()"); }
     void visit(AstStackTraceT* nodep) override { puts("VL_STACKTRACE();\n"); }
     void visit(AstSystemT* nodep) override {
+        increaseComplexityScore(1);
         puts("(void)VL_SYSTEM_I");
         emitIQW(nodep->lhsp());
         puts("(");
@@ -887,6 +924,7 @@ public:
         puts(");\n");
     }
     void visit(AstSystemF* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_SYSTEM_I");
         emitIQW(nodep->lhsp());
         puts("(");
@@ -899,10 +937,12 @@ public:
         puts(")");
     }
     void visit(AstStmtExpr* node) override {
+        increaseComplexityScore(1);
         iterateConst(node->exprp());
         puts(";\n");
     }
     void visit(AstJumpBlock* nodep) override {
+        increaseComplexityScore(1);
         nodep->labelNum(++m_labelNum);
         puts("{\n");  // Make it visually obvious label jumps outside these
         iterateAndNextConstNull(nodep->stmtsp());
@@ -910,17 +950,21 @@ public:
         puts("}\n");
     }
     void visit(AstCLocalScope* nodep) override {
+        increaseComplexityScore(1);
         puts("{\n");
         iterateAndNextConstNull(nodep->stmtsp());
         puts("}\n");
     }
     void visit(AstJumpGo* nodep) override {
+        increaseComplexityScore(1);
         puts("goto __Vlabel" + cvtToStr(nodep->labelp()->blockp()->labelNum()) + ";\n");
     }
     void visit(AstJumpLabel* nodep) override {
+        increaseComplexityScore(1);
         puts("__Vlabel" + cvtToStr(nodep->blockp()->labelNum()) + ": ;\n");
     }
     void visit(AstWhile* nodep) override {
+        increaseComplexityScore(1);
         iterateAndNextConstNull(nodep->precondsp());
         puts("while (");
         iterateAndNextConstNull(nodep->condp());
@@ -931,6 +975,7 @@ public:
         puts("}\n");
     }
     void visit(AstNodeIf* nodep) override {
+        increaseComplexityScore(1);
         puts("if (");
         if (!nodep->branchPred().unknown()) {
             puts(nodep->branchPred().ascii());
@@ -955,6 +1000,7 @@ public:
         }
     }
     void visit(AstExprStmt* nodep) override {
+        increaseComplexityScore(1);
         // GCC allows compound statements in expressions, but this is not standard.
         // So we use an immediate-evaluation lambda and comma operator
         putbs("([&]() {\n");
@@ -964,6 +1010,7 @@ public:
         puts(")");
     }
     void visit(AstStop* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_STOP_MT(");
         putsQuoted(protect(nodep->fileline()->filename()));
         puts(", ");
@@ -972,6 +1019,7 @@ public:
         puts(");\n");
     }
     void visit(AstFinish* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_FINISH_MT(");
         putsQuoted(protect(nodep->fileline()->filename()));
         puts(", ");
@@ -979,6 +1027,7 @@ public:
         puts(", \"\");\n");
     }
     void visit(AstPrintTimeScale* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_PRINTTIMESCALE(");
         putsQuoted(protect(nodep->prettyName()));
         puts(", ");
@@ -986,12 +1035,15 @@ public:
         puts(", vlSymsp->_vm_contextp__);\n");
     }
     void visit(AstRand* nodep) override {
+        increaseComplexityScore(1);
         emitOpName(nodep, nodep->emitC(), nodep->seedp(), nullptr, nullptr);
     }
     void visit(AstRandRNG* nodep) override {
+        increaseComplexityScore(1);
         emitOpName(nodep, nodep->emitC(), nullptr, nullptr, nullptr);
     }
     void visit(AstTime* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_TIME_UNITED_Q(");
         if (nodep->timeunit().isNone()) nodep->v3fatalSrc("$time has no units");
         puts(cvtToStr(nodep->timeunit().multiplier()
@@ -999,6 +1051,7 @@ public:
         puts(")");
     }
     void visit(AstTimeD* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_TIME_UNITED_D(");
         if (nodep->timeunit().isNone()) nodep->v3fatalSrc("$realtime has no units");
         puts(cvtToStr(nodep->timeunit().multiplier()
@@ -1006,6 +1059,7 @@ public:
         puts(")");
     }
     void visit(AstTimeFormat* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_TIMEFORMAT_IINI(");
         iterateAndNextConstNull(nodep->unitsp());
         puts(", ");
@@ -1017,9 +1071,11 @@ public:
         puts(", vlSymsp->_vm_contextp__);\n");
     }
     void visit(AstTimePrecision* nodep) override {
+        increaseComplexityScore(1);
         puts("vlSymsp->_vm_contextp__->timeprecision()");
     }
     void visit(AstNodeSimpleText* nodep) override {
+        increaseComplexityScore(1);
         const string text = m_inUC && m_useSelfForThis
                                 ? VString::replaceWord(nodep->text(), "this", "vlSelf")
                                 : nodep->text();
@@ -1030,6 +1086,7 @@ public:
         }
     }
     void visit(AstTextBlock* nodep) override {
+        increaseComplexityScore(1);
         visit(static_cast<AstNodeSimpleText*>(nodep));
         for (AstNode* childp = nodep->nodesp(); childp; childp = childp->nextp()) {
             iterateConst(childp);
@@ -1037,15 +1094,18 @@ public:
         }
     }
     void visit(AstCStmt* nodep) override {
+        increaseComplexityScore(1);
         putbs("");
         iterateAndNextConstNull(nodep->exprsp());
     }
     void visit(AstCExpr* nodep) override {
+        increaseComplexityScore(1);
         putbs("");
         iterateAndNextConstNull(nodep->exprsp());
     }
     void visit(AstUCStmt* nodep) override {
         VL_RESTORER(m_inUC);
+        increaseComplexityScore(1);
         m_inUC = true;
         putsDecoration(ifNoProtect("// $c statement at " + nodep->fileline()->ascii() + "\n"));
         iterateAndNextConstNull(nodep->exprsp());
@@ -1053,6 +1113,7 @@ public:
     }
     void visit(AstUCFunc* nodep) override {
         VL_RESTORER(m_inUC);
+        increaseComplexityScore(1);
         m_inUC = true;
         puts("\n");
         putsDecoration(ifNoProtect("// $c function at " + nodep->fileline()->ascii() + "\n"));
@@ -1062,9 +1123,11 @@ public:
 
     // Operators
     void visit(AstNodeTermop* nodep) override {
+        increaseComplexityScore(1);
         emitOpName(nodep, nodep->emitC(), nullptr, nullptr, nullptr);
     }
     void visit(AstNodeUniop* nodep) override {
+        increaseComplexityScore(1);
         if (nodep->emitCheckMaxWords()
             && (nodep->widthWords() > VL_MULS_MAX_WORDS
                 || nodep->lhsp()->widthWords() > VL_MULS_MAX_WORDS)) {
@@ -1085,6 +1148,7 @@ public:
         }
     }
     void visit(AstNodeBiop* nodep) override {
+        increaseComplexityScore(1);
         if (nodep->emitCheckMaxWords() && nodep->widthWords() > VL_MULS_MAX_WORDS) {
             nodep->v3warn(
                 E_UNSUPPORTED,
@@ -1106,10 +1170,12 @@ public:
     }
     void visit(AstNodeTriop* nodep) override {
         UASSERT_OBJ(!emitSimpleOk(nodep), nodep, "Triop cannot be described in a simple way");
+        increaseComplexityScore(1);
         emitOpName(nodep, nodep->emitC(), nodep->lhsp(), nodep->rhsp(), nodep->thsp());
     }
     void visit(AstCvtPackString* nodep) override { emitCvtPackStr(nodep->lhsp()); }
     void visit(AstRedXor* nodep) override {
+        increaseComplexityScore(1);
         if (nodep->lhsp()->isWide()) {
             visit(static_cast<AstNodeUniop*>(nodep));
         } else {
@@ -1126,6 +1192,7 @@ public:
         }
     }
     void visit(AstCCast* nodep) override {
+        increaseComplexityScore(1);
         // Extending a value of the same word width is just a NOP.
         if (const AstClassRefDType* const classDtypep = VN_CAST(nodep->dtypep(), ClassRefDType)) {
             puts("(" + classDtypep->cType("", false, false) + ")(");
@@ -1142,6 +1209,7 @@ public:
         puts(")");
     }
     void visit(AstNodeCond* nodep) override {
+        increaseComplexityScore(1);
         // Widths match up already, so we'll just use C++'s operator w/o any temps.
         if (nodep->thenp()->isWide()) {
             emitOpName(nodep, nodep->emitC(), nodep->condp(), nodep->thenp(), nodep->elsep());
@@ -1156,16 +1224,19 @@ public:
         }
     }
     void visit(AstMemberSel* nodep) override {
+        increaseComplexityScore(1);
         iterateAndNextConstNull(nodep->fromp());
         putbs("->");
         puts(nodep->varp()->nameProtect());
     }
     void visit(AstStructSel* nodep) override {
+        increaseComplexityScore(1);
         iterateAndNextConstNull(nodep->fromp());
         putbs(".");
         puts(nodep->nameProtect());
     }
     void visit(AstNullCheck* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_NULL_CHECK(");
         iterateAndNextConstNull(nodep->lhsp());
         puts(", ");
@@ -1175,6 +1246,7 @@ public:
         puts(")");
     }
     void visit(AstNewCopy* nodep) override {
+        increaseComplexityScore(1);
         puts("VL_NEW(" + prefixNameProtect(nodep->dtypep()) + ", "
              + optionalProcArg(nodep->dtypep()));
         puts("*");  // i.e. make into a reference
@@ -1183,9 +1255,11 @@ public:
     }
     void visit(AstSel* nodep) override {
         // Note ASSIGN checks for this on a LHS
+        increaseComplexityScore(1);
         emitOpName(nodep, nodep->emitC(), nodep->fromp(), nodep->lsbp(), nodep->widthp());
     }
     void visit(AstReplicate* nodep) override {
+        increaseComplexityScore(1);
         if (nodep->srcp()->widthMin() == 1 && !nodep->isWide()) {
             UASSERT_OBJ((static_cast<int>(VN_AS(nodep->countp(), Const)->toUInt())
                          * nodep->srcp()->widthMin())
@@ -1205,6 +1279,7 @@ public:
         }
     }
     void visit(AstStreamL* nodep) override {
+        increaseComplexityScore(1);
         // Attempt to use a "fast" stream function for slice size = power of 2
         if (!nodep->isWide()) {
             const uint32_t isPow2 = VN_AS(nodep->rhsp(), Const)->num().countOnes() == 1;
@@ -1227,6 +1302,7 @@ public:
                    nullptr);
     }
     void visit(AstCastDynamic* nodep) override {
+        increaseComplexityScore(1);
         putbs("VL_CAST_DYNAMIC(");
         iterateAndNextConstNull(nodep->fromp());
         puts(", ");
@@ -1234,6 +1310,7 @@ public:
         puts(")");
     }
     void visit(AstCountBits* nodep) override {
+        increaseComplexityScore(1);
         putbs("VL_COUNTBITS_");
         emitIQW(nodep->lhsp());
         puts("(");
@@ -1256,6 +1333,7 @@ public:
     void visit(AstInitItem* nodep) override { iterateChildrenConst(nodep); }
     // Terminals
     void visit(AstVarRef* nodep) override {
+        increaseComplexityScore(1);
         const AstVar* const varp = nodep->varp();
         const AstNodeModule* const varModp = EmitCParentModule::get(varp);
         if (isConstPoolMod(varModp)) {
@@ -1276,6 +1354,7 @@ public:
         puts(nodep->varp()->nameProtect());
     }
     void visit(AstAddrOfCFunc* nodep) override {
+        increaseComplexityScore(1);
         // Note: Can be thought to handle more, but this is all that is needed right now
         const AstCFunc* const funcp = nodep->funcp();
         UASSERT_OBJ(funcp->isLoose(), nodep, "Cannot take address of non-loose method");
@@ -1283,6 +1362,7 @@ public:
         puts(funcNameProtect(funcp));
     }
     void visit(AstConst* nodep) override {
+        increaseComplexityScore(1);
         if (m_emitConstInit) {
             EmitCConstInit::visit(nodep);
         } else if (nodep->isWide()) {
@@ -1294,6 +1374,7 @@ public:
         }
     }
     void visit(AstThisRef* nodep) override {
+        increaseComplexityScore(1);
         putbs(nodep->dtypep()->cType("", false, false));
         puts("{");
         puts(m_useSelfForThis ? "vlSelf" : "this");
@@ -1303,10 +1384,12 @@ public:
     //
     void visit(AstMTaskBody* nodep) override {
         VL_RESTORER(m_useSelfForThis);
+        increaseComplexityScore(1);
         m_useSelfForThis = true;
         iterateChildrenConst(nodep);
     }
     void visit(AstConsAssoc* nodep) override {
+        increaseComplexityScore(1);
         putbs(nodep->dtypep()->cType("", false, false));
         puts("()");
         if (nodep->defaultp()) {
@@ -1316,6 +1399,7 @@ public:
         }
     }
     void visit(AstSetAssoc* nodep) override {
+        increaseComplexityScore(1);
         iterateAndNextConstNull(nodep->lhsp());
         putbs(".set(");
         iterateAndNextConstNull(nodep->keyp());
@@ -1325,6 +1409,7 @@ public:
         puts(")");
     }
     void visit(AstConsWildcard* nodep) override {
+        increaseComplexityScore(1);
         putbs(nodep->dtypep()->cType("", false, false));
         puts("()");
         if (nodep->defaultp()) {
@@ -1334,6 +1419,7 @@ public:
         }
     }
     void visit(AstSetWildcard* nodep) override {
+        increaseComplexityScore(1);
         iterateAndNextConstNull(nodep->lhsp());
         putbs(".set(");
         iterateAndNextConstNull(nodep->keyp());
@@ -1343,6 +1429,7 @@ public:
         puts(")");
     }
     void visit(AstConsDynArray* nodep) override {
+        increaseComplexityScore(1);
         putbs(nodep->dtypep()->cType("", false, false));
         if (!nodep->lhsp()) {
             puts("()");
@@ -1358,6 +1445,7 @@ public:
         }
     }
     void visit(AstConsPackUOrStruct* nodep) override {
+        increaseComplexityScore(1);
         putbs(nodep->dtypep()->cType("", false, false));
         puts("{");
         for (AstNode* memberp = nodep->membersp(); memberp; memberp = memberp->nextp()) {
@@ -1367,6 +1455,7 @@ public:
         puts("}");
     }
     void visit(AstConsPackMember* nodep) override {
+        increaseComplexityScore(1);
         auto* const vdtypep = VN_AS(nodep->dtypep(), MemberDType);
         putbs(".");
         puts(vdtypep->name());
@@ -1374,6 +1463,7 @@ public:
         iterateConst(nodep->rhsp());
     }
     void visit(AstConsQueue* nodep) override {
+        increaseComplexityScore(1);
         putbs(nodep->dtypep()->cType("", false, false));
         if (!nodep->lhsp()) {
             puts("()");
@@ -1389,10 +1479,12 @@ public:
         }
     }
     void visit(AstCReset* nodep) override {
+        increaseComplexityScore(1);
         AstVar* const varp = nodep->varrefp()->varp();
         emitVarReset(varp);
     }
     void visit(AstExecGraph* nodep) override {
+        increaseComplexityScore(1);
         // The location of the AstExecGraph within the containing AstCFunc is where we want to
         // invoke the graph and wait for it to complete. Emitting the children does just that.
         UASSERT_OBJ(!nodep->mTaskBodiesp(), nodep, "These should have been lowered");
@@ -1412,8 +1504,9 @@ public:
 
     EmitCFunc()
         : m_lazyDecls(*this) {}
-    EmitCFunc(AstNode* nodep, V3OutCFile* ofp, bool trackText = false)
+    EmitCFunc(AstNode* nodep, AstCFile* cfilep, V3OutCFile* ofp, bool trackText = false)
         : EmitCFunc{} {
+        m_cfilep = cfilep;
         m_ofp = ofp;
         m_trackText = trackText;
         iterateConst(nodep);

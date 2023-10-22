@@ -31,11 +31,264 @@ class EmitMk final {
 public:
     // METHODS
 
+    struct FileOrConcatenatedFilesList {
+        std::string fileName{};
+        std::vector<std::string> concatenatedFileNames{};
+
+        bool isConcatenatingFile() const { return !concatenatedFileNames.empty(); }
+    };
+
+    struct FileNameWithScore {
+        std::string name;
+        std::int64_t score;
+    };
+
+    static std::vector<FileOrConcatenatedFilesList>
+    singleConcatenatedFilesList(std::vector<FileNameWithScore> inputFiles, std::int64_t totalScore,
+                                std::string concatenatedFilePrefix) {
+        // Data of a single work unit. Used only in this function.
+        struct WorkList {
+
+            std::int64_t totalScore{0};
+            std::vector<FileNameWithScore> files{};
+            // Number of buckets assigned for this list. Used only in concatenable lists.
+            int bucketsCount{0};
+            bool isConcatenable{true};
+        };
+
+        static const auto convertInputFilesToOutputFiles
+            = [](std::vector<FileNameWithScore> inputFiles) {
+                  std::vector<FileOrConcatenatedFilesList> outputFiles;
+                  outputFiles.reserve(inputFiles.size());
+                  for (auto& file : inputFiles) {
+                      outputFiles.push_back({/*fileName=*/std::move(file.name)});
+                  }
+                  return outputFiles;
+              };
+
+        const int bucketsCount = v3Global.opt.outputSplitJobs();
+
+        // MAIN PARAMETERS
+
+        // Arbitrary number, mostlikely could be larger
+        constexpr std::size_t MinFilesCount = 100;
+
+        // Arbitrary ratio.
+        constexpr std::size_t MinFilesPerBucketOnAvg = 4;
+
+        // Definitely should not exceed `totalScore / bucketsCount`.
+        const std::int64_t ConcatenableFileMaxScore = totalScore / bucketsCount / 2;
+
+        // ---
+
+        // Return early if there's nothing to do.
+        if ((inputFiles.size() < MinFilesCount)
+            || (inputFiles.size() < (bucketsCount * MinFilesPerBucketOnAvg))) {
+            UINFO(0, "File concatenation skipped - too few files");
+            return convertInputFilesToOutputFiles(std::move(inputFiles));
+        }
+
+        // Create initial work lists.
+
+        std::vector<WorkList> workLists{};
+
+        for (const auto& inputFile : inputFiles) {
+            const bool isConcatenable = (inputFile.score <= ConcatenableFileMaxScore);
+            if (!isConcatenable && debug() >= 5) {
+                UINFO(5, "Exceeds max score (" << ConcatenableFileMaxScore
+                                               << "), excluding: " << inputFile.name << endl);
+            }
+            // Add new list if the last list's concatenability does not match the inputFile's
+            // concatenability
+            if (workLists.empty() || workLists.back().isConcatenable != isConcatenable) {
+                workLists.push_back(WorkList{});
+                workLists.back().isConcatenable = isConcatenable;
+            }
+            // Add inputFile to the last list
+            auto& list = workLists.back();
+            list.files.push_back({inputFile.name, inputFile.score});
+            list.totalScore += inputFile.score;
+        }
+
+        // Collect stats and mark lists with only one file as non-concatenable
+
+        std::size_t concatenableFilesCount = 0;
+        std::int64_t concatenableFilesTotalScore = 0;
+        std::size_t concatenableFilesListsCount = 0;
+
+        std::vector<WorkList*> concatenableListsByDescSize;
+
+        for (auto& list : workLists) {
+            if (!list.isConcatenable) continue;
+
+            // No point in "concatenating" a single file
+            if (list.files.size() == 1) {
+                list.isConcatenable = false;
+                UINFO(5, "Single file, excluding: " << list.files[0].name << endl);
+                continue;
+            }
+
+            concatenableFilesCount += list.files.size();
+            concatenableFilesTotalScore += list.totalScore;
+            ++concatenableFilesListsCount;
+            // This vector is sorted below
+            concatenableListsByDescSize.push_back(&list);
+        }
+
+        // Check concatenation conditions again using more precise data
+        if ((concatenableFilesCount < MinFilesCount)
+            || (concatenableFilesCount < (bucketsCount * MinFilesPerBucketOnAvg))) {
+            UINFO(0, "File concatenation skipped - too few files");
+            return convertInputFilesToOutputFiles(std::move(inputFiles));
+        }
+
+        std::sort(concatenableListsByDescSize.begin(), concatenableListsByDescSize.end(),
+                  [](const WorkList* ap, const WorkList* bp) {
+                      // Sort in descending order by files count
+                      if (ap->files.size() != bp->files.size())
+                          return (ap->files.size() > bp->files.size());
+                      // As a fallback sort in ascending order by totalSize. This makes lists
+                      // with higher score more likely to be excluded.
+                      return bp->totalScore > ap->totalScore;
+                  });
+
+        // Assign buckets to lists
+
+        // More concatenable lists than buckets. Exclude lists with lowest number of files.
+        if (concatenableFilesListsCount > bucketsCount) {
+            std::for_each(concatenableListsByDescSize.begin() + bucketsCount,
+                          concatenableListsByDescSize.end(), [](auto* listp) {
+                              listp->isConcatenable = false;
+                              if (debug() >= 5) {
+                                  for (const auto& file : listp->files) {
+                                      UINFO(5, "Not enough buckets, excluding: " << file.name
+                                                                                 << endl);
+                                  }
+                              }
+                          });
+            concatenableListsByDescSize.resize(bucketsCount);
+            concatenableFilesListsCount = bucketsCount;
+            // Recalculate stats
+            concatenableFilesCount = 0;
+            concatenableFilesTotalScore = 0;
+            for (auto* listp : concatenableListsByDescSize) {
+                concatenableFilesCount += listp->files.size();
+                concatenableFilesTotalScore += listp->totalScore;
+            }
+        }
+        const std::int64_t idealBucketScore = concatenableFilesTotalScore / concatenableFilesCount;
+
+        int availableBuckets = bucketsCount;
+        for (auto* listp : concatenableListsByDescSize) {
+            if (availableBuckets > 0) {
+                listp->bucketsCount = std::min<int>(
+                    availableBuckets, std::max<int>(1, listp->totalScore / idealBucketScore));
+                availableBuckets -= listp->bucketsCount;
+            } else {
+                if (debug() >= 5) {
+                    for (const auto& file : listp->files) {
+                        UINFO(5, "Out of buckets, excluding: " << file.name << endl);
+                    }
+                }
+                // Out of buckets. Instead of recalculating everything just exclude the list.
+                listp->isConcatenable = false;
+            }
+        }
+
+        // Assign files to buckets and build final list of files
+
+        std::vector<FileOrConcatenatedFilesList> outputFiles;
+
+        // At this point the workLists contains concatenatable lists separated by one or more
+        // non-concatenable lists. Each concatenatable list has N buckets (where N > 0) which have
+        // to be filled with files from the list. Ideally, sum of file scores in each bucket should
+        // be equal.
+        int concatenatedFileId = 0;
+        for (auto& list : workLists) {
+            if (!list.isConcatenable) {
+                for (auto& file : list.files) {
+                    FileOrConcatenatedFilesList e{};
+                    e.fileName = std::move(file.name);
+                    outputFiles.push_back(std::move(e));
+                }
+                continue;
+            }
+
+            const std::int64_t listIdealBucketScore = list.totalScore / list.bucketsCount;
+            auto fileIt = list.files.begin();
+            for (int i = 0; i < list.bucketsCount; ++i) {
+                FileOrConcatenatedFilesList bucket;
+                std::int64_t bucketScore = 0;
+
+                bucket.fileName = concatenatedFilePrefix + std::to_string(concatenatedFileId);
+                ++concatenatedFileId;
+
+                for (; fileIt != list.files.end(); ++fileIt) {
+                    auto diffNow = std::abs(listIdealBucketScore - bucketScore);
+                    auto diffIfAdded
+                        = std::abs(listIdealBucketScore - bucketScore - fileIt->score);
+                    if (bucketScore == 0 || diffNow > diffIfAdded) {
+                        // Bucket score will be better with the file in it
+                        bucketScore += fileIt->score;
+                        bucket.concatenatedFileNames.push_back(std::move(fileIt->name));
+                    } else {
+                        // Best possible bucket score reached, process next bucket
+                        break;
+                    }
+                }
+
+                outputFiles.push_back(std::move(bucket));
+            }
+        }
+
+        return outputFiles;
+    }
+
+    static void emitConcatenatingFile(const FileOrConcatenatedFilesList& entry) {
+        UASSERT(entry.isConcatenatingFile(), "Passed entry does not represent concatenating file");
+
+        V3OutCFile concatenatingFile{v3Global.opt.makeDir() + "/" + entry.fileName + ".cpp"};
+        concatenatingFile.putsHeader();
+        for (const auto& file : entry.concatenatedFileNames) {
+            concatenatingFile.puts("#include \"" + file + ".cpp\"\n");
+        }
+    }
+
     void putMakeClassEntry(V3OutMkFile& of, const string& name) {
         of.puts("\t" + V3Os::filenameNonDirExt(name) + " \\\n");
     }
 
     void emitClassMake() {
+        std::vector<FileOrConcatenatedFilesList> vmClassesSlowList;
+        std::vector<FileOrConcatenatedFilesList> vmClassesFastList;
+        if (v3Global.opt.outputSplitJobs() > 0) {
+            std::vector<FileNameWithScore> slowFiles;
+            std::vector<FileNameWithScore> fastFiles;
+            std::int64_t slowTotalScore;
+            std::int64_t fastTotalScore;
+
+            for (AstNodeFile* nodep = v3Global.rootp()->filesp(); nodep;
+                 nodep = VN_AS(nodep->nextp(), NodeFile)) {
+                const AstCFile* const cfilep = VN_CAST(nodep, CFile);
+                if (cfilep && cfilep->source() && cfilep->support() == false) {
+                    auto& files = cfilep->slow() ? slowFiles : fastFiles;
+                    auto& totalScore = cfilep->slow() ? slowTotalScore : fastTotalScore;
+
+                    FileNameWithScore f;
+                    f.name = V3Os::filenameNonDirExt(cfilep->name());
+                    f.score = cfilep->complexityScore();
+
+                    totalScore += f.score;
+                    files.push_back(std::move(f));
+                }
+            }
+
+            vmClassesSlowList = singleConcatenatedFilesList(std::move(slowFiles), slowTotalScore,
+                                                            "vm_classes_slow_");
+            vmClassesFastList = singleConcatenatedFilesList(std::move(fastFiles), fastTotalScore,
+                                                            "vm_classes_fast_");
+        }
+
         // Generate the makefile
         V3OutMkFile of{v3Global.opt.makeDir() + "/" + v3Global.opt.prefix() + "_classes.mk"};
         of.putsHeader();
@@ -60,6 +313,11 @@ public:
         of.puts("# Parallel builds?  0/1 (from --output-split)\n");
         of.puts("VM_PARALLEL_BUILDS = ");
         of.puts(v3Global.useParallelBuild() ? "1" : "0");
+        of.puts("\n");
+        of.puts("# Number of concatenated files per type.  0+ (from --output-split-jobs)\n");
+        of.puts("VM_SPLIT_JOBS = ");
+        of.puts(v3Global.useParallelBuild() ? std::to_string(v3Global.opt.outputSplitJobs())
+                                            : "0");
         of.puts("\n");
         of.puts("# Tracing output mode?  0/1 (from --trace/--trace-fst)\n");
         of.puts("VM_TRACE = ");
@@ -111,6 +369,12 @@ public:
                         putMakeClassEntry(of, "verilated_profiler.cpp");
                     }
                 } else if (support == 2 && slow) {
+                } else if ((support == 0) && (v3Global.opt.outputSplitJobs() > 0)) {
+                    const auto& list = slow ? vmClassesSlowList : vmClassesFastList;
+                    for (const auto& entry : list) {
+                        if (entry.isConcatenatingFile()) { emitConcatenatingFile(entry); }
+                        putMakeClassEntry(of, entry.fileName);
+                    }
                 } else {
                     for (AstNodeFile* nodep = v3Global.rootp()->filesp(); nodep;
                          nodep = VN_AS(nodep->nextp(), NodeFile)) {
@@ -413,6 +677,40 @@ public:
 
 //######################################################################
 // Gate class functions
+
+void V3EmitMk::debugTestConcatenation(const char* inputFile) {
+    UINFO(2, __FUNCTION__ << ": " << endl);
+    const std::unique_ptr<std::ifstream> ifp{V3File::new_ifstream_nodepend(inputFile)};
+    std::vector<EmitMk::FileNameWithScore> inputList;
+    std::int64_t totalScore = 0;
+
+    EmitMk::FileNameWithScore current{};
+    while ((*ifp) >> current.score >> std::ws) {
+        char ch;
+        while (ch = ifp->get(), ch && ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r') {
+            current.name.push_back(ch);
+        }
+        // std::cout << "score:" << current.score << " | '" << current.name << "'" << std::endl;
+        totalScore += current.score;
+        inputList.push_back(std::move(current));
+        current = EmitMk::FileNameWithScore{};
+    }
+
+    const std::vector<EmitMk::FileOrConcatenatedFilesList> list
+        = EmitMk::singleConcatenatedFilesList(std::move(inputList), totalScore,
+                                              "concatenating_file_");
+
+    for (const auto& entry : list) {
+        if (entry.isConcatenatingFile()) {
+            std::cout << entry.fileName << "  [concatenating file]" << std::endl;
+            for (const auto& f : entry.concatenatedFileNames) {
+                std::cout << "    " << entry.fileName << " / " << f << std::endl;
+            }
+        } else {
+            std::cout << entry.fileName << std::endl;
+        }
+    }
+}
 
 void V3EmitMk::emitmk() {
     UINFO(2, __FUNCTION__ << ": " << endl);

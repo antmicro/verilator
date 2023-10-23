@@ -221,6 +221,7 @@ private:
                 AstVar* const queueVarp = new AstVar{
                     flp, VVarType::MODULETEMP,
                     "__Vqueue__" + m_clockingp->name() + "__DOT__" + varp->name(), queueDtp};
+                queueVarp->lifetime(VLifetime::STATIC);
                 m_clockingp->addNextHere(queueVarp);
                 // Create a process like this:
                 //     always queue.push(<sampled var>);
@@ -285,6 +286,8 @@ private:
         const std::string delayName = m_cycleDlyNames.get(nodep);
         AstVar* const cntVarp = new AstVar{flp, VVarType::BLOCKTEMP, delayName + "__counter",
                                            nodep->findBasicDType(VBasicDTypeKwd::UINT32)};
+        cntVarp->lifetime(VLifetime::AUTOMATIC);
+        cntVarp->funcLocal(true);
         AstBegin* const beginp = new AstBegin{flp, delayName + "__block", cntVarp, false, true};
         beginp->addStmtsp(new AstAssign{flp, new AstVarRef{flp, cntVarp, VAccess::WRITE}, valuep});
         beginp->addStmtsp(new AstWhile{

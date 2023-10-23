@@ -193,8 +193,9 @@ private:
         AstVar* const varp
             = new AstVar{nodep->fileline(), VVarType::BLOCKTEMP, name, nodep->findSigned32DType()};
         varp->lifetime(VLifetime::AUTOMATIC);
+        varp->funcLocal(true);
         varp->usedLoopIdx(true);
-        m_modp->addStmtsp(varp);
+        nodep->addHereThisAsNext(varp);
         AstNode* initsp = new AstAssign{
             nodep->fileline(), new AstVarRef{nodep->fileline(), varp, VAccess::WRITE}, countp};
         AstNode* const decp = new AstAssign{

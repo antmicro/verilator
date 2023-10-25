@@ -605,6 +605,33 @@ private:
                              new AstVarRef{flp, m_netlistp->nbaEventTriggerp(), VAccess::WRITE},
                              new AstConst{flp, AstConst::BitTrue{}}};
     }
+    // Creates the event variable to trigger in NBA region
+    AstEventControl* createInactiveEventControl(FileLine* flp) {
+        if (!m_netlistp->inactiveEventp()) {
+            auto* const inactiveEventDtp = new AstBasicDType{
+                m_scopeTopp->fileline(), VBasicDTypeKwd::EVENT, VSigning::UNSIGNED};
+            m_netlistp->typeTablep()->addTypesp(inactiveEventDtp);
+            m_netlistp->inactiveEventp(
+                m_scopeTopp->createTemp("__VinactiveEvent", inactiveEventDtp));
+            v3Global.setHasEvents();
+        }
+        return new AstEventControl{
+            flp,
+            new AstSenTree{flp, new AstSenItem{flp, VEdgeType::ET_EVENT,
+                                               new AstVarRef{flp, m_netlistp->inactiveEventp(),
+                                                             VAccess::READ}}},
+            nullptr};
+    }
+    // Creates the variable that, if set, causes the NBA event to be triggered
+    AstAssign* createInactiveEventTriggerAssignment(FileLine* flp) {
+        if (!m_netlistp->inactiveEventTriggerp()) {
+            m_netlistp->inactiveEventTriggerp(
+                m_scopeTopp->createTemp("__VinactiveEventTrigger", 1));
+        }
+        return new AstAssign{
+            flp, new AstVarRef{flp, m_netlistp->inactiveEventTriggerp(), VAccess::WRITE},
+            new AstConst{flp, AstConst::BitTrue{}}};
+    }
     // Returns true if we are under a class or the given tree has any references to locals. These
     // are cases where static, globally-evaluated triggers are not suitable.
     bool needDynamicTrigger(AstNode* const nodep) const {
@@ -877,8 +904,14 @@ private:
         AstNodeExpr* valuep = V3Const::constifyEdit(nodep->lhsp()->unlinkFrBack());
         auto* const constp = VN_CAST(valuep, Const);
         if (constp && constp->isZero()) {
-            nodep->v3warn(ZERODLY, "Unsupported: #0 delays do not schedule process resumption in "
-                                   "the Inactive region");
+            AstEventControl* const eventControlp = createInactiveEventControl(flp);
+            if (AstNode* const stmtsp = nodep->stmtsp()) {
+                eventControlp->addStmtsp(stmtsp->unlinkFrBackWithNext());
+            }
+            nodep->addNextHere(eventControlp);
+            nodep->replaceWith(createInactiveEventTriggerAssignment(flp));
+            VL_DO_DANGLING(nodep->deleteTree(), nodep);
+            return;
         } else {
             // Scale the delay
             if (valuep->dtypep()->isDouble()) {

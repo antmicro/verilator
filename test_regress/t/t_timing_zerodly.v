@@ -9,8 +9,10 @@ module t;
     logic v = 0;
     initial #1 begin
         fork
-            #0 if (v) $finish;
-               else $stop;
+            #0 if (v) begin
+                   $write("*-* All Finished *-*\n");
+                   $finish;
+               end else $stop;
         join_none
         ->e;
     end

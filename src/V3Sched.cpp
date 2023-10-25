@@ -611,6 +611,7 @@ struct EvalLoop {
     AstVarScope* continuep = nullptr;
     // The loop itself and statements around it
     AstNodeStmt* stmtsp = nullptr;
+    AstNodeIf* ifp = nullptr;
 };
 
 //============================================================================
@@ -653,6 +654,7 @@ EvalLoop makeEvalLoop(AstNetlist* netlistp, const string& tag, const string& nam
     AstNodeStmt* nodep = nullptr;
     if (v3Global.opt.profExec()) nodep = profExecSectionPush(flp, "loop " + tag);
     nodep = AstNode::addNext(nodep, setVar(counterp, 0));
+    AstIf* ifp;
     nodep->addNext(buildLoop(netlistp, continuep, [&](AstWhile* loopp) {
         // Compute triggers
         loopp->addStmtsp(computeTriggers());
@@ -661,7 +663,7 @@ EvalLoop makeEvalLoop(AstNetlist* netlistp, const string& tag, const string& nam
             AstVarRef* const refp = new AstVarRef{flp, trigVscp, VAccess::READ};
             AstCMethodHard* const callp = new AstCMethodHard{flp, refp, "any"};
             callp->dtypeSetBit();
-            AstIf* const ifp = new AstIf{flp, callp};
+            ifp = new AstIf{flp, callp};
             loopp->addStmtsp(ifp);
             ifp->addThensp(setVar(continuep, 1));
 
@@ -707,7 +709,7 @@ EvalLoop makeEvalLoop(AstNetlist* netlistp, const string& tag, const string& nam
 
     if (v3Global.opt.profExec()) nodep->addNext(profExecSectionPop(flp));
 
-    return {counterp, continuep, nodep};
+    return {counterp, continuep, nodep, ifp};
 }
 
 //============================================================================
@@ -952,6 +954,22 @@ void createEval(AstNetlist* netlistp,  //
 
             return resultp;
         });
+
+    // If the Inactive event exists, trigger it in 'nba'
+    if (netlistp->inactiveEventp()) {
+        UASSERT(netlistp->inactiveEventTriggerp(), "NBA event trigger var should exist");
+        AstIf* const ifp
+            = new AstIf{flp, new AstVarRef{flp, netlistp->inactiveEventTriggerp(), VAccess::READ}};
+        ifp->addThensp(setVar(activeEvalLoop.continuep, 1));
+        ifp->addThensp(setVar(netlistp->inactiveEventTriggerp(), 0));
+        AstCMethodHard* const firep = new AstCMethodHard{
+            flp, new AstVarRef{flp, netlistp->inactiveEventp(), VAccess::WRITE}, "fire"};
+        firep->dtypeSetVoid();
+        ifp->addThensp(firep->makeStmt());
+        activeEvalLoop.ifp->addElsesp(ifp);
+        netlistp->inactiveEventp(nullptr);
+        netlistp->inactiveEventTriggerp(nullptr);
+    }
 
     // Create the NBA eval loop. This uses the Active eval loop in the trigger section.
     const auto& nbaEvalLoop = makeEvalLoop(

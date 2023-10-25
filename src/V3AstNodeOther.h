@@ -1198,7 +1198,8 @@ class AstNetlist final : public AstNode {
     AstVarScope* m_nbaEventp = nullptr;  // The NBA event variable
     AstVarScope* m_nbaEventTriggerp = nullptr;  // If set to 1, the NBA event should get triggered
     AstVarScope* m_inactiveEventp = nullptr;  // The Inactive event variable
-    AstVarScope* m_inactiveEventTriggerp = nullptr;  // If set to 1, the Inactive event should get triggered
+    AstVarScope* m_inactiveEventTriggerp
+        = nullptr;  // If set to 1, the Inactive event should get triggered
     AstTopScope* m_topScopep = nullptr;  // The singleton AstTopScope under the top module
     VTimescale m_timeunit;  // Global time unit
     VTimescale m_timeprecision;  // Global time precision
@@ -1235,7 +1236,9 @@ public:
     AstVarScope* inactiveEventp() const { return m_inactiveEventp; }
     void inactiveEventp(AstVarScope* const varScopep) { m_inactiveEventp = varScopep; }
     AstVarScope* inactiveEventTriggerp() const { return m_inactiveEventTriggerp; }
-    void inactiveEventTriggerp(AstVarScope* const varScopep) { m_inactiveEventTriggerp = varScopep; }
+    void inactiveEventTriggerp(AstVarScope* const varScopep) {
+        m_inactiveEventTriggerp = varScopep;
+    }
     void stdPackagep(AstPackage* const packagep) { m_stdPackagep = packagep; }
     AstPackage* stdPackagep() const { return m_stdPackagep; }
     AstTopScope* topScopep() const { return m_topScopep; }

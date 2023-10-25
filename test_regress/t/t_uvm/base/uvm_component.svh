@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //
 //------------------------------------------------------------------------------
 // Copyright 2010 Paradigm Works
@@ -405,13 +406,13 @@ function void uvm_component::m_set_full_name();
   uvm_root top;
   if ($cast(top, m_parent) || m_parent==null)
     m_name = get_name();
-  else 
+  else
     m_name = {m_parent.get_full_name(), ".", get_name()};
 
   foreach (m_children[c]) begin
     uvm_component tmp;
     tmp = m_children[c];
-    tmp.m_set_full_name(); 
+    tmp.m_set_full_name();
   end
 
 endfunction

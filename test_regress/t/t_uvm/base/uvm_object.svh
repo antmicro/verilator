@@ -26,6 +26,8 @@
 //   permissions and limitations under the License.
 //------------------------------------------------------------------------------
 
+// SPDX-License-Identifier: Apache-2.0
+
 //-!!!- NOTICE -------------------------------------------------------------!!!-
 // This is a non-production-ready modified version of UVM intended for coverage
 // testing purpouses

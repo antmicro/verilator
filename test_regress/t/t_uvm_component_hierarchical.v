@@ -1,3 +1,9 @@
+// DESCRIPTION: Verilator: Verilog Test module
+//
+// This file ONLY is placed under the Creative Commons Public Domain, for
+// any use, without warranty, 2023 by Antmicro Ltd.
+// SPDX-License-Identifier: CC0-1.0
+
 `include "uvmt_unit.svh"
 `include "uvmt_logs.svh"
 

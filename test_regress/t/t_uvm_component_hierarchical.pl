@@ -14,7 +14,7 @@ compile(
     verilator_flags2 => ["--binary", "--timing",
                  "-Wno-PKGNODECL -Wno-IMPLICITSTATIC -Wno-CONSTRAINTIGN -Wno-MISINDENT",
                  "-Wno-WIDTHEXPAND -Wno-WIDTHTRUNC -Wno-CASTCONST -Wno-REALCVT",
-                 "-It/t_uvm"],
+                 "-It/t_uvm", "-DUVM_REGEX_NO_DPI"],
     verilator_make_gmake => 0,
     make_main => 0,
     );

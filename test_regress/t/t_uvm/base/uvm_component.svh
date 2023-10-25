@@ -40,12 +40,6 @@
 typedef class uvm_sequence_base;
 typedef class uvm_sequence_item; */
 
-`include "base/uvm_root.svh"
-`include "uvmt_logs.svh"
-`include "base/uvm_report_object.svh"
-`include "base/uvm_coreservice.svh"
-
-
 // @uvm-ieee 1800.2-2017 auto 13.1.1
 //UVM virtual class uvm_component extends uvm_report_object;
 virtual class uvm_component extends uvm_object;

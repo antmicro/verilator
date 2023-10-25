@@ -1,5 +1,11 @@
-`include "t_uvm/uvmt_unit.svh"
-`include "t_uvm/base/uvm_component.svh"
+`include "uvmt_unit.svh"
+`include "uvmt_logs.svh"
+
+`include "base/uvm_root.svh"
+`include "base/uvm_object.svh"
+`include "base/uvm_report_object.svh"
+`include "base/uvm_coreservice.svh"
+`include "base/uvm_component.svh"
 
 class my_uvm_component #(string S) extends uvm_component;
   function new(string name, uvm_component parent);

@@ -2740,9 +2740,8 @@ private:
                         }
                     } else {
                         if (staticAccess && !varp->lifetime().isStatic() && !varp->isParam()) {
-                            // TODO bug4077
-                            // nodep->v3error("Static access to non-static member variable "
-                            //                << varp->prettyNameQ() << endl);
+                            nodep->v3error("Static access to non-static member variable "
+                                           << varp->prettyNameQ() << endl);
                         }
                         AstVarRef* const refp = new AstVarRef{
                             nodep->fileline(), varp, VAccess::READ};  // lvalue'ness computed later
@@ -3187,10 +3186,9 @@ private:
             AstNodeFTask* const taskp
                 = foundp ? VN_CAST(foundp->nodep(), NodeFTask) : nullptr;  // Maybe nullptr
             if (taskp) {
-                if (staticAccess && !taskp->isStatic()) {
-                    // TODO bug4077
-                    // nodep->v3error("Static access to non-static task/function "
-                    //                << taskp->prettyNameQ() << endl);
+                if (staticAccess && taskp->classMethod() && !taskp->isStatic()) {
+                    nodep->v3error("Static access to non-static task/function "
+                                   << taskp->prettyNameQ() << endl);
                 }
                 nodep->taskp(taskp);
                 nodep->classOrPackagep(foundp->classOrPackagep());

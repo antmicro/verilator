@@ -435,47 +435,39 @@ void V3Randomize::randomizeNetlist(AstNetlist* nodep) {
 }
 
 AstFunc* V3Randomize::newRandomizeFunc(AstClass* nodep) {
-    VMemberMap memberMap;
-    AstFunc* funcp = VN_AS(memberMap.findMember(nodep, "randomize"), Func);
-    if (!funcp) {
-        v3Global.useRandomizeMethods(true);
-        AstNodeDType* const dtypep
-            = nodep->findBitDType(32, 32, VSigning::SIGNED);  // IEEE says int return of 0/1
-        AstVar* const fvarp = new AstVar{nodep->fileline(), VVarType::MEMBER, "randomize", dtypep};
-        fvarp->lifetime(VLifetime::AUTOMATIC);
-        fvarp->funcLocal(true);
-        fvarp->funcReturn(true);
-        fvarp->direction(VDirection::OUTPUT);
-        funcp = new AstFunc{nodep->fileline(), "randomize", nullptr, fvarp};
-        funcp->dtypep(dtypep);
-        funcp->classMethod(true);
-        funcp->isVirtual(nodep->isExtended());
-        nodep->addMembersp(funcp);
-        AstClass* const basep = nodep->baseMostClassp();
-        basep->needRNG(true);
-    }
+    v3Global.useRandomizeMethods(true);
+    AstNodeDType* const dtypep
+        = nodep->findBitDType(32, 32, VSigning::SIGNED);  // IEEE says int return of 0/1
+    AstVar* const fvarp = new AstVar{nodep->fileline(), VVarType::MEMBER, "randomize", dtypep};
+    fvarp->lifetime(VLifetime::AUTOMATIC);
+    fvarp->funcLocal(true);
+    fvarp->funcReturn(true);
+    fvarp->direction(VDirection::OUTPUT);
+    AstFunc* const funcp = new AstFunc{nodep->fileline(), "randomize", nullptr, fvarp};
+    funcp->dtypep(dtypep);
+    funcp->classMethod(true);
+    funcp->isVirtual(nodep->isExtended());
+    nodep->addMembersp(funcp);
+    AstClass* const basep = nodep->baseMostClassp();
+    basep->needRNG(true);
     return funcp;
 }
 
 AstFunc* V3Randomize::newSRandomFunc(AstClass* nodep) {
-    VMemberMap memberMap;
     AstClass* const basep = nodep->baseMostClassp();
-    AstFunc* funcp = VN_AS(memberMap.findMember(basep, "srandom"), Func);
-    if (!funcp) {
-        v3Global.useRandomizeMethods(true);
-        AstNodeDType* const dtypep
-            = basep->findBitDType(32, 32, VSigning::SIGNED);  // IEEE says argument 0/1
-        AstVar* const ivarp = new AstVar{basep->fileline(), VVarType::MEMBER, "seed", dtypep};
-        ivarp->lifetime(VLifetime::AUTOMATIC);
-        ivarp->funcLocal(true);
-        ivarp->direction(VDirection::INPUT);
-        funcp = new AstFunc{basep->fileline(), "srandom", ivarp, nullptr};
-        funcp->dtypep(basep->findVoidDType());
-        funcp->classMethod(true);
-        funcp->isVirtual(false);
-        basep->addMembersp(funcp);
-        funcp->addStmtsp(new AstCStmt{basep->fileline(), "__Vm_rng.srandom(seed);\n"});
-        basep->needRNG(true);
-    }
+    v3Global.useRandomizeMethods(true);
+    AstNodeDType* const dtypep
+        = basep->findBitDType(32, 32, VSigning::SIGNED);  // IEEE says argument 0/1
+    AstVar* const ivarp = new AstVar{basep->fileline(), VVarType::MEMBER, "seed", dtypep};
+    ivarp->lifetime(VLifetime::AUTOMATIC);
+    ivarp->funcLocal(true);
+    ivarp->direction(VDirection::INPUT);
+    AstFunc* const funcp = new AstFunc{basep->fileline(), "srandom", ivarp, nullptr};
+    funcp->dtypep(basep->findVoidDType());
+    funcp->classMethod(true);
+    funcp->isVirtual(false);
+    basep->addMembersp(funcp);
+    funcp->addStmtsp(new AstCStmt{basep->fileline(), "__Vm_rng.srandom(seed);\n"});
+    basep->needRNG(true);
     return funcp;
 }

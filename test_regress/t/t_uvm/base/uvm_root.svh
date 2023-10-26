@@ -62,7 +62,7 @@ function uvm_root::new();
   end
   m_inst = this;
 `ifdef UVM_ENABLE_DEPRECATED_API
-   uvm_top = this; 
+   uvm_top = this;
 `endif
 
   //UVM clp = uvm_cmdline_processor::get_inst();

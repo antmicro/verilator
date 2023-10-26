@@ -35,6 +35,9 @@
 
 // Status: MOCK
 
+// UVM MOCK
+class uvm_copier; endclass
+
 class uvm_object;
   local string m_leaf_name;
   local int m_inst_id;
@@ -46,6 +49,9 @@ class uvm_object;
   extern function int get_inst_id();
 
   virtual function string get_type_name (); return "<unknown>"; endfunction
+
+  extern virtual function void do_copy (uvm_object rhs);
+  extern virtual function string get_full_name ();
 endclass
 
 // UVM 1:1*
@@ -68,4 +74,14 @@ endfunction
 // UVM 1:1
 function int uvm_object::get_inst_id();
   return m_inst_id;
+endfunction
+
+// UVM 1:1
+function void uvm_object::do_copy (uvm_object rhs);
+  return;
+endfunction
+
+// UVM 1:1
+function string uvm_object::get_full_name ();
+  return get_name();
 endfunction

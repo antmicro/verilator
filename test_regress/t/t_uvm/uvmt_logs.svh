@@ -49,3 +49,40 @@ typedef enum bit [1:0] {
 function static int uvm_report_enabled(int a, int b, string c);
   return 1'b1;
 endfunction
+
+function void uvm_report_fatal(string id,
+	                             string message,
+                               int verbosity = UVM_NONE,
+			                         string filename = "",
+			                         int line = 0,
+                               string context_name = "",
+                               bit report_enabled_checked = 0);
+  $display("(mock) {UVM} FATAL ERROR: [%s] %s ", id, message);
+  if (filename != "")
+    $display("(mock)              ^ at %s:%0d ", filename, line);
+  $stop();
+endfunction
+
+function void uvm_report_error(string id,
+                               string message,
+                               int verbosity = UVM_NONE,
+			                         string filename = "",
+			                         int line = 0,
+                               string context_name = "",
+                               bit report_enabled_checked = 0);
+  $display("(mock) {UVM} ERROR: [%s] %s ", id, message);
+  if (filename != "")
+    $display("(mock)              ^ at %s:%0d ", filename, line);
+endfunction
+
+function void uvm_report_warning(string id,
+                                 string message,
+                                 int verbosity = UVM_MEDIUM,
+                                 string filename = "",
+                                 int line = 0,
+                                 string context_name = "",
+                                 bit report_enabled_checked = 0);
+  $display("(mock) {UVM} WARNING: [%s] %s ", id, message);
+  if (filename != "")
+    $display("(mock)              ^ at %s:%0d ", filename, line);
+endfunction

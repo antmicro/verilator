@@ -58,7 +58,8 @@ package uvmt;
   typedef enum bit [1:0] {
     S_PASS,
     S_FAIL,
-    S_UNTESTED
+    S_UNTESTED,
+    S_DISABLED
   } feature_status_t;
 
   typedef struct {
@@ -72,6 +73,7 @@ package uvmt;
       S_PASS:     return "PASS";
       S_FAIL:     return "FAIL";
       S_UNTESTED: return "UNTESTED";
+      S_DISABLED: return "DISABLED";
       default:    return "<UNKNOWN>";
     endcase
   endfunction
@@ -89,8 +91,8 @@ package uvmt;
       m_status = S_UNTESTED;
     endfunction
 
-    function void add_feature(string name);
-      m_features[name] = S_UNTESTED;
+    function void add_feature(string name, feature_status_t status = S_UNTESTED);
+      m_features_initials[name] = status;
     endfunction
 
     function void m_fail_feature(test_failure_t failure);
@@ -115,6 +117,7 @@ package uvmt;
 
     string m_name;
     feature_status_t m_features[string];
+    feature_status_t m_features_initials[string];
     feature_status_t m_status;
     test_failure_t m_failures[$];
     uvm_test_base m_tests[$];
@@ -125,12 +128,13 @@ package uvmt;
     task run();
       int feature_count, features_passed, features_failed;
 
-      feature_count = m_features.size();
+      feature_count = m_features_initials.size();
       features_passed = 0;
       features_failed = 0;
 
       m_failures.delete();
-      foreach (m_features[feature]) m_features[feature] = S_UNTESTED;
+      foreach (m_features_initials[feature])
+        m_features[feature] = m_features_initials[feature];
 
       foreach (m_tests[i]) begin
         uvm_test_base test = m_tests[i];
@@ -184,4 +188,3 @@ package uvmt;
     endtask
   endclass
 endpackage
-

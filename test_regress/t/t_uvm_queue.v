@@ -4,9 +4,11 @@
 // any use, without warranty, 2023 by Antmicro Ltd.
 // SPDX-License-Identifier: CC0-1.0
 
-`include "t_uvm/uvmt_unit.svh"
-`include "t_uvm/base/uvm_object.svh"
-`include "t_uvm/base/uvm_queue.svh"
+`include "uvmt_unit.svh"
+`include "uvmt_logs.svh"
+
+`include "base/uvm_object.svh"
+`include "base/uvm_queue.svh"
 
 typedef uvm_queue #(string) strq_t;
 typedef uvm_queue #(int) intq_t;

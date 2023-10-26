@@ -107,12 +107,9 @@ class uvm_queue #(type T=int) extends uvm_object;
   virtual function T get (int index);
     T default_value;
     if (index >= size() || index < 0) begin
-//UVM      uvm_report_warning("QUEUEGET",
-//UVM        $sformatf("get: given index out of range for queue of size %0d. Ignoring get request",size()));
-//UVM      return default_value;
-      $display("get: given index out of range for queue of size %0d. Ignoring get request",size());
+      uvm_report_warning("QUEUEGET",
+        $sformatf("get: given index out of range for queue of size %0d. Ignoring get request",size()));
       return default_value;
-//UVM
     end
     return queue[index];
   endfunction
@@ -135,10 +132,8 @@ class uvm_queue #(type T=int) extends uvm_object;
   // @uvm-ieee 1800.2-2017 auto 11.3.2.6
   virtual function void insert (int index, T item);
     if (index >= size() || index < 0) begin
-//UVM      uvm_report_warning("QUEUEINS",
-//UVM        $sformatf("insert: given index out of range for queue of size %0d. Ignoring insert request",size()));
-          $display("insert: given index out of range for queue of size %0d. Ignoring insert request", size());
-//UVM
+      uvm_report_warning("QUEUEINS",
+        $sformatf("insert: given index out of range for queue of size %0d. Ignoring insert request",size()));
       return;
     end
     queue.insert(index,item);
@@ -153,11 +148,9 @@ class uvm_queue #(type T=int) extends uvm_object;
   // @uvm-ieee 1800.2-2017 auto 11.3.2.7
   virtual function void delete (int index=-1);
     if (index >= size() || index < -1) begin
-//UVM      uvm_report_warning("QUEUEDEL",
-//UVM        $sformatf("delete: given index out of range for queue of size %0d. Ignoring delete request",size()));
-//UVM      return;
-      $display("delete: given index out of range for queue of size %0d. Ignoring delete request",size());
-//UVM
+      uvm_report_warning("QUEUEDEL",
+        $sformatf("delete: given index out of range for queue of size %0d. Ignoring delete request",size()));
+      return;
     end
     if (index == -1)
       queue.delete();

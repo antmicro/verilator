@@ -161,6 +161,7 @@ private:
     // VISITs
     void visit(AstNetlist* nodep) override {
         readModNames();
+        iterateAndNextNull(nodep->filesp()); // TODO(mglb): is it needed?
         iterateAndNextNull(nodep->modulesp());
         iterateAndNextNull(nodep->typeTablep()); // TODO(mglb): is it needed?
         // Find levels in graph

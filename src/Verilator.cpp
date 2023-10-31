@@ -679,8 +679,10 @@ static void verilate(const string& argString) {
         process();
     }
 
+    v3Global.rootp()->mglbBlockMiscp(true);
     // Final steps
     v3Global.dumpCheckGlobalTree("final", 990, dumpTreeLevel() >= 3);
+    v3Global.rootp()->mglbBlockMiscp(false);
 
     V3Error::abortIfErrors();
 

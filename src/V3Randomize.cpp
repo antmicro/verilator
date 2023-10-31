@@ -233,9 +233,10 @@ private:
             }
             return stmtsp;
         } else if (const auto* const arrayDtp
-            = VN_CAST(varrefp->dtypep()->skipRefp(), DynArrayDType)) {
+                   = VN_CAST(varrefp->dtypep()->skipRefp(), DynArrayDType)) {
             AstNode* argsp = new AstVarRef{fl, varrefp->varp(), VAccess::READWRITE};
-            argsp->addNext(new AstText{fl, randcVarp ? ".randomize(__Vm_rng);\n" : ".randomize();\n"});
+            argsp->addNext(
+                new AstText{fl, randcVarp ? ".randomize(__Vm_rng);\n" : ".randomize();\n"});
             AstCStmt* stmtp = new AstCStmt{fl, argsp};
             return stmtp;
         } else {

@@ -232,6 +232,12 @@ private:
                 }
             }
             return stmtsp;
+        } else if (const auto* const arrayDtp
+            = VN_CAST(varrefp->dtypep()->skipRefp(), DynArrayDType)) {
+            AstNode* argsp = new AstVarRef{fl, varrefp->varp(), VAccess::READWRITE};
+            argsp->addNext(new AstText{fl, randcVarp ? ".randomize(__Vm_rng);\n" : ".randomize();\n"});
+            AstCStmt* stmtp = new AstCStmt{fl, argsp};
+            return stmtp;
         } else {
             AstNodeExpr* valp;
             if (AstEnumDType* const enumDtp = VN_CAST(memberp ? memberp->subDTypep()->subDTypep()
@@ -327,7 +333,11 @@ private:
             if (VN_IS(dtypep, BasicDType) || VN_IS(dtypep, StructDType)) {
                 AstVar* const randcVarp = newRandcVarsp(memberVarp);
                 AstVarRef* const refp = new AstVarRef{fl, memberVarp, VAccess::WRITE};
-                AstNodeStmt* const stmtp = newRandStmtsp(fl, refp, randcVarp);
+                AstNodeStmt* const stmtp = newRandStmtsp(fl, refp, nullptr);
+                funcp->addStmtsp(stmtp);
+            } else if (const auto* const arrayp = VN_CAST(dtypep, DynArrayDType)) {
+                AstVarRef* const refp = new AstVarRef{fl, memberVarp, VAccess::WRITE};
+                AstNodeStmt* const stmtp = newRandStmtsp(fl, refp, nullptr);
                 funcp->addStmtsp(stmtp);
             } else if (const auto* const classRefp = VN_CAST(dtypep, ClassRefDType)) {
                 if (classRefp->classp() == nodep) {

@@ -632,6 +632,10 @@ public:
     }
     void reverse() { std::reverse(m_deque.begin(), m_deque.end()); }
     void shuffle() { std::shuffle(m_deque.begin(), m_deque.end(), VlURNG{}); }
+    void randomize() {
+        // TODO: Use emitted .randomize()/RAND Funcs
+        for (const auto& i : m_deque) { m_deque[i] = rand()%10; }
+    }
     VlQueue unique() const {
         VlQueue out;
         std::set<T_Value> saw;

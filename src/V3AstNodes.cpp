@@ -17,6 +17,7 @@
 #include "V3PchAstMT.h"
 
 #include "V3EmitCBase.h"
+#include "V3EmitV.h"
 #include "V3File.h"
 #include "V3Graph.h"
 #include "V3Hasher.h"
@@ -28,6 +29,8 @@
 #include <iomanip>
 #include <iterator>
 #include <vector>
+
+VL_DEFINE_DEBUG_FUNCTIONS;
 
 //======================================================================
 // Special methods
@@ -1955,6 +1958,59 @@ void AstNetlist::createTopScope(AstScope* scopep) {
     UASSERT_OBJ(!m_topScopep, scopep, "TopScope already exits");
     m_topScopep = new AstTopScope{scopep->modp()->fileline(), scopep};
     scopep->modp()->addStmtsp(v3Global.rootp()->topScopep());
+}
+void AstNetlist::dumpTreeFile(const string& filename, bool append, bool doDump, bool doCheck) {
+    // Not const function as calls brokenAll
+    if (doDump) {
+        {  // Write log & close
+            UINFO(2, "Dumping " << filename << endl);
+            const std::unique_ptr<std::ofstream> logsp{V3File::new_ofstream(filename, append)};
+            if (logsp->fail()) v3fatal("Can't write " << filename);
+            *logsp << "Verilator Tree Dump (format 0x3900) from <e" << std::dec << editCountLast();
+            *logsp << "> to <e" << std::dec << editCountGbl() << ">\n";
+            if (editCountGbl() == editCountLast() && ::dumpTreeLevel() < 9) {
+                *logsp << '\n';
+                *logsp << "No changes since last dump!\n";
+            } else {
+                {
+                    // Code in this scope is a copy of dumpTree() with minor changes.
+                    // TODO(mglb): look into integration of this code with the original dumpTree().
+
+                    std::ostream& os = *logsp;
+                    const std::string indent = "    ";
+
+                    static int s_debugFileline = v3Global.opt.debugSrcLevel("fileline");  // --debugi-fileline 9
+                    os << indent << " " << this << '\n';
+                    if (debug() > 8) {
+                        // TODO(mglb): implement dedicated dumpPtrs for AstNetlist
+                        // os << indent << "     ";
+                        // dumpPtrs(os);
+                    }
+                    if (s_debugFileline >= 9) os << fileline()->warnContextSecondary();
+                    for (const AstNode* nodep = modulesp(); nodep; nodep = nodep->nextp()) {
+                        nodep->dumpTree(os, indent + "1:");
+                    }
+                    for (const AstNode* nodep = filesp(); nodep; nodep = nodep->nextp()) {
+                        nodep->dumpTree(os, indent + "2:");
+                    }
+                    typeTablep()->dumpTree(os, indent + "3:");
+                    constPoolp()->dumpTree(os, indent + "3:");
+                }
+                editCountSetLast();  // Next dump can indicate start from here
+            }
+        }
+    }
+    if (doDump && v3Global.opt.debugEmitV()) V3EmitV::debugEmitV(filename + ".v");
+    if (doCheck && (v3Global.opt.debugCheck() || ::dumpTreeLevel())) {
+        // Error check
+        if (modulesp()) modulesp()->checkTree();
+        if (filesp()) filesp()->checkTree();
+        typeTablep()->checkTree();
+        constPoolp()->checkTree();
+        // Broken isn't part of check tree because it can munge iterp's
+        // set by other steps if it is called in the middle of other operations
+        V3Broken::brokenAll(this);
+    }
 }
 void AstNodeModule::dump(std::ostream& str) const {
     this->AstNode::dump(str);

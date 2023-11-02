@@ -1273,34 +1273,6 @@ void AstNode::dumpTreeAndNext(std::ostream& os, const string& indent, int maxDep
     }
 }
 
-void AstNode::dumpTreeFile(const string& filename, bool append, bool doDump, bool doCheck) {
-    // Not const function as calls checkTree
-    if (doDump) {
-        {  // Write log & close
-            UINFO(2, "Dumping " << filename << endl);
-            const std::unique_ptr<std::ofstream> logsp{V3File::new_ofstream(filename, append)};
-            if (logsp->fail()) v3fatal("Can't write " << filename);
-            *logsp << "Verilator Tree Dump (format 0x3900) from <e" << std::dec << editCountLast();
-            *logsp << "> to <e" << std::dec << editCountGbl() << ">\n";
-            if (editCountGbl() == editCountLast() && ::dumpTreeLevel() < 9) {
-                *logsp << '\n';
-                *logsp << "No changes since last dump!\n";
-            } else {
-                dumpTree(*logsp);
-                editCountSetLast();  // Next dump can indicate start from here
-            }
-        }
-    }
-    if (doDump && v3Global.opt.debugEmitV()) V3EmitV::debugEmitV(filename + ".v");
-    if (doCheck && (v3Global.opt.debugCheck() || ::dumpTreeLevel())) {
-        // Error check
-        checkTree();
-        // Broken isn't part of check tree because it can munge iterp's
-        // set by other steps if it is called in the middle of other operations
-        if (AstNetlist* const netp = VN_CAST(this, Netlist)) V3Broken::brokenAll(netp);
-    }
-}
-
 static void drawChildren(std::ostream& os, const AstNode* thisp, const AstNode* childp,
                          const std::string& childName) {
     if (childp) {

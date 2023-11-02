@@ -1266,6 +1266,9 @@ public:
     uint32_t allocNextMTaskID() { return m_nextFreeMTaskID++; }
     uint32_t allocNextMTaskProfilingID() { return m_nextFreeMTaskProfilingID++; }
     uint32_t usedMTaskProfilingIDs() const { return m_nextFreeMTaskProfilingID; }
+
+    void dumpTreeFile(const string& filename, bool append = false, bool doDump = true,
+                      bool doCheck = true);
 };
 class AstPackageExport final : public AstNode {
 private:

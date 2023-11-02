@@ -163,7 +163,7 @@ private:
         readModNames();
         iterateAndNextNull(nodep->filesp()); // TODO(mglb): is it needed?
         iterateAndNextNull(nodep->modulesp());
-        iterateAndNextNull(nodep->typeTablep()); // TODO(mglb): is it needed?
+        iterateNull(nodep->typeTablep()); // TODO(mglb): is it needed?
         // Find levels in graph
         m_graph.removeRedundantEdgesMax(&V3GraphEdge::followAlwaysTrue);
         if (dumpGraphLevel()) m_graph.dumpDotFilePrefixed("linkcells");

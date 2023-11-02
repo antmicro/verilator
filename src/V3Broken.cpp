@@ -326,7 +326,12 @@ private:
 
 public:
     // CONSTRUCTORS
-    explicit BrokenCheckVisitor(AstNetlist* nodep) { iterateConstNull(nodep); }
+    explicit BrokenCheckVisitor(AstNetlist* nodep) {
+        iterateAndNextConstNull(nodep->modulesp());
+        iterateAndNextConstNull(nodep->filesp());
+        iterateConstNull(nodep->typeTablep());
+        iterateConstNull(nodep->constPoolp());
+    }
     ~BrokenCheckVisitor() override = default;
 };
 
@@ -344,7 +349,7 @@ void V3Broken::brokenAll(AstNetlist* nodep) {
 
         // Mark every node in the tree
         const uint8_t brokenCntCurrent = s_brokenCntGlobal.get();
-        nodep->foreach([brokenCntCurrent](AstNode* nodep) {
+        auto l = [brokenCntCurrent](AstNode* nodep) {
 #ifdef VL_LEAK_CHECKS
             UASSERT_OBJ(s_allocTable.isAllocated(nodep), nodep,
                         "AstNode is in tree, but not allocated");
@@ -353,7 +358,11 @@ void V3Broken::brokenAll(AstNetlist* nodep) {
                         "AstNode is already in tree at another location");
             if (nodep->maybePointedTo()) s_linkableTable.addLinkable(nodep);
             nodep->brokenState(brokenCntCurrent);
-        });
+        };
+        if (nodep->modulesp()) nodep->modulesp()->foreachAndNext(l);
+        if (nodep->filesp()) nodep->filesp()->foreachAndNext(l);
+        nodep->typeTablep()->foreach(l);
+        nodep->constPoolp()->foreach(l);
 
         // Check every node in tree
         const BrokenCheckVisitor cvisitor{nodep};

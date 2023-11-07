@@ -507,16 +507,16 @@ struct TriggerKit {
         m_funcp->stmtsp()->addHereThisAsNext(callp->makeStmt());
     }
 
-    // Utility to set then clear the dpiExportTrigger trigger
-    void addDpiExportTriggerAssignment(AstVarScope* dpiExportTriggerVscp, uint32_t index) const {
-        FileLine* const flp = dpiExportTriggerVscp->fileline();
+    // Utility to set then clear an extra trigger
+    void addExtraTriggerAssignment(AstVarScope* extraTriggerVscp, uint32_t index) const {
+        FileLine* const flp = extraTriggerVscp->fileline();
         AstVarRef* const vrefp = new AstVarRef{flp, m_vscp, VAccess::WRITE};
         AstCMethodHard* const callp = new AstCMethodHard{flp, vrefp, "set"};
         callp->addPinsp(new AstConst{flp, index});
-        callp->addPinsp(new AstVarRef{flp, dpiExportTriggerVscp, VAccess::READ});
+        callp->addPinsp(new AstVarRef{flp, extraTriggerVscp, VAccess::READ});
         callp->dtypeSetVoid();
         AstNode* const stmtp = callp->makeStmt();
-        stmtp->addNext(new AstAssign{flp, new AstVarRef{flp, dpiExportTriggerVscp, VAccess::WRITE},
+        stmtp->addNext(new AstAssign{flp, new AstVarRef{flp, extraTriggerVscp, VAccess::WRITE},
                                      new AstConst{flp, AstConst::BitFalse{}}});
         m_funcp->stmtsp()->addHereThisAsNext(stmtp);
     }
@@ -840,7 +840,7 @@ AstNode* createInputCombLoop(AstNetlist* netlistp, AstCFunc* const initFuncp,
         = createTriggers(netlistp, initFuncp, senExprBuilder, senTreeps, "ico", extraTriggers);
 
     if (dpiExportTriggerVscp) {
-        trig.addDpiExportTriggerAssignment(dpiExportTriggerVscp, dpiExportTriggerIndex);
+        trig.addExtraTriggerAssignment(dpiExportTriggerVscp, dpiExportTriggerIndex);
     }
 
     // Remap sensitivities
@@ -1156,6 +1156,10 @@ void schedule(AstNetlist* netlistp) {
     const size_t dpiExportTriggerIndex = dpiExportTriggerVscp
                                              ? extraTriggers.allocate("DPI export trigger")
                                              : std::numeric_limits<unsigned>::max();
+    const size_t firstVifTriggerIndex = dpiExportTriggerIndex + 1;
+    for (const auto& p : netlistp->virtIfaceTriggerps()) {
+        extraTriggers.allocate(p.first->name());
+    }
 
     const auto& senTreeps = getSenTreesUsedBy({&logicRegions.m_pre,  //
                                                &logicRegions.m_act,  //
@@ -1170,7 +1174,14 @@ void schedule(AstNetlist* netlistp) {
     if (timingKit.m_postUpdates) actTrig.m_funcp->addStmtsp(timingKit.m_postUpdates);
 
     if (dpiExportTriggerVscp) {
-        actTrig.addDpiExportTriggerAssignment(dpiExportTriggerVscp, dpiExportTriggerIndex);
+        actTrig.addExtraTriggerAssignment(dpiExportTriggerVscp, dpiExportTriggerIndex);
+    }
+    {
+        size_t vifTriggerIndex = firstVifTriggerIndex;
+        for (const auto& p : netlistp->virtIfaceTriggerps()) {
+            actTrig.addExtraTriggerAssignment(p.second, vifTriggerIndex);
+            vifTriggerIndex++;
+        }
     }
 
     AstVarScope* const actTrigVscp = actTrig.m_vscp;
@@ -1223,12 +1234,26 @@ void schedule(AstNetlist* netlistp) {
               ? createTriggerSenTree(netlistp, actTrig.m_vscp, dpiExportTriggerIndex)
               : nullptr;
 
+    std::map<const AstIface*, AstSenTree*> vifTriggeredAct;
+    {
+        size_t vifTriggerIndex = firstVifTriggerIndex;
+        for (const auto& p : netlistp->virtIfaceTriggerps()) {
+            vifTriggeredAct.insert(std::make_pair(
+                p.first, createTriggerSenTree(netlistp, actTrig.m_vscp, vifTriggerIndex)));
+            vifTriggerIndex++;
+        }
+    }
+
     AstCFunc* const actFuncp = V3Order::order(
         netlistp, {&logicRegions.m_pre, &logicRegions.m_act, &logicReplicas.m_act}, trigToSenAct,
         "act", false, false, [&](const AstVarScope* vscp, std::vector<AstSenTree*>& out) {
             auto it = actTimingDomains.find(vscp);
             if (it != actTimingDomains.end()) out = it->second;
             if (vscp->varp()->isWrittenByDpi()) out.push_back(dpiExportTriggeredAct);
+            if (vscp->varp()->sensIfacep()) {
+                const auto it = vifTriggeredAct.find(vscp->varp()->sensIfacep());
+                if (it != vifTriggeredAct.end()) out.push_back(it->second);
+            }
         });
     splitCheck(actFuncp);
     if (v3Global.opt.stats()) V3Stats::statsStage("sched-create-act");
@@ -1252,6 +1277,15 @@ void schedule(AstNetlist* netlistp) {
             = dpiExportTriggerVscp
                   ? createTriggerSenTree(netlistp, trigVscp, dpiExportTriggerIndex)
                   : nullptr;
+        std::map<const AstIface*, AstSenTree*> vifTriggered;
+        {
+            size_t vifTriggerIndex = firstVifTriggerIndex;
+            for (const auto& p : netlistp->virtIfaceTriggerps()) {
+                vifTriggered.insert(std::make_pair(
+                    p.first, createTriggerSenTree(netlistp, trigVscp, vifTriggerIndex)));
+                vifTriggerIndex++;
+            }
+        }
 
         const auto& timingDomains = timingKit.remapDomains(trigMap);
         AstCFunc* const funcp = V3Order::order(
@@ -1260,6 +1294,10 @@ void schedule(AstNetlist* netlistp) {
                 auto it = timingDomains.find(vscp);
                 if (it != timingDomains.end()) out = it->second;
                 if (vscp->varp()->isWrittenByDpi()) out.push_back(dpiExportTriggered);
+                if (vscp->varp()->sensIfacep()) {
+                    const auto it = vifTriggered.find(vscp->varp()->sensIfacep());
+                    if (it != vifTriggered.end()) out.push_back(it->second);
+                }
             });
 
         // Create the trigger dumping function, which is the same as act trigger
@@ -1314,6 +1352,7 @@ void schedule(AstNetlist* netlistp) {
     splitCheck(initp);
 
     netlistp->dpiExportTriggerp(nullptr);
+    netlistp->virtIfaceTriggerps().clear();
 
     V3Global::dumpCheckGlobalTree("sched", 0, dumpTreeLevel() >= 3);
 }

@@ -1950,6 +1950,7 @@ const char* AstNetlist::broken() const {
     BROKEN_RTN(m_delaySchedulerp && !m_delaySchedulerp->brokeExists());
     BROKEN_RTN(m_nbaEventp && !m_nbaEventp->brokeExists());
     BROKEN_RTN(m_nbaEventTriggerp && !m_nbaEventTriggerp->brokeExists());
+    for (const auto& p : m_virtIfaceTriggerps) BROKEN_RTN(!p.second->brokeExists());
     return nullptr;
 }
 AstPackage* AstNetlist::dollarUnitPkgAddp() {

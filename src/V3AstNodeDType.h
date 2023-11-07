@@ -834,6 +834,7 @@ public:
 class AstIfaceRefDType final : public AstNodeDType {
     // Reference to an interface, either for a port, or inside parent cell
     // @astgen op1 := paramsp : List[AstPin]
+    bool m_virtual = false;  // True if virtual interface
     FileLine* m_modportFileline;  // Where modport token was
     string m_cellName;  // "" = no cell, such as when connects to 'input' iface
     string m_ifaceName;  // Interface name
@@ -876,6 +877,8 @@ public:
     bool similarDType(const AstNodeDType* samep) const override { return this == samep; }
     int widthAlignBytes() const override { return 1; }
     int widthTotalBytes() const override { return 1; }
+    void isVirtual(bool flag) { m_virtual = flag; }
+    bool isVirtual() const { return m_virtual; }
     FileLine* modportFileline() const { return m_modportFileline; }
     string cellName() const { return m_cellName; }
     void cellName(const string& name) { m_cellName = name; }

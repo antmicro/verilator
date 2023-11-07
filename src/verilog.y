@@ -143,7 +143,8 @@ public:
             m_varDecl = VVarType::IFACEREF;
             m_varIO = VDirection::NONE;
             m_varLifetime = VLifetime::NONE;
-            setDType(new AstIfaceRefDType{fileline, "", GRAMMARP->m_instModule});
+            setDType(
+                new AstIfaceRefDType{fileline, AstIfaceRefDType::REF, "", GRAMMARP->m_instModule});
             m_varDeclTyped = true;
             AstVar* const nodep = createVariable(fileline, name, rangelistp, nullptr);
             return nodep;
@@ -1505,12 +1506,12 @@ port<nodep>:                    // ==IEEE: port
         //                      // We use instantCb here because the non-port form looks just like a module instantiation
                 portDirNetE id/*interface*/                      portSig variable_dimensionListE sigAttrListE
                         { $$ = $3; VARDECL(IFACEREF); VARIO(NONE);
-                          AstNodeDType* const dtp = new AstIfaceRefDType{$<fl>2, "", *$2};
+                          AstNodeDType* const dtp = new AstIfaceRefDType{$<fl>2, AstIfaceRefDType::REF, "", *$2};
                           VARDTYPE(dtp);
                           addNextNull($$, VARDONEP($$, $4, $5)); }
         |       portDirNetE id/*interface*/ '.' idAny/*modport*/ portSig variable_dimensionListE sigAttrListE
                         { $$ = $5; VARDECL(IFACEREF); VARIO(NONE);
-                          AstNodeDType* const dtp = new AstIfaceRefDType{$<fl>2, $<fl>4, "", *$2, *$4};
+                          AstNodeDType* const dtp = new AstIfaceRefDType{$<fl>2, AstIfaceRefDType::REF, $<fl>4, "", *$2, *$4};
                           VARDTYPE(dtp);
                           addNextNull($$, VARDONEP($$, $6, $7)); }
         |       portDirNetE yINTERFACE                           portSig rangeListE sigAttrListE
@@ -2134,12 +2135,12 @@ data_typeNoRef<nodeDTypep>:             // ==IEEE: data_type, excluding class_ty
 
 data_typeVirtual<nodeDTypep>:           // ==IEEE: data_type after yVIRTUAL [ yINTERFACE ]
         //                      // Parameters here are SV2009
-                id/*interface*/                         { $$ = new AstIfaceRefDType{$<fl>1, "", *$1}; }
-        |       id/*interface*/ '.' id/*modport*/       { $$ = new AstIfaceRefDType{$<fl>1, $<fl>3, "", *$1, *$3}; }
+                id/*interface*/                         { $$ = new AstIfaceRefDType{$<fl>1, AstIfaceRefDType::VIRTUAL, "", *$1}; }
+        |       id/*interface*/ '.' id/*modport*/       { $$ = new AstIfaceRefDType{$<fl>1, AstIfaceRefDType::VIRTUAL, $<fl>3, "", *$1, *$3}; }
         |       id/*interface*/ parameter_value_assignmentClass
-                        { $$ = new AstIfaceRefDType{$<fl>1, nullptr, "", *$1, "", $2}; }
+                        { $$ = new AstIfaceRefDType{$<fl>1, AstIfaceRefDType::VIRTUAL, nullptr, "", *$1, "", $2}; }
         |       id/*interface*/ parameter_value_assignmentClass '.' id/*modport*/
-                        { $$ = new AstIfaceRefDType{$<fl>1, $<fl>4, "", *$1, *$4, $2}; }
+                        { $$ = new AstIfaceRefDType{$<fl>1, AstIfaceRefDType::VIRTUAL, $<fl>4, "", *$1, *$4, $2}; }
         ;
 
 data_type_or_void<nodeDTypep>:  // ==IEEE: data_type_or_void
@@ -3167,7 +3168,7 @@ instDecl<nodep>:
         //                      // IEEE: interface_identifier' .' modport_identifier list_of_interface_identifiers
         |       id/*interface*/ '.' id/*modport*/
         /*mid*/         { VARRESET_NONLIST(VVarType::IFACEREF);
-                          AstNodeDType* const dtp = new AstIfaceRefDType{$<fl>1, $<fl>3, "", *$1, *$3};
+                          AstNodeDType* const dtp = new AstIfaceRefDType{$<fl>1, AstIfaceRefDType::REF, $<fl>3, "", *$1, *$3};
                           VARDTYPE(dtp); }
         /*cont*/    mpInstnameList ';'
                         { $$ = VARDONEP($5, nullptr, nullptr); }

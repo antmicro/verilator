@@ -309,8 +309,9 @@ void V3LinkLevel::wrapTopCell(AstNetlist* rootp) {
                             ifacecellp->modp(ifacerefp->ifacep());
                             newmodp->addStmtsp(ifacecellp);
 
-                            AstIfaceRefDType* const idtypep = new AstIfaceRefDType{
-                                newmodp->fileline(), name, ifacerefp->ifaceName()};
+                            AstIfaceRefDType* const idtypep
+                                = new AstIfaceRefDType{newmodp->fileline(), AstIfaceRefDType::REF,
+                                                       name, ifacerefp->ifaceName()};
                             idtypep->ifacep(nullptr);
                             idtypep->dtypep(idtypep);
                             idtypep->cellp(ifacecellp);
@@ -358,7 +359,8 @@ void V3LinkLevel::wrapTopCell(AstNetlist* rootp) {
                                 newmodp->addStmtsp(ifacearraycellp);
 
                                 AstIfaceRefDType* const idtypep = new AstIfaceRefDType{
-                                    newmodp->fileline(), name, ifacerefp->ifaceName()};
+                                    newmodp->fileline(), AstIfaceRefDType::REF, name,
+                                    ifacerefp->ifaceName()};
                                 idtypep->ifacep(nullptr);
                                 idtypep->dtypep(idtypep);
                                 idtypep->cellp(ifacearraycellp);

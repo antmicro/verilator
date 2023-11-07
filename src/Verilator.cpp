@@ -102,6 +102,7 @@
 #include "V3Unknown.h"
 #include "V3Unroll.h"
 #include "V3VariableOrder.h"
+#include "V3VirtIface.h"
 #include "V3Waiver.h"
 #include "V3Width.h"
 #include "V3WidthCommit.h"
@@ -396,6 +397,11 @@ static void process() {
 
             // Reorder assignments in pipelined blocks
             if (v3Global.opt.fReorder()) V3Split::splitReorderAll(v3Global.rootp());
+
+            if (!v3Global.opt.xmlOnly()) {
+                //
+                V3VirtIface::makeTriggerAssignments(v3Global.rootp());
+            }
 
             if (v3Global.opt.timing().isSetTrue()) {
                 // Convert AST for timing if requested

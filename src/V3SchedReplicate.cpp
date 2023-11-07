@@ -128,6 +128,7 @@ public:
         // the act region, which means combinational logic driven from a suspendable
         // processes must be present in the 'act' region
         if (varp()->isWrittenBySuspendable()) addDrivingRegions(ACTIVE);
+        if (varp()->isUsedVirtIface()) addDrivingRegions(ACTIVE);
     }
     AstVarScope* vscp() const { return m_vscp; }
     AstVar* varp() const { return m_vscp->varp(); }

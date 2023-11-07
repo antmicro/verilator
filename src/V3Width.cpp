@@ -2723,7 +2723,7 @@ private:
                 if (AstVar* const varp = VN_CAST(foundp, Var)) {
                     nodep->dtypep(foundp->dtypep());
                     nodep->varp(varp);
-                    varp->usedVirtIface(true);
+                    varp->usedVirtIface(adtypep->isVirtual());
                     return;
                 }
                 UINFO(1, "found object " << foundp << endl);

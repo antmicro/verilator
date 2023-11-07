@@ -1198,6 +1198,7 @@ class AstNetlist final : public AstNode {
     AstCFunc* m_evalp = nullptr;  // The '_eval' function
     AstCFunc* m_evalNbap = nullptr;  // The '_eval__nba' function
     AstVarScope* m_dpiExportTriggerp = nullptr;  // The DPI export trigger variable
+    AstVarScope* m_virtIfaceTriggerp = nullptr;  // The virtual interface trigger variable
     AstVar* m_delaySchedulerp = nullptr;  // The delay scheduler variable
     AstVarScope* m_nbaEventp = nullptr;  // The NBA event variable
     AstVarScope* m_nbaEventTriggerp = nullptr;  // If set to 1, the NBA event should get triggered
@@ -1228,6 +1229,8 @@ public:
     void evalNbap(AstCFunc* funcp) { m_evalNbap = funcp; }
     AstVarScope* dpiExportTriggerp() const { return m_dpiExportTriggerp; }
     void dpiExportTriggerp(AstVarScope* varScopep) { m_dpiExportTriggerp = varScopep; }
+    AstVarScope* virtIfaceTriggerp() const { return m_virtIfaceTriggerp; }
+    void virtIfaceTriggerp(AstVarScope* varScopep) { m_virtIfaceTriggerp = varScopep; }
     AstVar* delaySchedulerp() const { return m_delaySchedulerp; }
     void delaySchedulerp(AstVar* const varScopep) { m_delaySchedulerp = varScopep; }
     AstVarScope* nbaEventp() const { return m_nbaEventp; }
@@ -2001,6 +2004,12 @@ public:
     string verilogKwd() const override;
     void lifetime(const VLifetime& flag) { m_lifetime = flag; }
     VLifetime lifetime() const { return m_lifetime; }
+    bool isVirtIface() const {
+        if (AstIfaceRefDType* ifaceRefDtp = VN_CAST(dtypep(), IfaceRefDType)) {
+            return ifaceRefDtp->isVirtual();
+        }
+        return false;
+    }
     void propagateAttrFrom(const AstVar* fromp) {
         // This is getting connected to fromp; keep attributes
         // Note the method below too

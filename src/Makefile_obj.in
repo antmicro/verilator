@@ -291,6 +291,7 @@ RAW_OBJS_PCH_ASTNOMT = \
 	V3Undriven.o \
 	V3Unknown.o \
 	V3Unroll.o \
+	V3VirtIface.o \
 	V3VariableOrder.o \
 	V3Width.o \
 	V3WidthCommit.o \

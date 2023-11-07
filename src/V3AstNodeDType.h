@@ -818,7 +818,11 @@ public:
 class AstIfaceRefDType final : public AstNodeDType {
     // Reference to an interface, either for a port, or inside parent cell
     // @astgen op1 := paramsp : List[AstPin]
+public:
+    enum Type { REF, VIRTUAL };
+
 private:
+    bool m_virtual = false;  // True if virtual interface
     FileLine* m_modportFileline;  // Where modport token was
     string m_cellName;  // "" = no cell, such as when connects to 'input' iface
     string m_ifaceName;  // Interface name
@@ -827,22 +831,25 @@ private:
     AstCell* m_cellp = nullptr;  // When exact parent cell known; not a guess
     AstModport* m_modportp = nullptr;  // nullptr = unlinked or no modport
 public:
-    AstIfaceRefDType(FileLine* fl, const string& cellName, const string& ifaceName)
+    AstIfaceRefDType(FileLine* fl, Type type, const string& cellName, const string& ifaceName)
         : ASTGEN_SUPER_IfaceRefDType(fl)
+        , m_virtual{type == VIRTUAL}
         , m_modportFileline{nullptr}
         , m_cellName{cellName}
         , m_ifaceName{ifaceName}
         , m_modportName{""} {}
-    AstIfaceRefDType(FileLine* fl, FileLine* modportFl, const string& cellName,
+    AstIfaceRefDType(FileLine* fl, Type type, FileLine* modportFl, const string& cellName,
                      const string& ifaceName, const string& modport)
         : ASTGEN_SUPER_IfaceRefDType(fl)
+        , m_virtual{type == VIRTUAL}
         , m_modportFileline{modportFl}
         , m_cellName{cellName}
         , m_ifaceName{ifaceName}
         , m_modportName{modport} {}
-    AstIfaceRefDType(FileLine* fl, FileLine* modportFl, const string& cellName,
+    AstIfaceRefDType(FileLine* fl, Type type, FileLine* modportFl, const string& cellName,
                      const string& ifaceName, const string& modport, AstPin* paramsp)
         : ASTGEN_SUPER_IfaceRefDType(fl)
+        , m_virtual{type == VIRTUAL}
         , m_modportFileline{modportFl}
         , m_cellName{cellName}
         , m_ifaceName{ifaceName} {
@@ -861,6 +868,8 @@ public:
     bool similarDType(const AstNodeDType* samep) const override { return this == samep; }
     int widthAlignBytes() const override { return 1; }
     int widthTotalBytes() const override { return 1; }
+    void isVirtual(bool flag) { m_virtual = flag; }
+    bool isVirtual() const { return m_virtual; }
     FileLine* modportFileline() const { return m_modportFileline; }
     string cellName() const { return m_cellName; }
     void cellName(const string& name) { m_cellName = name; }

@@ -1941,6 +1941,7 @@ const char* AstNetlist::broken() const {
     BROKEN_RTN(m_dollarUnitPkgp && !m_dollarUnitPkgp->brokeExists());
     BROKEN_RTN(m_evalp && !m_evalp->brokeExists());
     BROKEN_RTN(m_dpiExportTriggerp && !m_dpiExportTriggerp->brokeExists());
+    BROKEN_RTN(m_virtIfaceTriggerp && !m_virtIfaceTriggerp->brokeExists());
     BROKEN_RTN(m_topScopep && !m_topScopep->brokeExists());
     BROKEN_RTN(m_delaySchedulerp && !m_delaySchedulerp->brokeExists());
     BROKEN_RTN(m_nbaEventp && !m_nbaEventp->brokeExists());

@@ -372,7 +372,7 @@ private:
             UINFO(6, "New vertex " << varscp << endl);
             vertexp = new GateVarVertex{&m_graph, m_scopep, varscp};
             varscp->user1p(vertexp);
-            if (varscp->varp()->isUsedVirtIface()) {
+            if (varscp->varp()->isUsedVirtIface() || varscp->varp()->isVirtIface()) {
                 // Can be used in a class method, which cannot be tracked statically
                 vertexp->clearReducibleAndDedupable("VirtIface");
                 vertexp->setConsumed("VirtIface");

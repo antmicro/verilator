@@ -507,16 +507,16 @@ struct TriggerKit {
         m_funcp->stmtsp()->addHereThisAsNext(callp->makeStmt());
     }
 
-    // Utility to set then clear the dpiExportTrigger trigger
-    void addDpiExportTriggerAssignment(AstVarScope* dpiExportTriggerVscp, uint32_t index) const {
-        FileLine* const flp = dpiExportTriggerVscp->fileline();
+    // Utility to set then clear an extra trigger
+    void addExtraTriggerAssignment(AstVarScope* extraTriggerVscp, uint32_t index) const {
+        FileLine* const flp = extraTriggerVscp->fileline();
         AstVarRef* const vrefp = new AstVarRef{flp, m_vscp, VAccess::WRITE};
         AstCMethodHard* const callp = new AstCMethodHard{flp, vrefp, "set"};
         callp->addPinsp(new AstConst{flp, index});
-        callp->addPinsp(new AstVarRef{flp, dpiExportTriggerVscp, VAccess::READ});
+        callp->addPinsp(new AstVarRef{flp, extraTriggerVscp, VAccess::READ});
         callp->dtypeSetVoid();
         AstNode* const stmtp = callp->makeStmt();
-        stmtp->addNext(new AstAssign{flp, new AstVarRef{flp, dpiExportTriggerVscp, VAccess::WRITE},
+        stmtp->addNext(new AstAssign{flp, new AstVarRef{flp, extraTriggerVscp, VAccess::WRITE},
                                      new AstConst{flp, AstConst::BitFalse{}}});
         m_funcp->stmtsp()->addHereThisAsNext(stmtp);
     }
@@ -840,7 +840,7 @@ AstNode* createInputCombLoop(AstNetlist* netlistp, AstCFunc* const initFuncp,
         = createTriggers(netlistp, initFuncp, senExprBuilder, senTreeps, "ico", extraTriggers);
 
     if (dpiExportTriggerVscp) {
-        trig.addDpiExportTriggerAssignment(dpiExportTriggerVscp, dpiExportTriggerIndex);
+        trig.addExtraTriggerAssignment(dpiExportTriggerVscp, dpiExportTriggerIndex);
     }
 
     // Remap sensitivities
@@ -1150,11 +1150,16 @@ void schedule(AstNetlist* netlistp) {
 
     // Step 8: Create the pre/act/nba triggers
     AstVarScope* const dpiExportTriggerVscp = netlistp->dpiExportTriggerp();
+    AstVarScope* const virtIfaceTriggerVscp = netlistp->virtIfaceTriggerp();
 
     // We may have an extra trigger for variable updated in DPI exports
     ExtraTriggers extraTriggers;
     const size_t dpiExportTriggerIndex = dpiExportTriggerVscp
                                              ? extraTriggers.allocate("DPI export trigger")
+                                             : std::numeric_limits<unsigned>::max();
+
+    const size_t virtIfaceTriggerIndex = virtIfaceTriggerVscp
+                                             ? extraTriggers.allocate("Virtual interface trigger")
                                              : std::numeric_limits<unsigned>::max();
 
     const auto& senTreeps = getSenTreesUsedBy({&logicRegions.m_pre,  //
@@ -1170,7 +1175,10 @@ void schedule(AstNetlist* netlistp) {
     if (timingKit.m_postUpdates) actTrig.m_funcp->addStmtsp(timingKit.m_postUpdates);
 
     if (dpiExportTriggerVscp) {
-        actTrig.addDpiExportTriggerAssignment(dpiExportTriggerVscp, dpiExportTriggerIndex);
+        actTrig.addExtraTriggerAssignment(dpiExportTriggerVscp, dpiExportTriggerIndex);
+    }
+    if (virtIfaceTriggerVscp) {
+        actTrig.addExtraTriggerAssignment(virtIfaceTriggerVscp, virtIfaceTriggerIndex);
     }
 
     AstVarScope* const actTrigVscp = actTrig.m_vscp;
@@ -1223,12 +1231,18 @@ void schedule(AstNetlist* netlistp) {
               ? createTriggerSenTree(netlistp, actTrig.m_vscp, dpiExportTriggerIndex)
               : nullptr;
 
+    AstSenTree* const virtIfaceTriggeredAct
+        = virtIfaceTriggerVscp
+              ? createTriggerSenTree(netlistp, actTrig.m_vscp, virtIfaceTriggerIndex)
+              : nullptr;
+
     AstCFunc* const actFuncp = V3Order::order(
         netlistp, {&logicRegions.m_pre, &logicRegions.m_act, &logicReplicas.m_act}, trigToSenAct,
         "act", false, false, [&](const AstVarScope* vscp, std::vector<AstSenTree*>& out) {
             auto it = actTimingDomains.find(vscp);
             if (it != actTimingDomains.end()) out = it->second;
             if (vscp->varp()->isWrittenByDpi()) out.push_back(dpiExportTriggeredAct);
+            if (vscp->varp()->isUsedVirtIface()) out.push_back(virtIfaceTriggeredAct);
         });
     splitCheck(actFuncp);
     if (v3Global.opt.stats()) V3Stats::statsStage("sched-create-act");
@@ -1314,6 +1328,7 @@ void schedule(AstNetlist* netlistp) {
     splitCheck(initp);
 
     netlistp->dpiExportTriggerp(nullptr);
+    netlistp->virtIfaceTriggerp(nullptr);
 
     V3Global::dumpCheckGlobalTree("sched", 0, dumpTreeLevel() >= 3);
 }

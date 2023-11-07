@@ -427,8 +427,9 @@ private:
             if (!nodep->hasIfaceVar()) {
                 const string varName
                     = nodep->name() + "__Viftop";  // V3LinkDot looks for this naming
-                AstIfaceRefDType* const idtypep = new AstIfaceRefDType{
-                    nodep->fileline(), nodep->name(), nodep->modp()->name()};
+                AstIfaceRefDType* const idtypep
+                    = new AstIfaceRefDType{nodep->fileline(), AstIfaceRefDType::REF, nodep->name(),
+                                           nodep->modp()->name()};
                 idtypep->ifacep(nullptr);  // cellp overrides
                 // In the case of arrayed interfaces, we replace cellp when de-arraying in V3Inst
                 idtypep->cellp(nodep);  // Only set when real parent cell known.

@@ -682,7 +682,6 @@ static void verilate(const string& argString) {
     v3Global.rootp()->mglbBlockMiscp(true);
     // Final steps
     v3Global.dumpCheckGlobalTree("final", 990, dumpTreeLevel() >= 3);
-    v3Global.rootp()->mglbBlockMiscp(false);
 
     V3Error::abortIfErrors();
 
@@ -726,6 +725,8 @@ static void verilate(const string& argString) {
 
     // Final writing shouldn't throw warnings, but...
     V3Error::abortIfWarnings();
+
+    v3Global.rootp()->mglbBlockMiscp(false);
 }
 
 static string buildMakeCmd(const string& makefile, const string& target) {

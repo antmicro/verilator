@@ -13,8 +13,11 @@ scenarios(simulator => 1);
 compile(
     verilator_flags2 => ["--binary", "--timing",
                  "-Wno-PKGNODECL -Wno-IMPLICITSTATIC -Wno-CONSTRAINTIGN -Wno-MISINDENT",
-                 "-Wno-WIDTHEXPAND -Wno-WIDTHTRUNC -Wno-CASTCONST -Wno-REALCVT",
-                 "-It/t_uvm", "-DUVM_REGEX_NO_DPI"],
+                 "-Wno-CASEINCOMPLETE -Wno-CASTCONST -Wno-SYMRSVDWORD -Wno-WIDTHEXPAND -Wno-WIDTHTRUNC",
+                 "-Wno-REALCVT", # TODO note mostly related to $realtime - could suppress or fix upstream
+                 "-Wno-ZERODLY", # TODO issue #4494, add support"
+                 "-Wno-ENCAPSULATED",
+                 "-It/t_uvm", "-DUVM_REGEX_NO_DPI -DUVM_CMDLINE_NO_DPI -DUVM_NO_DPI -DUVM_HDL_NO_DPI"],
     verilator_make_gmake => 0,
     make_main => 0,
     );

@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0
 //
 //------------------------------------------------------------------------------
 // Copyright 2007-2011 Mentor Graphics Corporation
@@ -37,28 +36,16 @@
 // demand, and passed and stored by reference.
 //------------------------------------------------------------------------------
 
-//-!!!- NOTICE -------------------------------------------------------------!!!-
-// This is a non-production-ready modified version of UVM intended for coverage
-// testing purpouses
-//-!!!----------------------------------------------------------------------!!!-
-
-//UVM ~
 // @uvm-ieee 1800.2-2017 auto 11.3.1
 class uvm_queue #(type T=int) extends uvm_object;
 
   typedef uvm_queue #(T) this_type;
 
-//UVM  `uvm_object_param_utils(uvm_queue#(T))
-//UVM  `uvm_type_name_decl("uvm_queue")
+  `uvm_object_param_utils(uvm_queue#(T))
+  `uvm_type_name_decl("uvm_queue")
 
   static local this_type m_global_queue;
   protected T queue[$];
-
-//UVM
-  static function void uvmt_drop_globals();
-    m_global_queue = null;
-  endfunction
-//UVM
 
   // Function -- NODOCS -- new
   //
@@ -72,7 +59,7 @@ class uvm_queue #(type T=int) extends uvm_object;
 
   // Function -- NODOCS -- get_global_queue
   //
-  // Returns the singleton global queue for the item type, T.
+  // Returns the singleton global queue for the item type, T. 
   //
   // This allows items to be shared amongst components throughout the
   // verification environment.
@@ -86,12 +73,12 @@ class uvm_queue #(type T=int) extends uvm_object;
 
   // Function -- NODOCS -- get_global
   //
-  // Returns the specified item instance from the global item queue.
+  // Returns the specified item instance from the global item queue. 
 
   // @uvm-ieee 1800.2-2017 auto 11.3.2.3
   static function T get_global (int index);
     this_type gqueue;
-    gqueue = get_global_queue();
+    gqueue = get_global_queue(); 
     return gqueue.get(index);
   endfunction
 
@@ -113,7 +100,7 @@ class uvm_queue #(type T=int) extends uvm_object;
     end
     return queue[index];
   endfunction
-
+  
 
   // Function -- NODOCS -- size
   //
@@ -209,14 +196,14 @@ class uvm_queue #(type T=int) extends uvm_object;
       wait(queue.size() > 0);
   endtask
 
-//UVM  virtual function void do_copy (uvm_object rhs);
-//UVM    this_type p;
-//UVM    super.do_copy(rhs);
-//UVM    if (rhs == null || !$cast(p, rhs))
-//UVM      return;
-//UVM    queue = p.queue;
-//UVM  endfunction
-
+  virtual function void do_copy (uvm_object rhs);
+    this_type p;
+    super.do_copy(rhs);
+    if (rhs == null || !$cast(p, rhs))
+      return;
+    queue = p.queue;
+  endfunction
+  
   virtual function string convert2string();
       return $sformatf("%p",queue);
   endfunction

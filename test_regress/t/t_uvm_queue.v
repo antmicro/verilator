@@ -5,10 +5,10 @@
 // SPDX-License-Identifier: CC0-1.0
 
 `include "uvmt_unit.svh"
-`include "uvmt_logs.svh"
+`include "uvm_pkg.sv"
+`include "uvmt_extras.svh"
 
-`include "base/uvm_object.svh"
-`include "base/uvm_queue.svh"
+import uvm_pkg::*;
 
 typedef uvm_queue #(string) strq_t;
 typedef uvm_queue #(int) intq_t;
@@ -20,8 +20,8 @@ class uvm_queue_testsuite extends uvmt::uvm_testsuite;
   extern function new();
 
   virtual task setup();
-    strq_t::uvmt_drop_globals();
-    intq_t::uvmt_drop_globals();
+    uvmt_queue#(string)::drop_globals();
+    uvmt_queue#(int)::drop_globals();
 
     m_strq = new("strq");
     m_intq = new("intq");
@@ -99,10 +99,7 @@ class insert_get_test extends uvmt::uvm_test #(uvm_queue_testsuite, "insert_get_
     ctx.m_strq.insert(5, "sixth");
     ctx.m_strq.insert(0, "first");
     //if (ctx.m_strq.size() != 13) begin
-    if (ctx.m_strq.size() != 12) begin
-      $display("queue size: %0d", ctx.m_strq.size());
-      `UVMT_FAIL(ctx, "insert");
-    end
+    if (ctx.m_strq.size() != 12) `UVMT_FAIL(ctx, "insert");
     if (ctx.m_strq.get(0) != "first") `UVMT_FAIL(ctx, "get");
     //if (ctx.m_strq.get(12) != "last") `UVMT_FAIL(ctx, "get");
     if (ctx.m_strq.get(6) != "sixth") `UVMT_FAIL(ctx, "get");

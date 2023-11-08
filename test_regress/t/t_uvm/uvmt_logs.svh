@@ -86,3 +86,15 @@ function void uvm_report_warning(string id,
   if (filename != "")
     $display("(mock)              ^ at %s:%0d ", filename, line);
 endfunction
+
+function void uvm_report_info(string id,
+			                        string message,
+                              int verbosity = UVM_MEDIUM,
+			                        string filename = "",
+			                        int line = 0,
+                              string context_name = "",
+                              bit report_enabled_checked = 0);
+  $display("(mock) {UVM} INFO: [%s] %s ", id, message);
+  if (filename != "")
+    $display("(mock)              ^ at %s:%0d ", filename, line);
+endfunction

@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0
 //
 //------------------------------------------------------------------------------
 // Copyright 2007-2014 Mentor Graphics Corporation
@@ -35,7 +34,6 @@
 // be allocated on demand, and passed and stored by reference.
 //------------------------------------------------------------------------------
 
-//UVM ~
 // @uvm-ieee 1800.2-2017 auto 11.2.1
 class uvm_pool #(type KEY=int, T=uvm_void) extends uvm_object;
 
@@ -44,9 +42,9 @@ class uvm_pool #(type KEY=int, T=uvm_void) extends uvm_object;
   static protected this_type m_global_pool;
   protected T pool[KEY];
 
-//UVM  `uvm_object_param_utils(uvm_pool #(KEY,T))
-//UVM  `uvm_type_name_decl("uvm_pool")
-
+  `uvm_object_param_utils(uvm_pool #(KEY,T))
+  `uvm_type_name_decl("uvm_pool")
+  
   // Function -- NODOCS -- new
   //
   // Creates a new pool with the given ~name~.
@@ -59,7 +57,7 @@ class uvm_pool #(type KEY=int, T=uvm_void) extends uvm_object;
 
   // Function -- NODOCS -- get_global_pool
   //
-  // Returns the singleton global pool for the item type, T.
+  // Returns the singleton global pool for the item type, T. 
   //
   // This allows items to be shared amongst components throughout the
   // verification environment.
@@ -73,12 +71,12 @@ class uvm_pool #(type KEY=int, T=uvm_void) extends uvm_object;
 
   // Function -- NODOCS -- get_global
   //
-  // Returns the specified item instance from the global item pool.
+  // Returns the specified item instance from the global item pool. 
 
   // @uvm-ieee 1800.2-2017 auto 11.2.2.3
   static function T get_global (KEY key);
     this_type gpool;
-    gpool = get_global_pool();
+    gpool = get_global_pool(); 
     return gpool.get(key);
   endfunction
 
@@ -98,7 +96,7 @@ class uvm_pool #(type KEY=int, T=uvm_void) extends uvm_object;
     end
     return pool[key];
   endfunction
-
+  
 
   // Function -- NODOCS -- add
   //
@@ -109,7 +107,7 @@ class uvm_pool #(type KEY=int, T=uvm_void) extends uvm_object;
   virtual function void add (KEY key, T item);
     pool[key] = item;
   endfunction
-
+  
 
   // Function -- NODOCS -- num
   //
@@ -166,7 +164,7 @@ class uvm_pool #(type KEY=int, T=uvm_void) extends uvm_object;
   //
   // Returns the key of the last item stored in the pool.
   //
-  // If the pool is empty, then 0 is returned and ~key~ is unchanged.
+  // If the pool is empty, then 0 is returned and ~key~ is unchanged. 
   //
   // If the pool is not empty, then ~key~ is set to the last key in
   // the pool and 1 is returned.
@@ -182,7 +180,7 @@ class uvm_pool #(type KEY=int, T=uvm_void) extends uvm_object;
   // Returns the key of the next item in the pool.
   //
   // If the input ~key~ is the last key in the pool, then ~key~ is
-  // left unchanged and 0 is returned.
+  // left unchanged and 0 is returned. 
   //
   // If a next key is found, then ~key~ is updated with that key
   // and 1 is returned.
@@ -198,7 +196,7 @@ class uvm_pool #(type KEY=int, T=uvm_void) extends uvm_object;
   // Returns the key of the previous item in the pool.
   //
   // If the input ~key~ is the first key in the pool, then ~key~ is
-  // left unchanged and 0 is returned.
+  // left unchanged and 0 is returned. 
   //
   // If a previous key is found, then ~key~ is updated with that key
   // and 1 is returned.
@@ -217,22 +215,22 @@ class uvm_pool #(type KEY=int, T=uvm_void) extends uvm_object;
     pool = p.pool;
   endfunction
 
-//UVM  virtual function void do_print (uvm_printer printer);
-//UVM    string v;
-//UVM    int cnt;
-//UVM    string item;
-//UVM    KEY key;
-//UVM    printer.print_array_header("pool",pool.num(),"aa_object_string");
-//UVM    if (pool.first(key))
-//UVM      do begin
-//UVM        item.itoa(cnt);
-//UVM        item = {"[-key",item,"--]"};
-//UVM        $swrite(v,pool[key]);
-//UVM        printer.print_generic(item,"",-1,v,"[");
-//UVM      end
-//UVM      while (pool.next(key));
-//UVM    printer.print_array_footer();
-//UVM  endfunction
+  virtual function void do_print (uvm_printer printer);
+    string v;
+    int cnt;
+    string item;
+    KEY key;
+    printer.print_array_header("pool",pool.num(),"aa_object_string");
+    if (pool.first(key))
+      do begin
+        item.itoa(cnt);
+        item = {"[-key",item,"--]"};
+        $swrite(v,pool[key]);
+        printer.print_generic(item,"",-1,v,"[");
+      end
+      while (pool.next(key));
+    printer.print_array_footer();
+  endfunction
 
 endclass
 
@@ -243,20 +241,19 @@ endclass
 //
 //------------------------------------------------------------------------------
 // This provides a specialization of the generic <uvm_pool #(KEY,T)> class for
-// an associative array of <uvm_object>-based objects indexed by string.
+// an associative array of <uvm_object>-based objects indexed by string. 
 // Specializations of this class include the ~uvm_event_pool~ (a
 // uvm_object_string_pool storing ~uvm_event#(uvm_object)~) and
 // ~uvm_barrier_pool~ (a uvm_obejct_string_pool storing <uvm_barrier>).
 //------------------------------------------------------------------------------
 
-// UVM ~
 class uvm_object_string_pool #(type T=uvm_object) extends uvm_pool #(string,T);
 
   typedef uvm_object_string_pool #(T) this_type;
   static protected this_type m_global_pool;
 
-//UVM  `uvm_object_param_utils(uvm_object_string_pool#(T))
-//UVM  `uvm_type_name_decl("uvm_obj_str_pool")
+  `uvm_object_param_utils(uvm_object_string_pool#(T))
+  `uvm_type_name_decl("uvm_obj_str_pool")
 
   // Function -- NODOCS -- new
   //
@@ -268,7 +265,7 @@ class uvm_object_string_pool #(type T=uvm_object) extends uvm_pool #(string,T);
 
   // Function -- NODOCS -- get_global_pool
   //
-  // Returns the singleton global pool for the item type, T.
+  // Returns the singleton global pool for the item type, T. 
   //
   // This allows items to be shared amongst components throughout the
   // verification environment.
@@ -282,11 +279,11 @@ class uvm_object_string_pool #(type T=uvm_object) extends uvm_pool #(string,T);
 
   // Function -- NODOCS -- get_global
   //
-  // Returns the specified item instance from the global item pool.
+  // Returns the specified item instance from the global item pool. 
 
   static function T get_global (string key);
     this_type gpool;
-    gpool = get_global_pool();
+    gpool = get_global_pool(); 
     return gpool.get(key);
   endfunction
 
@@ -303,7 +300,7 @@ class uvm_object_string_pool #(type T=uvm_object) extends uvm_pool #(string,T);
       pool[key] = new (key);
     return pool[key];
   endfunction
-
+  
 
   // Function -- NODOCS -- delete
   //
@@ -321,15 +318,15 @@ class uvm_object_string_pool #(type T=uvm_object) extends uvm_pool #(string,T);
 
   // Function- do_print
 
-//UVM  virtual function void do_print (uvm_printer printer);
-//UVM    string key;
-//UVM    printer.print_array_header("pool",pool.num(),"aa_object_string");
-//UVM    if (pool.first(key))
-//UVM      do
-//UVM        printer.print_object({"[",key,"]"}, pool[key],"[");
-//UVM      while (pool.next(key));
-//UVM    printer.print_array_footer();
-//UVM  endfunction
+  virtual function void do_print (uvm_printer printer);
+    string key;
+    printer.print_array_header("pool",pool.num(),"aa_object_string");
+    if (pool.first(key))
+      do
+        printer.print_object({"[",key,"]"}, pool[key],"[");
+      while (pool.next(key));
+    printer.print_array_footer();
+  endfunction
 
 endclass
 
@@ -337,5 +334,5 @@ endclass
 typedef class uvm_barrier;
 typedef class uvm_event;
 
-//UVM typedef uvm_object_string_pool #(uvm_barrier) uvm_barrier_pool /* @uvm-ieee 1800.2-2017 auto 10.4.2.1*/   ;
-//UVM typedef uvm_object_string_pool #(uvm_event#(uvm_object)) uvm_event_pool /* @uvm-ieee 1800.2-2017 auto 10.4.1.1*/   ;
+typedef uvm_object_string_pool #(uvm_barrier) uvm_barrier_pool /* @uvm-ieee 1800.2-2017 auto 10.4.2.1*/   ;
+typedef uvm_object_string_pool #(uvm_event#(uvm_object)) uvm_event_pool /* @uvm-ieee 1800.2-2017 auto 10.4.1.1*/   ;

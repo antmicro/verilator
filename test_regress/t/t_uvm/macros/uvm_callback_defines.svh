@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0
-//
 //-----------------------------------------------------------------------------
 // Copyright 2007-2012 Mentor Graphics Corporation
 // Copyright 2010-2011 Synopsys, Inc.
@@ -61,13 +59,8 @@
 
 // @uvm-ieee 1800.2-2017 auto B.4.1
 `define uvm_register_cb(T,CB) \
-///UVM static local bit m_register_cb_``CB = uvm_callbacks#(T,CB)::m_register_pair(`"T`",`"CB`"); \
-  static local bit m_register_cb_``CB = uvm_callbacks#(T,CB)::m_register_pair(`"T`",`"CB`"); \
-  static function void uvmt_drop_and_reregister_cb(); \
-    uvm_callbacks#(T,CB)::uvmt_drop_globals(); \
-    m_register_cb_``CB = uvm_callbacks#(T,CB)::m_register_pair(`"T`",`"CB`"); \
-  endfunction
-//UVM
+  static local bit m_register_cb_``CB = uvm_callbacks#(T,CB)::m_register_pair(`"T`",`"CB`");
+
 
 //-----------------------------------------------------------------------------
 // MACRO -- NODOCS -- `uvm_set_super_type
@@ -106,7 +99,7 @@
 
 // @uvm-ieee 1800.2-2017 auto B.4.2
 `define uvm_set_super_type(T,ST) \
-  static local bit m_register_``T``ST = uvm_derived_callbacks#(T,ST)::register_super_type(`"T`",`"ST`");
+  static local bit m_register_``T``ST = uvm_derived_callbacks#(T,ST)::register_super_type(`"T`",`"ST`"); 
 
 
 //-----------------------------------------------------------------------------
@@ -137,7 +130,7 @@
 //
 // A component would invoke the macro as
 //
-//| task mycomp::run_phase(uvm_phase phase);
+//| task mycomp::run_phase(uvm_phase phase); 
 //|    int curr_addr, curr_data;
 //|    ...
 //|    `uvm_do_callbacks(mycb, mycomp, my_function(this, curr_addr, curr_data))
@@ -218,7 +211,7 @@
 //
 // A component would invoke the macro as
 //
-//| task mycomp::run_phase(uvm_phase phase);
+//| task mycomp::run_phase(uvm_phase phase); 
 //|    my_trans trans;
 //|    forever begin
 //|      get_port.get(trans);
@@ -282,8 +275,8 @@
    end
 
 
-// The +define+UVM_CB_TRACE_ON setting will instrument the uvm library to emit
-// messages with message id UVMCB_TRC and UVM_NONE verbosity
+// The +define+UVM_CB_TRACE_ON setting will instrument the uvm library to emit 
+// messages with message id UVMCB_TRC and UVM_NONE verbosity 
 // notifing add,delete and execution of uvm callbacks. The instrumentation is off by default.
 
 `ifdef UVM_CB_TRACE_ON

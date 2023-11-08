@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0
-//
 //------------------------------------------------------------------------------
 // Copyright 2012 Aldec
 // Copyright 2007-2012 Mentor Graphics Corporation
@@ -167,7 +165,7 @@
 // for an abstract class (i.e. virtual class).
 
 // Implementation Note:  The `uvm_field_utils_begin macro creates a new local
-// function "__m_uvm_execute_field_op", which has a similar signature to
+// function "__m_uvm_execute_field_op", which has a similar signature to 
 // <do_execute_op>, but the arguments are named differently so as to prevent
 // potential collisions with field names.  For example, if the user had a
 // field named "op", then that could collide with the "op" argument of the
@@ -295,7 +293,7 @@ endfunction : __m_uvm_execute_field_op
 // @uvm-ieee 1800.2-2017 auto B.2.1
 // @uvm-ieee 1800.2-2017 auto B.2.1.2
 `define uvm_object_utils(T) \
-//UVM  `m_uvm_object_registry_internal(T,T)  \
+  `m_uvm_object_registry_internal(T,T)  \
   `m_uvm_object_create_func(T) \
   `uvm_type_name_decl(`"T`")
 
@@ -2085,7 +2083,7 @@ UVM_``OP: \
 // @uvm-ieee 1800.2-2017 auto B.2.2.6.1
 `define uvm_field_aa_object_int(ARG,FLAG=UVM_DEFAULT) \
   `uvm_field_aa_object_key(int, ARG, FLAG)
-
+     
 // Not LRM, but supports packing + configuration
 `define uvm_field_aa_object_key(KEY, ARG,FLAG=UVM_DEFAULT) \
   `m_uvm_field_begin(ARG, FLAG) \

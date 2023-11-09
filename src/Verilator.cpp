@@ -613,7 +613,7 @@ static void process() {
 static void verilate(const string& argString) {
     UINFO(1, "Option --verilate: Start Verilation\n");
 
-    v3Global.rootp()->mglbBlockMiscp(true);
+    v3Global.netlistp()->mglbBlockMiscp(true);
 
     // Can we skip doing everything if times are ok?
     V3File::addSrcDepend(v3Global.opt.buildDepBin());
@@ -663,7 +663,7 @@ static void verilate(const string& argString) {
         UINFO(2, "selfTest done\n");
     }
 
-    v3Global.rootp()->mglbBlockMiscp(false);
+    v3Global.netlistp()->mglbBlockMiscp(false);
     {
         const V3MtDisabledLockGuard mtDisabler{v3MtDisabledLock()};
 
@@ -679,7 +679,7 @@ static void verilate(const string& argString) {
         process();
     }
 
-    v3Global.rootp()->mglbBlockMiscp(true);
+    v3Global.netlistp()->mglbBlockMiscp(true);
     // Final steps
     v3Global.dumpCheckGlobalTree("final", 990, dumpTreeLevel() >= 3);
 
@@ -726,7 +726,7 @@ static void verilate(const string& argString) {
     // Final writing shouldn't throw warnings, but...
     V3Error::abortIfWarnings();
 
-    v3Global.rootp()->mglbBlockMiscp(false);
+    v3Global.netlistp()->mglbBlockMiscp(false);
 }
 
 static string buildMakeCmd(const string& makefile, const string& target) {
@@ -806,9 +806,9 @@ int main(int argc, char** argv) {
         v3Global.rootp()->mglbBlockMiscp(false);
     }
 
-    v3Global.rootp()->mglbBlockMiscp(true);
+    v3Global.netlistp()->mglbBlockMiscp(true);
     V3Error::abortIfErrors();
-    v3Global.rootp()->mglbBlockMiscp(false);
+    v3Global.netlistp()->mglbBlockMiscp(false);
 
     if (v3Global.opt.verilate()) {
         verilate(argString);

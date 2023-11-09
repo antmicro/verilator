@@ -235,7 +235,7 @@ void V3ErrorGuarded::v3errorEnd(std::ostringstream& sstr, const string& extra)
                     }
                     if (debug()) {
                         execErrorExitCb();
-                        V3Stats::statsFinalAll(v3Global.rootp());
+                        V3Stats::statsFinalAll(v3Global.netlistp());
                         V3Stats::statsReport();
                     }
                     // Abort in exclusive access to make sure other threads

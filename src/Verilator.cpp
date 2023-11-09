@@ -114,7 +114,7 @@ V3Global v3Global;
 
 static void reportStatsIfEnabled() {
     if (v3Global.opt.stats()) {
-        V3Stats::statsFinalAll(v3Global.rootp());
+        V3Stats::statsFinalAll(v3Global.netlistp());
         V3Stats::statsReport();
     }
 }

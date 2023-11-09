@@ -92,17 +92,7 @@ class StatsVisitor final : public VNVisitorConst {
 
     void visit(AstNode* nodep) override { countThenIterateChildren(nodep); }
 
-public:
-    // CONSTRUCTORS
-    StatsVisitor(AstNetlist* nodep, const std::string& stage, bool fastOnly)
-        : m_fastOnly{fastOnly}
-        , m_accump{fastOnly ? &m_dumpster : &m_counters} {
-        UINFO(9, "Starting stats, fastOnly=" << fastOnly << endl);
-        memset(&m_counters, 0, sizeof(m_counters));
-        memset(&m_dumpster, 0, sizeof(m_dumpster));
-
-        iterateConst(nodep);
-
+    void addStats(const std::string& stage) {
         // Shorthand
         const auto addStat = [&](const std::string& name, double count) {  //
             V3Stats::addStat(stage, name, count);
@@ -148,6 +138,34 @@ public:
             }
         }
     }
+
+public:
+    // CONSTRUCTORS
+    StatsVisitor(AstNetlist* nodep, const std::string& stage, bool fastOnly)
+        : m_fastOnly{fastOnly}
+        , m_accump{fastOnly ? &m_dumpster : &m_counters} {
+        UINFO(9, "Starting stats, fastOnly=" << fastOnly << endl);
+        memset(&m_counters, 0, sizeof(m_counters));
+        memset(&m_dumpster, 0, sizeof(m_dumpster));
+
+        iterateConst(nodep);
+
+        addStats(stage);
+    }
+    StatsVisitor(VNetlist* nodep, const std::string& stage, bool fastOnly)
+        : m_fastOnly{fastOnly}
+        , m_accump{fastOnly ? &m_dumpster : &m_counters} {
+        UINFO(9, "Starting stats, fastOnly=" << fastOnly << endl);
+        memset(&m_counters, 0, sizeof(m_counters));
+        memset(&m_dumpster, 0, sizeof(m_dumpster));
+
+        iterateAndNextConstNull(nodep->modulesp());
+        iterateAndNextConstNull(nodep->filesp());
+        iterateConstNull(nodep->typeTablep());
+        iterateConstNull(nodep->constPoolp());
+
+        addStats(stage);
+    }
 };
 
 //######################################################################
@@ -158,6 +176,16 @@ void V3Stats::statsStageAll(AstNetlist* nodep, const std::string& stage, bool fa
 }
 
 void V3Stats::statsFinalAll(AstNetlist* nodep) {
+    statsStageAll(nodep, "Final all");
+    statsStageAll(nodep, "Final fast", true);
+}
+
+
+void V3Stats::statsStageAll(VNetlist* nodep, const std::string& stage, bool fastOnly) {
+    StatsVisitor{nodep, stage, fastOnly};
+}
+
+void V3Stats::statsFinalAll(VNetlist* nodep) {
     statsStageAll(nodep, "Final all");
     statsStageAll(nodep, "Final fast", true);
 }

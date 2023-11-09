@@ -1957,7 +1957,7 @@ void AstNetlist::createTopScope(AstScope* scopep) {
     UASSERT(scopep, "Must not be nullptr");
     UASSERT_OBJ(!m_topScopep, scopep, "TopScope already exits");
     m_topScopep = new AstTopScope{scopep->modp()->fileline(), scopep};
-    scopep->modp()->addStmtsp(v3Global.rootp()->topScopep());
+    scopep->modp()->addStmtsp(v3Global.netlistp()->topScopep());
 }
 void AstNetlist::dumpTreeFile(const string& filename, bool append, bool doDump, bool doCheck) {
     // Not const function as calls brokenAll

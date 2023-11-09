@@ -231,7 +231,7 @@ void V3ErrorGuarded::v3errorEnd(std::ostringstream& sstr, const string& extra)
                     V3Broken::allowMidvisitorCheck(true);
                     const V3ThreadPool::ScopedExclusiveAccess exclusiveAccess;
                     if (dumpTreeLevel()) {
-                        v3Global.rootp()->dumpTreeFile(v3Global.debugFilename("final.tree", 990));
+                        v3Global.netlistp()->dumpTreeFile(v3Global.debugFilename("final.tree", 990));
                     }
                     if (debug()) {
                         execErrorExitCb();

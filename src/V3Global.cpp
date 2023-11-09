@@ -29,6 +29,7 @@
 void V3Global::boot() {
     UASSERT(!m_rootp, "call once");
     m_rootp = new AstNetlist;
+    m_netlist = std::make_unique<VNetlist>(m_rootp);
 }
 
 void V3Global::shutdown() {
@@ -126,4 +127,85 @@ const std::string& V3Global::ptrToId(const void* p) {
         pair.first->second = os.str();
     }
     return pair.first->second;
+}
+
+AstNodeModule* VNetlist::modulesp() const VL_MT_STABLE { return m_rootp->modulesp(); }
+
+void VNetlist::addModulesp(AstNodeModule* nodep) { m_rootp->addModulesp(nodep); }
+
+AstNodeFile* VNetlist::filesp() const VL_MT_STABLE { return m_rootp->filesp(); }
+
+void VNetlist::addFilesp(AstNodeFile* nodep) { m_rootp->addFilesp(nodep); }
+
+AstTypeTable* VNetlist::typeTablep() { return m_rootp->typeTablep(); }
+
+AstConstPool* VNetlist::constPoolp() { return m_rootp->constPoolp(); }
+
+string VNetlist::name() const { return m_rootp->name(); }
+
+void VNetlist::dump(std::ostream& str) const { return m_rootp->dump(str); }
+
+AstPackage* VNetlist::dollarUnitPkgp() const { return m_rootp->dollarUnitPkgp(); }
+
+AstPackage* VNetlist::dollarUnitPkgAddp() { return m_rootp->dollarUnitPkgAddp(); }
+
+AstCFunc* VNetlist::evalp() const { return m_rootp->evalp(); }
+
+void VNetlist::evalp(AstCFunc* funcp) { m_rootp->evalp(funcp); }
+
+AstCFunc* VNetlist::evalNbap() const { return m_rootp->evalNbap(); }
+
+void VNetlist::evalNbap(AstCFunc* funcp) { m_rootp->evalNbap(funcp); }
+
+AstVarScope* VNetlist::dpiExportTriggerp() const { return m_rootp->dpiExportTriggerp(); }
+
+void VNetlist::dpiExportTriggerp(AstVarScope* varScopep) { m_rootp->dpiExportTriggerp(varScopep); }
+
+AstVar* VNetlist::delaySchedulerp() const { return m_rootp->delaySchedulerp(); }
+
+void VNetlist::delaySchedulerp(AstVar* const varScopep) { m_rootp->delaySchedulerp(varScopep); }
+
+AstVarScope* VNetlist::nbaEventp() const { return m_rootp->nbaEventp(); }
+
+void VNetlist::nbaEventp(AstVarScope* const varScopep) { m_rootp->nbaEventp(); }
+
+AstVarScope* VNetlist::nbaEventTriggerp() const { return m_rootp->nbaEventTriggerp(); }
+
+void VNetlist::nbaEventTriggerp(AstVarScope* const varScopep) {
+    m_rootp->nbaEventTriggerp(varScopep);
+}
+
+void VNetlist::stdPackagep(AstPackage* const packagep) { m_rootp->stdPackagep(packagep); }
+
+AstPackage* VNetlist::stdPackagep() const { return m_rootp->stdPackagep(); }
+
+AstTopScope* VNetlist::topScopep() const { return m_rootp->topScopep(); }
+
+void VNetlist::createTopScope(AstScope* scopep) { m_rootp->createTopScope(scopep); }
+
+VTimescale VNetlist::timeunit() const { return m_rootp->timeunit(); }
+
+void VNetlist::timeunit(const VTimescale& value) { m_rootp->timeunit(value); }
+
+VTimescale VNetlist::timeprecision() const { return m_rootp->timeprecision(); }
+
+void VNetlist::timeInit() { m_rootp->timeInit(); }
+
+void VNetlist::timeprecisionMerge(FileLine* fl, const VTimescale& value) {
+    m_rootp->timeprecisionMerge(fl, value);
+}
+
+void VNetlist::timescaleSpecified(bool specified) { m_rootp->timescaleSpecified(specified); }
+
+bool VNetlist::timescaleSpecified() const { return m_rootp->timescaleSpecified(); }
+
+uint32_t VNetlist::allocNextMTaskID() { return m_rootp->allocNextMTaskID(); }
+
+uint32_t VNetlist::allocNextMTaskProfilingID() { return m_rootp->allocNextMTaskProfilingID(); }
+
+uint32_t VNetlist::usedMTaskProfilingIDs() { return m_rootp->usedMTaskProfilingIDs(); }
+
+void VNetlist::dumpTreeFile(const string& filename, bool append, bool doDump,
+                            bool doCheck) {
+    m_rootp->dumpTreeFile(filename, append, doDump, doCheck);
 }

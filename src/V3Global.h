@@ -91,11 +91,95 @@ constexpr bool operator==(VWidthMinUsage::en lhs, const VWidthMinUsage& rhs) {
 }
 
 //######################################################################
+
+class AstNodeModule;
+class AstNodeFile;
+class AstNode;
+class AstTypeTable;
+class AstConstPool;
+class AstPackage;
+class AstCFunc;
+class AstVarScope;
+class AstVar;
+class AstTopScope;
+class AstScope;
+
+class VNetlist final {
+    AstNetlist* m_rootp = nullptr;  // Root of entire netlist,
+
+public:
+    VNetlist() = delete;
+    explicit VNetlist(AstNetlist* rootp)
+        : m_rootp(rootp) {}
+
+    ~VNetlist() = default;
+
+    VL_UNCOPYABLE(VNetlist);
+    VL_UNMOVABLE(VNetlist);
+
+    //void accept(VNVisitorConst& v) override { v.visit(this); }
+
+    AstNodeModule* modulesp() const VL_MT_STABLE;
+    void addModulesp(AstNodeModule* nodep);
+
+    AstNodeFile* filesp() const VL_MT_STABLE;
+    void addFilesp(AstNodeFile* nodep);
+
+    //AstNode* miscsp() const VL_MT_STABLE;
+    //void addMiscsp(AstNode* nodep);
+
+    AstTypeTable* typeTablep();
+    AstConstPool* constPoolp();
+
+    //const char* broken() const override;
+    string name() const;
+    void dump(std::ostream& str) const;
+
+    AstNodeModule* topModulep() const VL_MT_STABLE {  // Top module in hierarchy
+        return modulesp();  // First one in the list, for now
+    }
+
+    AstPackage* dollarUnitPkgp() const;
+    AstPackage* dollarUnitPkgAddp();
+
+    AstCFunc* evalp() const;
+    void evalp(AstCFunc* funcp);
+    AstCFunc* evalNbap() const;
+    void evalNbap(AstCFunc* funcp);
+    AstVarScope* dpiExportTriggerp() const;
+    void dpiExportTriggerp(AstVarScope* varScopep);
+    AstVar* delaySchedulerp() const;
+    void delaySchedulerp(AstVar* const varScopep);
+    AstVarScope* nbaEventp() const;
+    void nbaEventp(AstVarScope* const varScopep);
+    AstVarScope* nbaEventTriggerp() const;
+    void nbaEventTriggerp(AstVarScope* const varScopep);
+    void stdPackagep(AstPackage* const packagep);
+    AstPackage* stdPackagep() const;
+    AstTopScope* topScopep() const;
+    void createTopScope(AstScope* scopep);
+    VTimescale timeunit() const;
+    void timeunit(const VTimescale& value);
+    VTimescale timeprecision() const;
+    void timeInit();
+    void timeprecisionMerge(FileLine*, const VTimescale& value);
+    void timescaleSpecified(bool specified);
+    bool timescaleSpecified() const;
+    uint32_t allocNextMTaskID();
+    uint32_t allocNextMTaskProfilingID();
+    uint32_t usedMTaskProfilingIDs();
+
+    void dumpTreeFile(const string& filename, bool append = false, bool doDump = true,
+                      bool doCheck = true);
+};
+
+//######################################################################
 // V3Global - The top level class for the entire program
 
 class V3Global final {
     // Globals
     AstNetlist* m_rootp = nullptr;  // Root of entire netlist,
+    std::unique_ptr<VNetlist> m_netlist;
     // created by makeInitNetlist(} so static constructors run first
     V3HierBlockPlan* m_hierPlanp = nullptr;  // Hierarchical Verilation plan,
     // nullptr unless hier_block, set via hierPlanp(V3HierBlockPlan*}
@@ -134,7 +218,8 @@ public:
     void shutdown();  // Release allocated resources
 
     // ACCESSORS (general)
-    AstNetlist* rootp() const VL_MT_SAFE { return m_rootp; }
+    AstNetlist* rootp() const /*VL_MT_DISABLED*/ { return m_rootp; }
+    VNetlist* netlistp() const VL_MT_SAFE { return m_netlist.get(); }
     VWidthMinUsage widthMinUsage() const { return m_widthMinUsage; }
     bool assertDTypesResolved() const { return m_assertDTypesResolved; }
     bool assertScoped() const { return m_assertScoped; }

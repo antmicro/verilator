@@ -171,6 +171,8 @@ public:
 
     void dumpTreeFile(const string& filename, bool append = false, bool doDump = true,
                       bool doCheck = true);
+
+    void mglbBlockMiscp(bool enable);
 };
 
 //######################################################################

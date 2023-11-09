@@ -209,3 +209,7 @@ void VNetlist::dumpTreeFile(const string& filename, bool append, bool doDump,
                             bool doCheck) {
     m_rootp->dumpTreeFile(filename, append, doDump, doCheck);
 }
+
+void VNetlist::mglbBlockMiscp(bool enable) {
+    m_rootp->mglbBlockMiscp(enable);
+}

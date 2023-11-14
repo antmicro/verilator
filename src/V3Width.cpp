@@ -76,6 +76,7 @@
 #include "V3String.h"
 #include "V3Task.h"
 #include "V3WidthCommit.h"
+#include "V3LinkLValue.h"
 
 // More code; this file was getting too large; see actions there
 #define VERILATOR_V3WIDTH_CPP_
@@ -3136,7 +3137,7 @@ class WidthVisitor final : public VNVisitor {
             newp->dtypeSetSigned32();
         } else if (nodep->name() == "delete") {  // function void delete([input integer index])
             methodOkArguments(nodep, 0, 1);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::WRITE);
             if (!nodep->pinsp()) {
                 newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                           "clear"};
@@ -3158,14 +3159,14 @@ class WidthVisitor final : public VNVisitor {
                 = methodWithArgument(nodep, false, false, adtypep->subDTypep(),
                                      adtypep->findStringDType(), adtypep->subDTypep());
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       "r_" + nodep->name(), withp};
             newp->dtypeFrom(withp ? withp->dtypep() : adtypep->subDTypep());
             if (!nodep->firstAbovep()) newp->dtypeSetVoid();
         } else if (nodep->name() == "min" || nodep->name() == "max" || nodep->name() == "unique") {
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       nodep->name()};
             newp->dtypeFrom(adtypep);
@@ -3176,7 +3177,7 @@ class WidthVisitor final : public VNVisitor {
                 = methodWithArgument(nodep, true, false, nodep->findBitDType(),
                                      adtypep->findStringDType(), adtypep->subDTypep());
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       nodep->name(), withp};
             newp->dtypeFrom(adtypep);
@@ -3220,7 +3221,7 @@ class WidthVisitor final : public VNVisitor {
             newp->dtypeSetSigned32();
         } else if (nodep->name() == "delete") {  // function void delete([input integer index])
             methodOkArguments(nodep, 0, 1);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::WRITE);
             if (!nodep->pinsp()) {
                 newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                           "clear"};
@@ -3241,7 +3242,7 @@ class WidthVisitor final : public VNVisitor {
             AstWith* const withp = methodWithArgument(nodep, false, false, adtypep->subDTypep(),
                                                       adtypep->keyDTypep(), adtypep->subDTypep());
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       "r_" + nodep->name(), withp};
             newp->dtypeFrom(withp ? withp->dtypep() : adtypep->subDTypep());
@@ -3251,7 +3252,7 @@ class WidthVisitor final : public VNVisitor {
             AstWith* const withp = methodWithArgument(
                 nodep, false, true, nullptr, nodep->findUInt32DType(), adtypep->subDTypep());
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       nodep->name(), withp};
             if (nodep->name() == "unique_index") {
@@ -3265,7 +3266,7 @@ class WidthVisitor final : public VNVisitor {
             AstWith* const withp = methodWithArgument(nodep, true, false, nodep->findBitDType(),
                                                       adtypep->keyDTypep(), adtypep->subDTypep());
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       nodep->name(), withp};
             newp->dtypeFrom(adtypep);
@@ -3275,7 +3276,7 @@ class WidthVisitor final : public VNVisitor {
             AstWith* const withp = methodWithArgument(nodep, true, false, nodep->findBitDType(),
                                                       adtypep->keyDTypep(), adtypep->subDTypep());
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       nodep->name(), withp};
             newp->dtypep(queueDTypeIndexedBy(adtypep->keyDTypep()));
@@ -3306,21 +3307,6 @@ class WidthVisitor final : public VNVisitor {
         VL_DANGLING(index_exprp);  // May have been edited
         return VN_AS(nodep->pinsp(), Arg)->exprp();
     }
-    void methodCallLValueRecurse(AstMethodCall* nodep, AstNode* childp, const VAccess& access) {
-        if (AstNodeVarRef* const varrefp = VN_CAST(childp, NodeVarRef)) {
-            varrefp->access(access);
-        } else if (const AstMemberSel* const ichildp = VN_CAST(childp, MemberSel)) {
-            methodCallLValueRecurse(nodep, ichildp->fromp(), access);
-        } else if (const AstStructSel* const ichildp = VN_CAST(childp, StructSel)) {
-            methodCallLValueRecurse(nodep, ichildp->fromp(), access);
-        } else if (const AstNodeSel* const ichildp = VN_CAST(childp, NodeSel)) {
-            methodCallLValueRecurse(nodep, ichildp->fromp(), access);
-        } else {
-            UINFO(1, "    Related node: " << childp << endl);
-            nodep->v3warn(E_UNSUPPORTED, "Unsupported: Non-variable on LHS of built-in method '"
-                                             << nodep->prettyName() << "'");
-        }
-    }
     AstCMethodHard* methodCallArray(AstMethodCall* nodep, AstNodeDType* adtypep) {
         AstCMethodHard* newp = nullptr;
 
@@ -3332,7 +3318,7 @@ class WidthVisitor final : public VNVisitor {
                                            adtypep->subDTypep());
             }
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::WRITE);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       nodep->name(), withp};
             newp->dtypeSetVoid();
@@ -3341,7 +3327,7 @@ class WidthVisitor final : public VNVisitor {
             AstWith* const withp = methodWithArgument(
                 nodep, false, true, nullptr, nodep->findUInt32DType(), adtypep->subDTypep());
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       nodep->name(), withp};
             if (nodep->name() == "unique_index") {
@@ -3356,7 +3342,7 @@ class WidthVisitor final : public VNVisitor {
                 = methodWithArgument(nodep, true, false, nodep->findBitDType(),
                                      nodep->findUInt32DType(), adtypep->subDTypep());
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       nodep->name(), withp};
             newp->dtypeFrom(adtypep);
@@ -3367,7 +3353,7 @@ class WidthVisitor final : public VNVisitor {
                 = methodWithArgument(nodep, true, false, nodep->findBitDType(),
                                      nodep->findUInt32DType(), adtypep->subDTypep());
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       nodep->name(), withp};
             newp->dtypep(newp->findQueueIndexDType());
@@ -3379,7 +3365,7 @@ class WidthVisitor final : public VNVisitor {
         AstCMethodHard* newp = nullptr;
         if (nodep->name() == "at") {  // Created internally for []
             methodOkArguments(nodep, 1, 1);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::WRITE);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(), "at"};
             newp->dtypeFrom(adtypep->subDTypep());
         } else if (nodep->name() == "size") {
@@ -3388,7 +3374,7 @@ class WidthVisitor final : public VNVisitor {
             newp->dtypeSetSigned32();
         } else if (nodep->name() == "delete") {  // function void delete()
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::WRITE);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(), "clear"};
             newp->dtypeSetVoid();
         } else if (nodep->name() == "and" || nodep->name() == "or" || nodep->name() == "xor"
@@ -3398,7 +3384,7 @@ class WidthVisitor final : public VNVisitor {
                 = methodWithArgument(nodep, false, false, adtypep->subDTypep(),
                                      nodep->findUInt32DType(), adtypep->subDTypep());
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       "r_" + nodep->name(), withp};
             newp->dtypeFrom(adtypep->subDTypep());
@@ -3420,7 +3406,7 @@ class WidthVisitor final : public VNVisitor {
         AstCMethodHard* newp = nullptr;
         if (nodep->name() == "at") {  // Created internally for []
             methodOkArguments(nodep, 1, 1);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::WRITE);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(), "at"};
             newp->dtypeFrom(adtypep->subDTypep());
         } else if (nodep->name() == "num"  // function int num()
@@ -3430,7 +3416,7 @@ class WidthVisitor final : public VNVisitor {
             newp->dtypeSetSigned32();
         } else if (nodep->name() == "delete") {  // function void delete([input integer index])
             methodOkArguments(nodep, 0, 1);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::WRITE);
             if (!nodep->pinsp()) {
                 newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                           "clear"};
@@ -3450,7 +3436,7 @@ class WidthVisitor final : public VNVisitor {
             }
         } else if (nodep->name() == "insert") {
             methodOkArguments(nodep, 2, 2);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::WRITE);
             AstNodeExpr* const index_exprp = methodCallQueueIndexExpr(nodep);
             AstArg* const argp = VN_AS(nodep->pinsp()->nextp(), Arg);
             iterateCheckTyped(nodep, "insert value", argp->exprp(), adtypep->subDTypep(), BOTH);
@@ -3467,14 +3453,14 @@ class WidthVisitor final : public VNVisitor {
         } else if (nodep->name() == "pop_front" || nodep->name() == "pop_back") {
             methodOkArguments(nodep, 0, 0);
             // Returns element, so method both consumes (reads) and modifies the queue
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READWRITE);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READWRITE);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       nodep->name()};
             newp->dtypeFrom(adtypep->subDTypep());
             if (nodep->isStandaloneBodyStmt()) newp->dtypeSetVoid();
         } else if (nodep->name() == "push_back" || nodep->name() == "push_front") {
             methodOkArguments(nodep, 1, 1);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::WRITE);
             AstArg* const argp = VN_AS(nodep->pinsp(), Arg);
             iterateCheckTyped(nodep, "push value", argp->exprp(), adtypep->subDTypep(), BOTH);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
@@ -3486,7 +3472,7 @@ class WidthVisitor final : public VNVisitor {
                 = methodWithArgument(nodep, false, false, adtypep->subDTypep(),
                                      nodep->findUInt32DType(), adtypep->subDTypep());
             methodOkArguments(nodep, 0, 0);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
             newp = new AstCMethodHard{nodep->fileline(), nodep->fromp()->unlinkFrBack(),
                                       "r_" + nodep->name(), withp};
             newp->dtypeFrom(withp ? withp->dtypep() : adtypep->subDTypep());

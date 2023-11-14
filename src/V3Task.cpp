@@ -503,7 +503,7 @@ class TaskVisitor final : public VNVisitor {
                 }
             } else if (portp->isInoutish()) {
                 // if (debug() >= 9) pinp->dumpTree("-pinrsize- ");
-                V3LinkLValue::linkLValueSet(pinp);
+                V3LinkLValue::linkLValueSet(pinp, VAccess::WRITE);
 
                 AstVarScope* const newvscp
                     = createVarScope(portp, namePrefix + "__" + portp->shortName());
@@ -529,7 +529,7 @@ class TaskVisitor final : public VNVisitor {
                 // This is slightly scary; are we sure no decisions were made
                 // before here based on this not being a lvalue?
                 // Doesn't seem so; V3Unknown uses it earlier, but works ok.
-                V3LinkLValue::linkLValueSet(pinp);
+                V3LinkLValue::linkLValueSet(pinp, VAccess::WRITE);
                 // Even if it's referencing a varref, we still make a temporary
                 // Else task(x,x,x) might produce incorrect results
                 AstVarScope* const newvscp

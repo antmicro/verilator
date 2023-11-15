@@ -370,7 +370,9 @@ class RandomizeVisitor final : public VNVisitor {
         auto* newp = VN_AS(m_memberMap.findMember(nodep, "new"), NodeFTask);
         UASSERT_OBJ(newp, nodep, "No new() in class");
         auto* taskp = newSetupConstraintsTask(nodep);
-        newp->addStmtsp(new AstTaskRef{fl, taskp->name(), nullptr});
+        AstTaskRef* const setupTaskRefp = new AstTaskRef{fl, taskp->name(), nullptr};
+        setupTaskRefp->taskp(taskp);
+        newp->addStmtsp(new AstStmtExpr{fl, setupTaskRefp});
 
         nodep->user1(false);
 
@@ -392,7 +394,7 @@ class RandomizeVisitor final : public VNVisitor {
                     auto* const methodp = new AstCMethodHard{
                         fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "hard", exprp};
                     methodp->dtypeSetVoid();
-                    taskp->addStmtsp(methodp);
+                    taskp->addStmtsp(new AstStmtExpr{fl, methodp});
                 }
         });
     }

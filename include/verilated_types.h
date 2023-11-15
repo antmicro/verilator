@@ -345,8 +345,8 @@ inline IData VL_RANDOM_RNG_I(VlRNG& rngr) VL_MT_UNSAFE { return rngr.rand64(); }
 inline QData VL_RANDOM_RNG_Q(VlRNG& rngr) VL_MT_UNSAFE { return rngr.rand64(); }
 extern WDataOutP VL_RANDOM_RNG_W(VlRNG& rngr, int obits, WDataOutP outwp) VL_MT_UNSAFE;
 
-inline bool VL_RANDOMIZE(VlRNG& rngr, IData& valuer) { valuer = VL_RANDOM_RNG_I(rngr); return true; }
-inline bool VL_RANDOMIZE(VlRNG& rngr, QData& valuer) { valuer = VL_RANDOM_RNG_Q(rngr); return true; }
+inline bool VL_RANDOMIZE(IData& valuer) { valuer = VL_RANDOM_RNG_I(VlRNG::vl_thread_rng()); return true; }
+inline bool VL_RANDOMIZE(QData& valuer) { valuer = VL_RANDOM_RNG_Q(VlRNG::vl_thread_rng()); return true; }
 
 //===================================================================
 // Readmem/Writemem operation classes

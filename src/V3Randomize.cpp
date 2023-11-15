@@ -391,11 +391,11 @@ class RandomizeVisitor final : public VNVisitor {
                 AstNodeExpr* exprp = condsp->exprp()->unlinkFrBack();
                 pushDeletep(condsp);
                 // only hard constraints are now supported
-                    auto* const methodp = new AstCMethodHard{
-                        fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "hard", exprp};
-                    methodp->dtypeSetVoid();
-                    taskp->addStmtsp(new AstStmtExpr{fl, methodp});
-                }
+                auto* const methodp = new AstCMethodHard{
+                    fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "hard", exprp};
+                methodp->dtypeSetVoid();
+                taskp->addStmtsp(new AstStmtExpr{fl, methodp});
+            }
         });
     }
     void visit(AstRandCase* nodep) override {

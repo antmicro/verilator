@@ -827,6 +827,8 @@ AstNodeDType::CTypeRecursed AstNodeDType::cTypeRecurse(bool compound) const {
             info.m_type = "VlDynamicTriggerScheduler";
         } else if (bdtypep->isForkSync()) {
             info.m_type = "VlForkSync";
+        } else if (bdtypep->isRandomGenerator()) {
+            info.m_type = "crave::Generator";
         } else if (bdtypep->isProcessRef()) {
             info.m_type = "VlProcessRef";
         } else if (bdtypep->isEvent()) {

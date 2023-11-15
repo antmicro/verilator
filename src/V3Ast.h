@@ -518,6 +518,7 @@ public:
         TRIGGER_SCHEDULER,
         DYNAMIC_TRIGGER_SCHEDULER,
         FORK_SYNC,
+        RANDOM_GENERATOR,
         PROCESS_REFERENCE,
         // Unsigned and two state; fundamental types
         UINT32,
@@ -551,6 +552,7 @@ public:
                                             "VlTriggerScheduler",
                                             "VlDynamicTriggerScheduler",
                                             "VlFork",
+                                            "crave::Generator",
                                             "VlProcessRef",
                                             "IData",
                                             "QData",
@@ -569,7 +571,7 @@ public:
                                             "dpiScope",      "const char*",
                                             "%E-mtaskstate", "%E-triggervec",
                                             "%E-dly-sched",  "%E-trig-sched",
-                                            "%E-dyn-sched",  "%E-fork",
+                                            "%E-dyn-sched",  "%E-fork", "%error-rand-gen",
                                             "%E-proc-ref",   "IData",
                                             "QData",         "%E-logic-implct",
                                             " MAX"};
@@ -611,6 +613,7 @@ public:
         case TRIGGER_SCHEDULER: return 0;  // opaque
         case DYNAMIC_TRIGGER_SCHEDULER: return 0;  // opaque
         case FORK_SYNC: return 0;  // opaque
+        case RANDOM_GENERATOR: return 0;  // opaque
         case PROCESS_REFERENCE: return 0;  // opaque
         case UINT32: return 32;
         case UINT64: return 64;
@@ -651,7 +654,7 @@ public:
         return (m_e == EVENT || m_e == STRING || m_e == SCOPEPTR || m_e == CHARPTR
                 || m_e == MTASKSTATE || m_e == TRIGGERVEC || m_e == DELAY_SCHEDULER
                 || m_e == TRIGGER_SCHEDULER || m_e == DYNAMIC_TRIGGER_SCHEDULER || m_e == FORK_SYNC
-                || m_e == PROCESS_REFERENCE || m_e == DOUBLE || m_e == UNTYPED);
+                || m_e == RANDOM_GENERATOR || m_e == PROCESS_REFERENCE || m_e == DOUBLE || m_e == UNTYPED);
     }
     bool isDouble() const VL_MT_SAFE { return m_e == DOUBLE; }
     bool isEvent() const { return m_e == EVENT; }

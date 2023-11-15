@@ -273,6 +273,16 @@ class RandomizeVisitor final : public VNVisitor {
             funcp->addStmtsp(callp->makeStmt());
         }
     }
+    AstTask* newSetupConstraintsTask(AstClass* nodep) {
+        auto* funcp = VN_AS(m_memberMap.findMember(nodep, "_setup_constraints"), Task);
+        if (!funcp) {
+            funcp = new AstTask{nodep->fileline(), "_setup_constraints", nullptr};
+            funcp->classMethod(true);
+            funcp->isVirtual(nodep->isExtended());
+            nodep->addMembersp(funcp);
+        }
+        return funcp;
+    }
 
     // VISITORS
     void visit(AstNodeModule* nodep) override {
@@ -357,6 +367,10 @@ class RandomizeVisitor final : public VNVisitor {
         auto* genp = new AstVar(fl, VVarType::MEMBER, "constraint",
                                 nodep->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR));
         nodep->addMembersp(genp);
+        auto* newp = VN_AS(m_memberMap.findMember(nodep, "new"), NodeFTask);
+        UASSERT_OBJ(newp, nodep, "No new() in class");
+        auto* taskp = newSetupConstraintsTask(nodep);
+        newp->addStmtsp(new AstTaskRef{fl, taskp->name(), nullptr});
 
         nodep->user1(false);
 

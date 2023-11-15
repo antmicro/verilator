@@ -2466,6 +2466,7 @@ void AstCMethodHard::setPurity() {
                                                           {"r_product", true},
                                                           {"r_sum", true},
                                                           {"r_xor", true},
+                                                          {"randomize", false},
                                                           {"renew", false},
                                                           {"renew_copy", false},
                                                           {"resume", false},

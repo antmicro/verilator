@@ -2460,6 +2460,7 @@ void AstCMethodHard::setPurity() {
                                                           {"find_last_index", true},
                                                           {"fire", false},
                                                           {"first", false},
+                                                          {"hard", "false"},
                                                           {"init", false},
                                                           {"insert", false},
                                                           {"isFired", true},
@@ -2498,7 +2499,8 @@ void AstCMethodHard::setPurity() {
                                                           {"trigger", false},
                                                           {"unique", true},
                                                           {"unique_index", true},
-                                                          {"word", true}};
+                                                          {"word", true},
+                                                          {"write_var", false}};
 
     auto isPureIt = isPureMethod.find(name());
     UASSERT_OBJ(isPureIt != isPureMethod.end(), this, "Unknown purity of method " + name());

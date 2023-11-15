@@ -354,11 +354,33 @@ class RandomizeVisitor final : public VNVisitor {
             }
         }
         addPrePostCall(nodep, funcp, "post_randomize");
+        auto* genp = new AstVar(fl, VVarType::MEMBER, "constraint",
+                                nodep->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR));
+        nodep->addMembersp(genp);
+
         nodep->user1(false);
-    }
-    void visit(AstConstraint* nodep) override {
-        nodep->v3warn(CONSTRAINTIGN, "Constraint ignored (unsupported)");
-        if (!v3Global.opt.xmlOnly()) VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
+
+        nodep->foreach([&](AstConstraint* const constrp) {
+            constrp->foreach([&](AstNodeVarRef* const refp) {
+                auto* const methodp = new AstCMethodHard{
+                    fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "write_var"};
+                methodp->dtypep(refp->dtypep());
+                refp->replaceWith(methodp);
+                methodp->addPinsp(refp);
+            });
+
+            while (constrp->itemsp()) {
+                AstConstraintExpr* condsp = VN_AS(constrp->itemsp(), ConstraintExpr);
+                condsp->unlinkFrBack();
+                AstNodeExpr* exprp = condsp->exprp()->unlinkFrBack();
+                pushDeletep(condsp);
+                // only hard constraints are now supported
+                    auto* const methodp = new AstCMethodHard{
+                        fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "hard", exprp};
+                    methodp->dtypeSetVoid();
+                    taskp->addStmtsp(methodp);
+                }
+        });
     }
     void visit(AstRandCase* nodep) override {
         // RANDCASE

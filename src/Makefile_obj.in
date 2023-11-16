@@ -125,6 +125,7 @@ ifeq ($(CFG_WITH_DEFENV),yes)
  else
   CPPFLAGS += -DDEFENV_VERILATOR_ROOT=\"$(VERILATOR_ROOT)\"
  endif
+  CPPFLAGS += -DDEFENV_CRAVE_ROOT=\"$(shell realpath ../..)\"
 endif
 
 HEADERS = $(wildcard V*.h v*.h)

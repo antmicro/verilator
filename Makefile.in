@@ -133,7 +133,7 @@ VL_INST_MAN_FILES = \
 	verilator_profcfunc.1 \
 
 default: all
-all: all_nomsg msg_test
+all: all_nomsg msg_test crave
 all_nomsg: verilator_exe $(VL_INST_MAN_FILES)
 
 .PHONY:verilator_exe
@@ -537,3 +537,11 @@ preexist:
 
 maintainer-dist: preexist tag
 	svnorcvs release $(DISTTAGNAME)
+
+# CRAVE
+.PHONY: crave
+crave: crave/build
+	cmake --build crave/build
+	cmake --install crave/build
+crave/build:
+	cmake -S crave -B crave/build -DmetaSMT_USE_STP=ON -DCMAKE_INSTALL_PREFIX=.

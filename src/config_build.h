@@ -50,6 +50,9 @@
 #ifndef DEFENV_VERILATOR_ROOT
 # define DEFENV_VERILATOR_ROOT ""
 #endif
+#ifndef DEFENV_CRAVE_ROOT
+# define DEFENV_CRAVE_ROOT ""
+#endif
 // clang-format on
 
 //**********************************************************************

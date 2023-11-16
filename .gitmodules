@@ -1,0 +1,3 @@
+[submodule "crave"]
+	path = crave
+	url = https://github.com/antmicro/crave.git

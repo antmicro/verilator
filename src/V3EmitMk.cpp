@@ -193,7 +193,8 @@ public:
         of.puts("\n");
 
         of.puts("# User LDLIBS (from -LDFLAGS on Verilator command line)\n");
-        of.puts("VM_USER_LDLIBS = \\\n");
+        of.puts("VM_USER_LDLIBS = -L" + V3Options::getenvCRAVE_ROOT()
+                + "/lib -lcrave -lmetaSMT -lstp -lminisat -pthread\\\n");
         const V3StringList& ldLibs = v3Global.opt.ldLibs();
         for (const string& i : ldLibs) of.puts("\t" + i + " \\\n");
         of.puts("\n");

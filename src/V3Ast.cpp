@@ -1385,21 +1385,21 @@ AstNodeDType* AstNode::findBasicDType(VBasicDTypeKwd kwd) const {
 }
 AstNodeDType* AstNode::findBitDType(int width, int widthMin, VSigning numeric) const {
     return v3Global.netlistp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::BIT,
-                                                             width, widthMin, numeric);
+                                                                width, widthMin, numeric);
 }
 AstNodeDType* AstNode::findLogicDType(int width, int widthMin, VSigning numeric) const {
     return v3Global.netlistp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::LOGIC,
-                                                             width, widthMin, numeric);
+                                                                width, widthMin, numeric);
 }
 AstNodeDType* AstNode::findLogicRangeDType(const VNumRange& range, int widthMin,
                                            VSigning numeric) const {
     return v3Global.netlistp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::LOGIC,
-                                                             range, widthMin, numeric);
+                                                                range, widthMin, numeric);
 }
 AstNodeDType* AstNode::findBitRangeDType(const VNumRange& range, int widthMin,
                                          VSigning numeric) const {
     return v3Global.netlistp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::BIT,
-                                                             range, widthMin, numeric);
+                                                                range, widthMin, numeric);
 }
 AstBasicDType* AstNode::findInsertSameDType(AstBasicDType* nodep) {
     return v3Global.netlistp()->typeTablep()->findInsertSameDType(nodep);

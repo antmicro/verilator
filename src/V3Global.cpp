@@ -205,11 +205,14 @@ uint32_t VNetlist::allocNextMTaskProfilingID() { return m_rootp->allocNextMTaskP
 
 uint32_t VNetlist::usedMTaskProfilingIDs() { return m_rootp->usedMTaskProfilingIDs(); }
 
-void VNetlist::dumpTreeFile(const string& filename, bool append, bool doDump,
-                            bool doCheck) {
+void VNetlist::dumpTreeFile(const string& filename, bool append, bool doDump, bool doCheck) {
     m_rootp->dumpTreeFile(filename, append, doDump, doCheck);
 }
 
-void VNetlist::mglbBlockMiscp(bool enable) {
-    m_rootp->mglbBlockMiscp(enable);
+void VNetlist::dumpTreeDotFile(const string& filename, bool append, bool doDump) {
+    m_rootp->dumpTreeDotFile(filename, append, doDump);
 }
+
+FileLine* VNetlist::fileline() const VL_MT_SAFE { return m_rootp->fileline(); }
+
+void VNetlist::mglbBlockMiscp(bool enable) { m_rootp->mglbBlockMiscp(enable); }

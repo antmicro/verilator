@@ -118,7 +118,8 @@ public:
     /// Called each stage
     static void statsStage(const string& name);
     /// Called by the top level to collect statistics
-    static void statsStageAll(AstNetlist* nodep, const string& stage, bool fastOnly = false) VL_MT_DISABLED;
+    static void statsStageAll(AstNetlist* nodep, const string& stage,
+                              bool fastOnly = false) VL_MT_DISABLED;
     static void statsFinalAll(AstNetlist* nodep) VL_MT_DISABLED;
     static void statsStageAll(VNetlist* nodep, const string& stage, bool fastOnly = false);
     static void statsFinalAll(VNetlist* nodep);

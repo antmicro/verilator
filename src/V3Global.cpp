@@ -39,7 +39,12 @@ void V3Global::shutdown() {
 #endif
 }
 
-void V3Global::checkTree() const { rootp()->checkTree(); }
+void V3Global::checkTree() const {
+    if (netlistp()->modulesp()) netlistp()->modulesp()->checkTree();
+    if (netlistp()->filesp()) netlistp()->filesp()->checkTree();
+    netlistp()->typeTablep()->checkTree();
+    netlistp()->constPoolp()->checkTree();
+}
 
 void V3Global::readFiles() {
     // NODE STATE
@@ -108,7 +113,7 @@ string V3Global::digitsFilename(int number) {
 void V3Global::dumpCheckGlobalTree(const string& stagename, int newNumber, bool doDump) {
     const string treeFilename = v3Global.debugFilename(stagename + ".tree", newNumber);
     netlistp()->dumpTreeFile(treeFilename, false, doDump);
-    if (opt.dumpTreeDot()) { rootp()->dumpTreeDotFile(treeFilename + ".dot", false, doDump); }
+    if (opt.dumpTreeDot()) { netlistp()->dumpTreeDotFile(treeFilename + ".dot", false, doDump); }
     if (opt.stats()) V3Stats::statsStage(stagename);
 }
 

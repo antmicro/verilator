@@ -2212,7 +2212,6 @@ public:
                          int maxDepth = 0) const;
     static void dumpTreeFileGdb(const AstNode* nodep, const char* filenamep = nullptr);
     void dumpTreeDot(std::ostream& os = std::cout) const;
-    void dumpTreeDotFile(const string& filename, bool append = false, bool doDump = true);
 
     // METHODS - static advancement
     static AstNode* afterCommentp(AstNode* nodep) {

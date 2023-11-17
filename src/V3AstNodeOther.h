@@ -1269,6 +1269,7 @@ public:
 
     void dumpTreeFile(const string& filename, bool append = false, bool doDump = true,
                       bool doCheck = true);
+    void dumpTreeDotFile(const string& filename, bool append = false, bool doDump = true);
 };
 class AstPackageExport final : public AstNode {
 private:

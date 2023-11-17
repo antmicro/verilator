@@ -1300,22 +1300,6 @@ void AstNode::dumpTreeDot(std::ostream& os) const {
     drawChildren(os, this, m_op4p, "op4");
 }
 
-void AstNode::dumpTreeDotFile(const string& filename, bool append, bool doDump) {
-    if (doDump) {
-        UINFO(2, "Dumping " << filename << endl);
-        const std::unique_ptr<std::ofstream> treedotp{V3File::new_ofstream(filename, append)};
-        if (treedotp->fail()) v3fatal("Can't write " << filename);
-        *treedotp << "digraph vTree{\n";
-        *treedotp << "\tgraph\t[label=\"" << filename + ".dot"
-                  << "\",\n";
-        *treedotp << "\t\t labelloc=t, labeljust=l,\n";
-        *treedotp << "\t\t //size=\"7.5,10\",\n"
-                  << "];\n";
-        dumpTreeDot(*treedotp);
-        *treedotp << "}\n";
-    }
-}
-
 string AstNode::instanceStr() const {
     // Max iterations before giving up on location search,
     // in case we have some circular reference bug.

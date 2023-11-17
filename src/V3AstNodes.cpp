@@ -1979,7 +1979,8 @@ void AstNetlist::dumpTreeFile(const string& filename, bool append, bool doDump, 
                     std::ostream& os = *logsp;
                     const std::string indent = "    ";
 
-                    static int s_debugFileline = v3Global.opt.debugSrcLevel("fileline");  // --debugi-fileline 9
+                    static int s_debugFileline
+                        = v3Global.opt.debugSrcLevel("fileline");  // --debugi-fileline 9
                     os << indent << " " << this << '\n';
                     if (debug() > 8) {
                         // TODO(mglb): implement dedicated dumpPtrs for AstNetlist

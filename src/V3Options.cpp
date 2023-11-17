@@ -737,6 +737,16 @@ string V3Options::getStdPackagePath() {
     return V3Os::filenameJoin(getenvVERILATOR_ROOT(), "include", "verilated_std.sv");
 }
 
+string V3Options::getenvCRAVE_ROOT() {
+    string var = V3Os::getenvStr("CRAVE_ROOT", "");
+    if (var == "" && string(DEFENV_CRAVE_ROOT) != "") {
+        var = DEFENV_CRAVE_ROOT;
+        V3Os::setenvStr("CRAVE_ROOT", var, "Hardcoded at build time");
+    }
+    if (var == "") v3fatal("$CRAVE_ROOT needs to be in environment\n");
+    return var;
+}
+
 string V3Options::getSupported(const string& var) {
     // If update below, also update V3Options::showVersion()
     if (var == "COROUTINES" && coroutineSupport()) {

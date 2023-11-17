@@ -186,7 +186,7 @@ public:
         of.puts(string{"VM_MODPREFIX = "} + v3Global.opt.modPrefix() + "\n");
 
         of.puts("# User CFLAGS (from -CFLAGS on Verilator command line)\n");
-        of.puts("VM_USER_CFLAGS = \\\n");
+        of.puts("VM_USER_CFLAGS = -I" + V3Options::getenvCRAVE_ROOT() + "/include -pthread \\\n");
         if (!v3Global.opt.libCreate().empty()) of.puts("\t-fPIC \\\n");
         const V3StringList& cFlags = v3Global.opt.cFlags();
         for (const string& i : cFlags) of.puts("\t" + i + " \\\n");

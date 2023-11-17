@@ -996,14 +996,14 @@ public:
         puts("VL_TIME_UNITED_Q(");
         if (nodep->timeunit().isNone()) nodep->v3fatalSrc("$time has no units");
         puts(cvtToStr(nodep->timeunit().multiplier()
-                      / v3Global.rootp()->timeprecision().multiplier()));
+                      / v3Global.netlistp()->timeprecision().multiplier()));
         puts(")");
     }
     void visit(AstTimeD* nodep) override {
         puts("VL_TIME_UNITED_D(");
         if (nodep->timeunit().isNone()) nodep->v3fatalSrc("$realtime has no units");
         puts(cvtToStr(nodep->timeunit().multiplier()
-                      / v3Global.rootp()->timeprecision().multiplier()));
+                      / v3Global.netlistp()->timeprecision().multiplier()));
         puts(")");
     }
     void visit(AstTimeFormat* nodep) override {

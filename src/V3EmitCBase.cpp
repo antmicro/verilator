@@ -29,10 +29,10 @@ EmitCParentModule::EmitCParentModule() {
             if (VN_IS(nodep, CFunc) || VN_IS(nodep, Var)) { nodep->user4p(modp); }
         }
     };
-    for (AstNode* modp = v3Global.rootp()->modulesp(); modp; modp = modp->nextp()) {
+    for (AstNode* modp = v3Global.netlistp()->modulesp(); modp; modp = modp->nextp()) {
         setAll(VN_AS(modp, NodeModule));
     }
-    setAll(v3Global.rootp()->constPoolp()->modp());
+    setAll(v3Global.netlistp()->constPoolp()->modp());
 }
 
 //######################################################################
@@ -58,13 +58,13 @@ string EmitCBaseVisitorConst::funcNameProtect(const AstCFunc* nodep, const AstNo
 
 AstCFile* EmitCBaseVisitorConst::newCFile(const string& filename, bool slow, bool source) {
     AstCFile* const cfilep = createCFile(filename, slow, source);
-    v3Global.rootp()->addFilesp(cfilep);
+    v3Global.netlistp()->addFilesp(cfilep);
     return cfilep;
 }
 
 AstCFile* EmitCBaseVisitorConst::createCFile(const string& filename, bool slow,
                                              bool source) VL_MT_SAFE {
-    AstCFile* const cfilep = new AstCFile{v3Global.rootp()->fileline(), filename};
+    AstCFile* const cfilep = new AstCFile{v3Global.netlistp()->fileline(), filename};
     cfilep->slow(slow);
     cfilep->source(source);
     return cfilep;

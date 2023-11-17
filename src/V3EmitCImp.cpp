@@ -896,7 +896,7 @@ void V3EmitC::emitcImp() {
     std::list<std::future<void>> futures;
 
     // Process each module in turn
-    for (const AstNode* nodep = v3Global.rootp()->modulesp(); nodep; nodep = nodep->nextp()) {
+    for (const AstNode* nodep = v3Global.netlistp()->modulesp(); nodep; nodep = nodep->nextp()) {
         if (VN_IS(nodep, Class)) continue;  // Imped with ClassPackage
         const AstNodeModule* const modp = VN_AS(nodep, NodeModule);
         cfiles.emplace_back();
@@ -914,18 +914,18 @@ void V3EmitC::emitcImp() {
         cfiles.emplace_back();
         auto& slowCfilesr = cfiles.back();
         futures.push_back(V3ThreadPool::s().enqueue([&slowCfilesr]() {
-            EmitCTrace::main(v3Global.rootp()->topModulep(), /* slow: */ true, slowCfilesr);
+            EmitCTrace::main(v3Global.netlistp()->topModulep(), /* slow: */ true, slowCfilesr);
         }));
         cfiles.emplace_back();
         auto& fastCfilesr = cfiles.back();
         futures.push_back(V3ThreadPool::s().enqueue([&fastCfilesr]() {
-            EmitCTrace::main(v3Global.rootp()->topModulep(), /* slow: */ false, fastCfilesr);
+            EmitCTrace::main(v3Global.netlistp()->topModulep(), /* slow: */ false, fastCfilesr);
         }));
     }
     // Wait for futures
     V3ThreadPool::waitForFutures(futures);
     for (const auto& collr : cfiles) {
-        for (const auto cfilep : collr) v3Global.rootp()->addFilesp(cfilep);
+        for (const auto cfilep : collr) v3Global.netlistp()->addFilesp(cfilep);
     }
 }
 

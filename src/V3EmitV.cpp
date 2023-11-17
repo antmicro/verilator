@@ -782,6 +782,15 @@ public:
         m_trackText = trackText;
         iterateConst(nodep);
     }
+    EmitVFileVisitor(VNetlist* netlistp, V3OutVFile* ofp, bool trackText, bool suppressUnknown)
+        : EmitVBaseVisitorConst{suppressUnknown, nullptr} {
+        m_ofp = ofp;
+        m_trackText = trackText;
+        iterateAndNextConstNull(netlistp->modulesp());
+        iterateAndNextConstNull(netlistp->filesp());
+        iterateConstNull(netlistp->typeTablep());
+        iterateConstNull(netlistp->constPoolp());
+    }
     ~EmitVFileVisitor() override = default;
 };
 
@@ -816,7 +825,7 @@ void V3EmitV::verilogForTree(const AstNode* nodep, std::ostream& os) {
 
 void V3EmitV::emitvFiles() {
     UINFO(2, __FUNCTION__ << ": " << endl);
-    for (AstNodeFile* filep = v3Global.rootp()->filesp(); filep;
+    for (AstNodeFile* filep = v3Global.netlistp()->filesp(); filep;
          filep = VN_AS(filep->nextp(), NodeFile)) {
         AstVFile* const vfilep = VN_CAST(filep, VFile);
         if (vfilep && vfilep->tblockp()) {
@@ -831,5 +840,5 @@ void V3EmitV::emitvFiles() {
 void V3EmitV::debugEmitV(const string& filename) {
     UINFO(2, __FUNCTION__ << ": " << endl);
     V3OutVFile of{filename};
-    { EmitVFileVisitor{v3Global.rootp(), &of, true, true}; }
+    { EmitVFileVisitor{v3Global.netlistp(), &of, true, true}; }
 }

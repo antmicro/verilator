@@ -77,7 +77,7 @@ public:
                && (varp->basicp() && !varp->basicp()->isOpaque());  // Aggregates can't be anon
     }
     static bool isConstPoolMod(const AstNode* modp) {
-        return modp == v3Global.rootp()->constPoolp()->modp();
+        return modp == v3Global.netlistp()->constPoolp()->modp();
     }
 };
 

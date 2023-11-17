@@ -1203,7 +1203,8 @@ void AstNode::dumpTreeFileGdb(const AstNode* nodep,  // LCOV_EXCL_START
         return;
     }
     const string filename = filenamep ? filenamep : v3Global.debugFilename("debug.tree", 98);
-    v3Global.rootp()->dumpTreeFile(filename);
+    // TODO(mglb): fake mutex locks to avoid deadlocks in GDB
+    v3Global.netlistp()->dumpTreeFile(filename);
 }  // LCOV_EXCL_STOP
 
 // cppcheck-suppress unusedFunction  // Debug only
@@ -1380,40 +1381,40 @@ void AstNode::dtypeChgWidthSigned(int width, int widthMin, VSigning numeric) {
 AstNodeDType* AstNode::findBasicDType(VBasicDTypeKwd kwd) const {
     // For 'simple' types we use the global directory.  These are all unsized.
     // More advanced types land under the module/task/etc
-    return v3Global.rootp()->typeTablep()->findBasicDType(fileline(), kwd);
+    return v3Global.netlistp()->typeTablep()->findBasicDType(fileline(), kwd);
 }
 AstNodeDType* AstNode::findBitDType(int width, int widthMin, VSigning numeric) const {
-    return v3Global.rootp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::BIT,
+    return v3Global.netlistp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::BIT,
                                                              width, widthMin, numeric);
 }
 AstNodeDType* AstNode::findLogicDType(int width, int widthMin, VSigning numeric) const {
-    return v3Global.rootp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::LOGIC,
+    return v3Global.netlistp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::LOGIC,
                                                              width, widthMin, numeric);
 }
 AstNodeDType* AstNode::findLogicRangeDType(const VNumRange& range, int widthMin,
                                            VSigning numeric) const {
-    return v3Global.rootp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::LOGIC,
+    return v3Global.netlistp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::LOGIC,
                                                              range, widthMin, numeric);
 }
 AstNodeDType* AstNode::findBitRangeDType(const VNumRange& range, int widthMin,
                                          VSigning numeric) const {
-    return v3Global.rootp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::BIT,
+    return v3Global.netlistp()->typeTablep()->findLogicBitDType(fileline(), VBasicDTypeKwd::BIT,
                                                              range, widthMin, numeric);
 }
 AstBasicDType* AstNode::findInsertSameDType(AstBasicDType* nodep) {
-    return v3Global.rootp()->typeTablep()->findInsertSameDType(nodep);
+    return v3Global.netlistp()->typeTablep()->findInsertSameDType(nodep);
 }
 AstNodeDType* AstNode::findEmptyQueueDType() const {
-    return v3Global.rootp()->typeTablep()->findEmptyQueueDType(fileline());
+    return v3Global.netlistp()->typeTablep()->findEmptyQueueDType(fileline());
 }
 AstNodeDType* AstNode::findQueueIndexDType() const {
-    return v3Global.rootp()->typeTablep()->findQueueIndexDType(fileline());
+    return v3Global.netlistp()->typeTablep()->findQueueIndexDType(fileline());
 }
 AstNodeDType* AstNode::findVoidDType() const {
-    return v3Global.rootp()->typeTablep()->findVoidDType(fileline());
+    return v3Global.netlistp()->typeTablep()->findVoidDType(fileline());
 }
 AstNodeDType* AstNode::findStreamDType() const {
-    return v3Global.rootp()->typeTablep()->findStreamDType(fileline());
+    return v3Global.netlistp()->typeTablep()->findStreamDType(fileline());
 }
 
 static const AstNodeDType* computeCastableBase(const AstNodeDType* nodep) {

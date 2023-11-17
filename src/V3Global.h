@@ -223,7 +223,7 @@ public:
     void shutdown();  // Release allocated resources
 
     // ACCESSORS (general)
-    AstNetlist* rootp() const /*VL_MT_DISABLED*/ { return m_rootp; }
+    AstNetlist* rootp() const VL_MT_DISABLED { return m_rootp; }
     VNetlist* netlistp() const VL_MT_SAFE { return m_netlist.get(); }
     VWidthMinUsage widthMinUsage() const { return m_widthMinUsage; }
     bool assertDTypesResolved() const { return m_assertDTypesResolved; }

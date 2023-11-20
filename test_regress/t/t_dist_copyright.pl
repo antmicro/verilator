@@ -51,6 +51,7 @@ our @Exempt_Files_List = qw(
     test_regress/t/tsub/t_flag_f_tsub.v
     test_regress/t/tsub/t_flag_f_tsub_inc.v
     verilator.pc.in
+    crave
     );
 
 my $root = "..";

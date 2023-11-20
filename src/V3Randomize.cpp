@@ -132,6 +132,7 @@ class RandomizeVisitor final : public VNVisitor {
     //  AstClass::user1()       -> bool.  Set true to indicate needs randomize processing
     //  AstEnumDType::user2()   -> AstVar*.  Pointer to table with enum values
     //  AstClass::user3()       -> AstFunc*. Pointer to randomize() method of a class
+    //  AstVar::user4()         -> bool. Handled in constraints
     // VNUser1InUse    m_inuser1;      (Allocated for use in RandomizeMarkVisitor)
     const VNUser2InUse m_inuser2;
 
@@ -326,11 +327,50 @@ class RandomizeVisitor final : public VNVisitor {
         }
         if (!beginValp) beginValp = new AstConst{fl, AstConst::WidthedValue{}, 32, 1};
 
-        funcp->addStmtsp(new AstAssign{fl, new AstVarRef{fl, fvarp, VAccess::WRITE}, beginValp});
+        auto* genp = new AstVar(fl, VVarType::MEMBER, "constraint",
+                                nodep->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR));
+        nodep->addMembersp(genp);
+
+        auto* const craveCallp
+            = new AstCMethodHard{fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "next"};
+        craveCallp->dtypeSetBit();
+        funcp->addStmtsp(new AstAssign{fl, new AstVarRef{fl, fvarp, VAccess::WRITE}, craveCallp});
+
+        auto* newp = VN_AS(m_memberMap.findMember(nodep, "new"), NodeFTask);
+        UASSERT_OBJ(newp, nodep, "No new() in class");
+        auto* taskp = newSetupConstraintsTask(nodep);
+        AstTaskRef* const setupTaskRefp = new AstTaskRef{fl, taskp->name(), nullptr};
+        setupTaskRefp->taskp(taskp);
+        newp->addStmtsp(new AstStmtExpr{fl, setupTaskRefp});
+
+        nodep->user1(false);
+
+        nodep->foreach([&](AstConstraint* const constrp) {
+            constrp->foreach([&](AstNodeVarRef* const refp) {
+                auto* const methodp = new AstCMethodHard{
+                    fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "write_var"};
+                methodp->dtypep(refp->dtypep());
+                refp->varp()->user4(true);
+                refp->replaceWith(methodp);
+                methodp->addPinsp(refp);
+            });
+
+            while (constrp->itemsp()) {
+                AstConstraintExpr* condsp = VN_AS(constrp->itemsp(), ConstraintExpr);
+                condsp->unlinkFrBack();
+                AstNodeExpr* exprp = condsp->exprp()->unlinkFrBack();
+                pushDeletep(condsp);
+                // only hard constraints are now supported
+                auto* const methodp = new AstCMethodHard{
+                    fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "hard", exprp};
+                methodp->dtypeSetVoid();
+                taskp->addStmtsp(new AstStmtExpr{fl, methodp});
+            }
+        });
 
         for (auto* memberp = nodep->stmtsp(); memberp; memberp = memberp->nextp()) {
             AstVar* const memberVarp = VN_CAST(memberp, Var);
-            if (!memberVarp || !memberVarp->isRand()) continue;
+            if (!memberVarp || !memberVarp->isRand() || memberVarp->user4()) continue;
             const AstNodeDType* const dtypep = memberp->dtypep()->skipRefp();
             if (VN_IS(dtypep, BasicDType) || VN_IS(dtypep, StructDType)) {
                 AstVar* const randcVarp = newRandcVarsp(memberVarp);
@@ -364,39 +404,6 @@ class RandomizeVisitor final : public VNVisitor {
             }
         }
         addPrePostCall(nodep, funcp, "post_randomize");
-        auto* genp = new AstVar(fl, VVarType::MEMBER, "constraint",
-                                nodep->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR));
-        nodep->addMembersp(genp);
-        auto* newp = VN_AS(m_memberMap.findMember(nodep, "new"), NodeFTask);
-        UASSERT_OBJ(newp, nodep, "No new() in class");
-        auto* taskp = newSetupConstraintsTask(nodep);
-        AstTaskRef* const setupTaskRefp = new AstTaskRef{fl, taskp->name(), nullptr};
-        setupTaskRefp->taskp(taskp);
-        newp->addStmtsp(new AstStmtExpr{fl, setupTaskRefp});
-
-        nodep->user1(false);
-
-        nodep->foreach([&](AstConstraint* const constrp) {
-            constrp->foreach([&](AstNodeVarRef* const refp) {
-                auto* const methodp = new AstCMethodHard{
-                    fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "write_var"};
-                methodp->dtypep(refp->dtypep());
-                refp->replaceWith(methodp);
-                methodp->addPinsp(refp);
-            });
-
-            while (constrp->itemsp()) {
-                AstConstraintExpr* condsp = VN_AS(constrp->itemsp(), ConstraintExpr);
-                condsp->unlinkFrBack();
-                AstNodeExpr* exprp = condsp->exprp()->unlinkFrBack();
-                pushDeletep(condsp);
-                // only hard constraints are now supported
-                auto* const methodp = new AstCMethodHard{
-                    fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "hard", exprp};
-                methodp->dtypeSetVoid();
-                taskp->addStmtsp(new AstStmtExpr{fl, methodp});
-            }
-        });
     }
     void visit(AstRandCase* nodep) override {
         // RANDCASE

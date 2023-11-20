@@ -356,7 +356,13 @@ class RandomizeVisitor final : public VNVisitor {
             });
 
             while (constrp->itemsp()) {
-                AstConstraintExpr* condsp = VN_AS(constrp->itemsp(), ConstraintExpr);
+                AstConstraintExpr* condsp = VN_CAST(constrp->itemsp(), ConstraintExpr);
+                if (!condsp) {
+                    constrp->itemsp()->v3warn(CONSTRAINTIGN,
+                                              "Constraint expression ignored (unsupported)");
+                    constrp->itemsp()->unlinkFrBack();
+                    continue;
+                }
                 condsp->unlinkFrBack();
                 AstNodeExpr* exprp = condsp->exprp()->unlinkFrBack();
                 pushDeletep(condsp);

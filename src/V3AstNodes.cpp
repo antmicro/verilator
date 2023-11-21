@@ -2,7 +2,7 @@
 //*************************************************************************
 // DESCRIPTION: Verilator: Ast node structures
 //
-    // Code available from: https://verilator.org
+// Code available from: https://verilator.org
 //
 //*************************************************************************
 //

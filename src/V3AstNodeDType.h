@@ -52,6 +52,7 @@ public:
     ASTGEN_MEMBERS_AstNodeDType;
     // ACCESSORS
     void dump(std::ostream& str) const override;
+    void dumpExtraJson(std::ostream& str) const override;
     virtual void dumpSmall(std::ostream& str) const;
     bool hasDType() const override { return true; }
     /// Require VlUnpacked, instead of [] for POD elements.
@@ -148,6 +149,7 @@ protected:
 public:
     ASTGEN_MEMBERS_AstNodeArrayDType;
     void dump(std::ostream& str) const override;
+    void dumpExtraJson(std::ostream& str) const override;
     void dumpSmall(std::ostream& str) const override;
     const char* broken() const override {
         BROKEN_RTN(!((m_refDTypep && !childDTypep() && m_refDTypep->brokeExists())
@@ -217,6 +219,7 @@ public:
     int uniqueNum() const { return m_uniqueNum; }
     const char* broken() const override;
     void dump(std::ostream& str) const override;
+    void dumpExtraJson(std::ostream& str) const override;
     bool isCompound() const override { return !packed(); }
     // For basicp() we reuse the size to indicate a "fake" basic type of same size
     AstBasicDType* basicp() const override {
@@ -387,6 +390,7 @@ private:
 public:
     ASTGEN_MEMBERS_AstBasicDType;
     void dump(std::ostream& str) const override;
+    void dumpExtraJson(std::ostream& str) const override;
     // width/widthMin/numeric compared elsewhere
     bool same(const AstNode* samep) const override;
     bool similarDType(const AstNodeDType* samep) const override {
@@ -548,6 +552,7 @@ public:
         return this == samep || (type() == samep->type() && same(samep));
     }
     void dump(std::ostream& str = std::cout) const override;
+    void dumpExtraJson(std::ostream& str = std::cout) const override;
     void dumpSmall(std::ostream& str) const override;
     string name() const override VL_MT_STABLE;
     AstBasicDType* basicp() const override VL_MT_STABLE { return nullptr; }
@@ -813,6 +818,7 @@ public:
     string name() const override VL_MT_STABLE { return m_name; }
     void name(const string& flag) override { m_name = flag; }
     void dump(std::ostream& str = std::cout) const override;
+    void dumpExtraJson(std::ostream& str = std::cout) const override;
     void dumpSmall(std::ostream& str) const override;
     // METHODS
     AstBasicDType* basicp() const override VL_MT_STABLE { return subDTypep()->basicp(); }
@@ -867,6 +873,7 @@ public:
     // METHODS
     const char* broken() const override;
     void dump(std::ostream& str = std::cout) const override;
+    void dumpExtraJson(std::ostream& str = std::cout) const override;
     void dumpSmall(std::ostream& str) const override;
     void cloneRelink() override;
     AstBasicDType* basicp() const override VL_MT_STABLE { return nullptr; }
@@ -982,6 +989,7 @@ public:
     }
     ASTGEN_MEMBERS_AstParamTypeDType;
     void dump(std::ostream& str = std::cout) const override;
+    void dumpExtraJson(std::ostream& str = std::cout) const override;
     AstNodeDType* getChildDTypep() const override { return childDTypep(); }
     AstNodeDType* subDTypep() const override VL_MT_STABLE {
         return dtypep() ? dtypep() : childDTypep();
@@ -1135,6 +1143,7 @@ public:
         return skipRefp()->similarDType(samep->skipRefp());
     }
     void dump(std::ostream& str = std::cout) const override;
+    void dumpExtraJson(std::ostream& str = std::cout) const override;
     void dumpSmall(std::ostream& str) const override;
     string name() const override VL_MT_STABLE { return m_name; }
     string prettyDTypeName() const override {

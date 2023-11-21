@@ -898,9 +898,20 @@ void V3Options::notify() VL_MT_DISABLED {
     // Mark options as available
     m_available = true;
 
+    // --dump-json-tree will serve as alias to --dump-tree-json. Rationale is that:
+    //  - It is easy typo to make (after all tool used for pretty printing is called jsontree)
+    //  - Parsing of dump* options is very "forgiving" and does not report error when non-existing
+    //    option is used
+    if (m_dumpLevel.count("json-tree")) m_dumpLevel["tree-json"] = m_dumpLevel["json-tree"];
+
     // --dump-tree-dot will turn on tree dumping.
     if (!m_dumpLevel.count("tree") && m_dumpLevel.count("tree-dot")) {
         m_dumpLevel["tree"] = m_dumpLevel["tree-dot"];
+    }
+
+    // --dump-tree-json will turn on tree dumping.
+    if (!m_dumpLevel.count("tree") && m_dumpLevel.count("tree-json")) {
+        m_dumpLevel["tree"] = m_dumpLevel["tree-json"];
     }
 
     // Sanity check of expected configuration

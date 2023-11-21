@@ -472,6 +472,9 @@ public:
     bool decoration() const VL_MT_SAFE { return m_decoration; }
     bool dpiHdrOnly() const { return m_dpiHdrOnly; }
     bool dumpDefines() const { return m_dumpLevel.count("defines") && m_dumpLevel.at("defines"); }
+    bool dumpTreeJson() const {
+        return m_dumpLevel.count("tree-json") && m_dumpLevel.at("tree-json");
+    }
     bool dumpTreeDot() const {
         return m_dumpLevel.count("tree-dot") && m_dumpLevel.at("tree-dot");
     }

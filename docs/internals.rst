@@ -1696,6 +1696,76 @@ Similarly, the ``NETLIST`` has a list of modules referred to by its
 ``op1p()`` pointer.
 
 
+.tree.json Output
+-----------------
+
+``.tree.json``` is alternative dump format (enabled with ``--dump-tree-json``)
+that is meant for programatic processing (see e.g. `verilator_jsontree` tool)
+
+Structure (note: plain output is unformatted):
+::
+
+  {
+    /* here go atributes that are common to all types of nodes */
+    "type": "VAR",
+    "name": "out_wide",
+    "addr": "0x91a780",
+    "file": "t_do_while.v:18:4", /* <filename>:<linenum>:<colnum> */
+    "editNum": 634,
+    /* here go fields that are specific to VAR nodes: */
+    "isSc": false,
+    "ioDirection": "NONE",
+    "isConst": false,
+    "isPullup": false,
+    "isPulldown": false,
+    "isUsedClock": false,
+    "isSigPublic": false,
+    "isLatched": false,
+    "isUsedLoopIdx": false,
+    "noReset": false,
+    "attrIsolateAssign": false,
+    "attrFileDescr": false,
+    "isDpiOpenArray": false,
+    "isFuncReturn": false,
+    "isFuncLocal": false,
+    "attrClocker": "UNKNOWN",
+    "lifetime": "NONE",
+    "varType": "VAR",
+    /* here go lists of child nodes (which use similar structure as their parrent): */
+    op1: [ /* ... */ ],
+    op2: [ /* ... */ ],
+    op3: [ /* ... */ ],
+    op4: [ /* ... */ ]
+  }
+
+verilator_jsontree
+------------------
+``verilator_jsontree`` is tool that pretty prints, filters and diffs ``.tree.json`` files.
+The "pretty-print format" looks like this
+
+Structure:
+::
+
+  ...
+  MODULE "t" t_do_while.v:16:8 0x558a88b8ae90 <e1152> timeunit:1ps
+    op2:
+      VAR "a" t_do_while.v:17:8 0x558a88b8b370 <e633> attrClocker:UNKNOWN, ioDirection:NONE, lifetime:NONE, varType:VAR
+       op1:
+         BASICDTYPE "int" t_do_while.v:17:4 0x558a88b8b2a0 <e634> keyword:int, range:31:0
+      INITIAL "" t_do_while.v:18:4 0x558a88b96420 <e948>
+      ...
+
+* Order of fields: ``type``, ``name``, ``file``, ``addr``, ``editNum``, <node-specific-fields>, ``op1``, ``op2``, ``op3``, ``op4``.
+* For the sake of brevity, names of common fields (type, name, file, addr and editNum) are omitted.
+* Unless ``--verbose`` is used, node-specific fields with the value of false are omitted.
+* If there are no children in a given ``op*`` array then it is skipped.
+* ``name`` is often an empty string, so it is enclosed in quotes to make this case apparent.
+* Unwanted fields can be filtered out using the ``-d``` flag, for example ``-d '.file, .editNum'``.
+* In diffs, removed/added lines are colored, and replacements of inline fields are signaled with the ``->`` marker.
+* Unless ``--verbose`` is used, chunks of unmodified nodes are replaced with a ``...`` in diff
+
+To use jsontree, ``jq`` (a CLI utility) and ``DeepDiff`` (a Python library) have to be installed.
+
 .tree.dot Output
 ----------------
 
@@ -1767,6 +1837,18 @@ To print a node:
    # or: call dumpGdb(nodep)  # aliased to "pn" in src/.gdbinit
    pnt nodep
    # or: call dumpTreeGdb(nodep)  # aliased to "pnt" in src/.gdbinit
+
+``src/.gdbinit`` and ``src/.gdbinit.py`` define handy utils for working with
+JSON dumps. For example
+
+* ``jstash nodep`` - Do an unformatted JSON dump and save it into value history (e.g. ``$1``)
+* ``jtree nodep`` - Do a JSON dump and pretty print it using ``verilator_jsontree``.
+* ``jtree $1`` - Pretty print a dump that was previously saved by ``jstash``.
+* ``jtree nodep -d '.file, .timeunit'`` - Do a JSON dump, filter out some fields and pretty print it.
+* ``jtree 0x55555613dca0`` - Pretty print using address literal (rather than actual pointer).
+* ``jtree $1 nodep`` - Diff ``nodep`` against its older dump.
+
+A detailed description of ``jstash`` and ``jtree`` can be displayed using ``gdb``'s ``help`` command.
 
 When GDB halts, it is useful to understand that the backtrace will commonly
 show the iterator functions between each invocation of ``visit`` in the

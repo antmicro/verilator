@@ -148,7 +148,7 @@ public:
     V3SharedMutex()
         : m_exclusiveLockRequested{false}
         , m_sharedCount{0} {}
-    ~V3SharedMutex();
+    ~V3SharedMutex() {}
 
     V3SharedMutex(const V3SharedMutex&) = delete;
     V3SharedMutex(V3SharedMutex&&) = delete;

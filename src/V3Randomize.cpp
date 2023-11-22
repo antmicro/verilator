@@ -373,6 +373,7 @@ class RandomizeVisitor final : public VNVisitor {
                 methodp->dtypeSetVoid();
                 taskp->addStmtsp(new AstStmtExpr{fl, methodp});
             }
+            pushDeletep(constrp->unlinkFrBack());
         });
 
         for (auto* memberp = nodep->stmtsp(); memberp; memberp = memberp->nextp()) {

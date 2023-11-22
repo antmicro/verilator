@@ -186,14 +186,16 @@ public:
         of.puts(string{"VM_MODPREFIX = "} + v3Global.opt.modPrefix() + "\n");
 
         of.puts("# User CFLAGS (from -CFLAGS on Verilator command line)\n");
-        of.puts("VM_USER_CFLAGS = -I" + V3Options::getenvCRAVE_ROOT() + "/include -pthread \\\n");
+        of.puts("VM_USER_CFLAGS = \\\n");
+        if (v3Global.useRandomizeMethods()) of.puts("\t-I" + V3Options::getenvCRAVE_ROOT() + "/include -pthread \\\n");
         if (!v3Global.opt.libCreate().empty()) of.puts("\t-fPIC \\\n");
         const V3StringList& cFlags = v3Global.opt.cFlags();
         for (const string& i : cFlags) of.puts("\t" + i + " \\\n");
         of.puts("\n");
 
         of.puts("# User LDLIBS (from -LDFLAGS on Verilator command line)\n");
-        of.puts("VM_USER_LDLIBS = -L" + V3Options::getenvCRAVE_ROOT()
+        of.puts("VM_USER_LDLIBS = \\\n");
+        if (v3Global.useRandomizeMethods()) of.puts("\t-L" + V3Options::getenvCRAVE_ROOT()
                 + "/lib -lcrave -lmetaSMT -lstp -lminisat -pthread\\\n");
         const V3StringList& ldLibs = v3Global.opt.ldLibs();
         for (const string& i : ldLibs) of.puts("\t" + i + " \\\n");

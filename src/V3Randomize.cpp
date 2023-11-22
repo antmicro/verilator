@@ -334,7 +334,7 @@ class RandomizeVisitor final : public VNVisitor {
         auto* const craveCallp
             = new AstCMethodHard{fl, new AstVarRef{fl, genp, VAccess::READWRITE}, "next"};
         craveCallp->dtypeSetBit();
-        funcp->addStmtsp(new AstAssign{fl, new AstVarRef{fl, fvarp, VAccess::WRITE}, craveCallp});
+        funcp->addStmtsp(new AstAssign{fl, new AstVarRef{fl, fvarp, VAccess::WRITE}, new AstAnd{fl, beginValp, craveCallp}});
 
         auto* newp = VN_AS(m_memberMap.findMember(nodep, "new"), NodeFTask);
         UASSERT_OBJ(newp, nodep, "No new() in class");

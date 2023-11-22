@@ -33,8 +33,8 @@ define jstash
   call (char*) &(AstNode::dumpJsonTreeGdb($arg0)[0])
 end
 document jstash
-Verilator: Do json dump of the given nodep and save it in value history (e.g. $1) for later
-inspection using jtree. nodep can be actual pointer or adress literal (like 0x55555613dca0).
+Verilator: Perform a JSON dump of the given AST node and save it in value history (e.g. $1) for later
+inspection using jtree. The node can be a pointer identifier or an address literal.
 end
 
 alias -a js=jstash

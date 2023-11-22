@@ -19,20 +19,20 @@ def _tmpfile():
 
 
 def _fwrite(file, s):
-    """write to file and flush buf to make sure that data is written before passing file to jsontree"""
+    """Write to file and flush buffer before passing the file to astsee"""
     file.write(s)
     file.flush()
 
 
 class JsonTreeCmd(gdb.Command):
-    """Verilator: Pretty print or diff node(s) using jsontree. Node is allowed to be:
-    * an actual pointer,
-    * an address literal (like 0x55555613dca0),
-    * a gdb value (like $1) that stores a dump previously done by the jstash command.
-    Besides not taking input from file, it works exactly like `verilator_jsontree`:
+    """Verilator: Pretty print or diff nodes using `astsee`. A node can be:
+    * an pointer identifier,
+    * an address literal,
+    * a GDB value (like `$1`) that stores a dump previously done by the `jstash` command.
+    Apart from not taking input from a file, it works exactly like `astsee`:
     * passing one node gives you a pretty print,
     * passing two nodes gives you a diff,
-    * flags like -d work like expected.
+    * for more options see `astsee` readme/help.
     """
 
     def __init__(self):

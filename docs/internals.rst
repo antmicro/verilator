@@ -1699,10 +1699,9 @@ Similarly, the ``NETLIST`` has a list of modules referred to by its
 .tree.json Output
 -----------------
 
-``.tree.json``` is alternative dump format (enabled with ``--dump-tree-json``)
-that is meant for programatic processing (see e.g. `verilator_jsontree` tool)
+``.tree.json``` is an alternative dump format to ``.tree`` that is meant for programmatic processing (e.g. with `astsee <https://github.com/antmicro/astsee>_`]). To enable this dump format, use ``--dump-tree-json``)
 
-Structure (note: plain output is unformatted):
+Structure:
 ::
 
   {
@@ -1737,34 +1736,6 @@ Structure (note: plain output is unformatted):
     op3: [ /* ... */ ],
     op4: [ /* ... */ ]
   }
-
-verilator_jsontree
-------------------
-``verilator_jsontree`` is tool that pretty prints, filters and diffs ``.tree.json`` files.
-The "pretty-print format" looks like this
-
-Structure:
-::
-
-  ...
-  MODULE "t" t_do_while.v:16:8 0x558a88b8ae90 <e1152> timeunit:1ps
-    op2:
-      VAR "a" t_do_while.v:17:8 0x558a88b8b370 <e633> attrClocker:UNKNOWN, ioDirection:NONE, lifetime:NONE, varType:VAR
-       op1:
-         BASICDTYPE "int" t_do_while.v:17:4 0x558a88b8b2a0 <e634> keyword:int, range:31:0
-      INITIAL "" t_do_while.v:18:4 0x558a88b96420 <e948>
-      ...
-
-* Order of fields: ``type``, ``name``, ``file``, ``addr``, ``editNum``, <node-specific-fields>, ``op1``, ``op2``, ``op3``, ``op4``.
-* For the sake of brevity, names of common fields (type, name, file, addr and editNum) are omitted.
-* Unless ``--verbose`` is used, node-specific fields with the value of false are omitted.
-* If there are no children in a given ``op*`` array then it is skipped.
-* ``name`` is often an empty string, so it is enclosed in quotes to make this case apparent.
-* Unwanted fields can be filtered out using the ``-d``` flag, for example ``-d '.file, .editNum'``.
-* In diffs, removed/added lines are colored, and replacements of inline fields are signaled with the ``->`` marker.
-* Unless ``--verbose`` is used, chunks of unmodified nodes are replaced with a ``...`` in diff
-
-To use jsontree, ``jq`` (a CLI utility) and ``DeepDiff`` (a Python library) have to be installed.
 
 .tree.dot Output
 ----------------
@@ -1838,17 +1809,19 @@ To print a node:
    pnt nodep
    # or: call dumpTreeGdb(nodep)  # aliased to "pnt" in src/.gdbinit
 
-``src/.gdbinit`` and ``src/.gdbinit.py`` define handy utils for working with
-JSON dumps. For example
+``src/.gdbinit`` and ``src/.gdbinit.py`` define handy utilities for working with
+JSON AST dumps. For example
 
-* ``jstash nodep`` - Do an unformatted JSON dump and save it into value history (e.g. ``$1``)
-* ``jtree nodep`` - Do a JSON dump and pretty print it using ``verilator_jsontree``.
+* ``jstash nodep`` - Perform a JSON AST dump and save it into GDB value history (e.g. ``$1``)
+* ``jtree nodep`` - Perform a JSON AST dump and pretty print it using ``astsee_verilator``.
 * ``jtree $1`` - Pretty print a dump that was previously saved by ``jstash``.
-* ``jtree nodep -d '.file, .timeunit'`` - Do a JSON dump, filter out some fields and pretty print it.
+* ``jtree nodep -d '.file, .timeunit'`` - Perform a JSON AST dump, filter out some fields and pretty print it.
 * ``jtree 0x55555613dca0`` - Pretty print using address literal (rather than actual pointer).
-* ``jtree $1 nodep`` - Diff ``nodep`` against its older dump.
+* ``jtree $1 nodep`` - Diff ``nodep`` against an older dump.
 
 A detailed description of ``jstash`` and ``jtree`` can be displayed using ``gdb``'s ``help`` command.
+
+These commands require `astsee <https://github.com/antmicro/astsee>_` to be installed.
 
 When GDB halts, it is useful to understand that the backtrace will commonly
 show the iterator functions between each invocation of ``visit`` in the

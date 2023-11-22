@@ -332,7 +332,6 @@ class RandomizeVisitor final : public VNVisitor {
             funcp->addStmtsp(new AstAssign{fl, new AstVarRef{fl, fvarp, VAccess::WRITE},
                                            new AstAnd{fl, beginValp, craveCallp}});
         }
-        nodep->user1(false);
 
         for (auto* memberp = nodep->stmtsp(); memberp; memberp = memberp->nextp()) {
             AstVar* const memberVarp = VN_CAST(memberp, Var);
@@ -370,6 +369,7 @@ class RandomizeVisitor final : public VNVisitor {
             }
         }
         addPrePostCall(nodep, funcp, "post_randomize");
+        nodep->user1(false);
     }
     void visit(AstConstraint* nodep) override {
         auto* newp = VN_AS(m_memberMap.findMember(m_modp, "new"), NodeFTask);

@@ -48,7 +48,7 @@ class JsonTreeCmd(gdb.Command):
         import verilator_jsontree as jsontree  # pylint: disable=wrong-import-position
         # jsontree import may fail so we do it here rather than in outer scope
 
-        # We abuse verilator_jsontree's arg parser to find arguments with nodes
+        # We hack `astsee_verilator`'s arg parser to find arguments with nodes
         # After finding them, we replace them with proper files
         jsontree_args = jsontree.parser.parse_args(gdb.string_to_argv(arg_str))
         self._null_check(jsontree_args.file, jsontree_args.newfile)

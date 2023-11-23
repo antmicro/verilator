@@ -331,6 +331,8 @@ class RandomizeVisitor final : public VNVisitor {
             craveCallp->dtypeSetBit();
             funcp->addStmtsp(new AstAssign{fl, new AstVarRef{fl, fvarp, VAccess::WRITE},
                                            new AstAnd{fl, beginValp, craveCallp}});
+        } else {
+            funcp->addStmtsp(new AstAssign{fl, new AstVarRef{fl, fvarp, VAccess::WRITE}, beginValp});
         }
 
         for (auto* memberp = nodep->stmtsp(); memberp; memberp = memberp->nextp()) {

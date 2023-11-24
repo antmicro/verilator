@@ -497,8 +497,12 @@ AC_SUBST(CFG_LDFLAGS_VERILATED)
 # The pthread library is required by tcmalloc, so add it if it exists. If it
 # does not, the tcmalloc check below will fail anyway, and linking against
 # pthreads is harmless otherwise.
+# This is also used to enable pthread-based V3SharedMutex implementation.
 CFG_LIBS="$LIBS $CFG_LIBS"
-_MY_LDLIBS_CHECK_OPT(CFG_LIBS, -lpthread)
+_MY_LDLIBS_CHECK_IFELSE(
+  -lpthread,
+  [CFG_LIBS="$CFG_LIBS -lpthread"
+   CFG_CXXFLAGS_SRC="$CFG_CXXFLAGS_SRC -DVL_SHARED_MUTEX_IMPLEMENTATION_PTHREAD"])
 
 # Check libraries for MingW
 _MY_LDLIBS_CHECK_OPT(CFG_LIBS, -lbcrypt)

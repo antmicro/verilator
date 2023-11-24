@@ -119,6 +119,9 @@
 # define VL_REQUIRES(...) \
         VL_CLANG_ATTR(annotate("REQUIRES")) \
         VL_CLANG_ATTR(requires_capability(__VA_ARGS__))
+# define VL_REQUIRES_UNLOCKED(x) \
+        VL_CLANG_ATTR(annotate("EXCLUDES")) \
+        VL_CLANG_ATTR(requires_capability(!x))
 // Calling thread must have shared access to the given capabilities
 # define VL_REQUIRES_SHARED(...) \
         VL_CLANG_ATTR(annotate("REQUIRES_SHARED")) \
@@ -138,6 +141,8 @@
 // Keep annotations for clang_check_attributes
 # define VL_REQUIRES(...) \
         VL_CLANG_ATTR(annotate("REQUIRES"))
+# define VL_REQUIRES_UNLOCKED(x) \
+        VL_CLANG_ATTR(annotate("EXCLUDES"))
 # define VL_REQUIRES_SHARED(...) \
         VL_CLANG_ATTR(annotate("REQUIRES_SHARED"))
 # define VL_GUARDED_BY(x) \

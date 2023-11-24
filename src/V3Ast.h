@@ -25,6 +25,7 @@
 #include "V3FileLine.h"
 #include "V3FunctionTraits.h"
 #include "V3Global.h"
+#include "V3Mutex.h"
 #include "V3Number.h"
 #include "V3StdFuture.h"
 
@@ -1427,6 +1428,7 @@ public:
         return m_width == rhs.m_width && m_widthMin == rhs.m_widthMin && m_numeric == rhs.m_numeric
                && m_keyword == rhs.m_keyword && m_nrange == rhs.m_nrange;
     }
+    bool operator!=(const VBasicTypeKey& rhs) const { return !(*this == rhs); }
     bool operator<(const VBasicTypeKey& rhs) const {
         if ((m_width < rhs.m_width)) return true;
         if (!(m_width == rhs.m_width)) return false;  // lhs > rhs

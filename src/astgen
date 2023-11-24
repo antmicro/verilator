@@ -29,6 +29,7 @@ class Node:
         self._ordIdx = None  # Ordering index of this class
         self._arity = -1  # Arity of node
         self._ops = {}  # Operands of node
+        self._opProps = {}  # Additional properties of accessors
 
     @property
     def name(self):
@@ -72,6 +73,15 @@ class Node:
         if not self.isRoot:
             return self.superClass.getOp(n)
         return None
+
+    def setAccessorProperty(self, ident, prop, value):
+        assert ident in [op[0] for op in self._ops.values()]
+        d = self._opProps.setdefault(ident, {})
+        d[prop] = value
+
+    def getAccessorProperties(self, ident):
+        return self._opProps.get(ident, {})
+
 
     # Computes derived properties over entire class hierarchy.
     # No more changes to the hierarchy are allowed once this was called
@@ -650,6 +660,13 @@ def read_types(filename, Nodes, prefix):
                                   "Alaised op" + str(n) + " is not defined")
                         else:
                             node.addOp(n, ident, *op[1:])
+                elif "." in what:
+                    match = re.match(r'^\s*(\w+)\.(\w+)$', what)
+                    if not match:
+                        error(lineno, "Malformed '@astgen " + what + "' directive")
+                    else:
+                        ident, prop = match.groups()
+                        node.setAccessorProperty(ident, prop, rest.strip())
             else:
                 pass
                 #  line = re.sub(r'//.*$', '', line)
@@ -952,6 +969,7 @@ def write_ast_macros(filename):
 
         for node in AstNodeList:
             fh.write("#define ASTGEN_MEMBERS_Ast{t} \\\n".format(t=node.name))
+            # TODO(mglb): add support of requires*Lock to following methods
             emitBlock('''\
             Ast{t}* unlinkFrBack(VNRelinker* linkerp = nullptr) {{
                 return static_cast<Ast{t}*>(AstNode::unlinkFrBack(linkerp));
@@ -982,34 +1000,49 @@ def write_ast_macros(filename):
                 if not op:
                     continue
                 name, monad, kind = op
+
+                properties = node.getAccessorProperties(name)
+                getterAnnotations = ["VL_MT_STABLE"]
+                setterAnnotations = []
+
+                if lockExpr := properties.get("requiresSharedLock", None):
+                    getterAnnotations.append(f"VL_REQUIRES_SHARED({lockExpr})")
+                    setterAnnotations.append(f"VL_REQUIRES({lockExpr})")
+
                 retrieve = ("VN_DBG_AS(op{n}p(), {kind})" if kind != "Node"
                             else "op{n}p()").format(n=n, kind=kind)
                 if monad == "List":
                     emitBlock('''\
-                    Ast{kind}* {name}() const VL_MT_STABLE {{ return {retrieve}; }}
-                    void add{Name}(Ast{kind}* nodep) {{ addNOp{n}p(reinterpret_cast<AstNode*>(nodep)); }}
+                    Ast{kind}* {name}() const {getAnn} {{ return {retrieve}; }}
+                    void add{Name}(Ast{kind}* nodep) {addAnn} {{ addNOp{n}p(reinterpret_cast<AstNode*>(nodep)); }}
                     ''',
                               kind=kind,
                               name=name,
                               Name=name[0].upper() + name[1:],
+                              getAnn=" ".join(getterAnnotations),
+                              addAnn=" ".join(setterAnnotations),
                               n=n,
                               retrieve=retrieve)
                 elif monad == "Optional":
                     emitBlock('''\
-                    Ast{kind}* {name}() const VL_MT_STABLE {{ return {retrieve}; }}
-                    void {name}(Ast{kind}* nodep) {{ setNOp{n}p(reinterpret_cast<AstNode*>(nodep)); }}
+                    Ast{kind}* {name}() const {getAnn} {{ return {retrieve}; }}
+                    void {name}(Ast{kind}* nodep) {setAnn} {{ setNOp{n}p(reinterpret_cast<AstNode*>(nodep)); }}
                     ''',
                               kind=kind,
                               name=name,
+                              getAnn=" ".join(getterAnnotations),
+                              setAnn=" ".join(setterAnnotations),
                               n=n,
                               retrieve=retrieve)
                 else:
                     emitBlock('''\
-                    Ast{kind}* {name}() const VL_MT_STABLE {{ return {retrieve}; }}
-                    void {name}(Ast{kind}* nodep) {{ setOp{n}p(reinterpret_cast<AstNode*>(nodep)); }}
+                    Ast{kind}* {name}() const {getAnn} {{ return {retrieve}; }}
+                    void {name}(Ast{kind}* nodep) {setAnn} {{ setOp{n}p(reinterpret_cast<AstNode*>(nodep)); }}
                     ''',
                               kind=kind,
                               name=name,
+                              getAnn=" ".join(getterAnnotations),
+                              setAnn=" ".join(setterAnnotations),
                               n=n,
                               retrieve=retrieve)
 

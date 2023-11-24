@@ -333,6 +333,14 @@ PREDEP_H =
 OBJS += $(VLCOV_OBJS)
 endif
 
+ifneq ($(filter -Wthread-safety,$(CPPFLAGS) $(CXXFLAGS)),)
+THREAD_SAFETY_NEGATIVE_OBJS := \
+	V3Ast.o \
+	V3AstNodes.o \
+
+$(THREAD_SAFETY_NEGATIVE_OBJS): override CXXFLAGS_PRIV = -Wthread-safety-negative
+endif
+
 $(TGT): $(PREDEP_H) $(OBJS)
 	@echo "      Linking $@..."
 	${LINK} ${LDFLAGS} -o $@ $(OBJS) $(CCMALLOC) ${LIBS}
@@ -350,7 +358,7 @@ V3Number_test: V3Number_test.o
 %.gch: %
 	$(OBJCACHE) ${CXX} ${CXXFLAGS} ${CPPFLAGSWALL} ${CFG_CXXFLAGS_PCH} $< -o $@
 %.o: %.cpp
-	$(OBJCACHE) ${CXX} ${CXXFLAGS} ${CPPFLAGSWALL} -c $< -o $@
+	$(OBJCACHE) ${CXX} ${CXXFLAGS} $(CXXFLAGS_PRIV) ${CPPFLAGSWALL} -c $< -o $@
 %.o: %.c
 	$(OBJCACHE) ${CC}  ${CFLAGS} ${CPPFLAGSWALL} -c $< -o $@
 
@@ -368,7 +376,7 @@ V3PreProc.o: V3PreProc.cpp V3PreLex.yy.cpp
 
 define CXX_ASTMT_template
 $(1): $(basename $(1)).cpp V3PchAstMT.h.gch
-	$(OBJCACHE) ${CXX} ${CXXFLAGS} ${CPPFLAGSWALL} ${CFG_CXXFLAGS_PCH_I} V3PchAstMT.h${CFG_GCH_IF_CLANG} -c $(srcdir)/$(basename $(1)).cpp -o $(1)
+	$(OBJCACHE) ${CXX} ${CXXFLAGS} $$(CXXFLAGS_PRIV) ${CPPFLAGSWALL} ${CFG_CXXFLAGS_PCH_I} V3PchAstMT.h${CFG_GCH_IF_CLANG} -c $(srcdir)/$(basename $(1)).cpp -o $(1)
 
 endef
 

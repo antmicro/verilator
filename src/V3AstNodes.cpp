@@ -1078,7 +1078,8 @@ AstTypeTable::AstTypeTable(FileLine* fl)
     for (int i = 0; i < VBasicDTypeKwd::_ENUM_MAX; ++i) m_basicps[i] = nullptr;
 }
 
-void AstTypeTable::clearCache() {
+void AstTypeTable::clearCache() VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock()) {
+    V3ExclusiveLockGuard l{v3Global.netlistp()->typeTableChildrenListLock()};
     // When we mass-change widthMin in V3WidthCommit, we need to correct the table.
     // Just clear out the maps; the search functions will be used to rebuild the map
     for (auto& itr : m_basicps) itr = nullptr;
@@ -1089,54 +1090,94 @@ void AstTypeTable::clearCache() {
     }
 }
 
-void AstTypeTable::repairCache() {
+void AstTypeTable::repairCache() VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock()) {
     // After we mass-change widthMin in V3WidthCommit, we need to correct the table.
     clearCache();
+    V3ExclusiveLockGuard l{v3Global.netlistp()->typeTableChildrenListLock()};
     for (AstNode* nodep = typesp(); nodep; nodep = nodep->nextp()) {
         if (AstBasicDType* const bdtypep = VN_CAST(nodep, BasicDType)) {
-            (void)findInsertSameDType(bdtypep);
+            const VBasicTypeKey key{bdtypep->width(), bdtypep->widthMin(), bdtypep->numeric(),
+                                    bdtypep->keyword(), bdtypep->nrange()};
+            m_detailedMap.emplace(key, bdtypep);
+            bdtypep->generic(true);
         }
     }
 }
 
-AstEmptyQueueDType* AstTypeTable::findEmptyQueueDType(FileLine* fl) {
+AstEmptyQueueDType* AstTypeTable::findEmptyQueueDType(FileLine* fl)
+    VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock()) {
+    v3Global.netlistp()->typeTableChildrenListLock().lock_shared();
     if (VL_UNLIKELY(!m_emptyQueuep)) {
-        AstEmptyQueueDType* const newp = new AstEmptyQueueDType{fl};
-        addTypesp(newp);
-        m_emptyQueuep = newp;
+        v3Global.netlistp()->typeTableChildrenListLock().unlock_shared();
+        V3ExclusiveLockGuard l{v3Global.netlistp()->typeTableChildrenListLock()};
+        if (VL_LIKELY(!m_emptyQueuep)) {
+            AstEmptyQueueDType* const newp = new AstEmptyQueueDType{fl};
+            addTypesp(newp);
+            m_emptyQueuep = newp;
+        }
+        return m_emptyQueuep;
     }
+    V3SharedLockGuard l{v3Global.netlistp()->typeTableChildrenListLock(), std::adopt_lock};
     return m_emptyQueuep;
 }
 
-AstVoidDType* AstTypeTable::findVoidDType(FileLine* fl) {
+AstVoidDType* AstTypeTable::findVoidDType(FileLine* fl)
+    VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock()) {
+    v3Global.netlistp()->typeTableChildrenListLock().lock_shared();
     if (VL_UNLIKELY(!m_voidp)) {
-        AstVoidDType* const newp = new AstVoidDType{fl};
-        addTypesp(newp);
-        m_voidp = newp;
+        v3Global.netlistp()->typeTableChildrenListLock().unlock_shared();
+        V3ExclusiveLockGuard l{v3Global.netlistp()->typeTableChildrenListLock()};
+        if (VL_LIKELY(!m_voidp)) {
+            AstVoidDType* const newp = new AstVoidDType{fl};
+            addTypesp(newp);
+            m_voidp = newp;
+        }
+        return m_voidp;
     }
+    V3SharedLockGuard l{v3Global.netlistp()->typeTableChildrenListLock(), std::adopt_lock};
     return m_voidp;
 }
 
-AstStreamDType* AstTypeTable::findStreamDType(FileLine* fl) {
+AstStreamDType* AstTypeTable::findStreamDType(FileLine* fl)
+    VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock()) {
+    v3Global.netlistp()->typeTableChildrenListLock().lock_shared();
     if (VL_UNLIKELY(!m_streamp)) {
-        AstStreamDType* const newp = new AstStreamDType{fl};
-        addTypesp(newp);
-        m_streamp = newp;
+        v3Global.netlistp()->typeTableChildrenListLock().unlock_shared();
+        V3ExclusiveLockGuard l{v3Global.netlistp()->typeTableChildrenListLock()};
+        if (VL_LIKELY(!m_streamp)) {
+            AstStreamDType* const newp = new AstStreamDType{fl};
+            addTypesp(newp);
+            m_streamp = newp;
+        }
+        return m_streamp;
     }
+    V3SharedLockGuard l{v3Global.netlistp()->typeTableChildrenListLock(), std::adopt_lock};
     return m_streamp;
 }
 
-AstQueueDType* AstTypeTable::findQueueIndexDType(FileLine* fl) {
+AstQueueDType* AstTypeTable::findQueueIndexDType(FileLine* fl)
+    VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock()) {
+    v3Global.netlistp()->typeTableChildrenListLock().lock_shared();
     if (VL_UNLIKELY(!m_queueIndexp)) {
-        AstQueueDType* const newp = new AstQueueDType{fl, AstNode::findUInt32DType(), nullptr};
-        addTypesp(newp);
-        m_queueIndexp = newp;
+        v3Global.netlistp()->typeTableChildrenListLock().unlock_shared();
+        V3ExclusiveLockGuard l{v3Global.netlistp()->typeTableChildrenListLock()};
+        if (VL_LIKELY(!m_queueIndexp)) {
+            AstQueueDType* const newp = new AstQueueDType{fl, AstNode::findUInt32DType(), nullptr};
+            addTypesp(newp);
+            m_queueIndexp = newp;
+        }
+        return m_queueIndexp;
     }
+    V3SharedLockGuard l{v3Global.netlistp()->typeTableChildrenListLock(), std::adopt_lock};
     return m_queueIndexp;
 }
 
-AstBasicDType* AstTypeTable::findBasicDType(FileLine* fl, VBasicDTypeKwd kwd) {
-    if (m_basicps[kwd]) return m_basicps[kwd];
+AstBasicDType* AstTypeTable::findBasicDType(FileLine* fl, VBasicDTypeKwd kwd)
+    VL_REQUIRES_UNLOCKED(v3Global.netlistp()->typeTableChildrenListLock()) {
+    {
+        V3SharedLockGuard l{v3Global.netlistp()->typeTableChildrenListLock()};
+        if (m_basicps[kwd]) return m_basicps[kwd];
+    }
     //
     AstBasicDType* const new1p = new AstBasicDType{fl, kwd};
     // Because the detailed map doesn't update this map,
@@ -1145,46 +1186,63 @@ AstBasicDType* AstTypeTable::findBasicDType(FileLine* fl, VBasicDTypeKwd kwd) {
     AstBasicDType* const newp = findInsertSameDType(new1p);
     if (newp != new1p) {
         VL_DO_DANGLING(new1p->deleteTree(), new1p);
+        v3Global.netlistp()->typeTableChildrenListLock().lock();
     } else {
+        v3Global.netlistp()->typeTableChildrenListLock().lock();
         addTypesp(newp);
     }
-    //
     m_basicps[kwd] = newp;
+    v3Global.netlistp()->typeTableChildrenListLock().unlock();
     return newp;
 }
 
 AstBasicDType* AstTypeTable::findLogicBitDType(FileLine* fl, VBasicDTypeKwd kwd, int width,
-                                               int widthMin, VSigning numeric) {
+                                               int widthMin, VSigning numeric)
+    VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock()) {
     AstBasicDType* const new1p = new AstBasicDType{fl, kwd, numeric, width, widthMin};
     AstBasicDType* const newp = findInsertSameDType(new1p);
     if (newp != new1p) {
         VL_DO_DANGLING(new1p->deleteTree(), new1p);
     } else {
+        v3Global.netlistp()->typeTableChildrenListLock().lock();
         addTypesp(newp);
+        v3Global.netlistp()->typeTableChildrenListLock().unlock();
     }
     return newp;
 }
 
 AstBasicDType* AstTypeTable::findLogicBitDType(FileLine* fl, VBasicDTypeKwd kwd,
                                                const VNumRange& range, int widthMin,
-                                               VSigning numeric) {
+                                               VSigning numeric)
+    VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock()) {
     AstBasicDType* const new1p = new AstBasicDType{fl, kwd, numeric, range, widthMin};
     AstBasicDType* const newp = findInsertSameDType(new1p);
     if (newp != new1p) {
         VL_DO_DANGLING(new1p->deleteTree(), new1p);
     } else {
+        v3Global.netlistp()->typeTableChildrenListLock().lock();
         addTypesp(newp);
+        v3Global.netlistp()->typeTableChildrenListLock().unlock();
     }
     return newp;
 }
 
-AstBasicDType* AstTypeTable::findInsertSameDType(AstBasicDType* nodep) {
+AstBasicDType* AstTypeTable::findInsertSameDType(AstBasicDType* nodep) VL_REQUIRES_UNLOCKED(v3Global.netlistp()->typeTableChildrenListLock()) {
     const VBasicTypeKey key{nodep->width(), nodep->widthMin(), nodep->numeric(), nodep->keyword(),
                             nodep->nrange()};
-    auto pair = m_detailedMap.emplace(key, nodep);
-    if (pair.second) nodep->generic(true);
+    v3Global.netlistp()->typeTableChildrenListLock().lock_shared();
+    auto kv = m_detailedMap.lower_bound(key);
+    if (kv == m_detailedMap.end() || kv->first != key) {
+        nodep->generic(true);
+        v3Global.netlistp()->typeTableChildrenListLock().unlock_shared();
+        v3Global.netlistp()->typeTableChildrenListLock().lock();
+        kv = m_detailedMap.emplace_hint(kv, key, nodep);
+        v3Global.netlistp()->typeTableChildrenListLock().unlock();
+    } else {
+        v3Global.netlistp()->typeTableChildrenListLock().unlock_shared();
+    }
     // No addTypesp; the upper function that called new() is responsible for adding
-    return pair.first->second;
+    return kv->second;
 }
 
 AstConstPool::AstConstPool(FileLine* fl)
@@ -2087,7 +2145,10 @@ void AstMTaskBody::dump(std::ostream& str) const {
 void AstTypeTable::dump(std::ostream& str) const {
     this->AstNode::dump(str);
     for (int i = 0; i < static_cast<int>(VBasicDTypeKwd::_ENUM_MAX); ++i) {
-        if (AstBasicDType* const subnodep = m_basicps[i]) {
+        v3Global.netlistp()->typeTableChildrenListLock().lock_shared();
+        AstBasicDType* const subnodep = m_basicps[i];
+        v3Global.netlistp()->typeTableChildrenListLock().unlock_shared();
+        if (subnodep) {
             str << '\n';  // Newline from caller, so newline first
             str << "\t\t" << std::setw(8) << VBasicDTypeKwd{i}.ascii();
             str << "  -> ";
@@ -2096,12 +2157,16 @@ void AstTypeTable::dump(std::ostream& str) const {
     }
     {
         const DetailedMap& mapr = m_detailedMap;
+        v3Global.netlistp()->typeTableChildrenListLock().lock_shared();
         for (const auto& itr : mapr) {
             AstBasicDType* const dtypep = itr.second;
+            v3Global.netlistp()->typeTableChildrenListLock().unlock_shared();
             str << '\n';  // Newline from caller, so newline first
             str << "\t\tdetailed  ->  ";
             dtypep->dump(str);
+            v3Global.netlistp()->typeTableChildrenListLock().lock_shared();
         }
+        v3Global.netlistp()->typeTableChildrenListLock().unlock_shared();
     }
     // Note get newline from caller too.
 }

@@ -28,7 +28,6 @@
 
 #include "V3Error.h"
 #include "V3FileLine.h"
-#include "V3Mutex.h"
 #include "V3Options.h"
 #include "V3ThreadSafety.h"
 
@@ -107,6 +106,8 @@ class AstScope;
 class VNetlist final {
     AstNetlist* m_rootp = nullptr;  // Root of entire netlist,
 
+    V3SharedMutex m_typeTableChildrenListLock;
+
 public:
     VNetlist() = delete;
     explicit VNetlist(AstNetlist* rootp)
@@ -130,6 +131,8 @@ public:
 
     AstTypeTable* typeTablep();
     AstConstPool* constPoolp();
+
+    V3SharedMutex& typeTableChildrenListLock() { return m_typeTableChildrenListLock; }
 
     //const char* broken() const override;
     string name() const;

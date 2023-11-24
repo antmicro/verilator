@@ -88,7 +88,8 @@ public:
     V3MutexImp() = default;
     ~V3MutexImp() = default;
     VL_UNCOPYABLE(V3MutexImp);
-    const V3MutexImp& operator!() const { return *this; }  // For -fthread_safety
+    // For -Wthread-safety-negative
+    const V3MutexImp& operator!() const { return *this; }
     /// Acquire/lock mutex
     void lock() VL_ACQUIRE() VL_MT_SAFE {
         if (V3MutexConfig::s().enable()) {
@@ -135,7 +136,46 @@ public:
 using V3Mutex = V3MutexImp<std::mutex>;
 using V3RecursiveMutex = V3MutexImp<std::recursive_mutex>;
 
-class VL_CAPABILITY("shared_mutex") V3SharedMutex final {
+#if defined(VL_SHARED_MUTEX_IMPLEMENTATION_PTHREAD)
+
+// PThreads-based implementation of shared mutex
+class VL_CAPABILITY("shared mutex") V3SharedMutex final {
+    pthread_rwlock_t m_mutex;
+
+public:
+    V3SharedMutex() { pthread_rwlock_init(&m_mutex, nullptr); }
+    ~V3SharedMutex() { pthread_rwlock_destroy(&m_mutex); }
+
+    V3SharedMutex(const V3SharedMutex&) = delete;
+    V3SharedMutex(V3SharedMutex&&) = delete;
+
+    V3SharedMutex& operator=(const V3SharedMutex&) = delete;
+    V3SharedMutex& operator=(V3SharedMutex&&) = delete;
+
+    // For -Wthread-safety-negative
+    const V3SharedMutex& operator!() const { return *this; }
+
+    // Exclusive locking
+
+    void lock() VL_ACQUIRE() { pthread_rwlock_wrlock(&m_mutex); }
+
+    // TODO(mglb): bool try_lock();
+
+    void unlock() VL_RELEASE() { pthread_rwlock_unlock(&m_mutex); }
+
+    // Shared locking
+
+    void lock_shared() VL_ACQUIRE_SHARED() { pthread_rwlock_rdlock(&m_mutex); }
+
+    // TODO(mglb): bool try_lock_shared();
+
+    void unlock_shared() VL_RELEASE_SHARED() { pthread_rwlock_unlock(&m_mutex); }
+};
+
+#else
+
+// Generic C++11 std::mutex-based implementation of shared mutex
+class VL_CAPABILITY("shared mutex") V3SharedMutex final {
     std::mutex m_mutex;
     std::condition_variable m_noExclusiveLocksCond;
     std::condition_variable m_noSharedLocksCond;
@@ -183,7 +223,7 @@ public:
 
     void lock_shared() VL_ACQUIRE_SHARED() {
         std::unique_lock<std::mutex> l{m_mutex};
-        while (m_exclusiveLockRequested) { m_noExclusiveLocksCond.wait(l); }
+        while (VL_UNLIKELY(m_exclusiveLockRequested)) { m_noExclusiveLocksCond.wait(l); }
         assert((m_sharedCount < SHARED_COUNT_MAX)
                && "Maximum number of simultaneously held shared locks exceeded.");
         ++m_sharedCount;
@@ -197,11 +237,13 @@ public:
                && "Number of held shared locks can never become lower than 0. "
                   "Double unlock_shared() called somewhere?");
         --m_sharedCount;
-        if (m_exclusiveLockRequested) {
+        if (VL_UNLIKELY(m_exclusiveLockRequested)) {
             if (m_sharedCount == 0) { m_noSharedLocksCond.notify_one(); }
         }
     }
 };
+
+#endif
 
 /// Lock guard for mutex (ala std::unique_lock), wrapped to allow -fthread_safety checks
 template <typename T>

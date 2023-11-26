@@ -23,8 +23,8 @@
 // c++11 requires definition of static constexpr as well as declaration
 constexpr unsigned int V3ThreadPool::FUTUREWAITFOR_MS;
 
-void V3ThreadPool::resize(unsigned n) VL_MT_UNSAFE VL_EXCLUDES(m_mutex)
-    VL_EXCLUDES(m_stoppedJobsMutex) VL_EXCLUDES(V3MtDisabledLock::instance()) {
+void V3ThreadPool::resize(unsigned n) VL_MT_UNSAFE VL_REQUIRES_UNLOCKED(m_mutex)
+    VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex) VL_EXCLUDES(V3MtDisabledLock::instance()) {
     // At least one thread (main)
     n = std::max(1u, n);
     if (n == (m_workers.size() + 1)) { return; }
@@ -57,8 +57,8 @@ void V3ThreadPool::resize(unsigned n) VL_MT_UNSAFE VL_EXCLUDES(m_mutex)
     }
 }
 
-void V3ThreadPool::suspendMultithreading() VL_MT_SAFE VL_EXCLUDES(m_mutex)
-    VL_EXCLUDES(m_stoppedJobsMutex) {
+void V3ThreadPool::suspendMultithreading() VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_mutex)
+    VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex) {
     V3LockGuard stoppedJobsLock{m_stoppedJobsMutex};
     if (!m_workers.empty()) { stopOtherThreads(); }
 
@@ -73,8 +73,8 @@ void V3ThreadPool::suspendMultithreading() VL_MT_SAFE VL_EXCLUDES(m_mutex)
     m_multithreadingSuspended = true;
 }
 
-void V3ThreadPool::resumeMultithreading() VL_MT_SAFE VL_EXCLUDES(m_mutex)
-    VL_EXCLUDES(m_stoppedJobsMutex) {
+void V3ThreadPool::resumeMultithreading() VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_mutex)
+    VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex) {
     if (!m_mutex.try_lock()) { v3fatal("Tried to resume thread pool when other thread uses it."); }
     {
         V3LockGuard lock{m_mutex, std::adopt_lock_t{}};
@@ -88,11 +88,14 @@ void V3ThreadPool::resumeMultithreading() VL_MT_SAFE VL_EXCLUDES(m_mutex)
     }
 }
 
-void V3ThreadPool::startWorker(V3ThreadPool* selfThreadp, int id) VL_MT_SAFE {
+void V3ThreadPool::startWorker(V3ThreadPool* selfThreadp, int id)
+    VL_MT_SAFE VL_REQUIRES_UNLOCKED(selfThreadp->m_stoppedJobsMutex)
+        VL_REQUIRES_UNLOCKED(selfThreadp->m_mutex) {
     selfThreadp->workerJobLoop(id);
 }
 
-void V3ThreadPool::workerJobLoop(int id) VL_MT_SAFE {
+void V3ThreadPool::workerJobLoop(int id) VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex)
+    VL_REQUIRES_UNLOCKED(m_mutex) {
     while (true) {
         // Wait for a notification
         waitIfStopRequested();
@@ -120,7 +123,7 @@ void V3ThreadPool::workerJobLoop(int id) VL_MT_SAFE {
     }
 }
 
-bool V3ThreadPool::waitIfStopRequested() VL_MT_SAFE VL_EXCLUDES(m_stoppedJobsMutex) {
+bool V3ThreadPool::waitIfStopRequested() VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex) {
     if (!stopRequested()) return false;
     V3LockGuard stoppedJobLock(m_stoppedJobsMutex);
     waitForResumeRequest();
@@ -135,8 +138,7 @@ void V3ThreadPool::waitForResumeRequest() VL_REQUIRES(m_stoppedJobsMutex) {
     --m_stoppedJobs;
 }
 
-void V3ThreadPool::stopOtherThreads() VL_MT_SAFE_EXCLUDES(m_mutex)
-    VL_REQUIRES(m_stoppedJobsMutex) {
+void V3ThreadPool::stopOtherThreads() VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_mutex) VL_REQUIRES(m_stoppedJobsMutex) {
     m_stopRequested = true;
     {
         V3LockGuard lock{m_mutex};
@@ -151,7 +153,8 @@ void V3ThreadPool::selfTestMtDisabled() {
     // empty
 }
 
-void V3ThreadPool::selfTest() {
+void V3ThreadPool::selfTest() VL_REQUIRES_UNLOCKED(s().m_mutex)
+    VL_REQUIRES_UNLOCKED(s().m_stoppedJobsMutex) {
     V3Mutex commonMutex;
     int commonValue{0};
 

@@ -119,6 +119,8 @@ class V3ThreadPool final {
             // std::exit(0) (which invokes this destructor) is called in multiple places with
             // multithreading being suspended. Aborting would change the exit code, what would not
             // be acceptable.
+            m_mutex.assumeUnlocked();
+            m_stoppedJobsMutex.assumeUnlocked();
             resumeMultithreading();
         }
         // Unexpected states. Aborting to subtly signal to the outside world that something is
@@ -127,6 +129,8 @@ class V3ThreadPool final {
         // because assert can be disabled.
         if (VL_UNCOVERABLE(m_exclusiveAccess)) std::abort();
         if (VL_UNCOVERABLE(m_stopRequested)) std::abort();
+
+        m_stoppedJobsMutex.assumeUnlocked();
 
         if (VL_UNCOVERABLE(!m_mutex.try_lock())) {
             if (VL_UNCOVERABLE(m_jobsInProgress != 0)) {
@@ -162,8 +166,8 @@ public:
     }
 
     // Resize thread pool to n workers (queue must be empty)
-    void resize(unsigned n) VL_MT_UNSAFE VL_EXCLUDES(m_mutex) VL_EXCLUDES(m_stoppedJobsMutex)
-        VL_EXCLUDES(V3MtDisabledLock::instance());
+    void resize(unsigned n) VL_MT_UNSAFE VL_REQUIRES_UNLOCKED(m_mutex)
+        VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex) VL_EXCLUDES(V3MtDisabledLock::instance());
 
     // Enqueue a job for asynchronous execution
     // Due to missing support for lambda annotations in c++11,
@@ -182,13 +186,13 @@ public:
     // When all other threads are stopped, this function executes the job
     // and resumes execution of other jobs.
     template <typename Callable>
-    void requestExclusiveAccess(Callable&& exclusiveAccessJob) VL_MT_SAFE
-        VL_EXCLUDES(m_stoppedJobsMutex);
+    void requestExclusiveAccess(Callable&& exclusiveAccessJob)
+        VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex);
 
     // Check if other thread requested exclusive access to processing,
     // if so, it waits for it to complete. Afterwards it is resumed.
     // Returns true if request was send and we waited, otherwise false
-    bool waitIfStopRequested() VL_MT_SAFE VL_EXCLUDES(m_stoppedJobsMutex);
+    bool waitIfStopRequested() VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex);
 
     // Waits for future.
     // This function can be interupted by exclusive access request.
@@ -196,7 +200,8 @@ public:
     // current thread is stopped and waits until it is resumed.
     // Returns future result
     template <typename T>
-    static T waitForFuture(std::future<T>& future) VL_MT_SAFE_EXCLUDES(m_mutex);
+    static T waitForFuture(std::future<T>& future) VL_MT_SAFE VL_REQUIRES_UNLOCKED(s().m_mutex)
+        VL_REQUIRES_UNLOCKED(s().m_stoppedJobsMutex);
 
     // Waits for list of futures
     // This function can be interupted by exclusive access request.
@@ -206,11 +211,13 @@ public:
     // specialization as C++11 requires them to be inside namespace scope
     // Returns list of future result or void
     template <typename T>
-    static auto waitForFutures(std::list<std::future<T>>& futures) {
+    static auto waitForFutures(std::list<std::future<T>>& futures)
+        VL_REQUIRES_UNLOCKED(s().m_stoppedJobsMutex) VL_REQUIRES_UNLOCKED(s().m_mutex) {
         return waitForFuturesImp(futures);
     }
 
-    static void selfTest();
+    static void selfTest() VL_REQUIRES_UNLOCKED(s().m_stoppedJobsMutex)
+        VL_REQUIRES_UNLOCKED(s().m_mutex);
     static void selfTestMtDisabled() VL_MT_DISABLED;
 
 private:
@@ -225,15 +232,18 @@ private:
     // be idle.
     //
     // Only V3MtDisabledLock class is supposed to use this function.
-    void suspendMultithreading() VL_MT_SAFE VL_EXCLUDES(m_mutex) VL_EXCLUDES(m_stoppedJobsMutex);
+    void suspendMultithreading() VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_mutex)
+        VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex);
 
     // Resumes multithreading suspended previously by call tosuspendMultithreading().
     //
     // Only V3MtDisabledLock class is supposed to use this function.
-    void resumeMultithreading() VL_MT_SAFE VL_EXCLUDES(m_mutex) VL_EXCLUDES(m_stoppedJobsMutex);
+    void resumeMultithreading() VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_mutex)
+        VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex);
 
     template <typename T>
-    static std::list<T> waitForFuturesImp(std::list<std::future<T>>& futures) {
+    static std::list<T> waitForFuturesImp(std::list<std::future<T>>& futures)
+        VL_REQUIRES_UNLOCKED(s().m_mutex) VL_REQUIRES_UNLOCKED(s().m_stoppedJobsMutex) {
         std::list<T> results;
         while (!futures.empty()) {
             results.push_back(V3ThreadPool::waitForFuture(futures.front()));
@@ -242,7 +252,8 @@ private:
         return results;
     }
 
-    static void waitForFuturesImp(std::list<std::future<void>>& futures) {
+    static void waitForFuturesImp(std::list<std::future<void>>& futures)
+        VL_REQUIRES_UNLOCKED(s().m_mutex) VL_REQUIRES_UNLOCKED(s().m_stoppedJobsMutex) {
         while (!futures.empty()) {
             V3ThreadPool::waitForFuture(futures.front());
             futures.pop_front();
@@ -264,7 +275,8 @@ private:
     void waitForResumeRequest() VL_REQUIRES(m_stoppedJobsMutex);
 
     // Sends stop request to other threads and waits until they stop.
-    void stopOtherThreads() VL_MT_SAFE_EXCLUDES(m_mutex) VL_REQUIRES(m_stoppedJobsMutex);
+    void stopOtherThreads() VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_mutex)
+        VL_REQUIRES(m_stoppedJobsMutex);
 
     // Resumes threads stopped through previous call to `stopOtherThreads()`.
     void resumeOtherThreads() VL_MT_SAFE_EXCLUDES(m_mutex) VL_REQUIRES(m_stoppedJobsMutex) {
@@ -272,9 +284,12 @@ private:
         m_stoppedJobsCV.notify_all();
     }
 
-    void workerJobLoop(int id) VL_MT_SAFE;
+    void workerJobLoop(int id) VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_mutex)
+        VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex);
 
-    static void startWorker(V3ThreadPool* selfThreadp, int id) VL_MT_SAFE;
+    static void startWorker(V3ThreadPool* selfThreadp, int id)
+        VL_MT_SAFE VL_REQUIRES_UNLOCKED(selfThreadp->m_stoppedJobsMutex)
+            VL_REQUIRES_UNLOCKED(selfThreadp->m_mutex);
 };
 
 class VL_SCOPED_CAPABILITY V3ThreadPool::ScopedExclusiveAccess final {
@@ -306,7 +321,8 @@ public:
 };
 
 template <typename T>
-T V3ThreadPool::waitForFuture(std::future<T>& future) VL_MT_SAFE_EXCLUDES(m_mutex) {
+T V3ThreadPool::waitForFuture(std::future<T>& future) VL_MT_SAFE VL_REQUIRES_UNLOCKED(s().m_mutex)
+    VL_REQUIRES_UNLOCKED(s().m_stoppedJobsMutex) {
     while (true) {
         V3ThreadPool::s().waitIfStopRequested();
         {
@@ -322,7 +338,7 @@ T V3ThreadPool::waitForFuture(std::future<T>& future) VL_MT_SAFE_EXCLUDES(m_mute
 }
 
 template <typename Callable>
-auto V3ThreadPool::enqueue(Callable&& f) VL_MT_START {
+auto V3ThreadPool::enqueue(Callable&& f) VL_MT_START VL_REQUIRES_UNLOCKED(m_mutex) {
     using result_t = decltype(f());
     auto&& job = std::packaged_task<result_t()>{std::forward<Callable>(f)};
     auto future = job.get_future();
@@ -339,8 +355,8 @@ auto V3ThreadPool::enqueue(Callable&& f) VL_MT_START {
 }
 
 template <typename Callable>
-void V3ThreadPool::requestExclusiveAccess(Callable&& exclusiveAccessJob) VL_MT_SAFE
-    VL_EXCLUDES(m_stoppedJobsMutex) {
+void V3ThreadPool::requestExclusiveAccess(Callable&& exclusiveAccessJob)
+    VL_MT_SAFE VL_REQUIRES_UNLOCKED(s().m_stoppedJobsMutex) {
     ScopedExclusiveAccess exclusive_access;
     exclusiveAccessJob();
 }

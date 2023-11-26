@@ -1623,7 +1623,7 @@ public:
     AstStreamDType* findStreamDType(FileLine* fl) VL_REQUIRES_UNLOCKED(m_childrenListLock);
     void clearCache() VL_REQUIRES_UNLOCKED(m_childrenListLock);
     void repairCache() VL_REQUIRES_UNLOCKED(m_childrenListLock);
-    void dump(std::ostream& str = std::cout) const override;
+    void dump(std::ostream& str = std::cout) const override VL_REQUIRES_UNLOCKED(m_childrenListLock);
 };
 class AstTypedef final : public AstNode {
     // @astgen op1 := childDTypep : Optional[AstNodeDType]

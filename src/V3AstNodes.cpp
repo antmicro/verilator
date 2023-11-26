@@ -1075,6 +1075,7 @@ bool AstSenTree::hasHybrid() const {
 
 AstTypeTable::AstTypeTable(FileLine* fl)
     : ASTGEN_SUPER_TypeTable(fl) {
+    m_childrenListLock.assumeLocked();
     for (int i = 0; i < VBasicDTypeKwd::_ENUM_MAX; ++i) m_basicps[i] = nullptr;
 }
 
@@ -2142,7 +2143,7 @@ void AstMTaskBody::dump(std::ostream& str) const {
     str << " ";
     m_execMTaskp->dump(str);
 }
-void AstTypeTable::dump(std::ostream& str) const {
+void AstTypeTable::dump(std::ostream& str) const VL_REQUIRES_UNLOCKED(m_childrenListLock) {
     this->AstNode::dump(str);
     for (int i = 0; i < static_cast<int>(VBasicDTypeKwd::_ENUM_MAX); ++i) {
         m_childrenListLock.lock_shared();

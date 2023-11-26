@@ -114,6 +114,7 @@ public:
     }
     /// Assume that the mutex is already held. Purely for Clang thread safety analyzer.
     void assumeLocked() VL_ASSERT_CAPABILITY(this) VL_MT_SAFE {}
+    void assumeUnlocked() VL_ASSERT_CAPABILITY(!this) VL_MT_SAFE {}
     /// Pretend that the mutex is being unlocked. Purely for Clang thread safety analyzer.
     void pretendUnlock() VL_RELEASE() VL_MT_SAFE {}
     /// Acquire/lock mutex and check for stop request
@@ -157,19 +158,23 @@ public:
 
     // Exclusive locking
 
-    void lock() VL_ACQUIRE() { pthread_rwlock_wrlock(&m_mutex); }
+    void lock() VL_ACQUIRE() VL_MT_SAFE { pthread_rwlock_wrlock(&m_mutex); }
 
     // TODO(mglb): bool try_lock();
 
-    void unlock() VL_RELEASE() { pthread_rwlock_unlock(&m_mutex); }
+    void unlock() VL_RELEASE() VL_MT_SAFE { pthread_rwlock_unlock(&m_mutex); }
 
     // Shared locking
 
-    void lock_shared() VL_ACQUIRE_SHARED() { pthread_rwlock_rdlock(&m_mutex); }
+    void lock_shared() VL_ACQUIRE_SHARED() VL_MT_SAFE { pthread_rwlock_rdlock(&m_mutex); }
 
     // TODO(mglb): bool try_lock_shared();
 
-    void unlock_shared() VL_RELEASE_SHARED() { pthread_rwlock_unlock(&m_mutex); }
+    void unlock_shared() VL_RELEASE_SHARED() VL_MT_SAFE { pthread_rwlock_unlock(&m_mutex); }
+
+    void assumeLocked() VL_ASSERT_CAPABILITY(this) VL_MT_SAFE {}
+
+    void assumeUnlocked() VL_ASSERT_CAPABILITY(!this) VL_MT_SAFE {}
 };
 
 #else

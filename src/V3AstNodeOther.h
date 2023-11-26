@@ -1579,29 +1579,29 @@ public:
 class AstTypeTable final : public AstNode {
     // Container for hash of standard data types
     // @astgen op1 := typesp : List[AstNodeDType]
-    // @astgen typesp.requiresSharedLock := v3Global.netlistp()->typeTableChildrenListLock()
-    AstEmptyQueueDType*
-        m_emptyQueuep VL_GUARDED_BY(v3Global.netlistp()->typeTableChildrenListLock())
-        = nullptr;
-    AstQueueDType* m_queueIndexp VL_GUARDED_BY(v3Global.netlistp()->typeTableChildrenListLock())
-        = nullptr;
-    AstVoidDType* m_voidp VL_GUARDED_BY(v3Global.netlistp()->typeTableChildrenListLock())
-        = nullptr;
-    AstStreamDType* m_streamp VL_GUARDED_BY(v3Global.netlistp()->typeTableChildrenListLock())
-        = nullptr;
-    AstBasicDType* m_basicps[VBasicDTypeKwd::_ENUM_MAX] VL_GUARDED_BY(
-        v3Global.netlistp()->typeTableChildrenListLock()){};
+    // @astgen typesp.requiresSharedLock := m_childrenListLock
+    AstEmptyQueueDType* m_emptyQueuep VL_GUARDED_BY(m_childrenListLock) = nullptr;
+    AstQueueDType* m_queueIndexp VL_GUARDED_BY(m_childrenListLock) = nullptr;
+    AstVoidDType* m_voidp VL_GUARDED_BY(m_childrenListLock) = nullptr;
+    AstStreamDType* m_streamp VL_GUARDED_BY(m_childrenListLock) = nullptr;
+    AstBasicDType* m_basicps[VBasicDTypeKwd::_ENUM_MAX] VL_GUARDED_BY(m_childrenListLock) = {};
     //
     using DetailedMap = std::map<VBasicTypeKey, AstBasicDType*>;
-    DetailedMap m_detailedMap VL_GUARDED_BY(v3Global.netlistp()->typeTableChildrenListLock());
+    DetailedMap m_detailedMap VL_GUARDED_BY(m_childrenListLock);
+
+    mutable V3SharedMutex m_childrenListLock;
+
+    // Needed by clone methods. Default is deleted due to mutex not being copyable.
+    AstTypeTable(AstTypeTable& other)
+        : AstNode(other) {}
 
 public:
     explicit AstTypeTable(FileLine* fl);
+
     ASTGEN_MEMBERS_AstTypeTable;
     bool maybePointedTo() const override { return true; }
-    const char* broken() const override
-        VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock()) {
-        V3SharedLockGuard l{v3Global.netlistp()->typeTableChildrenListLock()};
+    const char* broken() const override VL_REQUIRES_UNLOCKED(m_childrenListLock) {
+        V3SharedLockGuard l{m_childrenListLock};
         BROKEN_RTN(m_emptyQueuep && !m_emptyQueuep->brokeExists());
         BROKEN_RTN(m_queueIndexp && !m_queueIndexp->brokeExists());
         BROKEN_RTN(m_voidp && !m_voidp->brokeExists());
@@ -1609,25 +1609,20 @@ public:
     }
     void cloneRelink() override { V3ERROR_NA; }
     AstBasicDType* findBasicDType(FileLine* fl, VBasicDTypeKwd kwd)
-        VL_REQUIRES_UNLOCKED(v3Global.netlistp()->typeTableChildrenListLock());
+        VL_REQUIRES_UNLOCKED(m_childrenListLock);
     AstBasicDType* findLogicBitDType(FileLine* fl, VBasicDTypeKwd kwd, int width, int widthMin,
-                                     VSigning numeric)
-        VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock());
+                                     VSigning numeric) VL_REQUIRES_UNLOCKED(m_childrenListLock);
     AstBasicDType* findLogicBitDType(FileLine* fl, VBasicDTypeKwd kwd, const VNumRange& range,
                                      int widthMin, VSigning numeric)
-        VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock());
+        VL_REQUIRES_UNLOCKED(m_childrenListLock);
     AstBasicDType* findInsertSameDType(AstBasicDType* nodep)
-        VL_REQUIRES_UNLOCKED(v3Global.netlistp()->typeTableChildrenListLock());
-    AstEmptyQueueDType* findEmptyQueueDType(FileLine* fl)
-        VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock());
-    AstQueueDType* findQueueIndexDType(FileLine* fl)
-        VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock());
-    AstVoidDType* findVoidDType(FileLine* fl)
-        VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock());
-    AstStreamDType* findStreamDType(FileLine* fl)
-        VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock());
-    void clearCache() VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock());
-    void repairCache() VL_EXCLUDES(v3Global.netlistp()->typeTableChildrenListLock());
+        VL_REQUIRES_UNLOCKED(m_childrenListLock);
+    AstEmptyQueueDType* findEmptyQueueDType(FileLine* fl) VL_REQUIRES_UNLOCKED(m_childrenListLock);
+    AstQueueDType* findQueueIndexDType(FileLine* fl) VL_REQUIRES_UNLOCKED(m_childrenListLock);
+    AstVoidDType* findVoidDType(FileLine* fl) VL_REQUIRES_UNLOCKED(m_childrenListLock);
+    AstStreamDType* findStreamDType(FileLine* fl) VL_REQUIRES_UNLOCKED(m_childrenListLock);
+    void clearCache() VL_REQUIRES_UNLOCKED(m_childrenListLock);
+    void repairCache() VL_REQUIRES_UNLOCKED(m_childrenListLock);
     void dump(std::ostream& str = std::cout) const override;
 };
 class AstTypedef final : public AstNode {

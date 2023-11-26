@@ -100,6 +100,12 @@
 #define VL_EXCLUDES(...) \
         VL_CLANG_ATTR(annotate("EXCLUDES")) \
         VL_CLANG_ATTR(locks_excluded(__VA_ARGS__))
+// Like VL_EXCLUDES, but required by compiler on methods locking a mutex that
+// is a member of the same class as the method, and all functions calling those
+// methods.
+#define VL_REQUIRES_UNLOCKED(x) \
+        VL_CLANG_ATTR(annotate("EXCLUDES")) \
+        VL_CLANG_ATTR(requires_capability(!x))
 // Scoped threaded capability/lock (-fthread-safety)
 // FIXME(mglb)
 #define VL_SCOPED_CAPABILITY \
@@ -119,9 +125,6 @@
 # define VL_REQUIRES(...) \
         VL_CLANG_ATTR(annotate("REQUIRES")) \
         VL_CLANG_ATTR(requires_capability(__VA_ARGS__))
-# define VL_REQUIRES_UNLOCKED(x) \
-        VL_CLANG_ATTR(annotate("EXCLUDES")) \
-        VL_CLANG_ATTR(requires_capability(!x))
 // Calling thread must have shared access to the given capabilities
 # define VL_REQUIRES_SHARED(...) \
         VL_CLANG_ATTR(annotate("REQUIRES_SHARED")) \
@@ -141,8 +144,6 @@
 // Keep annotations for clang_check_attributes
 # define VL_REQUIRES(...) \
         VL_CLANG_ATTR(annotate("REQUIRES"))
-# define VL_REQUIRES_UNLOCKED(x) \
-        VL_CLANG_ATTR(annotate("EXCLUDES"))
 # define VL_REQUIRES_SHARED(...) \
         VL_CLANG_ATTR(annotate("REQUIRES_SHARED"))
 # define VL_GUARDED_BY(x) \

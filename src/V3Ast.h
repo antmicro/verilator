@@ -2832,11 +2832,20 @@ AstNode* VNVisitor::iterateSubtreeReturnEdits(AstNode* nodep) {
 #include "V3Ast__gen_macros.h"
 
 // AstNode subclasses
+#ifndef VL_V3AST_FROM_V3ASTNODEDTYPE
 #include "V3AstNodeDType.h"
+#ifndef VL_V3AST_FROM_V3ASTNODEEXPR
 #include "V3AstNodeExpr.h"
+#ifndef VL_V3AST_FROM_V3ASTNODEOTHER
 #include "V3AstNodeOther.h"
 
+#ifndef VL_V3AST_FROM_V3ASTINLINES
 // Inline function definitions need to go last
 #include "V3AstInlines.h"
+
+#endif  // ifndef VL_V3AST_FROM_V3ASTINLINES
+#endif  // ifndef VL_V3AST_FROM_V3ASTNODEOTHER
+#endif  // ifndef VL_V3AST_FROM_V3ASTNODEEXPR
+#endif  // ifndef VL_V3AST_FROM_V3ASTNODEDTYPE
 
 #endif  // Guard

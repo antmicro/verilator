@@ -24,6 +24,7 @@
 
 #ifndef VERILATOR_V3AST_H_
 #error "Use V3Ast.h as the include"
+#define VL_V3AST_FROM_V3ASTNODEDTYPE
 #include "V3Ast.h"  // This helps code analysis tools pick up symbols in V3Ast.h
 #define VL_NOT_FINAL  // This #define fixes broken code folding in the CLion IDE
 #endif

@@ -19,6 +19,7 @@
 
 #ifndef VERILATOR_V3AST_H_
 #error "Use V3Ast.h as the include"
+#define VL_V3AST_FROM_V3ASTINLINES
 #include "V3Ast.h"  // This helps code analysis tools pick up symbols in V3Ast.h and related
 #endif
 

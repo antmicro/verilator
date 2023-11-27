@@ -13,6 +13,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+
 @dataclass
 class BucketData:
     bucket_id: int
@@ -60,9 +61,12 @@ def main():
             huge_files_num += 1
             huge_files_size += size
 
-    ideal_bucket_size = max(1, total_size - huge_files_size) // max(1, buckets_count - huge_files_num)
+    ideal_bucket_size = max(1, total_size - huge_files_size) // max(
+        1, buckets_count - huge_files_num)
 
-    buckets: list[BucketData] = [BucketData(i + 1) for i in range(buckets_count)]
+    buckets: list[BucketData] = [
+        BucketData(i + 1) for i in range(buckets_count)
+    ]
     for bucket in buckets:
         while input_list:
             next_size, next_fn = input_list[0]
@@ -81,13 +85,17 @@ def main():
         buckets[-1].filenames.append(str(next_fn))
         input_list.pop(0)
 
-    for bucket_id, size, filenames in sorted(buckets, key = lambda b: b.size, reverse = True):
+    for bucket_id, size, filenames in sorted(buckets,
+                                             key=lambda b: b.size,
+                                             reverse=True):
         #  print(f"Bucket {bucket_id:>2} size: {size:>8}, distance from ideal: {ideal_bucket_size - size:>8}", file=sys.stderr)
-        output_list_file = Path(output_name_template.replace("%", str(bucket_id)))
+        output_list_file = Path(
+            output_name_template.replace("%", str(bucket_id)))
         with output_list_file.open("w") as f:
             f.write("\n".join([f"#include <{fn}>" for fn in filenames]) + "\n")
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

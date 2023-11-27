@@ -1,6 +1,6 @@
 // -*- mode: C++; c-file-style: "cc-mode" -*-
 //*************************************************************************
-// DESCRIPTION: Verilator: Create triggers necessary for scheduling across 
+// DESCRIPTION: Verilator: Create triggers necessary for scheduling across
 //                         virtual interfaces
 //
 // Code available from: https://verilator.org

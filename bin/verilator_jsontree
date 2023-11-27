@@ -167,9 +167,9 @@ class AstDiffToHtml:
             for k in KNOWN_PTR_FIELDS if k != "addr"
         })
         self.diff_to_str_generic = DictDiffToHtml(omit_intact,
-                                                        val_handlers,
-                                                        split_fields,
-                                                        embeddable=True)
+                                                  val_handlers,
+                                                  split_fields,
+                                                  embeddable=True)
 
     def file_handler(self, val):
         """print file field as link to relevant line and save filename in self.srcfiles for later processing"""

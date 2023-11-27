@@ -205,7 +205,8 @@ verilator.pdf: Makefile
 
 # See uninstall also - don't put wildcards in this variable, it might uninstall other stuff
 VL_INST_BIN_FILES = verilator verilator_bin$(EXEEXT) verilator_bin_dbg$(EXEEXT) verilator_coverage_bin_dbg$(EXEEXT) \
-	verilator_ccache_report verilator_coverage verilator_difftree verilator_gantt verilator_includer verilator_profcfunc
+	verilator_ccache_report verilator_coverage verilator_difftree verilator_gantt verilator_includer verilator_includer2 \
+	verilator_profcfunc
 # Some scripts go into both the search path and pkgdatadir,
 # so they can be found by the user, and under $VERILATOR_ROOT.
 
@@ -237,6 +238,7 @@ installbin:
 	( cd bin ; $(INSTALL_PROGRAM) verilator_coverage_bin_dbg$(EXEEXT) $(DESTDIR)$(bindir)/verilator_coverage_bin_dbg$(EXEEXT) )
 	$(MKINSTALLDIRS) $(DESTDIR)$(pkgdatadir)/bin
 	( cd ${srcdir}/bin ; $(INSTALL_PROGRAM) verilator_includer $(DESTDIR)$(pkgdatadir)/bin/verilator_includer )
+	( cd ${srcdir}/bin ; $(INSTALL_PROGRAM) verilator_includer2 $(DESTDIR)$(pkgdatadir)/bin/verilator_includer2 )
 	( cd ${srcdir}/bin ; $(INSTALL_PROGRAM) verilator_ccache_report $(DESTDIR)$(pkgdatadir)/bin/verilator_ccache_report )
 	( cd ${srcdir}/bin ; $(INSTALL_PROGRAM) verilator_difftree $(DESTDIR)$(pkgdatadir)/bin/verilator_difftree )
 
@@ -398,6 +400,7 @@ PY_PROGRAMS = \
 	bin/verilator_difftree \
 	bin/verilator_gantt \
 	bin/verilator_includer \
+	bin/verilator_includer2 \
 	bin/verilator_jsontree \
 	bin/verilator_profcfunc \
 	examples/xml_py/vl_file_copy \

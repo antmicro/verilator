@@ -351,7 +351,6 @@ private:
                                 assignp};
                 funcp->addStmtsp(assignIfNotNullp);
             } else if (const auto* const dynp = VN_CAST(dtypep, DynArrayDType)) {
-                AstVarRef* const refp = new AstVarRef{fl, memberVarp, VAccess::WRITE};
                 AstNodeExpr* callp = newRandValue(fl, memberVarp, memberVarp->findBasicDType(VBasicDTypeKwd::UINT32));
                 AstAssign* const assignp = new AstAssign{
                     fl, new AstVarRef{fl, fvarp, VAccess::WRITE},

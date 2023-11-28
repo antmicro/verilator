@@ -2291,6 +2291,7 @@ class AstClass final : public AstNodeModule {
     bool m_parameterized = false;  // Parameterized class
     bool m_useVirtualPublic = false;  // Subclasses need virtual public as uses interface class
     bool m_virtual = false;  // Virtual class
+    AstCFunc* m_randomize = nullptr;  // Randomize implementation for this class, if exists
 
 public:
     AstClass(FileLine* fl, const string& name)
@@ -2303,6 +2304,8 @@ public:
     bool timescaleMatters() const override { return false; }
     AstClassPackage* classOrPackagep() const VL_MT_SAFE { return m_classOrPackagep; }
     void classOrPackagep(AstClassPackage* classpackagep) { m_classOrPackagep = classpackagep; }
+    AstCFunc* randomize() const VL_MT_SAFE { return m_randomize; }
+    void randomize(AstCFunc* randomize) { m_randomize = randomize; }
     AstNode* membersp() const { return stmtsp(); }
     void addMembersp(AstNode* nodep) { addStmtsp(nodep); }
     bool isExtended() const { return m_extended; }

@@ -1530,8 +1530,7 @@ private:
                         m_statep->ftaskCFuncp(nodep, cfuncp);
                     }
                     if (nodep->classMethod() && nodep->name() == "randomize") {
-                        AstClass *classp = m_statep->getClassp(nodep);
-                        classp->randomize(cfuncp);
+                        m_statep->getClassp(nodep)->randomize(cfuncp);
                     }
                     iterateIntoFTask(clonedFuncp);  // Do the clone too
                 }

@@ -2221,6 +2221,7 @@ class AstClass final : public AstNodeModule {
     // @astgen op4 := extendsp : List[AstClassExtends]
     // MEMBERS
     AstClassPackage* m_classOrPackagep = nullptr;  // Package it will be emitted with
+    AstCFunc* m_randomize = nullptr;  // Randomize implementation for this class, if exists
     bool m_extended = false;  // Is extension or extended by other classes
     bool m_interfaceClass = false;  // Interface class
     bool m_needRNG = false;  // Need RNG, uses srandom/randomize
@@ -2239,6 +2240,8 @@ public:
     bool timescaleMatters() const override { return false; }
     AstClassPackage* classOrPackagep() const VL_MT_SAFE { return m_classOrPackagep; }
     void classOrPackagep(AstClassPackage* classpackagep) { m_classOrPackagep = classpackagep; }
+    AstCFunc* randomize() const VL_MT_SAFE { return m_randomize; }
+    void randomize(AstCFunc* randomize) { m_randomize = randomize; }
     AstNode* membersp() const { return stmtsp(); }
     void addMembersp(AstNode* nodep) { addStmtsp(nodep); }
     bool isExtended() const { return m_extended; }

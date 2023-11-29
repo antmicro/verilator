@@ -170,8 +170,6 @@ AstNodeStmt* profExecSectionPop(FileLine* flp) {
 struct EvalLoop {
     // Flag set to true during the first iteration of the loop
     AstVarScope* firstIterp;
-    // The loop continuation flag (set to true to loop again)
-    AstVarScope* continuep = nullptr;
     // The loop itself and statements around it
     AstNodeStmt* stmtsp = nullptr;
 };
@@ -272,7 +270,7 @@ EvalLoop createEvalLoop(AstNetlist* netlistp,  //
     // Prof-exec section pop
     if (v3Global.opt.profExec()) stmtps->addNext(profExecSectionPop(flp));
 
-    return {firstIterFlagp, continueFlagp, stmtps};
+    return {firstIterFlagp, stmtps};
 }
 
 //============================================================================
@@ -493,7 +491,7 @@ struct TriggerKit {
     // The AstCFunc that dumps the current active triggers
     AstCFunc* const m_dumpp;
     // The map from input sensitivity list to trigger sensitivity list
-    const std::unordered_map<const AstSenTree*, AstSenTree*> m_map;
+    std::unordered_map<const AstSenTree*, AstSenTree*> m_map;
 
     // No VL_UNCOPYABLE(TriggerKit) as causes C++20 errors on MSVC
 
@@ -990,24 +988,6 @@ void createEval(AstNetlist* netlistp,  //
             return workp;
         }());
 
-    // If the NBA event exists, trigger it in 'nba'
-    if (AstVarScope* const nbaEventp = netlistp->nbaEventp()) {
-        AstVarScope* const nbaEventTriggerp = netlistp->nbaEventTriggerp();
-        UASSERT(nbaEventTriggerp, "NBA event trigger var should exist");
-        netlistp->nbaEventp(nullptr);
-        netlistp->nbaEventTriggerp(nullptr);
-
-        AstIf* const ifp = new AstIf{flp, new AstVarRef{flp, nbaEventTriggerp, VAccess::READ}};
-        ifp->addThensp(setVar(topLoop.continuep, 1));
-        ifp->addThensp(setVar(nbaEventTriggerp, 0));
-        AstCMethodHard* const firep
-            = new AstCMethodHard{flp, new AstVarRef{flp, nbaEventp, VAccess::WRITE}, "fire"};
-        firep->dtypeSetVoid();
-        ifp->addThensp(firep->makeStmt());
-        // actLoop.stmtsp happens to be the head of the loop body inside the NBA loop...
-        actLoop.stmtsp->addNext(ifp);
-    }
-
     if (!obsKit.empty()) {
         // Create the Observed eval loop, which becomes the top level loop.
         topLoop = createEvalLoop(  //
@@ -1072,6 +1052,22 @@ void createEval(AstNetlist* netlistp,  //
 
 //============================================================================
 // Top level entry-point to scheduling
+
+void createNbaEventTriggerLogic(AstNetlist* const netlistp, LogicByScope& nbaLogic,
+                                const size_t nbaEventTriggerIndex, TriggerKit& actTrig) {
+    auto* flp = netlistp->fileline();
+    AstTopScope* const topScopep = netlistp->topScopep();
+    AstVarScope* const nbaEventp = netlistp->nbaEventp();
+    UASSERT(nbaEventp, "NBA event should exist");
+    AstCMethodHard* const firep
+        = new AstCMethodHard{flp, new AstVarRef{flp, nbaEventp, VAccess::WRITE}, "fire"};
+    firep->dtypeSetVoid();
+    auto* alwaysp = new AstAlways{flp, VAlwaysKwd::ALWAYS, nullptr, firep->makeStmt()};
+    AstSenTree* const sensesp
+        = createTriggerSenTree(netlistp, actTrig.m_vscp, nbaEventTriggerIndex);
+    nbaLogic.add(topScopep->scopep(), sensesp, alwaysp);
+    actTrig.m_map.emplace(sensesp, sensesp);
+}
 
 void schedule(AstNetlist* netlistp) {
     const auto addSizeStat = [](const string& name, const LogicByScope& lbs) {
@@ -1151,12 +1147,16 @@ void schedule(AstNetlist* netlistp) {
 
     // Step 8: Create the pre/act/nba triggers
     AstVarScope* const dpiExportTriggerVscp = netlistp->dpiExportTriggerp();
+    AstVarScope* const nbaEventTriggerVscp = netlistp->nbaEventTriggerp();
 
     // We may have an extra trigger for variable updated in DPI exports
     ExtraTriggers extraTriggers;
     const size_t dpiExportTriggerIndex = dpiExportTriggerVscp
                                              ? extraTriggers.allocate("DPI export trigger")
                                              : std::numeric_limits<unsigned>::max();
+    const size_t nbaEventTriggerIndex = nbaEventTriggerVscp
+                                            ? extraTriggers.allocate("NBA event trigger")
+                                            : std::numeric_limits<unsigned>::max();
 
     const auto& senTreeps = getSenTreesUsedBy({&logicRegions.m_pre,  //
                                                &logicRegions.m_act,  //
@@ -1164,7 +1164,7 @@ void schedule(AstNetlist* netlistp) {
                                                &logicClasses.m_observed,  //
                                                &logicClasses.m_reactive,  //
                                                &timingKit.m_lbs});
-    const TriggerKit& actTrig
+    TriggerKit actTrig
         = createTriggers(netlistp, initp, senExprBuilder, senTreeps, "act", extraTriggers);
 
     // Add post updates from the timing kit
@@ -1172,6 +1172,11 @@ void schedule(AstNetlist* netlistp) {
 
     if (dpiExportTriggerVscp) {
         actTrig.addDpiExportTriggerAssignment(dpiExportTriggerVscp, dpiExportTriggerIndex);
+    }
+    // If the NBA event exists, trigger it in 'nba'
+    if (nbaEventTriggerVscp) {
+        createNbaEventTriggerLogic(netlistp, logicRegions.m_nba, nbaEventTriggerIndex, actTrig);
+        actTrig.addDpiExportTriggerAssignment(nbaEventTriggerVscp, nbaEventTriggerIndex);
     }
 
     AstVarScope* const actTrigVscp = actTrig.m_vscp;
@@ -1315,6 +1320,8 @@ void schedule(AstNetlist* netlistp) {
     splitCheck(initp);
 
     netlistp->dpiExportTriggerp(nullptr);
+    netlistp->nbaEventp(nullptr);
+    netlistp->nbaEventTriggerp(nullptr);
 
     V3Global::dumpCheckGlobalTree("sched", 0, dumpTreeLevel() >= 3);
 }

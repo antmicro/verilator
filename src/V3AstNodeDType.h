@@ -813,7 +813,6 @@ public:
 };
 class AstIfaceRefDType final : public AstNodeDType {
     // Reference to an interface, either for a port, or inside parent cell
-    // @astgen op1 := paramsp : List[AstPin]
     //
     // @astgen ptr := m_ifacep : Optional[AstIface]  // Interface; cellp() should override
     // @astgen ptr := m_cellp : Optional[AstCell]  // When exact parent cell known; not a guess
@@ -842,7 +841,6 @@ public:
         , m_modportFileline{modportFl}
         , m_cellName{cellName}
         , m_ifaceName{ifaceName} {
-        addParamsp(paramsp);
     }
     ASTGEN_MEMBERS_AstIfaceRefDType;
     // METHODS

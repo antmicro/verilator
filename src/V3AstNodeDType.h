@@ -840,8 +840,7 @@ public:
         : ASTGEN_SUPER_IfaceRefDType(fl)
         , m_modportFileline{modportFl}
         , m_cellName{cellName}
-        , m_ifaceName{ifaceName} {
-    }
+        , m_ifaceName{ifaceName} {}
     ASTGEN_MEMBERS_AstIfaceRefDType;
     // METHODS
     void dump(std::ostream& str = std::cout) const override;

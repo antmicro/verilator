@@ -208,7 +208,7 @@ public:
             void await_resume() const {}
         };
 
-        VlDelayPhase phase = (delay == 0) ? VlDelayPhase::INACTIVE : VlDelayPhase::ACTIVE;
+        VlDelayPhase phase = VlDelayPhase::ACTIVE;
 #ifdef VL_DEBUG
         if (phase == VlDelayPhase::INACTIVE) {
             VL_WARN_MT(filename, lineno, VL_UNKNOWN,

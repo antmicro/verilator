@@ -103,9 +103,11 @@
 // Like VL_EXCLUDES, but required by compiler on methods locking a mutex that
 // is a member of the same class as the method, and all functions calling those
 // methods.
+// `locks_excluded` added as a fallback when -Wthread-safety-negative is not enabled.
 #define VL_REQUIRES_UNLOCKED(x) \
         VL_CLANG_ATTR(annotate("EXCLUDES")) \
-        VL_CLANG_ATTR(requires_capability(!x))
+        VL_CLANG_ATTR(requires_capability(!x)) \
+        VL_CLANG_ATTR(locks_excluded(x))
 // Scoped threaded capability/lock (-fthread-safety)
 // FIXME(mglb)
 #define VL_SCOPED_CAPABILITY \

@@ -195,4 +195,17 @@ AstVarXRef::AstVarXRef(FileLine* fl, AstVar* varp, const string& dotted, const V
 
 AstStmtExpr* AstNodeExpr::makeStmt() { return new AstStmtExpr{fileline(), this}; }
 
+AstNode* AstNodeDType::nextp() const VL_REQUIRES_UNLOCKED(typeTablep()->m_childrenListLock) {
+    V3SharedLockGuard l{typeTablep()->m_childrenListLock};
+    return AstNode::nextp();
+}
+AstNode* AstNodeDType::backp() const VL_REQUIRES_UNLOCKED(typeTablep()->m_childrenListLock) {
+    V3SharedLockGuard l{typeTablep()->m_childrenListLock};
+    return AstNode::backp();
+}
+AstNode* AstNodeDType::abovep() const VL_REQUIRES_UNLOCKED(typeTablep()->m_childrenListLock) {
+    V3SharedLockGuard l{typeTablep()->m_childrenListLock};
+    return AstNode::abovep();
+}
+
 #endif  // Guard

@@ -1821,24 +1821,6 @@ class AstNode VL_NOT_FINAL {
     uint32_t m_user4Cnt = 0;  // Mark of when userp was set
     VNUser m_user4u{0};  // Contains any information the user iteration routine wants
 
-    // METHODS
-    void op1p(AstNode* nodep) {
-        m_op1p = nodep;
-        if (nodep) nodep->m_backp = this;
-    }
-    void op2p(AstNode* nodep) {
-        m_op2p = nodep;
-        if (nodep) nodep->m_backp = this;
-    }
-    void op3p(AstNode* nodep) {
-        m_op3p = nodep;
-        if (nodep) nodep->m_backp = this;
-    }
-    void op4p(AstNode* nodep) {
-        m_op4p = nodep;
-        if (nodep) nodep->m_backp = this;
-    }
-
 private:
     AstNode* cloneTreeIter(bool needPure);
     AstNode* cloneTreeIterList(bool needPure);
@@ -1863,6 +1845,28 @@ protected:
     void cloneRelinkTree();
 
     // METHODS
+    AstNode* op1Unsafep() const VL_MT_STABLE { return m_op1p; };
+    AstNode* op2Unsafep() const VL_MT_STABLE { return m_op2p; };
+    AstNode* op3Unsafep() const VL_MT_STABLE { return m_op3p; };
+    AstNode* op4Unsafep() const VL_MT_STABLE { return m_op4p; };
+
+    virtual void op1p(AstNode* nodep) {
+        m_op1p = nodep;
+        if (nodep) nodep->m_backp = this;
+    }
+    virtual void op2p(AstNode* nodep) {
+        m_op2p = nodep;
+        if (nodep) nodep->m_backp = this;
+    }
+    virtual void op3p(AstNode* nodep) {
+        m_op3p = nodep;
+        if (nodep) nodep->m_backp = this;
+    }
+    virtual void op4p(AstNode* nodep) {
+        m_op4p = nodep;
+        if (nodep) nodep->m_backp = this;
+    }
+
     void setOp1p(AstNode* newp);  // Set non-list-type op1 to non-list element
     void setOp2p(AstNode* newp);  // Set non-list-type op2 to non-list element
     void setOp3p(AstNode* newp);  // Set non-list-type op3 to non-list element
@@ -1901,13 +1905,13 @@ public:
     // ACCESSORS
     VNType type() const VL_MT_SAFE { return m_type; }
     const char* typeName() const VL_MT_SAFE { return type().ascii(); }  // See also prettyTypeName
-    AstNode* nextp() const VL_MT_STABLE { return m_nextp; }
-    AstNode* backp() const VL_MT_STABLE { return m_backp; }
-    AstNode* abovep() const;  // Get parent node above, only for list head and tail
-    AstNode* op1p() const VL_MT_STABLE { return m_op1p; }
-    AstNode* op2p() const VL_MT_STABLE { return m_op2p; }
-    AstNode* op3p() const VL_MT_STABLE { return m_op3p; }
-    AstNode* op4p() const VL_MT_STABLE { return m_op4p; }
+    virtual AstNode* nextp() const VL_MT_STABLE { return m_nextp; }
+    virtual AstNode* backp() const VL_MT_STABLE { return m_backp; }
+    virtual AstNode* abovep() const;  // Get parent node above, only for list head and tail
+    virtual AstNode* op1p() const VL_MT_STABLE { return m_op1p; }
+    virtual AstNode* op2p() const VL_MT_STABLE { return m_op2p; }
+    virtual AstNode* op3p() const VL_MT_STABLE { return m_op3p; }
+    virtual AstNode* op4p() const VL_MT_STABLE { return m_op4p; }
     AstNodeDType* dtypep() const VL_MT_STABLE { return m_dtypep; }
     AstNode* clonep() const { return ((m_cloneCnt == s_cloneCntGbl) ? m_clonep : nullptr); }
     AstNode* firstAbovep() const {  // Returns nullptr when second or later in list

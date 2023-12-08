@@ -342,6 +342,7 @@ if test "$CFG_ENABLE_COVERAGE" = "yes"; then
   _MY_CXX_CHECK_OPT(CXX,-fkeep-static-functions)
   # Exceptions can pollute the branch coverage data
   _MY_CXX_CHECK_OPT(CXX,-fno-exceptions)
+  # _MY_CXX_CHECK_OPT(CXX,-fno-exceptions)
   # Define-out some impossible stuff
   _MY_CXX_CHECK_OPT(CXX,-DVL_GCOV)
 fi

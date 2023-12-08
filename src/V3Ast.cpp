@@ -415,93 +415,89 @@ void AstNode::addNextHere(AstNode* newp) {
 
 void AstNode::setOp1p(AstNode* newp) {
     UASSERT(newp, "Null item passed to setOp1p");
-    UDEBUGONLY(UASSERT_OBJ(!m_op1p, this, "Adding to non-empty, non-list op1"););
-    UDEBUGONLY(UASSERT_OBJ(!newp->m_backp, newp, "Adding already linked node"););
-    UDEBUGONLY(UASSERT_OBJ(!newp->m_nextp, newp, "Adding list to non-list op1"););
+    UDEBUGONLY(UASSERT_OBJ(!op1p(), this, "Adding to non-empty, non-list op1"););
+    UDEBUGONLY(UASSERT_OBJ(!newp->backp(), newp, "Adding already linked node"););
+    UDEBUGONLY(UASSERT_OBJ(!newp->nextp(), newp, "Adding list to non-list op1"););
     debugTreeChange(this, "-setOp1pThs: ", __LINE__, false);
     debugTreeChange(newp, "-setOp1pNew: ", __LINE__, true);
-    m_op1p = newp;
+    op1p(newp);
     newp->editCountInc();
-    newp->m_backp = this;
     debugTreeChange(this, "-setOp1pOut: ", __LINE__, false);
 }
 
 void AstNode::setOp2p(AstNode* newp) {
     UASSERT(newp, "Null item passed to setOp2p");
-    UDEBUGONLY(UASSERT_OBJ(!m_op2p, this, "Adding to non-empty, non-list op2"););
-    UDEBUGONLY(UASSERT_OBJ(!newp->m_backp, newp, "Adding already linked node"););
-    UDEBUGONLY(UASSERT_OBJ(!newp->m_nextp, newp, "Adding list to non-list op2"););
+    UDEBUGONLY(UASSERT_OBJ(!op2p(), this, "Adding to non-empty, non-list op2"););
+    UDEBUGONLY(UASSERT_OBJ(!newp->backp(), newp, "Adding already linked node"););
+    UDEBUGONLY(UASSERT_OBJ(!newp->nextp(), newp, "Adding list to non-list op2"););
     debugTreeChange(this, "-setOp2pThs: ", __LINE__, false);
     debugTreeChange(newp, "-setOp2pNew: ", __LINE__, true);
-    m_op2p = newp;
+    op2p(newp);
     newp->editCountInc();
-    newp->m_backp = this;
     debugTreeChange(this, "-setOp2pOut: ", __LINE__, false);
 }
 
 void AstNode::setOp3p(AstNode* newp) {
     UASSERT(newp, "Null item passed to setOp3p");
-    UDEBUGONLY(UASSERT_OBJ(!m_op3p, this, "Adding to non-empty, non-list op3"););
-    UDEBUGONLY(UASSERT_OBJ(!newp->m_backp, newp, "Adding already linked node"););
-    UDEBUGONLY(UASSERT_OBJ(!newp->m_nextp, newp, "Adding list to non-list op3"););
+    UDEBUGONLY(UASSERT_OBJ(!op3p(), this, "Adding to non-empty, non-list op3"););
+    UDEBUGONLY(UASSERT_OBJ(!newp->backp(), newp, "Adding already linked node"););
+    UDEBUGONLY(UASSERT_OBJ(!newp->nextp(), newp, "Adding list to non-list op3"););
     debugTreeChange(this, "-setOp3pThs: ", __LINE__, false);
     debugTreeChange(newp, "-setOp3pNew: ", __LINE__, true);
-    m_op3p = newp;
+    op3p(newp);
     newp->editCountInc();
-    newp->m_backp = this;
     debugTreeChange(this, "-setOp3pOut: ", __LINE__, false);
 }
 
 void AstNode::setOp4p(AstNode* newp) {
     UASSERT(newp, "Null item passed to setOp4p");
-    UDEBUGONLY(UASSERT_OBJ(!m_op4p, this, "Adding to non-empty, non-list op4"););
-    UDEBUGONLY(UASSERT_OBJ(!newp->m_backp, newp, "Adding already linked node"););
-    UDEBUGONLY(UASSERT_OBJ(!newp->m_nextp, newp, "Adding list to non-list op4"););
+    UDEBUGONLY(UASSERT_OBJ(!op4p(), this, "Adding to non-empty, non-list op4"););
+    UDEBUGONLY(UASSERT_OBJ(!newp->backp(), newp, "Adding already linked node"););
+    UDEBUGONLY(UASSERT_OBJ(!newp->nextp(), newp, "Adding list to non-list op4"););
     debugTreeChange(this, "-setOp4pThs: ", __LINE__, false);
     debugTreeChange(newp, "-setOp4pNew: ", __LINE__, true);
-    m_op4p = newp;
+    op4p(newp);
     newp->editCountInc();
-    newp->m_backp = this;
     debugTreeChange(this, "-setOp4pOut: ", __LINE__, false);
 }
 
 void AstNode::addOp1p(AstNode* newp) {
     UASSERT(newp, "Null item passed to addOp1p");
-    UDEBUGONLY(UASSERT_OBJ(!newp->m_backp, newp, "Adding already linked node"););
-    if (!m_op1p) {
+    UDEBUGONLY(UASSERT_OBJ(!newp->backp(), newp, "Adding already linked node"););
+    if (!op1p()) {
         op1p(newp);
     } else {
-        m_op1p->addNext(newp);
+        op1p()->addNext(newp);
     }
 }
 
 void AstNode::addOp2p(AstNode* newp) {
     UASSERT(newp, "Null item passed to addOp2p");
-    UDEBUGONLY(UASSERT_OBJ(!newp->m_backp, newp, "Adding already linked node"););
-    if (!m_op2p) {
+    UDEBUGONLY(UASSERT_OBJ(!newp->backp(), newp, "Adding already linked node"););
+    if (!op2p()) {
         op2p(newp);
     } else {
-        m_op2p->addNext(newp);
+        op2p()->addNext(newp);
     }
 }
 
 void AstNode::addOp3p(AstNode* newp) {
     UASSERT(newp, "Null item passed to addOp3p");
-    UDEBUGONLY(UASSERT_OBJ(!newp->m_backp, newp, "Adding already linked node"););
-    if (!m_op3p) {
+    UDEBUGONLY(UASSERT_OBJ(!newp->backp(), newp, "Adding already linked node"););
+    if (!op3p()) {
         op3p(newp);
     } else {
-        m_op3p->addNext(newp);
+        op3p()->addNext(newp);
     }
 }
 
 void AstNode::addOp4p(AstNode* newp) {
     UASSERT(newp, "Null item passed to addOp4p");
-    UDEBUGONLY(UASSERT_OBJ(!newp->m_backp, newp, "Adding already linked node"););
-    if (!m_op4p) {
+    UDEBUGONLY(UASSERT_OBJ(!newp->backp(), newp, "Adding already linked node"););
+    if (!op4p()) {
         op4p(newp);
     } else {
-        m_op4p->addNext(newp);
+        op4p()->addNext(newp);
     }
 }
 
@@ -535,13 +531,13 @@ AstNode* AstNode::unlinkFrBackWithNext(VNRelinker* linkerp) {
         linkerp->m_iterpp = oldp->m_iterpp;
         if (backp->m_nextp == oldp) {
             linkerp->m_chg = VNRelinker::RELINK_NEXT;
-        } else if (backp->m_op1p == oldp) {
+        } else if (backp->op1p() == oldp) {
             linkerp->m_chg = VNRelinker::RELINK_OP1;
-        } else if (backp->m_op2p == oldp) {
+        } else if (backp->op2p() == oldp) {
             linkerp->m_chg = VNRelinker::RELINK_OP2;
-        } else if (backp->m_op3p == oldp) {
+        } else if (backp->op3p() == oldp) {
             linkerp->m_chg = VNRelinker::RELINK_OP3;
-        } else if (backp->m_op4p == oldp) {
+        } else if (backp->op4p() == oldp) {
             linkerp->m_chg = VNRelinker::RELINK_OP4;
         } else {
             oldp->v3fatalSrc("Unlink of node with back not pointing to it.");
@@ -563,14 +559,14 @@ AstNode* AstNode::unlinkFrBackWithNext(VNRelinker* linkerp) {
         // Create new head/tail of extracted list
         oldp->m_headtailp = oldtailp;
         oldp->m_headtailp->m_headtailp = oldp;
-    } else if (backp->m_op1p == oldp) {
-        backp->m_op1p = nullptr;
-    } else if (backp->m_op2p == oldp) {
-        backp->m_op2p = nullptr;
-    } else if (backp->m_op3p == oldp) {
-        backp->m_op3p = nullptr;
-    } else if (backp->m_op4p == oldp) {
-        backp->m_op4p = nullptr;
+    } else if (backp->op1p() == oldp) {
+        backp->op1p(nullptr);
+    } else if (backp->op2p() == oldp) {
+        backp->op2p(nullptr);
+    } else if (backp->op3p() == oldp) {
+        backp->op3p(nullptr);
+    } else if (backp->op4p() == oldp) {
+        backp->op4p(nullptr);
     } else {
         this->v3fatalSrc("Unlink of node with back not pointing to it.");
     }
@@ -601,13 +597,13 @@ AstNode* AstNode::unlinkFrBack(VNRelinker* linkerp) {
         }
         if (backp->m_nextp == oldp) {
             linkerp->m_chg = VNRelinker::RELINK_NEXT;
-        } else if (backp->m_op1p == oldp) {
+        } else if (backp->op1p() == oldp) {
             linkerp->m_chg = VNRelinker::RELINK_OP1;
-        } else if (backp->m_op2p == oldp) {
+        } else if (backp->op2p() == oldp) {
             linkerp->m_chg = VNRelinker::RELINK_OP2;
-        } else if (backp->m_op3p == oldp) {
+        } else if (backp->op3p() == oldp) {
             linkerp->m_chg = VNRelinker::RELINK_OP3;
-        } else if (backp->m_op4p == oldp) {
+        } else if (backp->op4p() == oldp) {
             linkerp->m_chg = VNRelinker::RELINK_OP4;
         } else {
             this->v3fatalSrc("Unlink of node with back not pointing to it.");
@@ -624,14 +620,14 @@ AstNode* AstNode::unlinkFrBack(VNRelinker* linkerp) {
             backp->m_headtailp->m_headtailp = backp;
         }
     } else {
-        if (backp->m_op1p == oldp) {
-            backp->m_op1p = oldp->m_nextp;
-        } else if (backp->m_op2p == oldp) {
-            backp->m_op2p = oldp->m_nextp;
-        } else if (backp->m_op3p == oldp) {
-            backp->m_op3p = oldp->m_nextp;
-        } else if (backp->m_op4p == oldp) {
-            backp->m_op4p = oldp->m_nextp;
+        if (backp->op1p() == oldp) {
+            backp->op1p(oldp->m_nextp);
+        } else if (backp->op2p() == oldp) {
+            backp->op2p(oldp->m_nextp);
+        } else if (backp->op3p() == oldp) {
+            backp->op3p(oldp->m_nextp);
+        } else if (backp->op4p() == oldp) {
+            backp->op4p(oldp->m_nextp);
         } else {
             this->v3fatalSrc("Unlink of node with back not pointing to it.");
         }
@@ -804,10 +800,10 @@ AstNode* AstNode::cloneTreeIter(bool needPure) {
         // it
     }
     AstNode* const newp = this->clone();
-    if (this->m_op1p) newp->op1p(this->m_op1p->cloneTreeIterList(needPure));
-    if (this->m_op2p) newp->op2p(this->m_op2p->cloneTreeIterList(needPure));
-    if (this->m_op3p) newp->op3p(this->m_op3p->cloneTreeIterList(needPure));
-    if (this->m_op4p) newp->op4p(this->m_op4p->cloneTreeIterList(needPure));
+    if (this->op1p()) newp->op1p(this->op1p()->cloneTreeIterList(needPure));
+    if (this->op2p()) newp->op2p(this->op2p()->cloneTreeIterList(needPure));
+    if (this->op3p()) newp->op3p(this->op3p()->cloneTreeIterList(needPure));
+    if (this->op4p()) newp->op4p(this->op4p()->cloneTreeIterList(needPure));
     newp->m_iterpp = nullptr;
     newp->clonep(this);  // Save pointers to/from both to simplify relinking.
     this->clonep(newp);  // Save pointers to/from both to simplify relinking.
@@ -933,10 +929,14 @@ void AstNode::iterateChildren(VNVisitor& v) {
     ASTNODE_PREFETCH(m_op2p);
     ASTNODE_PREFETCH(m_op3p);
     ASTNODE_PREFETCH(m_op4p);
-    if (m_op1p) m_op1p->iterateAndNext(v);
-    if (m_op2p) m_op2p->iterateAndNext(v);
-    if (m_op3p) m_op3p->iterateAndNext(v);
-    if (m_op4p) m_op4p->iterateAndNext(v);
+    AstNode* const currentOp1p = op1p();
+    if (currentOp1p) currentOp1p->iterateAndNext(v);
+    AstNode* const currentOp2p = op2p();
+    if (currentOp2p) currentOp2p->iterateAndNext(v);
+    AstNode* const currentOp3p = op3p();
+    if (currentOp3p) currentOp3p->iterateAndNext(v);
+    AstNode* const currentOp4p = op4p();
+    if (currentOp4p) currentOp4p->iterateAndNext(v);
 }
 
 void AstNode::iterateChildrenConst(VNVisitorConst& v) {
@@ -945,10 +945,14 @@ void AstNode::iterateChildrenConst(VNVisitorConst& v) {
     ASTNODE_PREFETCH(m_op2p);
     ASTNODE_PREFETCH(m_op3p);
     ASTNODE_PREFETCH(m_op4p);
-    if (m_op1p) m_op1p->iterateAndNextConst(v);
-    if (m_op2p) m_op2p->iterateAndNextConst(v);
-    if (m_op3p) m_op3p->iterateAndNextConst(v);
-    if (m_op4p) m_op4p->iterateAndNextConst(v);
+    AstNode* const currentOp1p = op1p();
+    if (currentOp1p) currentOp1p->iterateAndNextConst(v);
+    AstNode* const currentOp2p = op2p();
+    if (currentOp2p) currentOp2p->iterateAndNextConst(v);
+    AstNode* const currentOp3p = op3p();
+    if (currentOp3p) currentOp3p->iterateAndNextConst(v);
+    AstNode* const currentOp4p = op4p();
+    if (currentOp4p) currentOp4p->iterateAndNextConst(v);
 }
 
 void AstNode::iterateAndNext(VNVisitor& v) {
@@ -959,7 +963,7 @@ void AstNode::iterateAndNext(VNVisitor& v) {
     // there's no lower level reason yet though the back must exist.
     AstNode* nodep = this;
 #ifdef VL_DEBUG  // Otherwise too hot of a function for debug
-    UASSERT_OBJ(!(nodep && !nodep->m_backp), nodep, "iterateAndNext node has no back");
+    UASSERT_OBJ(!(nodep && !nodep->backp()), nodep, "iterateAndNext node has no back");
 #endif
     // cppcheck-suppress knownConditionTrueFalse
     if (nodep) ASTNODE_PREFETCH(nodep->m_nextp);
@@ -1001,17 +1005,21 @@ void AstNode::iterateListBackwardsConst(VNVisitorConst& v) {
 }
 
 void AstNode::iterateChildrenBackwardsConst(VNVisitorConst& v) {
-    if (m_op1p) m_op1p->iterateListBackwardsConst(v);
-    if (m_op2p) m_op2p->iterateListBackwardsConst(v);
-    if (m_op3p) m_op3p->iterateListBackwardsConst(v);
-    if (m_op4p) m_op4p->iterateListBackwardsConst(v);
+    AstNode* const currentOp1p = op1p();
+    if (currentOp1p) currentOp1p->iterateListBackwardsConst(v);
+    AstNode* const currentOp2p = op2p();
+    if (currentOp2p) currentOp2p->iterateListBackwardsConst(v);
+    AstNode* const currentOp3p = op3p();
+    if (currentOp3p) currentOp3p->iterateListBackwardsConst(v);
+    AstNode* const currentOp4p = op4p();
+    if (currentOp4p) currentOp4p->iterateListBackwardsConst(v);
 }
 
 void AstNode::iterateAndNextConst(VNVisitorConst& v) {
     // Keep following the current list even if edits change it
     AstNode* nodep = this;
     do {
-        AstNode* const nnextp = nodep->m_nextp;
+        AstNode* const nnextp = nodep->nextp();
         ASTNODE_PREFETCH(nnextp);
         nodep->accept(v);
         nodep = nnextp;

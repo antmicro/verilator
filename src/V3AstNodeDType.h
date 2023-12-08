@@ -45,14 +45,30 @@ private:
     // Unique number assigned to each dtype during creation for IEEE matching
     static int s_uniqueNum;
 
+    static AstTypeTable* typeTablep() { return v3Global.netlistp()->typeTablep(); }
+
 protected:
     // CONSTRUCTORS
     AstNodeDType(VNType t, FileLine* fl)
         : AstNode{t, fl} {}
 
+    void op1p(AstNode* nodep) final override { AstNode::op1p(nodep); }
+    void op2p(AstNode* nodep) final override { AstNode::op2p(nodep); }
+    void op3p(AstNode* nodep) final override { AstNode::op3p(nodep); }
+    void op4p(AstNode* nodep) final override { AstNode::op4p(nodep); }
+
 public:
     ASTGEN_MEMBERS_AstNodeDType;
     // ACCESSORS
+    inline AstNode* nextp() const final override;
+    inline AstNode* backp() const final override;
+    inline AstNode* abovep() const final override;
+    AstNode* op1p() const final override { return AstNode::op1p(); }
+    AstNode* op2p() const final override { return AstNode::op2p(); }
+    AstNode* op3p() const final override { return AstNode::op3p(); }
+    //AstNode* op4p() const final override { return AstNode::op4p(); }
+    AstNode* op4p() const final override { return nullptr; }
+
     void dump(std::ostream& str) const override;
     virtual void dumpSmall(std::ostream& str) const;
     bool hasDType() const override { return true; }

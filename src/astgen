@@ -1008,6 +1008,9 @@ def write_ast_macros(filename):
                 if lockExpr := properties.get("requiresSharedLock", None):
                     getterAnnotations.append(f"VL_REQUIRES_SHARED({lockExpr})")
                     setterAnnotations.append(f"VL_REQUIRES({lockExpr})")
+                if lockExpr := properties.get("usesLock", None):
+                    getterAnnotations.append(f"VL_REQUIRES_UNLOCKED({lockExpr})")
+                    setterAnnotations.append(f"VL_REQUIRES_UNLOCKED({lockExpr})")
 
                 retrieve = ("VN_DBG_AS(op{n}p(), {kind})" if kind != "Node"
                             else "op{n}p()").format(n=n, kind=kind)

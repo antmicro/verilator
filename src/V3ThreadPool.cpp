@@ -88,8 +88,8 @@ void V3ThreadPool::resumeMultithreading() VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_mute
     }
 }
 
-void V3ThreadPool::startWorker(V3ThreadPool* selfThreadp, int id)
-    VL_MT_SAFE VL_REQUIRES_UNLOCKED(selfThreadp->m_stoppedJobsMutex)
+void V3ThreadPool::startWorker(V3ThreadPool* selfThreadp, int id) VL_MT_SAFE
+    VL_REQUIRES_UNLOCKED(selfThreadp->m_stoppedJobsMutex)
         VL_REQUIRES_UNLOCKED(selfThreadp->m_mutex) {
     selfThreadp->workerJobLoop(id);
 }
@@ -138,7 +138,8 @@ void V3ThreadPool::waitForResumeRequest() VL_REQUIRES(m_stoppedJobsMutex) {
     --m_stoppedJobs;
 }
 
-void V3ThreadPool::stopOtherThreads() VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_mutex) VL_REQUIRES(m_stoppedJobsMutex) {
+void V3ThreadPool::stopOtherThreads() VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_mutex)
+    VL_REQUIRES(m_stoppedJobsMutex) {
     m_stopRequested = true;
     {
         V3LockGuard lock{m_mutex};

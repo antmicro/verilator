@@ -1580,7 +1580,7 @@ public:
 class AstTypeTable final : public AstNode {
     // Container for hash of standard data types
     // @astgen op1 := typesp : List[AstNodeDType]
-    // @astgen typesp.requiresSharedLock := m_childrenListLock
+    // @astgen typesp.usesLock := m_childrenListLock
     AstEmptyQueueDType* m_emptyQueuep VL_GUARDED_BY(m_childrenListLock) = nullptr;
     AstQueueDType* m_queueIndexp VL_GUARDED_BY(m_childrenListLock) = nullptr;
     AstVoidDType* m_voidp VL_GUARDED_BY(m_childrenListLock) = nullptr;
@@ -1592,14 +1592,47 @@ class AstTypeTable final : public AstNode {
 
     mutable V3SharedMutex m_childrenListLock;
 
+    friend class AstNode;
+    friend class AstNodeDType;
+
     // Needed by clone methods. Default is deleted due to mutex not being copyable.
     AstTypeTable(AstTypeTable& other)
         : AstNode(other) {}
+
+protected:
+    void op1p(AstNode* nodep) final override VL_REQUIRES_UNLOCKED(m_childrenListLock) {
+        V3SharedLockGuard l{m_childrenListLock};
+        AstNode::op1p(nodep);
+    }
+    void op2p(AstNode* nodep) final override {
+        //V3SharedLockGuard l{m_childrenListLock};
+        AstNode::op2p(nodep);
+    }
+    void op3p(AstNode* nodep) final override {
+        //V3SharedLockGuard l{m_childrenListLock};
+        AstNode::op3p(nodep);
+    }
+    void op4p(AstNode* nodep) final override {
+        //V3SharedLockGuard l{m_childrenListLock};
+        AstNode::op4p(nodep);
+    }
 
 public:
     explicit AstTypeTable(FileLine* fl);
 
     ASTGEN_MEMBERS_AstTypeTable;
+
+    AstNode* nextp() const final override { return AstNode::nextp(); }
+    AstNode* backp() const final override { return AstNode::backp(); }
+    AstNode* abovep() const final override { return AstNode::abovep(); }
+    AstNode* op1p() const final override VL_REQUIRES_UNLOCKED(m_childrenListLock) {
+        V3SharedLockGuard l{m_childrenListLock};
+        return AstNode::op1p();
+    }
+    AstNode* op2p() const final override { return nullptr; }
+    AstNode* op3p() const final override { return nullptr; }
+    AstNode* op4p() const final override { return nullptr; }
+
     bool maybePointedTo() const override { return true; }
     const char* broken() const override VL_REQUIRES_UNLOCKED(m_childrenListLock) {
         V3SharedLockGuard l{m_childrenListLock};
@@ -1624,7 +1657,8 @@ public:
     AstStreamDType* findStreamDType(FileLine* fl) VL_REQUIRES_UNLOCKED(m_childrenListLock);
     void clearCache() VL_REQUIRES_UNLOCKED(m_childrenListLock);
     void repairCache() VL_REQUIRES_UNLOCKED(m_childrenListLock);
-    void dump(std::ostream& str = std::cout) const override VL_REQUIRES_UNLOCKED(m_childrenListLock);
+    void dump(std::ostream& str = std::cout) const override
+        VL_REQUIRES_UNLOCKED(m_childrenListLock);
 };
 class AstTypedef final : public AstNode {
     // @astgen op1 := childDTypep : Optional[AstNodeDType]

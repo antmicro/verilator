@@ -186,8 +186,8 @@ public:
     // When all other threads are stopped, this function executes the job
     // and resumes execution of other jobs.
     template <typename Callable>
-    void requestExclusiveAccess(Callable&& exclusiveAccessJob)
-        VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex);
+    void requestExclusiveAccess(Callable&& exclusiveAccessJob) VL_MT_SAFE
+        VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex);
 
     // Check if other thread requested exclusive access to processing,
     // if so, it waits for it to complete. Afterwards it is resumed.
@@ -287,8 +287,8 @@ private:
     void workerJobLoop(int id) VL_MT_SAFE VL_REQUIRES_UNLOCKED(m_mutex)
         VL_REQUIRES_UNLOCKED(m_stoppedJobsMutex);
 
-    static void startWorker(V3ThreadPool* selfThreadp, int id)
-        VL_MT_SAFE VL_REQUIRES_UNLOCKED(selfThreadp->m_stoppedJobsMutex)
+    static void startWorker(V3ThreadPool* selfThreadp, int id) VL_MT_SAFE
+        VL_REQUIRES_UNLOCKED(selfThreadp->m_stoppedJobsMutex)
             VL_REQUIRES_UNLOCKED(selfThreadp->m_mutex);
 };
 
@@ -355,8 +355,8 @@ auto V3ThreadPool::enqueue(Callable&& f) VL_MT_START VL_REQUIRES_UNLOCKED(m_mute
 }
 
 template <typename Callable>
-void V3ThreadPool::requestExclusiveAccess(Callable&& exclusiveAccessJob)
-    VL_MT_SAFE VL_REQUIRES_UNLOCKED(s().m_stoppedJobsMutex) {
+void V3ThreadPool::requestExclusiveAccess(Callable&& exclusiveAccessJob) VL_MT_SAFE
+    VL_REQUIRES_UNLOCKED(s().m_stoppedJobsMutex) {
     ScopedExclusiveAccess exclusive_access;
     exclusiveAccessJob();
 }

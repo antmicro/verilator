@@ -195,6 +195,7 @@ RAW_OBJS_PCH_ASTMT = \
 	V3EmitCInlines.o \
 	V3EmitCPch.o \
 	V3EmitV.o \
+	V3Expand.o \
 	V3File.o \
 	V3Global.o \
 	V3Hasher.o \
@@ -240,7 +241,6 @@ RAW_OBJS_PCH_ASTNOMT = \
 	V3EmitCSyms.o \
 	V3EmitMk.o \
 	V3EmitXml.o \
-	V3Expand.o \
 	V3Force.o \
 	V3Fork.o \
 	V3Gate.o \

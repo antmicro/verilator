@@ -41,6 +41,9 @@ public:
     // unlock() will reenable multithreading while in MT Disabled regions
     void unlock() VL_RELEASE() VL_MT_SAFE;
 
+    // For -Wthread-safety-negative
+    const V3MtDisabledLock& operator!() const { return *this; }
+
     static constexpr V3MtDisabledLock& instance()
         VL_RETURN_CAPABILITY(V3MtDisabledLock::s_mtDisabledLock) {
         return s_mtDisabledLock;

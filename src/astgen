@@ -682,7 +682,8 @@ def read_types(filename, Nodes, prefix):
                 elif "." in what:
                     match = re.match(r'^\s*(\w+)\.(\w+)$', what)
                     if not match:
-                        error(lineno, "Malformed '@astgen " + what + "' directive")
+                        error(lineno,
+                              "Malformed '@astgen " + what + "' directive")
                     else:
                         ident, prop = match.groups()
                         node.setAccessorProperty(ident, prop, rest.strip())
@@ -1028,8 +1029,10 @@ def write_ast_macros(filename):
                     getterAnnotations.append(f"VL_REQUIRES_SHARED({lockExpr})")
                     setterAnnotations.append(f"VL_REQUIRES({lockExpr})")
                 if lockExpr := properties.get("usesLock", None):
-                    getterAnnotations.append(f"VL_REQUIRES_UNLOCKED({lockExpr})")
-                    setterAnnotations.append(f"VL_REQUIRES_UNLOCKED({lockExpr})")
+                    getterAnnotations.append(
+                        f"VL_REQUIRES_UNLOCKED({lockExpr})")
+                    setterAnnotations.append(
+                        f"VL_REQUIRES_UNLOCKED({lockExpr})")
 
                 retrieve = ("VN_DBG_AS(op{n}p(), {kind})" if kind != "Node"
                             else "op{n}p()").format(n=n, kind=kind)

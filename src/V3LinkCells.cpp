@@ -27,6 +27,7 @@
 
 #include "V3LinkCells.h"
 
+#include "V3Global.h"
 #include "V3Graph.h"
 #include "V3Parse.h"
 #include "V3SymTable.h"
@@ -189,8 +190,8 @@ class LinkCellsVisitor final : public VNVisitor {
             UINFO(4, "Link Module: " << nodep << endl);
             if (nodep->fileline()->filebasenameNoExt() != nodep->prettyName()
                 && !v3Global.opt.isLibraryFile(nodep->fileline()->filename())
-                && !VN_IS(nodep, NotFoundModule) && !nodep->recursiveClone()
-                && !nodep->internal()) {
+                && !VN_IS(nodep, NotFoundModule) && !nodep->recursiveClone() && !nodep->internal()
+                && !v3Global.opt.hierChild()) {
                 // We only complain once per file, otherwise library-like files
                 // have a huge mess of warnings
                 const auto itFoundPair = m_declfnWarned.insert(nodep->fileline()->filename());

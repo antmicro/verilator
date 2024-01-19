@@ -16,6 +16,8 @@
 
 #include "V3PchAstMT.h"
 
+#include "V3Global.h"
+
 #include "V3File.h"
 #include "V3HierBlock.h"
 #include "V3LinkCells.h"
@@ -73,7 +75,13 @@ void V3Global::readFiles() {
                          "Cannot find file containing library module: ");
     }
 
-    // v3Global.rootp()->dumpTreeFile(v3Global.debugFilename("parse.tree"));
+    // Read hierarchical type parameter file
+    const auto filename = v3Global.opt.hierarchicalTypeParameterFile();
+    if (!filename.empty()) {
+        parser.parseFile(new FileLine{FileLine::commandLineFilename()}, filename, false,
+                         "Cannot find file containing type parameter declarations");
+    }
+
     V3Error::abortIfErrors();
 
     if (!v3Global.opt.preprocOnly()) {

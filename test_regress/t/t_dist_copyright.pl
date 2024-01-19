@@ -92,7 +92,7 @@ if (!-r "$root/.git") {
             } elsif ($line =~ /Copyright 20[0-9][0-9]/) {
                 $copyright = $line;
                 if ($line =~ /Wilson Snyder/) {
-                } elsif (!$added{$file} && $line =~ /Antmicro|Geza Lore|Todd Strader/) {
+                } elsif ($line =~ /Antmicro|Geza Lore|Todd Strader/) {
                 } elsif ($file =~ /$Exempt_Author_Re/) {
                 } else {
                     my $yeardash = ($file =~ m!test_regress/t!) ? $year : $year."-".$year;

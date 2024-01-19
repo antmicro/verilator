@@ -23,6 +23,7 @@
 #include "V3LinkParse.h"
 
 #include "V3Config.h"
+#include "V3Global.h"
 
 #include <set>
 #include <vector>

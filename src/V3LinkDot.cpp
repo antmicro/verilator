@@ -65,8 +65,13 @@
 
 #include "V3LinkDot.h"
 
+#include "V3Error.h"
+#include "V3Global.h"
 #include "V3Graph.h"
 #include "V3MemberMap.h"
+#include "V3Number.h"
+#include "V3Parse.h"
+#include "V3ParseSym.h"
 #include "V3String.h"
 #include "V3SymTable.h"
 
@@ -914,9 +919,21 @@ class LinkDotFindVisitor final : public VNVisitor {
             iterateChildren(nodep);
             nodep->user4(true);
         } else {  // !doit
-            // Will be optimized away later
-            // Can't remove now, as our backwards iterator will throw up
-            UINFO(5, "Module not under any CELL or top - dead module: " << nodep << endl);
+            if (nodep->name() == "_V_type_parameters") {
+                UINFO(5, "Module with type parameters" << endl);
+                for (auto node = nodep->op2p(); node; node = node->nextp()) {
+                    if (auto tdef = VN_CAST(node, Typedef)) {
+                        UINFO(3, "Type parameter typedef: " << tdef << endl);
+                        VSymEnt* const upperSymp = m_curSymp ? m_curSymp : m_statep->rootEntp();
+                        m_curSymp = m_modSymp = m_statep->insertBlock(upperSymp, nodep->name(),
+                                                                      nodep, m_classOrPackagep);
+                    }
+                }
+            } else {
+                // Will be optimized away later
+                // Can't remove now, as our backwards iterator will throw up
+                UINFO(5, "Module not under any CELL or top - dead module: " << nodep << endl);
+            }
         }
     }
 
@@ -1297,9 +1314,9 @@ class LinkDotFindVisitor final : public VNVisitor {
                 if (m_statep->forPrimary() && nodep->isGParam()
                     && VN_IS(m_modSymp->nodep(), Module)
                     && (m_statep->rootEntp()->nodep() == m_modSymp->parentp()->nodep())) {
-                    // This is the toplevel module. Check for command line overwrites of parameters
-                    // We first search if the parameter is overwritten and then replace it with a
-                    // new value.
+                    // This is the toplevel module. Check for command line overwrites of
+                    // parameters We first search if the parameter is overwritten and then
+                    // replace it with a new value.
                     if (v3Global.opt.hasParameter(nodep->name())) {
                         const string svalue = v3Global.opt.parameter(nodep->name());
                         if (AstConst* const valuep
@@ -1341,8 +1358,27 @@ class LinkDotFindVisitor final : public VNVisitor {
         // No need to insert, only the real typedef matters, but need to track for errors
         nodep->user1p(m_curSymp);
     }
+
     void visit(AstParamTypeDType* nodep) override {
         UASSERT_OBJ(m_curSymp, nodep, "Parameter type not under module/package/$unit");
+
+        if (const VSymEnt* typedefEntp = m_curSymp->findIdFallback("_V_type_parameters")) {
+            const AstModule* modp = VN_CAST(typedefEntp->nodep(), Module);
+
+            for (const AstNode* node = modp->stmtsp(); node; node = node->nextp()) {
+                const AstTypedef* tdefp = VN_CAST(node, Typedef);
+
+                if (tdefp && tdefp->name() == nodep->name() && m_statep->forPrimary()) {
+                    UINFO(8, "Replacing type of" << nodep << endl << " with " << tdefp << endl);
+                    AstNodeDType* const newType = tdefp->childDTypep();
+                    AstNodeDType* const oldType = nodep->childDTypep();
+
+                    oldType->replaceWith(newType->cloneTree(false));
+                    oldType->deleteTree();
+                }
+            }
+        }
+
         iterateChildren(nodep);
         m_statep->insertSym(m_curSymp, nodep->name(), nodep, m_classOrPackagep);
         if (m_statep->forPrimary() && nodep->isGParam()) {
@@ -1352,6 +1388,7 @@ class LinkDotFindVisitor final : public VNVisitor {
             symp->exported(false);
         }
     }
+
     void visit(AstCFunc* nodep) override {
         // For dotted resolution, ignore all AstVars under functions, otherwise shouldn't exist
         UASSERT_OBJ(!m_statep->forScopeCreation(), nodep, "No CFuncs expected in tree yet");

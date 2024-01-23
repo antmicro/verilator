@@ -84,7 +84,6 @@
 #include "V3String.h"
 
 #include <memory>
-#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -152,7 +151,10 @@ V3HierBlock::stringifyParams(const V3HierBlockParams::GTypeParams& params) {
     StrGParams strParams;
 
     for (const auto& gparam : params) {
-        strParams.emplace_back(gparam->name(), gparam->childDTypep()->prettyDTypeName());
+        if (!gparam) continue;
+
+        const auto type = gparam->skipRefToEnump();
+        if (type) strParams.emplace_back(gparam->name(), type->prettyDTypeName());
     }
 
     return strParams;
@@ -332,7 +334,18 @@ class HierBlockUsageCollectVisitor final : public VNVisitorConst {
         if (nodep->isGParam() && nodep->overriddenParam()) m_params.add(nodep);
     }
 
-    void visit(AstParamTypeDType* nodep) override { m_params.add(nodep); }
+    void visit(AstParamTypeDType* nodep) override {
+        if (!nodep->subDTypep()) { return; }
+        if (VN_IS(nodep->subDTypep(), BasicDType)) {
+            m_params.add(nodep);
+        } else {
+            iterateConst(nodep->subDTypep());
+        }
+    }
+
+    void visit(AstRefDType* nodep) override {
+        if (nodep->subDTypep()) { iterateConst(nodep->subDTypep()); }
+    }
 
     void visit(AstNodeExpr*) override {}  // Accelerate
     void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }

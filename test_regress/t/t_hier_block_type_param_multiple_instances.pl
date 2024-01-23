@@ -10,9 +10,12 @@ if (!$::Driver) { use FindBin; exec("$FindBin::Bin/bootstrap.pl", @ARGV, $0); di
 
 scenarios(simulator => 1);
 
-# This test fails, it will be investigated
 compile(
     verilator_flags2 => ['--hierarchical']
+    );
+
+execute(
+    check_finished => 1,
     );
 
 ok(1);

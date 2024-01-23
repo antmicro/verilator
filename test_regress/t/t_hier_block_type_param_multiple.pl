@@ -14,5 +14,9 @@ compile(
     verilator_flags2 => ['--hierarchical']
     );
 
+execute(
+    check_finished => 1,
+    );
+
 ok(1);
 1;

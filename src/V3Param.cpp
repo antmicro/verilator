@@ -97,13 +97,13 @@ public:
             m_hierBlockOptsByOrigName.emplace(hierOpt.second.origName(), &hierOpt.second);
             const V3HierarchicalBlockOption::ParamStrMap& params = hierOpt.second.params();
             ParamConstMap& consts = m_hierParams[&hierOpt.second];
-            for (V3HierarchicalBlockOption::ParamStrMap::const_iterator pIt = params.begin();
-                 pIt != params.end(); ++pIt) {
+            for (const auto& param : params) {
                 std::unique_ptr<AstConst> constp{AstConst::parseParamLiteral(
-                    new FileLine{FileLine::builtInFilename()}, pIt->second)};
-                UASSERT(constp, pIt->second << " is not a valid parameter literal");
-                const bool inserted = consts.emplace(pIt->first, std::move(constp)).second;
-                UASSERT(inserted, pIt->first << " is already added");
+                    new FileLine{FileLine::builtInFilename()}, param.second)};
+
+                UASSERT(constp, param.second << " is not a valid parameter literal");
+                const bool inserted = consts.emplace(param.first, std::move(constp)).second;
+                UASSERT(inserted, param.first << " is already added");
             }
             // origName may be already registered, but it's fine.
             m_modParams.insert({hierOpt.second.origName(), {}});
@@ -459,7 +459,7 @@ class ParamProcessor final {
         }
     }
     // Check if parameter setting during instantiation is simple enough for hierarchical Verilation
-    void checkSupportedParam(AstNodeModule* modp, AstPin* pinp) const {
+    void checkSupportedParam(const AstNodeModule* modp, const AstPin* pinp) const {
         // InitArray is not supported because that can not be set via -G
         // option.
         if (pinp->modVarp()) {
@@ -481,69 +481,8 @@ class ParamProcessor final {
         return false;
     }
 
-    string parameterizedHierBlockName(AstNodeModule* modp, AstPin* paramPinsp) {
-        // Create a unique name in the following steps
-        //  - Make a long name that includes all parameters, that appear
-        //    in the alphabetical order.
-        //  - Hash the long name to get valid Verilog symbol
-        UASSERT_OBJ(modp->hierBlock(), modp, "should be used for hierarchical block");
-
-        std::map<string, AstNode*> pins;
-
-        auto pinp = paramPinsp;
-        while (pinp) {
-            checkSupportedParam(modp, pinp);
-            if (const AstVar* const varp = pinp->modVarp()) {
-                if (!pinp->exprp()) continue;
-                if (varp->isGParam()) { pins.emplace(varp->name(), pinp->exprp()); }
-            } else if (VN_IS(pinp->exprp(), BasicDType)) {
-                pins.emplace(pinp->name(), pinp->exprp());
-            }
-            pinp = VN_AS(pinp->nextp(), Pin);
-        }
-
-        const auto pair = m_defaultParameterValues.emplace(
-            std::piecewise_construct, std::forward_as_tuple(modp), std::forward_as_tuple());
-        if (pair.second) {  // Not cached yet, so check parameters
-            // Using map with key=string so that we can scan it in deterministic order
-            DefaultValueMap params;
-            for (AstNode* stmtp = modp->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
-                if (const AstVar* const varp = VN_CAST(stmtp, Var)) {
-                    if (varp->isGParam()) {
-                        AstConst* const constp = VN_CAST(varp->valuep(), Const);
-                        // constp can be nullptr if the parameter is not used to instantiate sub
-                        // module. varp->valuep() is not constified yet in the case.
-                        // nullptr means that the parameter is using some default value.
-                        params.emplace(varp->name(), constp);
-                    }
-                } else if (const auto p = VN_CAST(stmtp, ParamTypeDType)) {
-                    params.emplace(p->name(), p->childDTypep());
-                }
-            }
-            pair.first->second = std::move(params);
-        }
-        const auto paramsIt = pair.first;
-        if (paramsIt->second.empty()) return modp->origName();  // modp has no parameter
-
-        string longname = modp->origName();
-        for (auto&& defaultValue : paramsIt->second) {
-            const auto pinIt = pins.find(defaultValue.first);
-            const auto node = pinIt == pins.end() ? defaultValue.second : pinIt->second;
-            // This longname is not valid as verilog symbol, but ok, because it will be hashed
-            longname += "_" + defaultValue.first + "=";
-            // constp can be nullptr
-
-            if (auto p = VN_CAST(node, Const))
-                longname += p->num().ascii(false);
-            else if (auto p = VN_CAST(node, BasicDType))
-                longname += p->prettyDTypeName();  // TODO check if name is correct
-        }
-
-        const auto iter = m_longMap.find(longname);
-        if (iter != m_longMap.end()) return iter->second;  // Already calculated
-
+    string hashHierBlock(const string& longname, const AstNodeModule* modp) {
         VHashSha256 hash;
-        // Calculate hash using longname
         // The hash is used as the module suffix to find a module name that is unique in the design
         hash.insert(longname);
         while (true) {
@@ -561,10 +500,86 @@ class ParamProcessor final {
                     return newName;
                 }
             }
-            // Hash collision. maybe just v3error is practically enough
-            hash.insert(V3Os::trueRandom(64));
+
+            UINFO(3, "Hash collision occurred");
+            hash.insert("A");
         }
     }
+
+    std::map<string, AstNode*> supportedHierBlockParams(const AstNodeModule* modp,
+                                                        const AstPin* pinp) {
+        std::map<string, AstNode*> pins;
+        while (pinp) {
+            checkSupportedParam(modp, pinp);
+            if (const AstVar* const varp = pinp->modVarp()) {
+                if (!pinp->exprp()) continue;
+                if (varp->isGParam()) { pins.emplace(varp->name(), pinp->exprp()); }
+            } else if (const AstNodeDType* nodep = VN_AS(pinp->exprp(), NodeDType)) {
+                pins.emplace(pinp->name(), nodep->skipRefToEnump());
+            }
+            pinp = VN_AS(pinp->nextp(), Pin);
+        }
+
+        return pins;
+    }
+
+    string parameterizedHierBlockName(AstNodeModule* modp, AstPin* pinp) {
+        // Create a unique name in the following steps
+        //  - Make a long name that includes all parameters, that appear
+        //    in the alphabetical order.
+        //  - Hash the long name to get valid Verilog symbol
+        UASSERT_OBJ(modp->hierBlock(), modp, "should be used for hierarchical block");
+
+        const auto currentModuleWithParams = m_defaultParameterValues.emplace(
+            std::piecewise_construct, std::forward_as_tuple(modp), std::forward_as_tuple());
+        if (currentModuleWithParams.second) {  // Not cached yet, so check parameters
+            // Using map with key=string so that we can scan it in deterministic order
+            DefaultValueMap params;
+            for (AstNode* stmtp = modp->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+                if (const AstVar* const varp = VN_CAST(stmtp, Var)) {
+                    if (varp->isGParam()) {
+                        AstConst* const constp = VN_CAST(varp->valuep(), Const);
+                        // constp can be nullptr if the parameter is not used to instantiate sub
+                        // module. varp->valuep() is not constified yet in the case.
+                        // nullptr means that the parameter is using some default value.
+                        params.emplace(varp->name(), constp);
+                    }
+                } else if (const auto p = VN_CAST(stmtp, ParamTypeDType)) {
+                    params.emplace(p->name(), p->skipRefToEnump());
+                }
+            }
+            currentModuleWithParams.first->second = std::move(params);
+        }
+        const auto paramsIt = currentModuleWithParams.first;
+        if (paramsIt->second.empty()) return modp->origName();  // modp has no parameter
+
+        const auto currentParams = supportedHierBlockParams(modp, pinp);
+
+        string longname = modp->origName();
+        for (const auto& defaultParam : paramsIt->second) {
+            const auto defaultParamName = defaultParam.first;
+            const auto defaultParamValue = defaultParam.second;
+
+            const auto currentParam = currentParams.find(defaultParamName);
+            const auto paramValue
+                = currentParam == currentParams.end() ? defaultParamValue : currentParam->second;
+
+            // This longname is not valid as verilog symbol, but ok, because it will be hashed
+            longname += "_" + defaultParamName + "=";
+
+            if (auto p = VN_CAST(paramValue, Const))
+                longname += p->num().ascii(false);
+            else if (auto p = VN_CAST(paramValue, BasicDType))
+                longname += p->keyword().ascii() + std::to_string(p->left()) + ":"
+                            + std::to_string(p->right());
+        }
+
+        const auto nameHash = m_longMap.find(longname);
+        if (nameHash != m_longMap.end()) return nameHash->second;
+
+        return hashHierBlock(longname, modp);
+    }
+
     void replaceRefsRecurse(AstNode* const nodep, const AstClass* const oldClassp,
                             AstClass* const newClassp) {
         // Self references linked in the first pass of V3LinkDot.cpp should point to the default
@@ -661,6 +676,7 @@ class ParamProcessor final {
                     modvarp->overriddenParam(overridden);
                 } else if (AstParamTypeDType* const modptp = pinp->modPTypep()) {
                     AstNodeDType* const dtypep = VN_AS(pinp->exprp(), NodeDType);
+                    UINFO(9, "       set type param " << modptp << " = " << dtypep << endl);
                     UASSERT_OBJ(dtypep, pinp, "unlinked param dtype");
                     if (modptp->childDTypep()) modptp->childDTypep()->unlinkFrBack()->deleteTree();
                     // Set this parameter to value requested by cell

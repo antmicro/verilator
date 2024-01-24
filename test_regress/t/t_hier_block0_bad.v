@@ -16,7 +16,6 @@ module t (/*AUTOARG*/
    wire [7:0] out1;
    int count = 0;
 
-   // unpacked array cannot be passed to hierarchical block
    localparam logic UNPACKED[0:1] = '{1'b1, 1'b0};
    sub0 #(UNPACKED) i_sub0(.clk(clk), .in(8'(count)), .out(out0));
    sub1 #(.T(logic[7:0])) i_sub1(.in(out0), .out(out1));

@@ -114,14 +114,13 @@ static void V3HierWriteCommonInputs(const V3HierBlock* hblockp, std::ostream* of
 
 //######################################################################
 
-V3HierBlock::StrGParams V3HierBlock::stringifyParams(const V3HierBlockParams::GParams& params,
-                                                     bool forGOption) {
-    StrGParams strParams;
+// TODO unify with GTypeParams
+std::vector<std::pair<std::string, std::string>>
+stringifyGParams(const V3HierBlockParams::GParams& params, bool forGOption) {
+    std::vector<std::pair<std::string, std::string>> strParams;
     for (const auto& gparam : params) {
         if (const AstConst* const constp = VN_CAST(gparam->valuep(), Const)) {
             string s;
-            // Only constant parameter needs to be set to -G because already checked in
-            // V3Param.cpp. See also ParamVisitor::checkSupportedParam() in the file.
             if (constp->isDouble()) {
                 // 64 bit width of hex can be expressed with 16 chars.
                 // 32 chars must be long enough for hexadecimal floating point
@@ -146,15 +145,51 @@ V3HierBlock::StrGParams V3HierBlock::stringifyParams(const V3HierBlockParams::GP
     return strParams;
 }
 
-V3HierBlock::StrGParams
-V3HierBlock::stringifyParams(const V3HierBlockParams::GTypeParams& params) {
-    StrGParams strParams;
+V3HierBlockParams::StrGParams V3HierBlockParams::toHierBlockArgs() const {
+    string params;
+    const auto gparamsStr = stringifyGParams(gparams(), false);
+    for (const auto& param : gparamsStr) {
+        const auto name = param.first;
+        const auto value = param.second;
+        params += "," + name;
+        params += "," + value;
+    }
 
-    for (const auto& gparam : params) {
+    return {params};
+}
+
+V3HierBlockParams::StrGParams V3HierBlockParams::toCommandArgs() const {
+    StrGParams params;
+    const auto gparamsStr = stringifyGParams(gparams(), true);
+    for (const auto& param : gparamsStr) {
+        const auto name = param.first;
+        const auto value = param.second;
+        params.push_back("-G" + name + "=" + value + "");
+    }
+
+    return params;
+}
+
+V3HierBlockParams::StrGParams V3HierBlockParams::toTypeParams() const {
+    StrGParams strParams;
+    for (const auto& gparam : gTypeParams()) {
         if (!gparam) continue;
 
-        const auto type = gparam->skipRefToEnump();
-        if (type) strParams.emplace_back(gparam->name(), type->prettyDTypeName());
+        if (const AstUnpackArrayDType* const arrayDTypep
+            = VN_CAST(gparam->skipRefToEnump(), UnpackArrayDType)) {
+            // workaround for making prettyDTypeName suitable for typedef
+            // prettyDTypeName inserts '$' sign instead of proper variable name
+            auto strParam = arrayDTypep->prettyDTypeName();
+            const string toReplace = "$";
+            strParam.replace(strParam.find(toReplace), toReplace.size(), gparam->name());
+
+            UINFO(9, "Adding UnpackArrayDType GTypeParam: '" << strParam << "'" << endl);
+            strParams.emplace_back(strParam);
+        } else if (const AstNodeDType* const typep = gparam->skipRefToEnump()) {
+            const auto strParam = typep->prettyDTypeName() + " " + gparam->name();
+            UINFO(9, "Adding BasicDType GTypeParam: '" << strParam << "'" << endl);
+            strParams.emplace_back(strParam);
+        }
     }
 
     return strParams;
@@ -181,12 +216,9 @@ V3StringList V3HierBlock::commandArgs(bool forCMake) const {
         opts.push_back(" --protect-key " + v3Global.opt.protectKeyDefaulted());
     opts.push_back(" --hierarchical-child " + cvtToStr(v3Global.opt.threads()));
 
-    const auto gparamsStr = stringifyParams(params().gparams(), true);
-    for (const auto& param : gparamsStr) {
-        const auto name = param.first;
-        const auto value = param.second;
-        opts.push_back("-G" + name + "=" + value + "");
-    }
+    const auto commandArgs = params().toCommandArgs();
+    opts.insert(opts.begin(), commandArgs.begin(), commandArgs.end());
+
     if (!params().gTypeParams().empty())
         opts.push_back(" --hierarchical-type-parameter-file " + typeParametersFileName());
 
@@ -194,18 +226,11 @@ V3StringList V3HierBlock::commandArgs(bool forCMake) const {
 }
 
 V3StringList V3HierBlock::hierBlockArgs() const {
-    V3StringList opts;
-    const StrGParams gparamsStr = stringifyParams(params().gparams(), false);
-    opts.push_back("--hierarchical-block ");
-    string s = modp()->origName();  // origName
-    s += "," + modp()->name();  // mangledName
-    for (StrGParams::const_iterator paramIt = gparamsStr.begin(); paramIt != gparamsStr.end();
-         ++paramIt) {
-        s += "," + paramIt->first;
-        s += "," + paramIt->second;
-    }
-    opts.back() += s;
-    return opts;
+    const string opts = "--hierarchical-block " + modp()->origName() + ","
+                        + modp()->name()  // mangledName
+                        + params().toHierBlockArgs().front();
+
+    return {opts};
 }
 
 string V3HierBlock::hierPrefix() const { return "V" + modp()->name(); }
@@ -265,14 +290,13 @@ string V3HierBlock::typeParametersFileName() const {
 void V3HierBlock::writeTypeParametersFile() const {
     const std::unique_ptr<std::ofstream> of{V3File::new_ofstream(typeParametersFileName())};
 
-    const auto params = stringifyParams(m_params.gTypeParams());
-    if (!params.empty()) { *of << "module _V_type_parameters();\n"; }
-    for (const auto& param : params) {
-        const auto name = param.first;
-        const auto value = param.second;
-        *of << "typedef " + value + " " + name + ";\n";
+    const auto params = m_params.toTypeParams();
+
+    if (!params.empty()) {
+        *of << "module _V_type_parameters();\n";
+        for (const auto& param : params) { *of << "typedef " + param + ";\n"; }
+        *of << "endmodule\n";
     }
-    if (!params.empty()) { *of << "endmodule\n"; };
 }
 
 //######################################################################
@@ -334,17 +358,10 @@ class HierBlockUsageCollectVisitor final : public VNVisitorConst {
         if (nodep->isGParam() && nodep->overriddenParam()) m_params.add(nodep);
     }
 
-    void visit(AstParamTypeDType* nodep) override {
+    void visit(AstNodeDType* nodep) override {
         if (!nodep->subDTypep()) { return; }
-        if (VN_IS(nodep->subDTypep(), BasicDType)) {
-            m_params.add(nodep);
-        } else {
-            iterateConst(nodep->subDTypep());
-        }
-    }
 
-    void visit(AstRefDType* nodep) override {
-        if (nodep->subDTypep()) { iterateConst(nodep->subDTypep()); }
+        m_params.add(nodep);
     }
 
     void visit(AstNodeExpr*) override {}  // Accelerate
@@ -366,6 +383,8 @@ void V3HierBlockPlan::add(const AstNodeModule* modp, const V3HierBlockParams& pa
         UINFO(3, "Add " << modp->prettyNameQ() << " with " << params.gparams().size()
                         << " parameters and " << params.gTypeParams().size() << " type parameters"
                         << std::endl);
+        for (const auto& param : params.gTypeParams()) UINFO(9, "GTypeParam: " << param << endl);
+        for (const auto& param : params.gparams()) UINFO(9, "GParam: " << param << endl);
         pair.first->second = hblockp;
     }
 }

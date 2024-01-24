@@ -23,12 +23,9 @@
 #include "V3Options.h"
 #include "V3ThreadSafety.h"
 
-#include <map>
-#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
 class AstNetlist;
@@ -40,7 +37,8 @@ class AstVar;
 class V3HierBlockParams final {
 public:
     using GParams = std::vector<AstVar*>;
-    using GTypeParams = std::vector<AstParamTypeDType*>;
+    using GTypeParams = std::vector<AstNodeDType*>;
+    using StrGParams = std::vector<std::string>;
 
 private:
     GParams m_params;
@@ -48,12 +46,16 @@ private:
 
 public:
     void add(AstVar* param) { m_params.push_back(param); }
-    void add(AstParamTypeDType* param) { m_typeParams.push_back(param); }
+    void add(AstNodeDType* param) { m_typeParams.push_back(param); }
 
     const GParams& gparams() const { return m_params; };
     const GTypeParams& gTypeParams() const { return m_typeParams; };
     GParams& gparams() { return m_params; };
     GTypeParams& gTypeParams() { return m_typeParams; };
+
+    StrGParams toHierBlockArgs() const;
+    StrGParams toCommandArgs() const;
+    StrGParams toTypeParams() const;
 
     void swap(V3HierBlockParams& other) {
         m_params.swap(other.m_params);
@@ -66,10 +68,6 @@ public:
     using HierBlockSet = std::unordered_set<V3HierBlock*>;
 
 private:
-    // TYPES
-    // Parameter name, stringified value
-    using StrGParams = std::vector<std::pair<std::string, std::string>>;
-
     // MEMBERS
     const AstNodeModule* const m_modp;  // Hierarchical block module
     // Hierarchical blocks that directly or indirectly instantiate this block
@@ -81,9 +79,6 @@ private:
 
     // METHODS
     VL_UNCOPYABLE(V3HierBlock);
-    static StrGParams stringifyParams(const V3HierBlockParams::GParams& params,
-                                      bool forGOption) VL_MT_DISABLED;
-    static StrGParams stringifyParams(const V3HierBlockParams::GTypeParams& params) VL_MT_DISABLED;
 
 public:
     V3HierBlock(const AstNodeModule* modp, const V3HierBlockParams& params)

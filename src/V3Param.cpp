@@ -458,23 +458,6 @@ class ParamProcessor final {
             }
         }
     }
-    // Check if parameter setting during instantiation is simple enough for hierarchical Verilation
-    void checkSupportedParam(const AstNodeModule* modp, const AstPin* pinp) const {
-        // InitArray is not supported because that can not be set via -G
-        // option.
-        if (pinp->modVarp()) {
-            bool supported = false;
-            if (const AstConst* const constp = VN_CAST(pinp->exprp(), Const)) {
-                supported = !constp->isOpaque();
-            }
-            if (!supported) {
-                pinp->v3error(
-                    AstNode::prettyNameQ(modp->origName())
-                    << " has hier_block metacomment, hierarchical Verilation"
-                    << " supports only integer/floating point/string and type param parameters");
-            }
-        }
-    }
     bool moduleExists(const string& modName) const {
         if (m_allModuleNames.find(modName) != m_allModuleNames.end()) return true;
         if (m_modNameMap.find(modName) != m_modNameMap.end()) return true;
@@ -510,7 +493,6 @@ class ParamProcessor final {
                                                         const AstPin* pinp) {
         std::map<string, AstNode*> pins;
         while (pinp) {
-            checkSupportedParam(modp, pinp);
             if (const AstVar* const varp = pinp->modVarp()) {
                 if (!pinp->exprp()) continue;
                 if (varp->isGParam()) { pins.emplace(varp->name(), pinp->exprp()); }

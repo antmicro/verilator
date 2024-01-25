@@ -199,10 +199,14 @@ RAW_OBJS_PCH_ASTMT = \
 	V3File.o \
 	V3Global.o \
 	V3Hasher.o \
+	V3LinkLValue.o \
 	V3Number.o \
 	V3Options.o \
+	V3Randomize.o \
 	V3Stats.o \
 	V3StatsReport.o \
+	V3Task.o \
+	V3Width.o \
 
 RAW_OBJS_PCH_ASTNOMT = \
 	V3Active.o \
@@ -255,7 +259,6 @@ RAW_OBJS_PCH_ASTNOMT = \
 	V3LinkDot.o \
 	V3LinkInc.o \
 	V3LinkJump.o \
-	V3LinkLValue.o \
 	V3LinkLevel.o \
 	V3LinkParse.o \
 	V3LinkResolve.o \
@@ -267,7 +270,6 @@ RAW_OBJS_PCH_ASTNOMT = \
 	V3Partition.o \
 	V3Premit.o \
 	V3ProtectLib.o \
-	V3Randomize.o \
 	V3Reloop.o \
 	V3Sched.o \
 	V3SchedAcyclic.o \
@@ -283,7 +285,6 @@ RAW_OBJS_PCH_ASTNOMT = \
 	V3Subst.o \
 	V3TSP.o \
 	V3Table.o \
-	V3Task.o \
 	V3Timing.o \
 	V3Trace.o \
 	V3TraceDecl.o \
@@ -292,7 +293,6 @@ RAW_OBJS_PCH_ASTNOMT = \
 	V3Unknown.o \
 	V3Unroll.o \
 	V3VariableOrder.o \
-	V3Width.o \
 	V3WidthCommit.o \
 	V3WidthSel.o \
 
@@ -337,6 +337,13 @@ ifneq ($(filter -Wthread-safety,$(CPPFLAGS) $(CXXFLAGS)),)
 THREAD_SAFETY_NEGATIVE_OBJS := \
 	V3Ast.o \
 	V3AstNodes.o \
+	V3Const__gen.o \
+	V3Expand.o \
+	V3Graph.o \
+	V3LinkLValue.o \
+	V3Randomize.o \
+	V3Task.o \
+	V3Width.o \
 
 $(THREAD_SAFETY_NEGATIVE_OBJS): override CXXFLAGS_PRIV = -Wthread-safety-negative
 endif

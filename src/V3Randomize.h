@@ -28,10 +28,10 @@ class AstNetlist;
 
 class V3Randomize final {
 public:
-    static void randomizeNetlist(AstNetlist* nodep) VL_MT_DISABLED;
+    static void randomizeNetlist(AstNetlist* nodep);
 
-    static AstFunc* newRandomizeFunc(AstClass* nodep) VL_MT_DISABLED;
-    static AstFunc* newSRandomFunc(AstClass* nodep) VL_MT_DISABLED;
+    static AstFunc* newRandomizeFunc(AstClass* nodep);
+    static AstFunc* newSRandomFunc(AstClass* nodep);
 };
 
 #endif  // Guard

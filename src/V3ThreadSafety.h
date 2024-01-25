@@ -73,4 +73,8 @@ using V3MtDisabledLockGuard = V3LockGuardImp<V3MtDisabledLock>;
     VL_CLANG_ATTR(annotate("MT_DISABLED")) \
     VL_REQUIRES(V3MtDisabledLock::instance())
 
+#define VL_MT_ENABLED \
+    VL_CLANG_ATTR(annotate("MT_ENABLED")) \
+    VL_REQUIRES_UNLOCKED(V3MtDisabledLock::instance())
+
 #endif  // guard

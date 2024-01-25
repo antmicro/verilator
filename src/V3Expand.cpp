@@ -25,7 +25,7 @@
 //
 //*************************************************************************
 
-#include "V3PchAstNoMT.h"  // VL_MT_DISABLED_CODE_UNIT
+#include "V3PchAstMT.h"
 
 #include "V3Expand.h"
 

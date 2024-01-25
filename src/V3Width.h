@@ -31,13 +31,13 @@ class AstNodeDType;
 class V3Width final {
 public:
     static void width(AstNetlist* nodep) VL_MT_DISABLED;
-    static AstNode* widthParamsEdit(AstNode* nodep) VL_MT_DISABLED;
+    static AstNode* widthParamsEdit(AstNode* nodep);
     static AstNode* widthGenerateParamsEdit(AstNode* nodep) VL_MT_DISABLED;
 
     // For use only in WidthVisitor
     // Replace AstSelBit, etc with AstSel/AstArraySel
     // Returns replacement node if nodep was deleted, or null if none.
-    static AstNode* widthSelNoIterEdit(AstNode* nodep) VL_MT_DISABLED;
+    static AstNode* widthSelNoIterEdit(AstNode* nodep);
 };
 
 #endif  // Guard

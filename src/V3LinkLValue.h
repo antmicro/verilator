@@ -20,8 +20,6 @@
 #include "config_build.h"
 #include "verilatedos.h"
 
-#include "V3ThreadSafety.h"
-
 class AstNetlist;
 class AstNode;
 
@@ -29,8 +27,8 @@ class AstNode;
 
 class V3LinkLValue final {
 public:
-    static void linkLValue(AstNetlist* nodep) VL_MT_DISABLED;
-    static void linkLValueSet(AstNode* nodep) VL_MT_DISABLED;
+    static void linkLValue(AstNetlist* nodep);
+    static void linkLValueSet(AstNode* nodep);
 };
 
 #endif  // Guard

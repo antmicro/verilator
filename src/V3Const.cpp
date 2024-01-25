@@ -20,8 +20,6 @@
 //          If operands are constant, replace this node with constant.
 //*************************************************************************
 
-#define VL_MT_DISABLED_CODE_UNIT 1
-
 #include "config_build.h"
 #include "verilatedos.h"
 
@@ -29,6 +27,7 @@
 
 #include "V3Ast.h"
 #include "V3Global.h"
+#include "V3Mutex.h"
 #include "V3Simulate.h"
 #include "V3Stats.h"
 #include "V3String.h"
@@ -52,17 +51,17 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Utilities
 
-static bool isConst(const AstNode* nodep, uint64_t v) {
+static bool isConst(const AstNode* nodep, uint64_t v) VL_MT_SAFE {
     const AstConst* const constp = VN_CAST(nodep, Const);
     return constp && constp->toUQuad() == v;
 }
 
 template <class T>
-static typename std::enable_if<std::is_integral<T>::value, bool>::type isPow2(T val) {
+static typename std::enable_if<std::is_integral<T>::value, bool>::type isPow2(T val) VL_MT_SAFE {
     return (val & (val - 1)) == 0;
 }
 
-static int countTrailingZeroes(uint64_t val) {
+static int countTrailingZeroes(uint64_t val) VL_MT_SAFE {
     UASSERT(val, "countTrailingZeroes argument must be non-zero");
 #if defined(__GNUC__) && !defined(VL_NO_BUILTINS)
     return __builtin_ctzll(val);
@@ -77,10 +76,15 @@ static int countTrailingZeroes(uint64_t val) {
 #endif
 }
 
+// Guards use of AstNode::user4. Must be locked when VNUser4InUse object exists.
+static V3Mutex s_user4InUseLock;
+
 // This visitor can be used in the post-expanded Ast from V3Expand, where the Ast satisfies:
 // - Constants are 64 bit at most (because words are accessed via AstWordSel)
 // - Variables are scoped.
 class ConstBitOpTreeVisitor final : public VNVisitorConst {
+    V3LockGuard m_oneInstanceLockGuard{s_user4InUseLock};
+
     // NODE STATE
     // AstVarRef::user4u      -> Base index of m_varInfos that points VarInfo
     // AstVarScope::user4u    -> Same as AstVarRef::user4
@@ -650,6 +654,7 @@ class ConstBitOpTreeVisitor final : public VNVisitorConst {
 
     // CONSTRUCTORS
     ConstBitOpTreeVisitor(AstNodeExpr* nodep, unsigned externalOps)
+        VL_REQUIRES_UNLOCKED(s_user4InUseLock)
         : m_ops{externalOps}
         , m_rootp{nodep} {
         // Fill nullptr at [0] because AstVarScope::user4 is 0 by default
@@ -681,7 +686,8 @@ public:
     // Reduction ops are transformed in the same way.
     // &{v[0], v[1]} => 2'b11 == (2'b11 & v)
     static AstNodeExpr* simplify(AstNodeExpr* nodep, int resultWidth, unsigned externalOps,
-                                 VDouble0& reduction, VNDeleter& deleterr) {
+                                 VDouble0& reduction, VNDeleter& deleterr)
+        VL_REQUIRES_UNLOCKED(s_user4InUseLock) {
         UASSERT_OBJ(1 <= resultWidth && resultWidth <= 64, nodep, "resultWidth out of range");
 
         // Walk tree, gathering all terms referenced in expression
@@ -1168,7 +1174,7 @@ private:
         return false;
     }
 
-    bool matchBitOpTree(AstNodeExpr* nodep) {
+    bool matchBitOpTree(AstNodeExpr* nodep) VL_REQUIRES_UNLOCKED(s_user4InUseLock) {
         if (nodep->widthMin() != 1) return false;
         if (!v3Global.opt.fConstBitOpTree()) return false;
 
@@ -2040,7 +2046,7 @@ private:
                 && varNotReferenced(nodep->op4p(), varp, level + 1));
     }
 
-    bool replaceNodeAssign(AstNodeAssign* nodep) {
+    bool replaceNodeAssign(AstNodeAssign* nodep) VL_REQUIRES_UNLOCKED(s_user4InUseLock) {
         if (VN_IS(nodep->lhsp(), VarRef) && VN_IS(nodep->rhsp(), VarRef)
             && VN_AS(nodep->lhsp(), VarRef)->sameNoLvalue(VN_AS(nodep->rhsp(), VarRef))
             && !VN_IS(nodep, AssignDly)) {
@@ -2057,6 +2063,7 @@ private:
             if (m_warn && !VN_IS(nodep, AssignDly)) {  // Is same var on LHS and RHS?
                 // Note only do this (need user4) when m_warn, which is
                 // done as unique visitor
+                const V3LockGuard user4Lock{s_user4InUseLock};
                 const VNUser4InUse m_inuser4;
                 nodep->lhsp()->foreach([](const AstVarRef* nodep) {
                     if (nodep->varp()) nodep->varp()->user4(1);
@@ -2988,7 +2995,7 @@ private:
 
     //-----
     // Zero elimination
-    void visit(AstNodeAssign* nodep) override {
+    void visit(AstNodeAssign* nodep) override VL_REQUIRES_UNLOCKED(s_user4InUseLock) {
         iterateChildren(nodep);
         if (nodep->timingControlp()) m_hasJumpDelay = true;
         if (m_doNConst && replaceNodeAssign(nodep)) return;
@@ -2999,7 +3006,7 @@ private:
     void visit(AstAssignVarScope* nodep) override {
         // Don't perform any optimizations, the node won't be linked yet
     }
-    void visit(AstAssignW* nodep) override {
+    void visit(AstAssignW* nodep) override VL_REQUIRES_UNLOCKED(s_user4InUseLock) {
         iterateChildren(nodep);
         if (m_doNConst && replaceNodeAssign(nodep)) return;
         AstNodeVarRef* const varrefp = VN_CAST(
@@ -3646,7 +3653,7 @@ private:
     TREEOPV("AstRedOr {$lhsp.castExtend}",      "AstRedOr {$lhsp->castExtend()->lhsp()}");
     TREEOPV("AstRedXor{$lhsp.castExtend}",      "AstRedXor{$lhsp->castExtend()->lhsp()}");
     TREEOP ("AstRedXor{$lhsp.castXor, VN_IS(VN_AS($lhsp,,Xor)->lhsp(),,Const)}", "AstXor{AstRedXor{$lhsp->castXor()->lhsp()}, AstRedXor{$lhsp->castXor()->rhsp()}}");  // ^(const ^ a) => (^const)^(^a)
-    TREEOPC("AstAnd {$lhsp.castConst, $rhsp.castRedXor, matchBitOpTree(nodep)}", "DONE");
+    TREEOPC("AstAnd {$lhsp.castConst, $rhsp.castRedXor, matchBitOpTree(nodep)}", "DONE", "VL_REQUIRES_UNLOCKED(s_user4InUseLock)");
     TREEOPV("AstOneHot{$lhsp.width1}",          "replaceWLhs(nodep)");
     TREEOPV("AstOneHot0{$lhsp.width1}",         "replaceNum(nodep,1)");
     // Binary AND/OR is faster than logical and/or (usually)
@@ -3671,9 +3678,9 @@ private:
     TREEOP ("AstAnd {operandShiftSame(nodep)}",         "replaceShiftSame(nodep)");
     TREEOP ("AstOr  {operandShiftSame(nodep)}",         "replaceShiftSame(nodep)");
     TREEOP ("AstXor {operandShiftSame(nodep)}",         "replaceShiftSame(nodep)");
-    TREEOPC("AstAnd {matchBitOpTree(nodep)}", "DONE");
-    TREEOPC("AstOr  {matchBitOpTree(nodep)}", "DONE");
-    TREEOPC("AstXor {matchBitOpTree(nodep)}", "DONE");
+    TREEOPC("AstAnd {matchBitOpTree(nodep)}", "DONE", "VL_REQUIRES_UNLOCKED(s_user4InUseLock)");
+    TREEOPC("AstOr  {matchBitOpTree(nodep)}", "DONE", "VL_REQUIRES_UNLOCKED(s_user4InUseLock)");
+    TREEOPC("AstXor {matchBitOpTree(nodep)}", "DONE", "VL_REQUIRES_UNLOCKED(s_user4InUseLock)");
     // Note can't simplify a extend{extends}, extends{extend}, as the sign
     // bits end up in the wrong places
     TREEOPV("AstExtend {$lhsp.castExtend}",  "replaceExtend(nodep, VN_AS(nodep->lhsp(), Extend)->lhsp())");
@@ -3854,7 +3861,7 @@ AstNode* V3Const::constifyParamsNoWarnEdit(AstNode* nodep) {
 //! something a generate block can depend on, we can wait until later to do the
 //! width check.
 //! @return  Pointer to the edited node.
-AstNode* V3Const::constifyGenerateParamsEdit(AstNode* nodep) {
+AstNode* V3Const::constifyGenerateParamsEdit(AstNode* nodep) VL_MT_DISABLED {
     // if (debug() > 0) nodep->dumpTree("-  forceConPRE:: ");
     // Resize even if the node already has a width, because buried in the tree
     // we may have a node we just created with signing, etc, that isn't sized
@@ -3876,7 +3883,7 @@ AstNode* V3Const::constifyGenerateParamsEdit(AstNode* nodep) {
     return nodep;
 }
 
-void V3Const::constifyAllLint(AstNetlist* nodep) {
+void V3Const::constifyAllLint(AstNetlist* nodep) VL_MT_DISABLED {
     // Only call from Verilator.cpp, as it uses user#'s
     UINFO(2, __FUNCTION__ << ": " << endl);
     {
@@ -3886,7 +3893,7 @@ void V3Const::constifyAllLint(AstNetlist* nodep) {
     v3Global.dumpCheckGlobalTree("const", 0, dumpTreeLevel() >= 3);
 }
 
-void V3Const::constifyCpp(AstNetlist* nodep) {
+void V3Const::constifyCpp(AstNetlist* nodep) VL_MT_DISABLED {
     UINFO(2, __FUNCTION__ << ": " << endl);
     {
         ConstVisitor visitor{ConstVisitor::PROC_CPP, /* globalPass: */ true};
@@ -3895,19 +3902,19 @@ void V3Const::constifyCpp(AstNetlist* nodep) {
     v3Global.dumpCheckGlobalTree("const_cpp", 0, dumpTreeLevel() >= 3);
 }
 
-AstNode* V3Const::constifyEdit(AstNode* nodep) {
+AstNode* V3Const::constifyEdit(AstNode* nodep) VL_MT_DISABLED {
     ConstVisitor visitor{ConstVisitor::PROC_V_NOWARN, /* globalPass: */ false};
     nodep = visitor.mainAcceptEdit(nodep);
     return nodep;
 }
 
-AstNode* V3Const::constifyEditCpp(AstNode* nodep) {
+AstNode* V3Const::constifyEditCpp(AstNode* nodep) VL_MT_ENABLED {
     ConstVisitor visitor{ConstVisitor::PROC_CPP, /* globalPass: */ false};
     nodep = visitor.mainAcceptEdit(nodep);
     return nodep;
 }
 
-void V3Const::constifyAllLive(AstNetlist* nodep) {
+void V3Const::constifyAllLive(AstNetlist* nodep) VL_MT_DISABLED {
     // Only call from Verilator.cpp, as it uses user#'s
     // This only pushes constants up, doesn't make any other edits
     // IE doesn't prune dead statements, as we need to do some usability checks after this
@@ -3919,7 +3926,7 @@ void V3Const::constifyAllLive(AstNetlist* nodep) {
     v3Global.dumpCheckGlobalTree("const", 0, dumpTreeLevel() >= 3);
 }
 
-void V3Const::constifyAll(AstNetlist* nodep) {
+void V3Const::constifyAll(AstNetlist* nodep) VL_MT_DISABLED {
     // Only call from Verilator.cpp, as it uses user#'s
     UINFO(2, __FUNCTION__ << ": " << endl);
     {
@@ -3929,7 +3936,7 @@ void V3Const::constifyAll(AstNetlist* nodep) {
     v3Global.dumpCheckGlobalTree("const", 0, dumpTreeLevel() >= 3);
 }
 
-AstNode* V3Const::constifyExpensiveEdit(AstNode* nodep) {
+AstNode* V3Const::constifyExpensiveEdit(AstNode* nodep) VL_MT_DISABLED {
     ConstVisitor visitor{ConstVisitor::PROC_V_EXPENSIVE, /* globalPass: */ false};
     nodep = visitor.mainAcceptEdit(nodep);
     return nodep;

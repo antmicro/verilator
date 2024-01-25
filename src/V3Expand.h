@@ -28,7 +28,7 @@ class AstNetlist;
 
 class V3Expand final {
 public:
-    static void expandAll(AstNetlist* nodep) VL_MT_DISABLED;
+    static void expandAll(AstNetlist* nodep);
 };
 
 #endif  // Guard

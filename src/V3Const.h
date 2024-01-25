@@ -27,12 +27,12 @@
 
 class V3Const final {
 public:
-    static AstNode* constifyParamsEdit(AstNode* nodep) VL_MT_DISABLED;
-    static AstNodeExpr* constifyParamsEdit(AstNodeExpr* exprp) VL_MT_DISABLED {
+    static AstNode* constifyParamsEdit(AstNode* nodep);
+    static AstNodeExpr* constifyParamsEdit(AstNodeExpr* exprp) {
         return VN_AS(constifyParamsEdit(static_cast<AstNode*>(exprp)), NodeExpr);
     }
-    static AstNode* constifyParamsNoWarnEdit(AstNode* nodep) VL_MT_DISABLED;
-    static AstNodeExpr* constifyParamsNoWarnEdit(AstNodeExpr* exprp) VL_MT_DISABLED {
+    static AstNode* constifyParamsNoWarnEdit(AstNode* nodep);
+    static AstNodeExpr* constifyParamsNoWarnEdit(AstNodeExpr* exprp) {
         return VN_AS(constifyParamsNoWarnEdit(static_cast<AstNode*>(exprp)), NodeExpr);
     }
     static AstNode* constifyGenerateParamsEdit(AstNode* nodep) VL_MT_DISABLED;
@@ -46,14 +46,14 @@ public:
     static void constifyCpp(AstNetlist* nodep) VL_MT_DISABLED;
     // Only the current node and lower
     // Return new node that may have replaced nodep
-    static AstNode* constifyEditCpp(AstNode* nodep) VL_MT_DISABLED;
-    static AstNodeExpr* constifyEditCpp(AstNodeExpr* exprp) VL_MT_DISABLED {
+    static AstNode* constifyEditCpp(AstNode* nodep);
+    static AstNodeExpr* constifyEditCpp(AstNodeExpr* exprp) {
         return VN_AS(constifyEditCpp(static_cast<AstNode*>(exprp)), NodeExpr);
     }
     // Only the current node and lower
     // Return new node that may have replaced nodep
-    static AstNode* constifyEdit(AstNode* nodep) VL_MT_DISABLED;
-    static AstNodeExpr* constifyEdit(AstNodeExpr* exprp) VL_MT_DISABLED {
+    static AstNode* constifyEdit(AstNode* nodep);
+    static AstNodeExpr* constifyEdit(AstNodeExpr* exprp) {
         return VN_AS(constifyEdit(static_cast<AstNode*>(exprp)), NodeExpr);
     }
     // Only the current node and lower, with special SenTree optimization

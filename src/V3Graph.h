@@ -96,12 +96,12 @@ protected:
     // ACCESSORS
 
 public:
-    V3Graph() VL_MT_DISABLED;
-    virtual ~V3Graph() VL_MT_DISABLED;
+    V3Graph();
+    virtual ~V3Graph();
     virtual string dotRankDir() const { return "TB"; }  // rankdir for dot plotting
 
     // METHODS
-    void clear() VL_MT_DISABLED;  // Empty it of all vertices/edges, as if making a new object
+    void clear();  // Empty it of all vertices/edges, as if making a new object
     bool empty() const { return m_vertices.empty(); }
     V3GraphVertex* verticesBeginp() const { return m_vertices.begin(); }
 
@@ -152,7 +152,7 @@ public:
 
     /// Remove any redundant edges, weights become SUM of any other weight
     /// Side-effect: changes user()
-    void removeRedundantEdgesSum(V3EdgeFuncP edgeFuncp) VL_MT_DISABLED;
+    void removeRedundantEdgesSum(V3EdgeFuncP edgeFuncp);
 
     /// Remove any transitive edges.  E.g. if have edges A->B, B->C, and A->C
     /// then A->C is a "transitive" edge; it's implied by the first two
@@ -175,9 +175,8 @@ public:
 
     /// Debugging
     void dump(std::ostream& os = std::cout) const VL_MT_DISABLED;
-    void dumpDotFile(const string& filename, bool colorAsSubgraph) const VL_MT_DISABLED;
-    void dumpDotFilePrefixed(const string& nameComment,
-                             bool colorAsSubgraph = false) const VL_MT_DISABLED;
+    void dumpDotFile(const string& filename, bool colorAsSubgraph) const;
+    void dumpDotFilePrefixed(const string& nameComment, bool colorAsSubgraph = false) const;
     void dumpDotFilePrefixedAlways(const string& nameComment,
                                    bool colorAsSubgraph = false) const VL_MT_DISABLED;
     static void selfTest() VL_MT_DISABLED;
@@ -208,17 +207,17 @@ protected:
         uint32_t m_user;  // Marker for some algorithms
     };
     // METHODS
-    void verticesPushBack(V3Graph* graphp) VL_MT_DISABLED;
+    void verticesPushBack(V3Graph* graphp);
     // ACCESSORS
     void fanout(double fanout) { m_fanout = fanout; }
     void inUnlink() { m_ins.reset(); }  // Low level; normally unlinkDelete is what you want
     void outUnlink() { m_outs.reset(); }  // Low level; normally unlinkDelete is what you want
 protected:
     // CONSTRUCTORS
-    V3GraphVertex(V3Graph* graphp, const V3GraphVertex& old) VL_MT_DISABLED;
+    V3GraphVertex(V3Graph* graphp, const V3GraphVertex& old);
 
 public:
-    explicit V3GraphVertex(V3Graph* graphp) VL_MT_DISABLED;
+    explicit V3GraphVertex(V3Graph* graphp);
     //! Clone copy constructor. Doesn't copy edges or user/userp.
     virtual V3GraphVertex* clone(V3Graph* graphp) const VL_MT_DISABLED {
         return new V3GraphVertex{graphp, *this};
@@ -338,21 +337,21 @@ protected:
     };
     // METHODS
     void init(V3Graph* graphp, V3GraphVertex* fromp, V3GraphVertex* top, int weight,
-              bool cutable = false) VL_MT_DISABLED;
+              bool cutable = false);
     void cut() { m_weight = 0; }  // 0 weight is same as disconnected
-    void outPushBack() VL_MT_DISABLED;
-    void inPushBack() VL_MT_DISABLED;
+    void outPushBack();
+    void inPushBack();
     // CONSTRUCTORS
 protected:
     V3GraphEdge(V3Graph* graphp, V3GraphVertex* fromp, V3GraphVertex* top,
-                const V3GraphEdge& old) VL_MT_DISABLED {
+                const V3GraphEdge& old) {
         init(graphp, fromp, top, old.m_weight, old.m_cutable);
     }
 
 public:
     //! Add DAG from one node to the specified node
     V3GraphEdge(V3Graph* graphp, V3GraphVertex* fromp, V3GraphVertex* top, int weight,
-                bool cutable = false) VL_MT_DISABLED {
+                bool cutable = false) {
         init(graphp, fromp, top, weight, cutable);
     }
     //! Clone copy constructor.  Doesn't copy existing vertices or user/userp.

@@ -139,11 +139,12 @@ using V3RecursiveMutex = V3MutexImp<std::recursive_mutex>;
 
 #if defined(VL_SHARED_MUTEX_IMPLEMENTATION_PTHREAD)
 
+// TODO(mglb): Wrap std::shared_timed_mutex and ignore timing methods
+// https://en.cppreference.com/w/cpp/thread/shared_timed_mutex
+
 // PThreads-based implementation of shared mutex
 class VL_CAPABILITY("shared mutex") V3SharedMutex final {
     pthread_rwlock_t m_mutex;
-    const char* m_lastLockFile = nullptr;
-    int m_lastLockLine = 0;
     bool m_lastLockExclusive = false;
 
 public:
@@ -161,11 +162,8 @@ public:
 
     // Exclusive locking
 
-    void lock(const char* file = __builtin_FILE(), int line = __builtin_LINE())
-        VL_ACQUIRE() VL_MT_SAFE {
+    void lock() VL_ACQUIRE() VL_MT_SAFE {
         pthread_rwlock_wrlock(&m_mutex);
-        m_lastLockFile = file;
-        m_lastLockLine = line;
         m_lastLockExclusive = true;
     }
 
@@ -173,17 +171,12 @@ public:
 
     void unlock() VL_RELEASE() VL_MT_SAFE {
         pthread_rwlock_unlock(&m_mutex);
-        m_lastLockFile = nullptr;
-        m_lastLockLine = 0;
     }
 
     // Shared locking
 
-    void lock_shared(const char* file = __builtin_FILE(), int line = __builtin_LINE())
-        VL_ACQUIRE_SHARED() VL_MT_SAFE {
+    void lock_shared() VL_ACQUIRE_SHARED() VL_MT_SAFE {
         pthread_rwlock_rdlock(&m_mutex);
-        m_lastLockFile = file;
-        m_lastLockLine = line;
         m_lastLockExclusive = false;
     }
 
@@ -191,8 +184,6 @@ public:
 
     void unlock_shared() VL_RELEASE_SHARED() VL_MT_SAFE {
         pthread_rwlock_unlock(&m_mutex);
-        m_lastLockFile = nullptr;
-        m_lastLockLine = 0;
     }
 
     void assumeLocked() VL_ASSERT_CAPABILITY(this) VL_MT_SAFE {}
@@ -269,6 +260,10 @@ public:
             if (m_sharedCount == 0) { m_noSharedLocksCond.notify_one(); }
         }
     }
+
+    void assumeLocked() VL_ASSERT_CAPABILITY(this) VL_MT_SAFE {}
+
+    void assumeUnlocked() VL_ASSERT_CAPABILITY(!this) VL_MT_SAFE {}
 };
 
 #endif

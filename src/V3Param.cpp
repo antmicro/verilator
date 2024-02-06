@@ -853,7 +853,12 @@ class ParamProcessor final {
 
         if (srcModpr->hierBlock()) {
             longname = parameterizedHierBlockName(srcModpr, paramsp);
-            any_overrides = longname != srcModpr->name();
+            // always create deparametrized module for hierarchical dot referencing
+            // module name is changed so it doesn't shadow the original one
+            // TODO find more intuitive way for forcing module de-parametrization in
+            // hierarchical verilation
+            if (longname == srcModpr->name()) longname += "_";
+            any_overrides = true;
         } else {
             for (AstPin* pinp = paramsp; pinp; pinp = VN_AS(pinp->nextp(), Pin)) {
                 cellPinCleanup(nodep, pinp, srcModpr, longname /*ref*/, any_overrides /*ref*/);

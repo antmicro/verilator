@@ -18,7 +18,7 @@ execute(
     check_finished => 1,
     );
 
-file_grep($Self->{obj_dir} . "/VTest/Test.sv", /^module\s+(\S+)\s+/, "Test");
+file_grep($Self->{obj_dir} . "/VTest_/Test_.sv", /^module\s+(\S+)\s+/, "Test");
 
 ok(1);
 1;

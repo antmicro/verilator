@@ -21,7 +21,6 @@ module t (/*AUTOARG*/
    sub1 #(.T(logic[7:0])) i_sub1(.in(out0), .out(out1));
 
    always_ff @(posedge clk) begin
-      // dotted access under hierarchical block is not allowed
       $display("%d %d %d", count, i_sub0.ff, out1);
       if (count == 16) begin
          if (out1 == 15) begin

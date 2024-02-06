@@ -678,9 +678,7 @@ public:
             if (lookupSymp) {
                 if (const AstCell* const cellp = VN_CAST(lookupSymp->nodep(), Cell)) {
                     if (const AstNodeModule* const modp = cellp->modp()) {
-                        if (modp->hierBlock()) {
-                            refLocationp->v3error("Cannot access inside hierarchical block");
-                        } else if (VN_IS(modp, NotFoundModule)) {
+                        if (VN_IS(modp, NotFoundModule)) {
                             refLocationp->v3error("Dotted reference to instance that refers to "
                                                   "missing module/interface: "
                                                   << modp->prettyNameQ());

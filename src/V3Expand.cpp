@@ -39,9 +39,6 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 // Find nodes with side effects, to mark as non-expandable
 
-// TODO(mglb): remove this and make V3Stats::addStat* thread-safe. V3Stats is used in V3Const and stuff explodes
-V3Mutex constifyLock;
-
 class ExpandOkVisitor final : public VNVisitor {
 private:
     // NODE STATE
@@ -206,7 +203,6 @@ private:
                            new AstShiftL{fl, llowp,
                                          new AstConst{fl, static_cast<uint32_t>(loffset)},
                                          VL_EDATASIZE}}};
-            V3LockGuard l{constifyLock};
             newp = V3Const::constifyEditCpp(newp);
         } else {
             newp = llowp;
@@ -457,7 +453,6 @@ private:
                             cleanmask.setMask(VL_BITBIT_E(destp->widthMin()));
                             newp = new AstAnd{lfl, newp, new AstConst{lfl, cleanmask}};
                         }
-                        V3LockGuard l{constifyLock};
                         AstNodeExpr* const orp
                             = V3Const::constifyEditCpp(new AstOr{lfl, oldvalp, newp});
                         addWordAssign(nodep, w, destp, orp);
@@ -481,7 +476,6 @@ private:
                     lfl, rhsp, new AstConst{lfl, static_cast<uint32_t>(lsb)}, destp->width()};
                 AstNodeExpr* const cleaned
                     = new AstAnd{lfl, shifted, new AstConst{lfl, cleanmask}};
-                V3LockGuard l{constifyLock};
                 AstNodeExpr* const orp
                     = V3Const::constifyEditCpp(new AstOr{lfl, oldvalp, cleaned});
                 insertBefore(nodep, new AstAssign{nfl, destp, orp});

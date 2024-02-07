@@ -102,17 +102,17 @@ public:
 
 class V3Stats final {
 public:
-    static void addStat(const V3Statistic&);
-    static void addStat(const string& stage, const string& name, double count) {
+    static void addStat(const V3Statistic&) VL_MT_SAFE;
+    static void addStat(const string& stage, const string& name, double count) VL_MT_SAFE {
         addStat(V3Statistic{stage, name, count});
     }
-    static void addStat(const string& name, double count) {
+    static void addStat(const string& name, double count) VL_MT_SAFE {
         addStat(V3Statistic{"*", name, count});
     }
-    static void addStatSum(const string& name, double count) {
+    static void addStatSum(const string& name, double count) VL_MT_SAFE {
         addStat(V3Statistic{"*", name, count, true});
     }
-    static void addStatPerf(const string& name, double count) {
+    static void addStatPerf(const string& name, double count) VL_MT_SAFE {
         addStat(V3Statistic{"*", name, count, true, true});
     }
     /// Called each stage

@@ -18,6 +18,7 @@
 
 #include "V3File.h"
 #include "V3Global.h"
+#include "V3Mutex.h"
 #include "V3Os.h"
 #include "V3Stats.h"
 
@@ -34,17 +35,23 @@ class StatsReport final {
     using StatColl = std::vector<V3Statistic>;
 
     // STATE
-    std::ofstream& os;  ///< Output stream
-    static StatColl s_allStats;  ///< All statistics
+    /// Output stream
+    std::ofstream& os;
+    /// All statistics
+    static StatColl s_allStats VL_GUARDED_BY(s_allStatsLock);
+    static V3SharedMutex s_allStatsLock;
 
     void sumit() {
         os << '\n';
         // If sumit is set on a statistic, combine with others of same name
         std::multimap<std::string, V3Statistic*> byName;
-        // * is always first
-        for (auto& itr : s_allStats) {
-            V3Statistic* repp = &itr;
-            byName.emplace(repp->name(), repp);
+        {
+            V3SharedLockGuard lock{s_allStatsLock};
+            // * is always first
+            for (auto& itr : s_allStats) {
+                V3Statistic* repp = &itr;
+                byName.emplace(repp->name(), repp);
+            }
         }
 
         // Process duplicates
@@ -63,12 +70,15 @@ class StatsReport final {
         // Find all stages
         size_t maxWidth = 0;
         std::multimap<std::string, const V3Statistic*> byName;
-        // * is always first
-        for (const auto& itr : s_allStats) {
-            const V3Statistic* repp = &itr;
-            if (repp->stage() == "*" && repp->printit()) {
-                if (maxWidth < repp->name().length()) maxWidth = repp->name().length();
-                byName.emplace(repp->name(), repp);
+        {
+            V3SharedLockGuard lock{s_allStatsLock};
+            // * is always first
+            for (const auto& itr : s_allStats) {
+                const V3Statistic* repp = &itr;
+                if (repp->stage() == "*" && repp->printit()) {
+                    if (maxWidth < repp->name().length()) maxWidth = repp->name().length();
+                    byName.emplace(repp->name(), repp);
+                }
             }
         }
 
@@ -104,17 +114,20 @@ class StatsReport final {
         std::vector<std::string> stages;
         std::unordered_map<string, int> stageInt;
         std::multimap<std::string, const V3Statistic*> byName;
-        // * is always first
-        for (auto it = s_allStats.begin(); it != s_allStats.end(); ++it) {
-            const V3Statistic* repp = &(*it);
-            if (repp->stage() != "*" && repp->printit()) {
-                if (maxWidth < repp->name().length()) maxWidth = repp->name().length();
-                const auto itFoundPair = stageInt.emplace(repp->stage(), stage);
-                if (itFoundPair.second) {
-                    ++stage;
-                    stages.push_back(repp->stage());
+        {
+            V3SharedLockGuard lock{s_allStatsLock};
+            // * is always first
+            for (auto it = s_allStats.begin(); it != s_allStats.end(); ++it) {
+                const V3Statistic* repp = &(*it);
+                if (repp->stage() != "*" && repp->printit()) {
+                    if (maxWidth < repp->name().length()) maxWidth = repp->name().length();
+                    const auto itFoundPair = stageInt.emplace(repp->stage(), stage);
+                    if (itFoundPair.second) {
+                        ++stage;
+                        stages.push_back(repp->stage());
+                    }
+                    byName.emplace(repp->name(), repp);
                 }
-                byName.emplace(repp->name(), repp);
             }
         }
 
@@ -161,7 +174,10 @@ class StatsReport final {
 
 public:
     // METHODS
-    static void addStat(const V3Statistic& stat) { s_allStats.push_back(stat); }
+    static void addStat(const V3Statistic& stat) VL_MT_SAFE {
+        V3ExclusiveLockGuard lock{s_allStatsLock};
+        s_allStats.push_back(stat);
+    }
 
     // CONSTRUCTORS
     explicit StatsReport(std::ofstream* aofp)
@@ -175,7 +191,8 @@ public:
     ~StatsReport() = default;
 };
 
-StatsReport::StatColl StatsReport::s_allStats;
+StatsReport::StatColl StatsReport::s_allStats VL_GUARDED_BY(StatsReport::s_allStatsLock);
+V3SharedMutex StatsReport::s_allStatsLock;
 
 //######################################################################
 // V3Statstic class
@@ -191,7 +208,7 @@ void V3Statistic::dump(std::ofstream& os) const {
 //######################################################################
 // Top Stats class
 
-void V3Stats::addStat(const V3Statistic& stat) { StatsReport::addStat(stat); }
+void V3Stats::addStat(const V3Statistic& stat) VL_MT_SAFE { StatsReport::addStat(stat); }
 
 void V3Stats::statsStage(const string& name) {
     static double lastWallTime = -1;

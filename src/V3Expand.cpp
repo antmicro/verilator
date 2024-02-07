@@ -992,8 +992,8 @@ protected:
         for (const auto& f: m_futures) { f.wait(); }
         m_futures.clear();
         V3LockGuard lock(m_workerVisitorsLock);
-        std::cout << "Completed work in a module using " << m_workerVisitors.size() << " workers" << std::endl;
-        std::cout << "In progress: " << V3ThreadPool::s().m_jobsInProgress << std::endl;
+        //std::cout << "Completed work in a module using " << m_workerVisitors.size() << " workers" << std::endl;
+        //std::cout << "In progress: " << V3ThreadPool::s().m_jobsInProgress << std::endl;
     }
 
 public:

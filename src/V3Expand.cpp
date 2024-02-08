@@ -31,6 +31,7 @@
 
 #include "V3Const.h"
 #include "V3Mutex.h"
+#include "V3Os.h"  // TODO(mglb): debug, remove
 #include "V3Stats.h"
 #include "V3ThreadPool.h"
 
@@ -1010,10 +1011,17 @@ public:
 // Expand class functions
 
 void V3Expand::expandAll(AstNetlist* nodep) {
+    const double startTime = V3Os::timeUsecs() / 1.0e6;
+
     UINFO(2, __FUNCTION__ << ": " << endl);
     {
         ExpandOkVisitor okVisitor{nodep};
         ExpandVisitor{nodep};
     }  // Destruct before checking
+
+    const double endTime = V3Os::timeUsecs() / 1.0e6;
+    std::cerr << "XXX V3Expand took " << std::right << std::fixed << std::setprecision(6)
+              << std::setw(9) << (endTime - startTime) << " s" << std::endl;
+
     v3Global.dumpCheckGlobalTree("expand", 0, dumpTreeLevel() >= 3);
 }

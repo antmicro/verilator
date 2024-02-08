@@ -35,6 +35,8 @@
 #include "V3Stats.h"
 #include "V3ThreadPool.h"
 
+#include <deque>
+
 VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
@@ -69,6 +71,19 @@ public:
     ~ExpandOkVisitor() = default;
 };
 
+struct ExpandVisitorStats {
+    VDouble0 m_statWides;
+    VDouble0 m_statWideWords;
+    VDouble0 m_statWideLimited;
+
+    ExpandVisitorStats& operator+=(const ExpandVisitorStats otherStats) {
+        m_statWides += otherStats.m_statWides;
+        m_statWideWords += otherStats.m_statWideWords;
+        m_statWideLimited += otherStats.m_statWideLimited;
+        return *this;
+    }
+};
+
 //######################################################################
 // Expand state, as a visitor of each AstNode
 
@@ -79,9 +94,7 @@ private:
 
 public:
     // STATE - across all visitors
-    VDouble0 m_statWides;  // Statistic tracking
-    VDouble0 m_statWideWords;  // Statistic tracking
-    VDouble0 m_statWideLimited;  // Statistic tracking
+    ExpandVisitorStats m_stats;
 
 private:
     // METHODS
@@ -94,12 +107,12 @@ private:
 
     bool doExpandWide(AstNode* nodep) {
         if (isImpure(nodep)) return false;
-        ++m_statWides;
+        ++m_stats.m_statWides;
         if (nodep->widthWords() <= v3Global.opt.expandLimit()) {
-            m_statWideWords += nodep->widthWords();
+            m_stats.m_statWideWords += nodep->widthWords();
             return true;
         } else {
-            ++m_statWideLimited;
+            ++m_stats.m_statWideLimited;
             return false;
         }
     }
@@ -964,46 +977,43 @@ private:
 protected:
     using ExpandVisitorWorker::visit;
 
-    std::vector<ExpandVisitorWorker> m_workerVisitors VL_GUARDED_BY(m_workerVisitorsLock);
-    V3Mutex m_workerVisitorsLock;
-    std::vector<std::future<void>> m_futures;
+    // TODO(mglb): add support for futureless jobs. Use barrier jobs or condition variable.
+    std::deque<std::future<ExpandVisitorStats>> m_futures;
 
-    void visit(AstCFunc* nodep) override VL_REQUIRES_UNLOCKED(m_workerVisitorsLock) {
-        m_futures.push_back(V3ThreadPool::s().enqueue([nodep]() VL_REQUIRES_UNLOCKED(m_workerVisitorsLock) {
-            // thread_local ExpandVisitorWorker* myWorkerp = nullptr;
-            // if (myWorkerp == nullptr) {
-            //     V3LockGuard lock(m_workerVisitorsLock);
-            //     m_workerVisitors.emplace_back();
-            //     myWorkerp = &m_workerVisitors.back();
-            //     std::cout << "Created worker #" << m_workerVisitors.size() << std::endl;
-            // }
-            ExpandVisitorWorker myWorkerp{};
-            myWorkerp.visit(nodep);
-        }));
+    class VisitCFuncJob {
+        AstCFunc* m_nodep = nullptr;
+
+    public:
+        explicit VisitCFuncJob(AstCFunc* nodep)
+            : m_nodep(nodep) {}
+
+        ExpandVisitorStats operator()() {
+            ExpandVisitorWorker worker{};
+            worker.visit(m_nodep);
+            return std::move(worker.m_stats);
+        }
+    };
+
+    void visit(AstCFunc* nodep) override {
+        m_futures.push_back(V3ThreadPool::s().enqueue(VisitCFuncJob{nodep}));
     }
 
-    void visit(AstNodeModule* nodep) override VL_REQUIRES_UNLOCKED(m_workerVisitorsLock) {
-        iterateChildren(nodep);
-        for (const auto& f: m_futures) { f.wait(); }
-        m_futures.clear();
-        V3LockGuard lock(m_workerVisitorsLock);
-        //std::cout << "Completed work in a module using " << m_workerVisitors.size() << " workers" << std::endl;
-        //std::cout << "In progress: " << V3ThreadPool::s().m_jobsInProgress << std::endl;
-    }
+    void visit(AstNodeModule* nodep) override { iterateChildren(nodep); }
 
 public:
     // CONSTRUCTORS
-    explicit ExpandVisitor(AstNetlist* nodep) { iterate(nodep); }
-    ~ExpandVisitor() override VL_REQUIRES_UNLOCKED(m_workerVisitorsLock) {
-        V3LockGuard lock(m_workerVisitorsLock);
-        for (const auto& worker: m_workerVisitors) {
-            m_statWides += worker.m_statWides;
-            m_statWideLimited += worker.m_statWideLimited;
-            m_statWideWords += worker.m_statWideWords;
+    explicit ExpandVisitor(AstNetlist* nodep) {
+        iterate(nodep);
+        for (auto& f : m_futures) {
+            f.wait();
+            m_stats += f.get();
         }
-        V3Stats::addStat("Optimizations, expand wides", m_statWides);
-        V3Stats::addStat("Optimizations, expand wide words", m_statWideWords);
-        V3Stats::addStat("Optimizations, expand limited", m_statWideLimited);
+        m_futures.clear();
+    }
+    ~ExpandVisitor() override {
+        V3Stats::addStat("Optimizations, expand wides", m_stats.m_statWides);
+        V3Stats::addStat("Optimizations, expand wide words", m_stats.m_statWideWords);
+        V3Stats::addStat("Optimizations, expand limited", m_stats.m_statWideLimited);
     }
 };
 

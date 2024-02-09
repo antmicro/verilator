@@ -94,14 +94,6 @@ public:
     /// Acquire/lock mutex
     void lock() VL_ACQUIRE() VL_MT_SAFE {
         if (V3MutexConfig::s().enable()) {
-            // Try to acquire the lock by spinning.  If the wait is short,
-            // avoids a trap to the OS plus OS scheduler overhead.
-            if (VL_LIKELY(try_lock())) return;  // Short circuit loop
-            for (int i = 0; i < VL_LOCK_SPINS; ++i) {
-                if (VL_LIKELY(try_lock())) return;
-                VL_CPU_RELAX();
-            }
-            // Spinning hasn't worked, pay the cost of blocking.
             m_mutex.lock();
         }
     }

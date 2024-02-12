@@ -60,6 +60,12 @@ class LinkResolveVisitor final : public VNVisitor {
         // Module: Create sim table for entire module and iterate
         UINFO(8, "MODULE " << nodep << endl);
         if (nodep->dead()) return;
+
+        if (v3Global.opt.forceHierarchical() && nodep->level() > 2
+            && v3Global.opt.hierarchical()) {
+            nodep->hierBlock(true);
+        }
+
         VL_RESTORER(m_modp);
         VL_RESTORER(m_senitemCvtNum);
         {

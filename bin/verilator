@@ -347,6 +347,7 @@ detailed descriptions of these arguments.
      -f <file>                  Parse arguments from a file
      -FI <file>                 Force include of a file
     --flatten                   Force inlining of all modules, tasks and functions
+    --force-hierarchical        Force hierarchical Verilation
      -fno-<optimization>        Disable internal optimization stage
      -G<name>=<value>           Overwrite top-level parameter
     --gate-stmts <value>        Tune gate optimizer depth

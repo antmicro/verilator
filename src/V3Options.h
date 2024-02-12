@@ -248,6 +248,7 @@ private:
     bool m_dpiHdrOnly = false;      // main switch: --dpi-hdr-only
     bool m_exe = false;             // main switch: --exe
     bool m_flatten = false;         // main switch: --flatten
+    bool m_forceHierarchical = false;  // main switch: --force-hierarchical
     bool m_hierarchical = false;    // main switch: --hierarchical
     bool m_ignc = false;            // main switch: --ignc
     bool m_lintOnly = false;        // main switch: --lint-only
@@ -660,6 +661,7 @@ public:
     }
 
     bool hierarchical() const { return m_hierarchical; }
+    bool forceHierarchical() const { return m_forceHierarchical; }
     int hierChild() const { return m_hierChild; }
     bool hierTop() const VL_MT_SAFE { return !m_hierChild && !m_hierBlocks.empty(); }
     const V3HierBlockOptSet& hierBlocks() const { return m_hierBlocks; }

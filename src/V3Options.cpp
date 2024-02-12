@@ -810,6 +810,10 @@ void V3Options::notify() VL_MT_DISABLED {
     // Make sure at least one make system is enabled
     if (!m_gmake && !m_cmake) m_gmake = true;
 
+    if (m_forceHierarchical && (!m_hierChild && m_hierBlocks.empty())) {
+        m_hierarchical = true;
+    }
+
     if (m_hierarchical && (m_hierChild || !m_hierBlocks.empty())) {
         cmdfl->v3error(
             "--hierarchical must not be set with --hierarchical-child or --hierarchical-block");
@@ -1226,6 +1230,7 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc,
     DECL_OPTION("-fmerge-cond", FOnOff, &m_fMergeCond);
     DECL_OPTION("-fmerge-cond-motion", FOnOff, &m_fMergeCondMotion);
     DECL_OPTION("-fmerge-const-pool", FOnOff, &m_fMergeConstPool);
+    DECL_OPTION("-force-hierarchical", FOnOff, &m_forceHierarchical);
     DECL_OPTION("-freloop", FOnOff, &m_fReloop);
     DECL_OPTION("-freorder", FOnOff, &m_fReorder);
     DECL_OPTION("-fsplit", FOnOff, &m_fSplit);

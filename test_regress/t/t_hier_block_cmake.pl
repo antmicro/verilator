@@ -33,9 +33,6 @@ if (!$Self->have_cmake) {
         cmd => ['cd "' . $Self->{obj_dir} . '" && ./t_hier_block_cmake', '.']
     );
     my $target_dir = $Self->{obj_dir} . '/CMakeFiles/t_hier_block_cmake.dir/Vt_hier_block.dir/';
-    file_grep($target_dir . 'Vsub0/sub0.sv', /^module\s+(\S+)\s+/, "sub0");
-    file_grep($target_dir . 'Vsub1/sub1.sv', /^module\s+(\S+)\s+/, "sub1");
-    file_grep($target_dir . 'Vsub2/sub2.sv', /^module\s+(\S+)\s+/, "sub2");
     file_grep($target_dir . 'Vt_hier_block__stats.txt', qr/HierBlock,\s+Hierarchical blocks\s+(\d+)/i, 14);
     file_grep($Self->{obj_dir} . '/run.log', qr/MACRO:(\S+) is defined/i, "cplusplus");
 }

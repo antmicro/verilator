@@ -810,9 +810,7 @@ void V3Options::notify() VL_MT_DISABLED {
     // Make sure at least one make system is enabled
     if (!m_gmake && !m_cmake) m_gmake = true;
 
-    if (m_forceHierarchical && (!m_hierChild && m_hierBlocks.empty())) {
-        m_hierarchical = true;
-    }
+    if (m_forceHierarchical && (!m_hierChild && m_hierBlocks.empty())) { m_hierarchical = true; }
 
     if (m_hierarchical && (m_hierChild || !m_hierBlocks.empty())) {
         cmdfl->v3error(

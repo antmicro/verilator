@@ -82,7 +82,6 @@ class Node:
     def getAccessorProperties(self, ident):
         return self._opProps.get(ident, {})
 
-
     # Computes derived properties over entire class hierarchy.
     # No more changes to the hierarchy are allowed once this was called
     def complete(self, typeId=0, ordIdx=0):
@@ -272,7 +271,7 @@ class Cpt:
 
         # doflag "S" indicates an op specifying short-circuiting for a type.
         match = re.search(
-                r'''TREEOP
+            r'''TREEOP
                 (1?) # 1
                 ([ACSV]?) # 2
                 \s*\(\s*
@@ -284,8 +283,8 @@ class Cpt:
                         " ([^"]*) " # 5 (optional)
                     )?
                 \s*\)''',
-                func,
-                flags=re.VERBOSE,
+            func,
+            flags=re.VERBOSE,
         )
         match_skip = re.search(r'TREE_SKIP_VISIT\s*\(\s*\"([^\"]*)\"\s*\)',
                                func)

@@ -93,9 +93,7 @@ public:
     const V3MutexImp& operator!() const { return *this; }
     /// Acquire/lock mutex
     void lock() VL_ACQUIRE() VL_MT_SAFE {
-        if (V3MutexConfig::s().enable()) {
-            m_mutex.lock();
-        }
+        if (V3MutexConfig::s().enable()) { m_mutex.lock(); }
     }
     /// Release/unlock mutex
     void unlock() VL_RELEASE() VL_MT_SAFE {

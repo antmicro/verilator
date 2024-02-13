@@ -345,7 +345,7 @@ THREAD_SAFETY_NEGATIVE_OBJS := \
 	V3Task.o \
 	V3Width.o \
 
-$(THREAD_SAFETY_NEGATIVE_OBJS): override CXXFLAGS_PRIV = -Wthread-safety-negative
+$(THREAD_SAFETY_NEGATIVE_OBJS): override CXXFLAGS_PRIV := ${CXXFLAGS_PRIV} -Wthread-safety-negative
 endif
 
 $(TGT): $(PREDEP_H) $(OBJS)
@@ -353,6 +353,23 @@ $(TGT): $(PREDEP_H) $(OBJS)
 	${LINK} ${LDFLAGS} -o $@ $(OBJS) $(CCMALLOC) ${LIBS}
 
 V3Number_test: V3Number_test.o
+	${LINK} ${LDFLAGS} -o $@ $^ ${LIBS}
+
+# V3ThreadPool_benchmark
+
+V3THREADPOOL_BENCHMARK_OBJS := \
+	V3ThreadPool_benchmark__V3ThreadPool_benchmark.o \
+	V3ThreadPool__V3ThreadPool_benchmark.o \
+
+%__V3ThreadPool_benchmark.o: override CPPFLAGS_PRIV := \
+		${CPPFLAGS_PRIV} \
+		-DV3OPTION_PARSER_NO_VOPTION_BOOL \
+		-DV3ERROR_NO_GLOBAL_ \
+
+%__V3ThreadPool_benchmark.o: %.cpp
+	$(OBJCACHE) ${CXX} ${CXXFLAGS} ${CPPFLAGSWALL} ${CPPFLAGS_PRIV} -c $< -o $@
+
+V3ThreadPool_benchmark: ${V3THREADPOOL_BENCHMARK_OBJS}
 	${LINK} ${LDFLAGS} -o $@ $^ ${LIBS}
 
 #### Modules

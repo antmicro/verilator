@@ -106,6 +106,9 @@ class V3ThreadPool final {
 
     std::atomic_bool m_shutdown{false};  // Termination pending
 
+    // Sequential thread index.
+    static thread_local std::size_t s_threadId;
+
     // Indicates whether multithreading has been suspended.
     // Used for error detection in resumeMultithreading only. You probably should use
     // m_exclusiveAccess for information whether something should be run in current thread.
@@ -164,6 +167,12 @@ public:
         static V3ThreadPool s_s;
         return s_s;
     }
+
+    // Returns sequential thread index.
+    // Main thread has index 0, first worker thread has index 1, etc.
+    static std::size_t currentThreadId() VL_MT_SAFE { return s_threadId; }
+
+    static constexpr std::size_t mainThreadId() VL_PURE { return 0; }
 
     // Resize thread pool to n workers (queue must be empty)
     void resize(unsigned n) VL_MT_UNSAFE VL_REQUIRES_UNLOCKED(m_mutex)

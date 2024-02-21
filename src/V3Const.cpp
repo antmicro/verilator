@@ -58,7 +58,7 @@ static bool isConst(const AstNode* nodep, uint64_t v) {
 }
 
 template <class T>
-static typename std::enable_if<std::is_integral<T>::value, bool>::type isPow2(T val) {
+static typename std::enable_if_t<std::is_integral_v<T>, bool> isPow2(T val) {
     return (val & (val - 1)) == 0;
 }
 

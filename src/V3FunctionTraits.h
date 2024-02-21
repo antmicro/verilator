@@ -29,7 +29,7 @@ struct FunctionTraits;
 // For generic types, directly use the result of the signature of its 'operator()'
 template <typename T>
 struct FunctionTraits final
-    : public FunctionTraits<decltype(&std::remove_reference<T>::type::operator())> {};
+    : public FunctionTraits<decltype(&std::remove_reference_t<T>::operator())> {};
 
 // Specialization for pointers to member function
 template <typename ClassType, typename ReturnType, typename... Args>
@@ -43,7 +43,7 @@ struct FunctionTraits<ReturnType (ClassType::*)(Args...) const> VL_NOT_FINAL {
     // Type of arguments
     template <std::size_t I>
     struct arg final {
-        using type = typename std::tuple_element<I, std::tuple<Args...>>::type;
+        using type = std::tuple_element_t<I, std::tuple<Args...>>;
     };
 };
 

@@ -40,14 +40,13 @@ std::string cvtToStr(const T& t) VL_PURE {
     return os.str();
 }
 template <class T>
-typename std::enable_if<std::is_pointer<T>::value, std::string>::type
-cvtToHex(const T tp) VL_PURE {
+typename std::enable_if_t<std::is_pointer_v<T>, std::string> cvtToHex(const T tp) VL_PURE {
     std::ostringstream os;
     os << static_cast<const void*>(tp);
     return os.str();
 }
 template <class T>
-typename std::enable_if<std::is_integral<T>::value, std::string>::type cvtToHex(const T t) {
+typename std::enable_if_t<std::is_integral_v<T>, std::string> cvtToHex(const T t) {
     std::ostringstream os;
     os << std::hex << std::setw(sizeof(T) * 8 / 4) << std::setfill('0') << t;
     return os.str();

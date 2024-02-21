@@ -30,7 +30,7 @@
 template <class T_Node, class T_Data, int T_UserN>
 class AstUserAllocatorBase VL_NOT_FINAL {
     static_assert(1 <= T_UserN && T_UserN <= 4, "Wrong user pointer number");
-    static_assert(std::is_base_of<AstNode, T_Node>::value, "T_Node must be an AstNode type");
+    static_assert(std::is_base_of_v<AstNode, T_Node>, "T_Node must be an AstNode type");
 
 private:
     std::deque<T_Data> m_allocated;

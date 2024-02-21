@@ -75,7 +75,7 @@ private: \
     /* A type used only for implementation of the static_assert below. */ \
     struct RttiUniqueTypeForThisClass {}; \
     static_assert( \
-        std::is_same<RttiUniqueTypeForThisClass, ThisClass::RttiUniqueTypeForThisClass>::value, \
+        std::is_same_v<RttiUniqueTypeForThisClass, ThisClass::RttiUniqueTypeForThisClass>, \
         "'ThisClass' argument (" #ThisClass ") does not match the class name"); \
 \
 public: \

@@ -231,10 +231,10 @@ public:
     // Return true iff of type T
     template <typename T>
     bool is() const {
-        static_assert(std::is_base_of<V3GraphVertex, T>::value,
+        static_assert(std::is_base_of_v<V3GraphVertex, T>,
                       "'T' must be a subtype of V3GraphVertex");
-        static_assert(std::is_same<typename std::remove_cv<T>::type,
-                                   VTypeListFront<typename T::RttiThisAndBaseClassesList>>::value,
+        static_assert(std::is_same_v<std::remove_cv_t<T>,
+                                     VTypeListFront<typename T::RttiThisAndBaseClassesList>>,
                       "Missing VL_RTTI_IMPL(...) call in 'T'");
         return this->isInstanceOfClassWithId(T::rttiClassId());
     }
@@ -365,10 +365,9 @@ public:
     // Return true iff of type T
     template <typename T>
     bool is() const {
-        static_assert(std::is_base_of<V3GraphEdge, T>::value,
-                      "'T' must be a subtype of V3GraphEdge");
-        static_assert(std::is_same<typename std::remove_cv<T>::type,
-                                   VTypeListFront<typename T::RttiThisAndBaseClassesList>>::value,
+        static_assert(std::is_base_of_v<V3GraphEdge, T>, "'T' must be a subtype of V3GraphEdge");
+        static_assert(std::is_same_v<std::remove_cv_t<T>,
+                                     VTypeListFront<typename T::RttiThisAndBaseClassesList>>,
                       "Missing VL_RTTI_IMPL(...) call in 'T'");
         return this->isInstanceOfClassWithId(T::rttiClassId());
     }

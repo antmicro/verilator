@@ -383,7 +383,7 @@ public:
 
     // Set user data, becomes current.
     template <typename T>
-    typename std::enable_if<sizeof(T) <= sizeof(void*), void>::type setUser(T value) {
+    typename std::enable_if_t<sizeof(T) <= sizeof(void*), void> setUser(T value) {
         static_assert(sizeof(T) <= sizeof(UserDataStorage),
                       "Size of user data type 'T' is too large for allocated storage");
         static_assert(alignof(T) <= alignof(UserDataStorage),
@@ -532,8 +532,8 @@ public:
     // Subtype test
     template <typename T>
     bool is() const {
-        static_assert(std::is_base_of<DfgVertex, T>::value, "'T' must be a subtype of DfgVertex");
-        return privateTypeTest<typename std::remove_cv<T>::type>(this);
+        static_assert(std::is_base_of_v<DfgVertex, T>, "'T' must be a subtype of DfgVertex");
+        return privateTypeTest<std::remove_cv_t<T>>(this);
     }
 
     // Ensure subtype, then cast to that type
@@ -714,7 +714,7 @@ const DfgEdge* DfgVertex::findSourceEdge(std::function<bool(const DfgEdge&, size
 
 template <typename Vertex>
 Vertex* DfgVertex::findSink(std::function<bool(const Vertex&)> p) const {
-    static_assert(std::is_base_of<DfgVertex, Vertex>::value,
+    static_assert(std::is_base_of_v<DfgVertex, Vertex>,
                   "'Vertex' must be subclass of 'DfgVertex'");
     for (DfgEdge* edgep = m_sinksp; edgep; edgep = edgep->m_nextp) {
         if (Vertex* const sinkp = edgep->m_sinkp->cast<Vertex>()) {
@@ -726,7 +726,7 @@ Vertex* DfgVertex::findSink(std::function<bool(const Vertex&)> p) const {
 
 template <typename Vertex>
 Vertex* DfgVertex::findSink() const {
-    static_assert(!std::is_same<DfgVertex, Vertex>::value,
+    static_assert(!std::is_same_v<DfgVertex, Vertex>,
                   "'Vertex' must be proper subclass of 'DfgVertex'");
     return findSink<Vertex>([](const Vertex&) { return true; });
 }

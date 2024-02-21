@@ -45,7 +45,7 @@ public:
 private:
     using Link = typename Heap::Link;
 
-    // Note: T_Elem is incomplete here, so we cannot assert 'std::is_base_of<Node, T_Elem>::value'
+    // Note: T_Elem is incomplete here, so we cannot assert 'std::is_base_of_v<Node, T_Elem>'
 
     // MEMBERS
     Heap m_known;  // The heap of entries with known scores

@@ -1522,7 +1522,7 @@ public:
     ~VNUser() = default;
     // Casters
     template <class T>
-    typename std::enable_if<std::is_pointer<T>::value, T>::type to() const VL_MT_SAFE {
+    typename std::enable_if_t<std::is_pointer_v<T>, T> to() const VL_MT_SAFE {
         return reinterpret_cast<T>(m_u.up);
     }
     WidthVP* c() const { return to<WidthVP*>(); }
@@ -2173,9 +2173,9 @@ public:
     // Returns nodep, adds newp to end of nodep's list
     template <typename T_NodeResult, typename T_NodeNext>
     static T_NodeResult* addNext(T_NodeResult* nodep, T_NodeNext* newp) {
-        static_assert(std::is_base_of<AstNode, T_NodeResult>::value,
+        static_assert(std::is_base_of_v<AstNode, T_NodeResult>,
                       "'T_NodeResult' must be a subtype of AstNode");
-        static_assert(std::is_base_of<T_NodeResult, T_NodeNext>::value,
+        static_assert(std::is_base_of_v<T_NodeResult, T_NodeNext>,
                       "'T_NodeNext' must be a subtype of 'T_NodeResult'");
         return static_cast<T_NodeResult*>(addNext<AstNode, AstNode>(nodep, newp));
     }
@@ -2325,19 +2325,19 @@ private:
     // For internal use only.
     template <typename TargetType, typename DeclType>
     constexpr static bool uselessCast() VL_PURE {
-        using NonRef = typename std::remove_reference<DeclType>::type;
-        using NonPtr = typename std::remove_pointer<NonRef>::type;
-        using NonCV = typename std::remove_cv<NonPtr>::type;
-        return std::is_base_of<TargetType, NonCV>::value;
+        using NonRef = std::remove_reference_t<DeclType>;
+        using NonPtr = std::remove_pointer_t<NonRef>;
+        using NonCV = std::remove_cv_t<NonPtr>;
+        return std::is_base_of_v<TargetType, NonCV>;
     }
 
     // For internal use only.
     template <typename TargetType, typename DeclType>
     constexpr static bool impossibleCast() VL_PURE {
-        using NonRef = typename std::remove_reference<DeclType>::type;
-        using NonPtr = typename std::remove_pointer<NonRef>::type;
-        using NonCV = typename std::remove_cv<NonPtr>::type;
-        return !std::is_base_of<NonCV, TargetType>::value;
+        using NonRef = std::remove_reference_t<DeclType>;
+        using NonPtr = std::remove_pointer_t<NonRef>;
+        using NonCV = std::remove_cv_t<NonPtr>;
+        return !std::is_base_of_v<NonCV, TargetType>;
     }
 
 public:
@@ -2400,9 +2400,9 @@ public:
     // Note: specializations for particular node types are provided below
     template <typename T_Node>
     static bool mayBeUnder(const AstNode* nodep) {
-        static_assert(!std::is_const<T_Node>::value,
+        static_assert(!std::is_const_v<T_Node>,
                       "Type parameter 'T_Node' should not be const qualified");
-        static_assert(std::is_base_of<AstNode, T_Node>::value,
+        static_assert(std::is_base_of_v<AstNode, T_Node>,
                       "Type parameter 'T_Node' must be a subtype of AstNode");
         return true;
     }
@@ -2412,9 +2412,9 @@ public:
     // Note: specializations for particular node types are provided below
     template <typename T_Node>
     static constexpr bool isLeaf() {
-        static_assert(!std::is_const<T_Node>::value,
+        static_assert(!std::is_const_v<T_Node>,
                       "Type parameter 'T_Node' should not be const qualified");
-        static_assert(std::is_base_of<AstNode, T_Node>::value,
+        static_assert(std::is_base_of_v<AstNode, T_Node>,
                       "Type parameter 'T_Node' must be a subtype of AstNode");
         return false;
     }
@@ -2423,7 +2423,7 @@ private:
     // Using std::conditional for const correctness in the public 'foreach' functions
     template <typename T_Arg>
     using ConstCorrectAstNode =
-        typename std::conditional<std::is_const<T_Arg>::value, const AstNode, AstNode>::type;
+        typename std::conditional_t<std::is_const_v<T_Arg>, const AstNode, AstNode>;
 
     template <typename T_Arg, typename Callable>
     inline static void foreachImpl(ConstCorrectAstNode<T_Arg>* nodep, const Callable& f,
@@ -2436,8 +2436,8 @@ private:
     struct Arg0NoPointerNoCV final {
         using Traits = FunctionTraits<T_Callable>;
         using T_Arg0 = typename Traits::template arg<0>::type;
-        using T_Arg0NoPtr = typename std::remove_pointer<T_Arg0>::type;
-        using type = typename std::remove_cv<T_Arg0NoPtr>::type;
+        using T_Arg0NoPtr = std::remove_pointer_t<T_Arg0>;
+        using type = std::remove_cv_t<T_Arg0NoPtr>;
     };
 
 public:
@@ -2451,10 +2451,10 @@ public:
     template <typename Callable>
     void foreach(Callable&& f) {
         using T_Node = typename Arg0NoPointerNoCV<Callable>::type;
-        static_assert(vlstd::is_invocable<Callable, T_Node*>::value
-                          && std::is_base_of<AstNode, T_Node>::value,
-                      "Callable 'f' must have a signature compatible with 'void(T_Node*)', "
-                      "with 'T_Node' being a subtype of 'AstNode'");
+        static_assert(
+            vlstd::is_invocable_v<Callable, T_Node*> && std::is_base_of_v<AstNode, T_Node>,
+            "Callable 'f' must have a signature compatible with 'void(T_Node*)', "
+            "with 'T_Node' being a subtype of 'AstNode'");
         foreachImpl<T_Node>(this, f, /* visitNext: */ false);
     }
 
@@ -2462,10 +2462,10 @@ public:
     template <typename Callable>
     void foreach(Callable&& f) const {
         using T_Node = typename Arg0NoPointerNoCV<Callable>::type;
-        static_assert(vlstd::is_invocable<Callable, const T_Node*>::value
-                          && std::is_base_of<AstNode, T_Node>::value,
-                      "Callable 'f' must have a signature compatible with 'void(const T_Node*)', "
-                      "with 'T_Node' being a subtype of 'AstNode'");
+        static_assert(
+            vlstd::is_invocable_v<Callable, const T_Node*> && std::is_base_of_v<AstNode, T_Node>,
+            "Callable 'f' must have a signature compatible with 'void(const T_Node*)', "
+            "with 'T_Node' being a subtype of 'AstNode'");
         foreachImpl<const T_Node>(this, f, /* visitNext: */ false);
     }
 
@@ -2473,10 +2473,10 @@ public:
     template <typename Callable>
     void foreachAndNext(Callable&& f) {
         using T_Node = typename Arg0NoPointerNoCV<Callable>::type;
-        static_assert(vlstd::is_invocable<Callable, T_Node*>::value
-                          && std::is_base_of<AstNode, T_Node>::value,
-                      "Callable 'f' must have a signature compatible with 'void(T_Node*)', "
-                      "with 'T_Node' being a subtype of 'AstNode'");
+        static_assert(
+            vlstd::is_invocable_v<Callable, T_Node*> && std::is_base_of_v<AstNode, T_Node>,
+            "Callable 'f' must have a signature compatible with 'void(T_Node*)', "
+            "with 'T_Node' being a subtype of 'AstNode'");
         foreachImpl<T_Node>(this, f, /* visitNext: */ true);
     }
 
@@ -2484,10 +2484,10 @@ public:
     template <typename Callable>
     void foreachAndNext(Callable&& f) const {
         using T_Node = typename Arg0NoPointerNoCV<Callable>::type;
-        static_assert(vlstd::is_invocable<Callable, const T_Node*>::value
-                          && std::is_base_of<AstNode, T_Node>::value,
-                      "Callable 'f' must have a signature compatible with 'void(const T_Node*)', "
-                      "with 'T_Node' being a subtype of 'AstNode'");
+        static_assert(
+            vlstd::is_invocable_v<Callable, const T_Node*> && std::is_base_of_v<AstNode, T_Node>,
+            "Callable 'f' must have a signature compatible with 'void(const T_Node*)', "
+            "with 'T_Node' being a subtype of 'AstNode'");
         foreachImpl<const T_Node>(this, f, /* visitNext: */ true);
     }
 
@@ -2499,10 +2499,10 @@ public:
     template <typename Callable>
     bool exists(Callable&& p) {
         using T_Node = typename Arg0NoPointerNoCV<Callable>::type;
-        static_assert(vlstd::is_invocable_r<bool, Callable, T_Node*>::value
-                          && std::is_base_of<AstNode, T_Node>::value,
-                      "Predicate 'p' must have a signature compatible with 'bool(T_Node*)', "
-                      "with 'T_Node' being a subtype of 'AstNode'");
+        static_assert(
+            vlstd::is_invocable_r_v<bool, Callable, T_Node*> && std::is_base_of_v<AstNode, T_Node>,
+            "Predicate 'p' must have a signature compatible with 'bool(T_Node*)', "
+            "with 'T_Node' being a subtype of 'AstNode'");
         return predicateImpl<T_Node, /* Default: */ false>(this, p);
     }
 
@@ -2510,8 +2510,8 @@ public:
     template <typename Callable>
     bool exists(Callable&& p) const {
         using T_Node = typename Arg0NoPointerNoCV<Callable>::type;
-        static_assert(vlstd::is_invocable_r<bool, Callable, const T_Node*>::value
-                          && std::is_base_of<AstNode, T_Node>::value,
+        static_assert(vlstd::is_invocable_r_v<bool, Callable,
+                                              const T_Node*> && std::is_base_of_v<AstNode, T_Node>,
                       "Predicate 'p' must have a signature compatible with 'bool(const T_Node*)', "
                       "with 'T_Node' being a subtype of 'AstNode'");
         return predicateImpl<const T_Node, /* Default: */ false>(this, p);
@@ -2524,10 +2524,10 @@ public:
     template <typename Callable>
     bool forall(Callable&& p) {
         using T_Node = typename Arg0NoPointerNoCV<Callable>::type;
-        static_assert(vlstd::is_invocable_r<bool, Callable, T_Node*>::value
-                          && std::is_base_of<AstNode, T_Node>::value,
-                      "Predicate 'p' must have a signature compatible with 'bool(T_Node*)', "
-                      "with 'T_Node' being a subtype of 'AstNode'");
+        static_assert(
+            vlstd::is_invocable_r_v<bool, Callable, T_Node*> && std::is_base_of_v<AstNode, T_Node>,
+            "Predicate 'p' must have a signature compatible with 'bool(T_Node*)', "
+            "with 'T_Node' being a subtype of 'AstNode'");
         return predicateImpl<T_Node, /* Default: */ true>(this, p);
     }
 
@@ -2535,8 +2535,8 @@ public:
     template <typename Callable>
     bool forall(Callable&& p) const {
         using T_Node = typename Arg0NoPointerNoCV<Callable>::type;
-        static_assert(vlstd::is_invocable_r<bool, Callable, const T_Node*>::value
-                          && std::is_base_of<AstNode, T_Node>::value,
+        static_assert(vlstd::is_invocable_r_v<bool, Callable,
+                                              const T_Node*> && std::is_base_of_v<AstNode, T_Node>,
                       "Predicate 'p' must have a signature compatible with 'bool(const T_Node*)', "
                       "with 'T_Node' being a subtype of 'AstNode'");
         return predicateImpl<const T_Node, /* Default: */ true>(this, p);
@@ -2620,7 +2620,7 @@ void AstNode::foreachImpl(ConstCorrectAstNode<T_Arg>* nodep, const Callable& f, 
     // iterations, we do want to enqueue nodep->nextp(). Duplicating code (via
     // 'foreachImplVisit') for the initial iteration here to avoid an extra branch in the loop
 
-    using T_Arg_NonConst = typename std::remove_const<T_Arg>::type;
+    using T_Arg_NonConst = std::remove_const_t<T_Arg>;
     using Node = ConstCorrectAstNode<T_Arg>;
 
     // Traversal stack
@@ -2696,7 +2696,7 @@ void AstNode::foreachImpl(ConstCorrectAstNode<T_Arg>* nodep, const Callable& f, 
 template <typename T_Arg, bool Default, typename Callable>
 bool AstNode::predicateImpl(ConstCorrectAstNode<T_Arg>* nodep, const Callable& p) {
     // Implementation similar to foreach, but abort traversal as soon as result is determined
-    using T_Arg_NonConst = typename std::remove_const<T_Arg>::type;
+    using T_Arg_NonConst = std::remove_const_t<T_Arg>;
     using Node = ConstCorrectAstNode<T_Arg>;
 
     // Traversal stack
@@ -2784,7 +2784,7 @@ void VNRelinker::relink(AstNode* newp) { newp->AstNode::relink(this); }
 // VNRef is std::reference_wrapper that can only hold AstNode subtypes
 template <typename T_Node>
 class VNRef final : public std::reference_wrapper<T_Node> {
-    static_assert(std::is_base_of<AstNode, T_Node>::value,
+    static_assert(std::is_base_of_v<AstNode, T_Node>,
                   "Type parameter 'T_Node' must be a subtype of AstNode");
 
 public:

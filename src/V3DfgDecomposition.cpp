@@ -342,7 +342,7 @@ class ExtractCyclicComponents final {
     // using the provided 'relink' callback
     template <typename T_Vertex>
     void fixSources(T_Vertex& vtx, std::function<void(T_Vertex&, DfgVertex&, size_t)> relink) {
-        static_assert(std::is_base_of<DfgVertexVar, T_Vertex>::value,
+        static_assert(std::is_base_of_v<DfgVertexVar, T_Vertex>,
                       "'Vertex' must be a 'DfgVertexVar'");
         const size_t component = state(vtx).component;
         vtx.forEachSourceEdge([&](DfgEdge& edge, size_t idx) {

@@ -504,7 +504,7 @@ public:
     }
 };
 
-static_assert(!std::is_polymorphic<SiblingMC>::value, "Should not have a vtable");
+static_assert(!std::is_polymorphic_v<SiblingMC>, "Should not have a vtable");
 
 // GraphEdge for the MTask graph
 class MTaskEdge final : public V3GraphEdge, public MergeCandidate {

@@ -21,6 +21,8 @@ fatal() {
   echo "ERROR: $(basename "$0"): $1" >&2; exit 1;
 }
 
+echo "$debugdir:$datadir/auto-load"
+
 if [ "$CI_M32" = "0" ]; then
   unset CI_M32
 elif [ "$CI_M32" != "1" ]; then

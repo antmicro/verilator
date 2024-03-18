@@ -3242,11 +3242,12 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     if (AstClass* const classp = VN_CAST(m_modp, Class)) {
                         nodep->classOrPackagep(classp);
                     } else if (nodep->name() == "randomize"
-                            && (dotSymp->nodep()->name().empty() || dotSymp->nodep()->name() == "std")) {
-                            nodep->replaceWith(new AstRandomize{nodep->fileline(),
-                                nodep->pinsp()->unlinkFrBack()});
-                            VL_DO_DANGLING(pushDeletep(nodep), nodep);
-                            return;
+                               && (dotSymp->nodep()->name().empty()
+                                   || dotSymp->nodep()->name() == "std")) {
+                        nodep->replaceWith(
+                            new AstRandomize{nodep->fileline(), nodep->pinsp()->unlinkFrBack()});
+                        VL_DO_DANGLING(pushDeletep(nodep), nodep);
+                        return;
                     } else {
                         nodep->v3error("Calling implicit class method "
                                        << nodep->prettyNameQ() << " without being under class");

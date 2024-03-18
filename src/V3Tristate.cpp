@@ -660,6 +660,7 @@ class TristateVisitor final : public TristateBaseVisitor {
 
         for (auto it = beginStrength; it != endStrength; it++) {
             AstVarRef* refp = it->m_varrefp;
+            AstNodeExpr* const enRhsp = getEnp(refp);
 
             // create the new lhs driver for this var
             AstVar* const newLhsp = new AstVar{varp->fileline(), VVarType::MODULETEMP,
@@ -678,7 +679,7 @@ class TristateVisitor final : public TristateBaseVisitor {
 
             AstNode* const enLhspAssignp = new AstAssignW{
                 refp->fileline(), new AstVarRef{refp->fileline(), newEnLhsp, VAccess::WRITE},
-                getEnp(refp)};
+                enRhsp};
             UINFO(9, "       newenlhspAssignp " << enLhspAssignp << endl);
             nodep->addStmtsp(enLhspAssignp);
 

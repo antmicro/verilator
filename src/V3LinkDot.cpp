@@ -3397,12 +3397,14 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 nodep->isVirtual(funcProtop->isVirtual());
                 nodep->lifetime(funcProtop->lifetime());
             } else {
-                nodep->v3error("extern not found that declares " + nodep->prettyNameQ());
+                pushDeletep(nodep->unlinkFrBack());
+                return;
             }
         }
         if (nodep->isExternProto()) {
             if (!m_curSymp->findIdFallback(nodep->name())) {
-                nodep->v3error("Definition not found for extern " + nodep->prettyNameQ());
+                pushDeletep(nodep->unlinkFrBack());
+                return;
             }
         }
         VL_RESTORER(m_curSymp);

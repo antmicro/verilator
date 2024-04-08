@@ -248,6 +248,7 @@ class AssertVisitor final : public VNVisitor {
         if (!nodep->user2p()) {
             AstVar* const assertPortp = new AstVar{nodep->fileline(), VVarType::VAR, "assert_port",
                                                    nodep->findBasicDType(VBasicDTypeKwd::BIT)};
+            assertPortp->direction(VDirection::INPUT);
             nodep->addStmtsp(assertPortp);
             nodep->user2p(assertPortp);
             return assertPortp;

@@ -46,6 +46,7 @@ class AssertVisitor final : public VNVisitor {
     unsigned m_monitorNum = 0;  // Global $monitor numbering (not per module)
     AstVar* m_monitorNumVarp = nullptr;  // $monitor number variable
     AstVar* m_monitorOffVarp = nullptr;  // $monitoroff variable
+    AstVar* m_assertDisabledVarp = nullptr;  // Varp to disable asserts
     unsigned m_modPastNum = 0;  // Module past numbering
     unsigned m_modStrobeNum = 0;  // Module $strobe numbering
     const AstNodeProcedure* m_procedurep = nullptr;  // Current procedure
@@ -161,8 +162,7 @@ class AssertVisitor final : public VNVisitor {
         AstNodeExpr* propp;
         if (VN_IS(m_modp, Module)) {
             AstVarRef* const disabledAssertp
-                = new AstVarRef{originalPropp->fileline(),
-                                getCreateAssertPortp(VN_AS(m_modp, Module)), VAccess::READ};
+                = new AstVarRef{originalPropp->fileline(), m_assertDisabledVarp, VAccess::READ};
             propp = new AstLogOr{originalPropp->fileline(), disabledAssertp, originalPropp};
         } else {
             propp = originalPropp;
@@ -558,17 +558,25 @@ class AssertVisitor final : public VNVisitor {
         VL_RESTORER(m_modp);
         VL_RESTORER(m_modPastNum);
         VL_RESTORER(m_modStrobeNum);
+        VL_RESTORER(m_assertDisabledVarp);
         {
             m_modp = nodep;
             m_modPastNum = 0;
             m_modStrobeNum = 0;
+            if (VN_IS(nodep, Module)) {
+                m_assertDisabledVarp
+                    = new AstVar{nodep->fileline(), VVarType::VAR, "assert_disabled",
+                                 nodep->findBasicDType(VBasicDTypeKwd::BIT)};
+                nodep->addStmtsp(m_assertDisabledVarp);
+            }
             iterateChildren(nodep);
         }
     }
     void visit(AstCell* nodep) override {
         AstVar* const assertPortp = getCreateAssertPortp(VN_AS(nodep->modp(), Module));
-        AstPin* const pinp = new AstPin{nodep->fileline(), 0, assertPortp->name(),
-                                        new AstConst{nodep->fileline(), AstConst::BitFalse{}}};
+        AstPin* const pinp
+            = new AstPin{nodep->fileline(), 0, assertPortp->name(),
+                         new AstVarRef{nodep->fileline(), m_assertDisabledVarp, VAccess::READ}};
         pinp->modVarp(assertPortp);
         nodep->addPinsp(pinp);
         iterateChildren(nodep);

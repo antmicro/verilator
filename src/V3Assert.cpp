@@ -544,6 +544,24 @@ class AssertVisitor final : public VNVisitor {
         iterateChildren(nodep);
         newPslAssertion(nodep, nodep->failsp());
     }
+    void visit(AstAssertCtl* nodep) override {
+        iterateChildren(nodep);
+        switch (nodep->ctlType()) {
+        case VAssertCtlType::ON:
+        case VAssertCtlType::OFF:
+        case VAssertCtlType::KILL: {
+            FileLine* const fl = nodep->fileline();
+            AstAssign* const assignp = new AstAssign{
+                fl, new AstVarRef{fl, m_assertDisabledVarp, VAccess::WRITE},
+                new AstConst{fl, AstConst::BitTrue{}, nodep->ctlType() != VAssertCtlType::ON}};
+            nodep->replaceWith(assignp);
+            pushDeletep(nodep);
+            break;
+        }
+        default:
+            nodep->v3warn(E_UNSUPPORTED, "Unexpected control_type (IEEE 1800-2023 Table 20-5)");
+        }
+    }
     void visit(AstCover* nodep) override {
         iterateChildren(nodep);
         newPslAssertion(nodep, nullptr);

@@ -564,10 +564,16 @@ class AssertVisitor final : public VNVisitor {
             m_modPastNum = 0;
             m_modStrobeNum = 0;
             if (VN_IS(nodep, Module)) {
-                m_assertDisabledVarp
-                    = new AstVar{nodep->fileline(), VVarType::VAR, "assert_disabled",
-                                 nodep->findBasicDType(VBasicDTypeKwd::BIT)};
+                FileLine* const fl = nodep->fileline();
+                m_assertDisabledVarp = new AstVar{fl, VVarType::VAR, "assert_disabled",
+                                                  nodep->findBasicDType(VBasicDTypeKwd::BIT)};
                 nodep->addStmtsp(m_assertDisabledVarp);
+                if (nodep->user2p()) {  // top module
+                    nodep->addStmtsp(new AstInitialStatic{
+                        fl, new AstAssign{
+                                fl, new AstVarRef{fl, m_assertDisabledVarp, VAccess::WRITE},
+                                new AstVarRef{fl, VN_AS(nodep->user2p(), Var), VAccess::READ}}});
+                }
             }
             iterateChildren(nodep);
         }

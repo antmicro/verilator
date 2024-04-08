@@ -35,8 +35,10 @@ class AssertVisitor final : public VNVisitor {
     };
     // NODE STATE/TYPES
     // Cleared on netlist
-    //  AstNode::user()         -> bool.  True if processed
+    //  AstNode::user1()         -> bool.    True if processed
+    //  AstModule::user2p()      -> AstVar*. Port to handle asserts
     const VNUser1InUse m_inuser1;
+    const VNUser2InUse m_inuser2;
 
     // STATE
     AstNodeModule* m_modp = nullptr;  // Last module
@@ -155,7 +157,16 @@ class AssertVisitor final : public VNVisitor {
     void newPslAssertion(AstNodeCoverOrAssert* nodep, AstNode* failsp) {
         if (m_beginp && nodep->name() == "") nodep->name(m_beginp->name());
 
-        AstNodeExpr* const propp = VN_AS(nodep->propp()->unlinkFrBackWithNext(), NodeExpr);
+        AstNodeExpr* const originalPropp = VN_AS(nodep->propp()->unlinkFrBackWithNext(), NodeExpr);
+        AstNodeExpr* propp;
+        if (VN_IS(m_modp, Module)) {
+            AstVarRef* const disabledAssertp
+                = new AstVarRef{originalPropp->fileline(),
+                                getCreateAssertPortp(VN_AS(m_modp, Module)), VAccess::READ};
+            propp = new AstLogOr{originalPropp->fileline(), disabledAssertp, originalPropp};
+        } else {
+            propp = originalPropp;
+        }
         AstSenTree* const sentreep = nodep->sentreep();
         const string& message = nodep->name();
         AstNode* passsp = nodep->passsp();
@@ -232,6 +243,16 @@ class AssertVisitor final : public VNVisitor {
         }
         // Bye
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
+    }
+    AstVar* getCreateAssertPortp(AstModule* nodep) {
+        if (!nodep->user2p()) {
+            AstVar* const assertPortp = new AstVar{nodep->fileline(), VVarType::VAR, "assert_port",
+                                                   nodep->findBasicDType(VBasicDTypeKwd::BIT)};
+            nodep->addStmtsp(assertPortp);
+            nodep->user2p(assertPortp);
+            return assertPortp;
+        }
+        return VN_AS(nodep->user2p(), Var);
     }
 
     // VISITORS
@@ -542,6 +563,14 @@ class AssertVisitor final : public VNVisitor {
             m_modStrobeNum = 0;
             iterateChildren(nodep);
         }
+    }
+    void visit(AstCell* nodep) override {
+        AstVar* const assertPortp = getCreateAssertPortp(VN_AS(nodep->modp(), Module));
+        AstPin* const pinp = new AstPin{nodep->fileline(), 0, assertPortp->name(),
+                                        new AstConst{nodep->fileline(), AstConst::BitFalse{}}};
+        pinp->modVarp(assertPortp);
+        nodep->addPinsp(pinp);
+        iterateChildren(nodep);
     }
     void visit(AstNodeProcedure* nodep) override {
         VL_RESTORER(m_procedurep);

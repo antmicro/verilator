@@ -597,12 +597,14 @@ class AssertVisitor final : public VNVisitor {
         }
     }
     void visit(AstCell* nodep) override {
-        AstVar* const assertPortp = getCreateAssertPortp(VN_AS(nodep->modp(), Module));
-        AstPin* const pinp
-            = new AstPin{nodep->fileline(), 0, assertPortp->name(),
-                         new AstVarRef{nodep->fileline(), m_assertDisabledVarp, VAccess::READ}};
-        pinp->modVarp(assertPortp);
-        nodep->addPinsp(pinp);
+        if (VN_IS(nodep->modp(), Module)) {
+            AstVar* const assertPortp = getCreateAssertPortp(VN_AS(nodep->modp(), Module));
+            AstPin* const pinp = new AstPin{
+                nodep->fileline(), 0, assertPortp->name(),
+                new AstVarRef{nodep->fileline(), m_assertDisabledVarp, VAccess::READ}};
+            pinp->modVarp(assertPortp);
+            nodep->addPinsp(pinp);
+        }
         iterateChildren(nodep);
     }
     void visit(AstNodeProcedure* nodep) override {

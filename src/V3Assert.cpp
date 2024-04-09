@@ -559,7 +559,7 @@ class AssertVisitor final : public VNVisitor {
             break;
         }
         default:
-            nodep->v3warn(E_UNSUPPORTED, "Unexpected control_type (IEEE 1800-2023 Table 20-5)");
+            nodep->v3warn(E_UNSUPPORTED, "Unsupported control_type (IEEE 1800-2023 Table 20-5)");
         }
     }
     void visit(AstCover* nodep) override {

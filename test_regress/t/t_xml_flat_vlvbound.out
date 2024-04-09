@@ -23,6 +23,7 @@
       <var loc="d,10,25,10,28" name="vlvbound_test.i_b" dtype_id="1" vartype="logic" origName="i_b"/>
       <var loc="d,11,25,11,28" name="vlvbound_test.o_a" dtype_id="2" vartype="logic" origName="o_a"/>
       <var loc="d,12,25,12,28" name="vlvbound_test.o_b" dtype_id="2" vartype="logic" origName="o_b"/>
+      <var loc="d,7,8,7,21" name="vlvbound_test.assert_disabled" dtype_id="3" vartype="bit" origName="assert_disabled"/>
       <topscope loc="d,7,8,7,21">
         <scope loc="d,7,8,7,21" name="TOP">
           <varscope loc="d,9,25,9,28" name="i_a" dtype_id="1"/>
@@ -33,14 +34,15 @@
           <varscope loc="d,10,25,10,28" name="vlvbound_test.i_b" dtype_id="1"/>
           <varscope loc="d,11,25,11,28" name="vlvbound_test.o_a" dtype_id="2"/>
           <varscope loc="d,12,25,12,28" name="vlvbound_test.o_b" dtype_id="2"/>
+          <varscope loc="d,7,8,7,21" name="vlvbound_test.assert_disabled" dtype_id="3"/>
           <varscope loc="d,15,34,15,37" name="__Vfunc_vlvbound_test.foo__0__Vfuncout" dtype_id="2"/>
           <varscope loc="d,15,57,15,60" name="__Vfunc_vlvbound_test.foo__0__val" dtype_id="1"/>
           <varscope loc="d,16,17,16,20" name="__Vfunc_vlvbound_test.foo__0__ret" dtype_id="2"/>
-          <varscope loc="d,17,13,17,14" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="3"/>
+          <varscope loc="d,17,13,17,14" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="4"/>
           <varscope loc="d,15,34,15,37" name="__Vfunc_vlvbound_test.foo__1__Vfuncout" dtype_id="2"/>
           <varscope loc="d,15,57,15,60" name="__Vfunc_vlvbound_test.foo__1__val" dtype_id="1"/>
           <varscope loc="d,16,17,16,20" name="__Vfunc_vlvbound_test.foo__1__ret" dtype_id="2"/>
-          <varscope loc="d,17,13,17,14" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="3"/>
+          <varscope loc="d,17,13,17,14" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="4"/>
           <assignalias loc="d,9,25,9,28" dtype_id="1">
             <varref loc="d,9,25,9,28" name="i_a" dtype_id="1"/>
             <varref loc="d,9,25,9,28" name="vlvbound_test.i_a" dtype_id="1"/>
@@ -63,54 +65,54 @@
               <varref loc="d,24,20,24,23" name="i_a" dtype_id="1"/>
               <varref loc="d,15,57,15,60" name="__Vfunc_vlvbound_test.foo__0__val" dtype_id="1"/>
             </assign>
-            <assign loc="d,18,11,18,12" dtype_id="3">
-              <const loc="d,18,12,18,13" name="32&apos;sh0" dtype_id="4"/>
-              <varref loc="d,18,10,18,11" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="3"/>
+            <assign loc="d,18,11,18,12" dtype_id="4">
+              <const loc="d,18,12,18,13" name="32&apos;sh0" dtype_id="5"/>
+              <varref loc="d,18,10,18,11" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="4"/>
             </assign>
             <while loc="d,18,5,18,8">
               <begin>
               </begin>
               <begin>
-                <gts loc="d,18,18,18,19" dtype_id="5">
-                  <const loc="d,18,20,18,21" name="32&apos;sh7" dtype_id="4"/>
-                  <varref loc="d,18,16,18,17" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="3"/>
+                <gts loc="d,18,18,18,19" dtype_id="6">
+                  <const loc="d,18,20,18,21" name="32&apos;sh7" dtype_id="5"/>
+                  <varref loc="d,18,16,18,17" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="4"/>
                 </gts>
               </begin>
               <begin>
-                <assign loc="d,19,14,19,15" dtype_id="5">
-                  <eq loc="d,19,31,19,33" dtype_id="5">
-                    <const loc="d,19,34,19,39" name="2&apos;h0" dtype_id="6"/>
-                    <sel loc="d,19,20,19,21" dtype_id="6">
+                <assign loc="d,19,14,19,15" dtype_id="6">
+                  <eq loc="d,19,31,19,33" dtype_id="6">
+                    <const loc="d,19,34,19,39" name="2&apos;h0" dtype_id="7"/>
+                    <sel loc="d,19,20,19,21" dtype_id="7">
                       <varref loc="d,19,17,19,20" name="__Vfunc_vlvbound_test.foo__0__val" dtype_id="1"/>
-                      <sel loc="d,19,22,19,23" dtype_id="7">
-                        <muls loc="d,19,22,19,23" dtype_id="4">
-                          <const loc="d,19,23,19,24" name="32&apos;sh2" dtype_id="4"/>
-                          <varref loc="d,19,21,19,22" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="3"/>
+                      <sel loc="d,19,22,19,23" dtype_id="8">
+                        <muls loc="d,19,22,19,23" dtype_id="5">
+                          <const loc="d,19,23,19,24" name="32&apos;sh2" dtype_id="5"/>
+                          <varref loc="d,19,21,19,22" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="4"/>
                         </muls>
-                        <const loc="d,19,22,19,23" name="32&apos;h0" dtype_id="8"/>
-                        <const loc="d,19,22,19,23" name="32&apos;h4" dtype_id="8"/>
+                        <const loc="d,19,22,19,23" name="32&apos;h0" dtype_id="9"/>
+                        <const loc="d,19,22,19,23" name="32&apos;h4" dtype_id="9"/>
                       </sel>
-                      <const loc="d,19,28,19,29" name="32&apos;sh2" dtype_id="4"/>
+                      <const loc="d,19,28,19,29" name="32&apos;sh2" dtype_id="5"/>
                     </sel>
                   </eq>
-                  <sel loc="d,19,10,19,11" dtype_id="5">
+                  <sel loc="d,19,10,19,11" dtype_id="6">
                     <varref loc="d,19,7,19,10" name="__Vfunc_vlvbound_test.foo__0__ret" dtype_id="2"/>
-                    <sel loc="d,19,11,19,12" dtype_id="9">
-                      <varref loc="d,19,11,19,12" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="3"/>
-                      <const loc="d,19,11,19,12" name="32&apos;h0" dtype_id="8"/>
-                      <const loc="d,19,11,19,12" name="32&apos;h3" dtype_id="8"/>
+                    <sel loc="d,19,11,19,12" dtype_id="10">
+                      <varref loc="d,19,11,19,12" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="4"/>
+                      <const loc="d,19,11,19,12" name="32&apos;h0" dtype_id="9"/>
+                      <const loc="d,19,11,19,12" name="32&apos;h3" dtype_id="9"/>
                     </sel>
-                    <const loc="d,19,10,19,11" name="32&apos;h1" dtype_id="8"/>
+                    <const loc="d,19,10,19,11" name="32&apos;h1" dtype_id="9"/>
                   </sel>
                 </assign>
               </begin>
               <begin>
-                <assign loc="d,18,24,18,26" dtype_id="3">
-                  <add loc="d,18,24,18,26" dtype_id="8">
-                    <const loc="d,18,24,18,26" name="32&apos;h1" dtype_id="8"/>
-                    <varref loc="d,18,23,18,24" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="3"/>
+                <assign loc="d,18,24,18,26" dtype_id="4">
+                  <add loc="d,18,24,18,26" dtype_id="9">
+                    <const loc="d,18,24,18,26" name="32&apos;h1" dtype_id="9"/>
+                    <varref loc="d,18,23,18,24" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="4"/>
                   </add>
-                  <varref loc="d,18,23,18,24" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="3"/>
+                  <varref loc="d,18,23,18,24" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="4"/>
                 </assign>
               </begin>
             </while>
@@ -129,54 +131,54 @@
               <varref loc="d,25,20,25,23" name="i_b" dtype_id="1"/>
               <varref loc="d,15,57,15,60" name="__Vfunc_vlvbound_test.foo__1__val" dtype_id="1"/>
             </assign>
-            <assign loc="d,18,11,18,12" dtype_id="3">
-              <const loc="d,18,12,18,13" name="32&apos;sh0" dtype_id="4"/>
-              <varref loc="d,18,10,18,11" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="3"/>
+            <assign loc="d,18,11,18,12" dtype_id="4">
+              <const loc="d,18,12,18,13" name="32&apos;sh0" dtype_id="5"/>
+              <varref loc="d,18,10,18,11" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="4"/>
             </assign>
             <while loc="d,18,5,18,8">
               <begin>
               </begin>
               <begin>
-                <gts loc="d,18,18,18,19" dtype_id="5">
-                  <const loc="d,18,20,18,21" name="32&apos;sh7" dtype_id="4"/>
-                  <varref loc="d,18,16,18,17" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="3"/>
+                <gts loc="d,18,18,18,19" dtype_id="6">
+                  <const loc="d,18,20,18,21" name="32&apos;sh7" dtype_id="5"/>
+                  <varref loc="d,18,16,18,17" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="4"/>
                 </gts>
               </begin>
               <begin>
-                <assign loc="d,19,14,19,15" dtype_id="5">
-                  <eq loc="d,19,31,19,33" dtype_id="5">
-                    <const loc="d,19,34,19,39" name="2&apos;h0" dtype_id="6"/>
-                    <sel loc="d,19,20,19,21" dtype_id="6">
+                <assign loc="d,19,14,19,15" dtype_id="6">
+                  <eq loc="d,19,31,19,33" dtype_id="6">
+                    <const loc="d,19,34,19,39" name="2&apos;h0" dtype_id="7"/>
+                    <sel loc="d,19,20,19,21" dtype_id="7">
                       <varref loc="d,19,17,19,20" name="__Vfunc_vlvbound_test.foo__1__val" dtype_id="1"/>
-                      <sel loc="d,19,22,19,23" dtype_id="7">
-                        <muls loc="d,19,22,19,23" dtype_id="4">
-                          <const loc="d,19,23,19,24" name="32&apos;sh2" dtype_id="4"/>
-                          <varref loc="d,19,21,19,22" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="3"/>
+                      <sel loc="d,19,22,19,23" dtype_id="8">
+                        <muls loc="d,19,22,19,23" dtype_id="5">
+                          <const loc="d,19,23,19,24" name="32&apos;sh2" dtype_id="5"/>
+                          <varref loc="d,19,21,19,22" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="4"/>
                         </muls>
-                        <const loc="d,19,22,19,23" name="32&apos;h0" dtype_id="8"/>
-                        <const loc="d,19,22,19,23" name="32&apos;h4" dtype_id="8"/>
+                        <const loc="d,19,22,19,23" name="32&apos;h0" dtype_id="9"/>
+                        <const loc="d,19,22,19,23" name="32&apos;h4" dtype_id="9"/>
                       </sel>
-                      <const loc="d,19,28,19,29" name="32&apos;sh2" dtype_id="4"/>
+                      <const loc="d,19,28,19,29" name="32&apos;sh2" dtype_id="5"/>
                     </sel>
                   </eq>
-                  <sel loc="d,19,10,19,11" dtype_id="5">
+                  <sel loc="d,19,10,19,11" dtype_id="6">
                     <varref loc="d,19,7,19,10" name="__Vfunc_vlvbound_test.foo__1__ret" dtype_id="2"/>
-                    <sel loc="d,19,11,19,12" dtype_id="9">
-                      <varref loc="d,19,11,19,12" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="3"/>
-                      <const loc="d,19,11,19,12" name="32&apos;h0" dtype_id="8"/>
-                      <const loc="d,19,11,19,12" name="32&apos;h3" dtype_id="8"/>
+                    <sel loc="d,19,11,19,12" dtype_id="10">
+                      <varref loc="d,19,11,19,12" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="4"/>
+                      <const loc="d,19,11,19,12" name="32&apos;h0" dtype_id="9"/>
+                      <const loc="d,19,11,19,12" name="32&apos;h3" dtype_id="9"/>
                     </sel>
-                    <const loc="d,19,10,19,11" name="32&apos;h1" dtype_id="8"/>
+                    <const loc="d,19,10,19,11" name="32&apos;h1" dtype_id="9"/>
                   </sel>
                 </assign>
               </begin>
               <begin>
-                <assign loc="d,18,24,18,26" dtype_id="3">
-                  <add loc="d,18,24,18,26" dtype_id="8">
-                    <const loc="d,18,24,18,26" name="32&apos;h1" dtype_id="8"/>
-                    <varref loc="d,18,23,18,24" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="3"/>
+                <assign loc="d,18,24,18,26" dtype_id="4">
+                  <add loc="d,18,24,18,26" dtype_id="9">
+                    <const loc="d,18,24,18,26" name="32&apos;h1" dtype_id="9"/>
+                    <varref loc="d,18,23,18,24" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="4"/>
                   </add>
-                  <varref loc="d,18,23,18,24" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="3"/>
+                  <varref loc="d,18,23,18,24" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="4"/>
                 </assign>
               </begin>
             </while>
@@ -194,22 +196,23 @@
       <var loc="d,15,34,15,37" name="__Vfunc_vlvbound_test.foo__0__Vfuncout" dtype_id="2" vartype="logic" origName="__Vfunc_vlvbound_test__DOT__foo__0__Vfuncout"/>
       <var loc="d,15,57,15,60" name="__Vfunc_vlvbound_test.foo__0__val" dtype_id="1" vartype="logic" origName="__Vfunc_vlvbound_test__DOT__foo__0__val"/>
       <var loc="d,16,17,16,20" name="__Vfunc_vlvbound_test.foo__0__ret" dtype_id="2" vartype="logic" origName="__Vfunc_vlvbound_test__DOT__foo__0__ret"/>
-      <var loc="d,17,13,17,14" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="3" vartype="integer" origName="__Vfunc_vlvbound_test__DOT__foo__0__i"/>
+      <var loc="d,17,13,17,14" name="__Vfunc_vlvbound_test.foo__0__i" dtype_id="4" vartype="integer" origName="__Vfunc_vlvbound_test__DOT__foo__0__i"/>
       <var loc="d,15,34,15,37" name="__Vfunc_vlvbound_test.foo__1__Vfuncout" dtype_id="2" vartype="logic" origName="__Vfunc_vlvbound_test__DOT__foo__1__Vfuncout"/>
       <var loc="d,15,57,15,60" name="__Vfunc_vlvbound_test.foo__1__val" dtype_id="1" vartype="logic" origName="__Vfunc_vlvbound_test__DOT__foo__1__val"/>
       <var loc="d,16,17,16,20" name="__Vfunc_vlvbound_test.foo__1__ret" dtype_id="2" vartype="logic" origName="__Vfunc_vlvbound_test__DOT__foo__1__ret"/>
-      <var loc="d,17,13,17,14" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="3" vartype="integer" origName="__Vfunc_vlvbound_test__DOT__foo__1__i"/>
+      <var loc="d,17,13,17,14" name="__Vfunc_vlvbound_test.foo__1__i" dtype_id="4" vartype="integer" origName="__Vfunc_vlvbound_test__DOT__foo__1__i"/>
     </module>
     <typetable loc="a,0,0,0,0">
-      <basicdtype loc="d,18,18,18,19" id="5" name="logic"/>
-      <basicdtype loc="d,19,34,19,39" id="6" name="logic" left="1" right="0"/>
+      <basicdtype loc="d,18,18,18,19" id="6" name="logic"/>
+      <basicdtype loc="d,19,34,19,39" id="7" name="logic" left="1" right="0"/>
       <basicdtype loc="d,9,11,9,16" id="1" name="logic" left="15" right="0"/>
       <basicdtype loc="d,11,12,11,17" id="2" name="logic" left="6" right="0"/>
-      <basicdtype loc="d,17,5,17,12" id="3" name="integer" left="31" right="0" signed="true"/>
-      <basicdtype loc="d,19,10,19,11" id="9" name="logic" left="2" right="0" signed="true"/>
-      <basicdtype loc="d,19,11,19,12" id="8" name="logic" left="31" right="0"/>
-      <basicdtype loc="d,19,20,19,21" id="7" name="logic" left="3" right="0" signed="true"/>
-      <basicdtype loc="d,18,12,18,13" id="4" name="logic" left="31" right="0" signed="true"/>
+      <basicdtype loc="d,17,5,17,12" id="4" name="integer" left="31" right="0" signed="true"/>
+      <basicdtype loc="d,19,10,19,11" id="10" name="logic" left="2" right="0" signed="true"/>
+      <basicdtype loc="d,19,11,19,12" id="9" name="logic" left="31" right="0"/>
+      <basicdtype loc="d,19,20,19,21" id="8" name="logic" left="3" right="0" signed="true"/>
+      <basicdtype loc="d,18,12,18,13" id="5" name="logic" left="31" right="0" signed="true"/>
+      <basicdtype loc="d,7,8,7,21" id="3" name="bit"/>
     </typetable>
   </netlist>
 </verilator_xml>

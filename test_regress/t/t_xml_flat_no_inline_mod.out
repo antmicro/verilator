@@ -17,12 +17,18 @@
     <module loc="d,11,8,11,11" name="$root" origName="$root" topModule="1" public="true">
       <var loc="d,11,24,11,29" name="i_clk" dtype_id="1" dir="input" pinIndex="1" vartype="logic" origName="i_clk" public="true"/>
       <var loc="d,11,24,11,29" name="top.i_clk" dtype_id="1" vartype="logic" origName="i_clk"/>
+      <var loc="d,11,8,11,11" name="top.assert_disabled" dtype_id="2" vartype="bit" origName="assert_disabled"/>
       <var loc="d,7,24,7,29" name="top.f.i_clk" dtype_id="1" vartype="logic" origName="i_clk"/>
+      <var loc="d,7,8,7,11" name="top.f.assert_port" dtype_id="2" vartype="bit" origName="assert_port"/>
+      <var loc="d,7,8,7,11" name="top.f.assert_disabled" dtype_id="2" vartype="bit" origName="assert_disabled"/>
       <topscope loc="d,11,8,11,11">
         <scope loc="d,11,8,11,11" name="TOP">
           <varscope loc="d,11,24,11,29" name="i_clk" dtype_id="1"/>
           <varscope loc="d,11,24,11,29" name="top.i_clk" dtype_id="1"/>
+          <varscope loc="d,11,8,11,11" name="top.assert_disabled" dtype_id="2"/>
           <varscope loc="d,7,24,7,29" name="top.f.i_clk" dtype_id="1"/>
+          <varscope loc="d,7,8,7,11" name="top.f.assert_port" dtype_id="2"/>
+          <varscope loc="d,7,8,7,11" name="top.f.assert_disabled" dtype_id="2"/>
           <assignalias loc="d,11,24,11,29" dtype_id="1">
             <varref loc="d,11,24,11,29" name="i_clk" dtype_id="1"/>
             <varref loc="d,11,24,11,29" name="top.i_clk" dtype_id="1"/>
@@ -31,11 +37,22 @@
             <varref loc="d,12,7,12,8" name="top.i_clk" dtype_id="1"/>
             <varref loc="d,7,24,7,29" name="top.f.i_clk" dtype_id="1"/>
           </assignalias>
+          <assignalias loc="d,7,8,7,11" dtype_id="2">
+            <varref loc="d,12,7,12,8" name="top.assert_disabled" dtype_id="2"/>
+            <varref loc="d,7,8,7,11" name="top.f.assert_port" dtype_id="2"/>
+          </assignalias>
+          <initialstatic loc="d,7,8,7,11">
+            <assign loc="d,7,8,7,11" dtype_id="2">
+              <varref loc="d,7,8,7,11" name="top.assert_disabled" dtype_id="2"/>
+              <varref loc="d,7,8,7,11" name="top.f.assert_disabled" dtype_id="2"/>
+            </assign>
+          </initialstatic>
         </scope>
       </topscope>
     </module>
     <typetable loc="a,0,0,0,0">
       <basicdtype loc="d,11,18,11,23" id="1" name="logic"/>
+      <basicdtype loc="d,11,8,11,11" id="2" name="bit"/>
     </typetable>
   </netlist>
 </verilator_xml>

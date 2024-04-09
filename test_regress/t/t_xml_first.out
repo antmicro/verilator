@@ -32,6 +32,9 @@
         <port loc="d,22,12,22,13" name="d" direction="in" portIndex="3">
           <varref loc="d,22,42,22,43" name="d" dtype_id="1"/>
         </port>
+        <port loc="d,20,4,20,9" name="assert_port" direction="in" portIndex="0">
+          <varref loc="d,20,4,20,9" name="assert_disabled" dtype_id="3"/>
+        </port>
       </instance>
       <instance loc="d,25,6,25,11" name="cell2" defName="mod2" origName="cell2">
         <port loc="d,25,14,25,15" name="d" direction="in" portIndex="1">
@@ -43,26 +46,38 @@
         <port loc="d,27,14,27,17" name="clk" direction="in" portIndex="3">
           <varref loc="d,27,42,27,45" name="clk" dtype_id="2"/>
         </port>
+        <port loc="d,25,6,25,11" name="assert_port" direction="in" portIndex="0">
+          <varref loc="d,25,6,25,11" name="assert_disabled" dtype_id="3"/>
+        </port>
       </instance>
+      <var loc="d,7,8,7,9" name="assert_disabled" dtype_id="3" vartype="bit" origName="assert_disabled"/>
     </module>
     <module loc="d,46,8,46,12" name="mod2" origName="mod2">
       <var loc="d,48,10,48,13" name="clk" dtype_id="2" dir="input" pinIndex="1" vartype="logic" origName="clk"/>
       <var loc="d,49,16,49,17" name="d" dtype_id="1" dir="input" pinIndex="2" vartype="logic" origName="d"/>
       <var loc="d,50,22,50,23" name="q" dtype_id="1" dir="output" pinIndex="3" vartype="logic" origName="q"/>
+      <var loc="d,46,8,46,12" name="assert_port" dtype_id="3" dir="input" vartype="bit" origName="assert_port"/>
+      <var loc="d,46,8,46,12" name="assert_disabled" dtype_id="3" vartype="bit" origName="assert_disabled"/>
+      <initialstatic loc="d,46,8,46,12">
+        <assign loc="d,46,8,46,12" dtype_id="3">
+          <varref loc="d,46,8,46,12" name="assert_port" dtype_id="3"/>
+          <varref loc="d,46,8,46,12" name="assert_disabled" dtype_id="3"/>
+        </assign>
+      </initialstatic>
       <contassign loc="d,53,13,53,14" dtype_id="1">
         <varref loc="d,49,16,49,17" name="d" dtype_id="1"/>
         <varref loc="d,53,13,53,14" name="q" dtype_id="1"/>
       </contassign>
     </module>
     <module loc="d,31,8,31,12" name="mod1__W4" origName="mod1">
-      <var loc="d,32,15,32,20" name="WIDTH" dtype_id="3" vartype="logic" origName="WIDTH" param="true">
-        <const loc="d,19,18,19,19" name="32&apos;sh4" dtype_id="3"/>
+      <var loc="d,32,15,32,20" name="WIDTH" dtype_id="4" vartype="logic" origName="WIDTH" param="true">
+        <const loc="d,19,18,19,19" name="32&apos;sh4" dtype_id="4"/>
       </var>
       <var loc="d,34,24,34,27" name="clk" dtype_id="2" dir="input" pinIndex="1" vartype="logic" origName="clk"/>
       <var loc="d,35,30,35,31" name="d" dtype_id="1" dir="input" pinIndex="2" vartype="logic" origName="d"/>
       <var loc="d,36,30,36,31" name="q" dtype_id="1" dir="output" pinIndex="3" vartype="logic" origName="q"/>
-      <var loc="d,39,15,39,22" name="IGNORED" dtype_id="3" vartype="logic" origName="IGNORED" localparam="true">
-        <const loc="d,39,25,39,26" name="32&apos;sh1" dtype_id="3"/>
+      <var loc="d,39,15,39,22" name="IGNORED" dtype_id="4" vartype="logic" origName="IGNORED" localparam="true">
+        <const loc="d,39,25,39,26" name="32&apos;sh1" dtype_id="4"/>
       </var>
       <always loc="d,41,4,41,10">
         <sentree loc="d,41,11,41,12">
@@ -75,11 +90,20 @@
           <varref loc="d,42,6,42,7" name="q" dtype_id="1"/>
         </assigndly>
       </always>
+      <var loc="d,31,8,31,12" name="assert_port" dtype_id="3" dir="input" vartype="bit" origName="assert_port"/>
+      <var loc="d,31,8,31,12" name="assert_disabled" dtype_id="3" vartype="bit" origName="assert_disabled"/>
+      <initialstatic loc="d,31,8,31,12">
+        <assign loc="d,31,8,31,12" dtype_id="3">
+          <varref loc="d,31,8,31,12" name="assert_port" dtype_id="3"/>
+          <varref loc="d,31,8,31,12" name="assert_disabled" dtype_id="3"/>
+        </assign>
+      </initialstatic>
     </module>
     <typetable loc="a,0,0,0,0">
       <basicdtype loc="d,34,24,34,27" id="2" name="logic"/>
       <basicdtype loc="d,15,16,15,17" id="1" name="logic" left="3" right="0"/>
-      <basicdtype loc="d,19,18,19,19" id="3" name="logic" left="31" right="0" signed="true"/>
+      <basicdtype loc="d,19,18,19,19" id="4" name="logic" left="31" right="0" signed="true"/>
+      <basicdtype loc="d,7,8,7,9" id="3" name="bit"/>
     </typetable>
   </netlist>
 </verilator_xml>

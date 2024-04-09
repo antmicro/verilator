@@ -49,6 +49,7 @@
           </stmtexpr>
         </begin>
       </initial>
+      <var loc="d,12,8,12,9" name="assert_disabled" dtype_id="9" vartype="bit" origName="assert_disabled"/>
     </module>
     <iface loc="d,7,11,7,14" name="ifc" origName="ifc">
       <var loc="d,8,12,8,17" name="value" dtype_id="6" vartype="integer" origName="value"/>
@@ -60,19 +61,19 @@
       <voiddtype loc="d,41,7,41,8" id="8"/>
       <basicdtype loc="d,8,4,8,11" id="6" name="integer" left="31" right="0" signed="true"/>
       <basicdtype loc="d,14,11,14,17" id="1" name="logic"/>
-      <basicdtype loc="d,21,7,21,12" id="9" name="logic"/>
-      <basicdtype loc="d,22,7,22,12" id="10" name="logic"/>
-      <basicdtype loc="d,23,7,23,12" id="11" name="logic"/>
-      <basicdtype loc="d,24,7,24,12" id="12" name="logic"/>
+      <basicdtype loc="d,21,7,21,12" id="10" name="logic"/>
+      <basicdtype loc="d,22,7,22,12" id="11" name="logic"/>
+      <basicdtype loc="d,23,7,23,12" id="12" name="logic"/>
+      <basicdtype loc="d,24,7,24,12" id="13" name="logic"/>
       <structdtype loc="d,20,12,20,18" id="2" name="m.my_struct">
-        <memberdtype loc="d,21,19,21,22" id="13" name="clk" tag="this is clk" sub_dtype_id="9"/>
-        <memberdtype loc="d,22,19,22,20" id="14" name="k" sub_dtype_id="10"/>
-        <memberdtype loc="d,23,19,23,25" id="15" name="enable" tag="enable" sub_dtype_id="11"/>
-        <memberdtype loc="d,24,19,24,23" id="16" name="data" tag="data" sub_dtype_id="12"/>
+        <memberdtype loc="d,21,19,21,22" id="14" name="clk" tag="this is clk" sub_dtype_id="10"/>
+        <memberdtype loc="d,22,19,22,20" id="15" name="k" sub_dtype_id="11"/>
+        <memberdtype loc="d,23,19,23,25" id="16" name="enable" tag="enable" sub_dtype_id="12"/>
+        <memberdtype loc="d,24,19,24,23" id="17" name="data" tag="data" sub_dtype_id="13"/>
       </structdtype>
       <ifacerefdtype loc="d,29,8,29,12" id="3" modportname=""/>
       <basicdtype loc="d,31,27,31,28" id="5" name="logic" left="31" right="0"/>
-      <refdtype loc="d,31,4,31,13" id="17" name="my_struct" sub_dtype_id="2"/>
+      <refdtype loc="d,31,4,31,13" id="18" name="my_struct" sub_dtype_id="2"/>
       <unpackarraydtype loc="d,31,26,31,27" id="4" sub_dtype_id="2">
         <range loc="d,31,26,31,27">
           <const loc="d,31,27,31,28" name="32&apos;h0" dtype_id="5"/>
@@ -80,6 +81,7 @@
         </range>
       </unpackarraydtype>
       <basicdtype loc="d,35,21,35,27" id="7" name="string"/>
+      <basicdtype loc="d,12,8,12,9" id="9" name="bit"/>
     </typetable>
   </netlist>
 </verilator_xml>

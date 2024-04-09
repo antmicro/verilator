@@ -16,9 +16,11 @@
   <netlist>
     <module loc="d,7,8,7,9" name="m" origName="m">
       <var loc="d,8,10,8,13" name="clk" tag="foo_op" dtype_id="1" dir="input" pinIndex="1" vartype="logic" origName="clk"/>
+      <var loc="d,7,8,7,9" name="assert_disabled" dtype_id="2" vartype="bit" origName="assert_disabled"/>
     </module>
     <typetable loc="a,0,0,0,0">
       <basicdtype loc="d,8,10,8,13" id="1" name="logic"/>
+      <basicdtype loc="d,7,8,7,9" id="2" name="bit"/>
     </typetable>
   </netlist>
 </verilator_xml>

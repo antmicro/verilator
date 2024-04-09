@@ -47,6 +47,7 @@
   <map from="PS9gCw" to="_eval_triggers__act"/>
   <map from="PSgp53" to="_nba_sequent__TOP__0"/>
   <map from="PSoFVg" to="_nba_sequent__TOP__t__DOT__secret_inst__0"/>
+  <map from="PStBpu" to="assert_port"/>
   <map from="PScyq8" to="clk"/>
   <map from="PSnRoO" to="secret_inst"/>
   <map from="PSS3Gk" to="secret_sub"/>

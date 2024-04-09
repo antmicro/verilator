@@ -19,67 +19,100 @@
       {"type":"PIN","name":"d","addr":"(T)","loc":"d,22:12,22:13","svDotName":true,"svImplicit":false,"modVarp":"(U)","modPTypep":"UNLINKED",
        "exprp": [
         {"type":"VARREF","name":"d","addr":"(V)","loc":"d,22:42,22:43","dtypep":"(G)","access":"RD","varp":"(J)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+      ]},
+      {"type":"PIN","name":"assert_port","addr":"(W)","loc":"d,20:4,20:9","svDotName":false,"svImplicit":false,"modVarp":"(X)","modPTypep":"UNLINKED",
+       "exprp": [
+        {"type":"VARREF","name":"assert_disabled","addr":"(Y)","loc":"d,20:4,20:9","dtypep":"(Z)","access":"RD","varp":"(AB)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
       ]}
     ],"paramsp": [],"rangep": [],"intfRefsp": []},
-    {"type":"CELL","name":"cell2","addr":"(W)","loc":"d,25:6,25:11","origName":"cell2","recursive":false,"modp":"(X)",
+    {"type":"CELL","name":"cell2","addr":"(BB)","loc":"d,25:6,25:11","origName":"cell2","recursive":false,"modp":"(CB)",
      "pinsp": [
-      {"type":"PIN","name":"d","addr":"(Y)","loc":"d,25:14,25:15","svDotName":true,"svImplicit":false,"modVarp":"(Z)","modPTypep":"UNLINKED",
+      {"type":"PIN","name":"d","addr":"(DB)","loc":"d,25:14,25:15","svDotName":true,"svImplicit":false,"modVarp":"(EB)","modPTypep":"UNLINKED",
        "exprp": [
-        {"type":"VARREF","name":"between","addr":"(AB)","loc":"d,25:16,25:23","dtypep":"(G)","access":"RD","varp":"(K)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+        {"type":"VARREF","name":"between","addr":"(FB)","loc":"d,25:16,25:23","dtypep":"(G)","access":"RD","varp":"(K)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
       ]},
-      {"type":"PIN","name":"q","addr":"(BB)","loc":"d,26:14,26:15","svDotName":true,"svImplicit":false,"modVarp":"(CB)","modPTypep":"UNLINKED",
+      {"type":"PIN","name":"q","addr":"(GB)","loc":"d,26:14,26:15","svDotName":true,"svImplicit":false,"modVarp":"(HB)","modPTypep":"UNLINKED",
        "exprp": [
-        {"type":"VARREF","name":"q","addr":"(DB)","loc":"d,26:42,26:43","dtypep":"(G)","access":"WR","varp":"(F)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+        {"type":"VARREF","name":"q","addr":"(IB)","loc":"d,26:42,26:43","dtypep":"(G)","access":"WR","varp":"(F)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
       ]},
-      {"type":"PIN","name":"clk","addr":"(EB)","loc":"d,27:14,27:17","svDotName":true,"svImplicit":false,"modVarp":"(FB)","modPTypep":"UNLINKED",
+      {"type":"PIN","name":"clk","addr":"(JB)","loc":"d,27:14,27:17","svDotName":true,"svImplicit":false,"modVarp":"(KB)","modPTypep":"UNLINKED",
        "exprp": [
-        {"type":"VARREF","name":"clk","addr":"(GB)","loc":"d,27:42,27:45","dtypep":"(I)","access":"RD","varp":"(H)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+        {"type":"VARREF","name":"clk","addr":"(LB)","loc":"d,27:42,27:45","dtypep":"(I)","access":"RD","varp":"(H)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+      ]},
+      {"type":"PIN","name":"assert_port","addr":"(MB)","loc":"d,25:6,25:11","svDotName":false,"svImplicit":false,"modVarp":"(NB)","modPTypep":"UNLINKED",
+       "exprp": [
+        {"type":"VARREF","name":"assert_disabled","addr":"(OB)","loc":"d,25:6,25:11","dtypep":"(Z)","access":"RD","varp":"(AB)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
       ]}
-    ],"paramsp": [],"rangep": [],"intfRefsp": []}
+    ],"paramsp": [],"rangep": [],"intfRefsp": []},
+    {"type":"VAR","name":"assert_disabled","addr":"(AB)","loc":"d,7:8,7:9","dtypep":"(Z)","origName":"assert_disabled","isSc":false,"isPrimaryIO":false,"direction":"NONE","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"VAR","dtypeName":"bit","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []}
   ],"activesp": []},
-  {"type":"MODULE","name":"mod2","addr":"(X)","loc":"d,46:8,46:12","origName":"mod2","level":3,"modPublic":false,"inLibrary":false,"dead":false,"recursiveClone":false,"recursive":false,"timeunit":"1ps","inlinesp": [],
+  {"type":"MODULE","name":"mod2","addr":"(CB)","loc":"d,46:8,46:12","origName":"mod2","level":3,"modPublic":false,"inLibrary":false,"dead":false,"recursiveClone":false,"recursive":false,"timeunit":"1ps","inlinesp": [],
    "stmtsp": [
-    {"type":"VAR","name":"clk","addr":"(FB)","loc":"d,48:10,48:13","dtypep":"(I)","origName":"clk","isSc":false,"isPrimaryIO":false,"direction":"INPUT","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"PORT","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
-    {"type":"VAR","name":"d","addr":"(Z)","loc":"d,49:16,49:17","dtypep":"(G)","origName":"d","isSc":false,"isPrimaryIO":false,"direction":"INPUT","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"PORT","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
-    {"type":"VAR","name":"q","addr":"(CB)","loc":"d,50:22,50:23","dtypep":"(G)","origName":"q","isSc":false,"isPrimaryIO":false,"direction":"OUTPUT","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"VSTATIC","varType":"WIRE","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
-    {"type":"ASSIGNW","name":"","addr":"(HB)","loc":"d,53:13,53:14","dtypep":"(G)",
+    {"type":"VAR","name":"clk","addr":"(KB)","loc":"d,48:10,48:13","dtypep":"(I)","origName":"clk","isSc":false,"isPrimaryIO":false,"direction":"INPUT","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"PORT","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
+    {"type":"VAR","name":"d","addr":"(EB)","loc":"d,49:16,49:17","dtypep":"(G)","origName":"d","isSc":false,"isPrimaryIO":false,"direction":"INPUT","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"PORT","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
+    {"type":"VAR","name":"q","addr":"(HB)","loc":"d,50:22,50:23","dtypep":"(G)","origName":"q","isSc":false,"isPrimaryIO":false,"direction":"OUTPUT","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"VSTATIC","varType":"WIRE","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
+    {"type":"VAR","name":"assert_port","addr":"(NB)","loc":"d,46:8,46:12","dtypep":"(Z)","origName":"assert_port","isSc":false,"isPrimaryIO":false,"direction":"INPUT","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"VAR","dtypeName":"bit","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
+    {"type":"VAR","name":"assert_disabled","addr":"(PB)","loc":"d,46:8,46:12","dtypep":"(Z)","origName":"assert_disabled","isSc":false,"isPrimaryIO":false,"direction":"NONE","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"VAR","dtypeName":"bit","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
+    {"type":"INITIALSTATIC","name":"","addr":"(QB)","loc":"d,46:8,46:12","isSuspendable":false,"needProcess":false,
+     "stmtsp": [
+      {"type":"ASSIGN","name":"","addr":"(RB)","loc":"d,46:8,46:12","dtypep":"(Z)",
+       "rhsp": [
+        {"type":"VARREF","name":"assert_port","addr":"(SB)","loc":"d,46:8,46:12","dtypep":"(Z)","access":"RD","varp":"(NB)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+      ],
+       "lhsp": [
+        {"type":"VARREF","name":"assert_disabled","addr":"(TB)","loc":"d,46:8,46:12","dtypep":"(Z)","access":"WR","varp":"(PB)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+      ],"timingControlp": []}
+    ]},
+    {"type":"ASSIGNW","name":"","addr":"(UB)","loc":"d,53:13,53:14","dtypep":"(G)",
      "rhsp": [
-      {"type":"VARREF","name":"d","addr":"(IB)","loc":"d,49:16,49:17","dtypep":"(G)","access":"RD","varp":"(Z)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+      {"type":"VARREF","name":"d","addr":"(VB)","loc":"d,49:16,49:17","dtypep":"(G)","access":"RD","varp":"(EB)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
     ],
      "lhsp": [
-      {"type":"VARREF","name":"q","addr":"(JB)","loc":"d,53:13,53:14","dtypep":"(G)","access":"WR","varp":"(CB)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+      {"type":"VARREF","name":"q","addr":"(WB)","loc":"d,53:13,53:14","dtypep":"(G)","access":"WR","varp":"(HB)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
     ],"timingControlp": [],"strengthSpecp": []}
   ],"activesp": []},
   {"type":"MODULE","name":"mod1__W4","addr":"(M)","loc":"d,31:8,31:12","origName":"mod1","level":3,"modPublic":false,"inLibrary":false,"dead":false,"recursiveClone":false,"recursive":false,"timeunit":"1ps","inlinesp": [],
    "stmtsp": [
-    {"type":"VAR","name":"WIDTH","addr":"(KB)","loc":"d,32:15,32:20","dtypep":"(LB)","origName":"WIDTH","isSc":false,"isPrimaryIO":false,"direction":"NONE","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"VSTATIC","varType":"GPARAM","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":true,"isParam":true,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],
+    {"type":"VAR","name":"WIDTH","addr":"(XB)","loc":"d,32:15,32:20","dtypep":"(YB)","origName":"WIDTH","isSc":false,"isPrimaryIO":false,"direction":"NONE","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"VSTATIC","varType":"GPARAM","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":true,"isParam":true,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],
      "valuep": [
-      {"type":"CONST","name":"32'sh4","addr":"(MB)","loc":"d,19:18,19:19","dtypep":"(LB)"}
+      {"type":"CONST","name":"32'sh4","addr":"(ZB)","loc":"d,19:18,19:19","dtypep":"(YB)"}
     ],"attrsp": []},
     {"type":"VAR","name":"clk","addr":"(R)","loc":"d,34:24,34:27","dtypep":"(I)","origName":"clk","isSc":false,"isPrimaryIO":false,"direction":"INPUT","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"PORT","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
     {"type":"VAR","name":"d","addr":"(U)","loc":"d,35:30,35:31","dtypep":"(G)","origName":"d","isSc":false,"isPrimaryIO":false,"direction":"INPUT","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"PORT","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
     {"type":"VAR","name":"q","addr":"(O)","loc":"d,36:30,36:31","dtypep":"(G)","origName":"q","isSc":false,"isPrimaryIO":false,"direction":"OUTPUT","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"PORT","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
-    {"type":"VAR","name":"IGNORED","addr":"(NB)","loc":"d,39:15,39:22","dtypep":"(LB)","origName":"IGNORED","isSc":false,"isPrimaryIO":false,"direction":"NONE","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"VSTATIC","varType":"LPARAM","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":true,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],
+    {"type":"VAR","name":"IGNORED","addr":"(AC)","loc":"d,39:15,39:22","dtypep":"(YB)","origName":"IGNORED","isSc":false,"isPrimaryIO":false,"direction":"NONE","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"VSTATIC","varType":"LPARAM","dtypeName":"logic","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":true,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],
      "valuep": [
-      {"type":"CONST","name":"32'sh1","addr":"(OB)","loc":"d,39:25,39:26","dtypep":"(LB)"}
+      {"type":"CONST","name":"32'sh1","addr":"(BC)","loc":"d,39:25,39:26","dtypep":"(YB)"}
     ],"attrsp": []},
-    {"type":"ALWAYS","name":"","addr":"(PB)","loc":"d,41:4,41:10","keyword":"always","isSuspendable":false,"needProcess":false,
+    {"type":"ALWAYS","name":"","addr":"(CC)","loc":"d,41:4,41:10","keyword":"always","isSuspendable":false,"needProcess":false,
      "sensesp": [
-      {"type":"SENTREE","name":"","addr":"(QB)","loc":"d,41:11,41:12","isMulti":false,
+      {"type":"SENTREE","name":"","addr":"(DC)","loc":"d,41:11,41:12","isMulti":false,
        "sensesp": [
-        {"type":"SENITEM","name":"","addr":"(RB)","loc":"d,41:13,41:20","edgeType":"POS",
+        {"type":"SENITEM","name":"","addr":"(EC)","loc":"d,41:13,41:20","edgeType":"POS",
          "sensp": [
-          {"type":"VARREF","name":"clk","addr":"(SB)","loc":"d,41:21,41:24","dtypep":"(I)","access":"RD","varp":"(R)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+          {"type":"VARREF","name":"clk","addr":"(FC)","loc":"d,41:21,41:24","dtypep":"(I)","access":"RD","varp":"(R)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
         ],"condp": []}
       ]}
     ],
      "stmtsp": [
-      {"type":"ASSIGNDLY","name":"","addr":"(TB)","loc":"d,42:8,42:10","dtypep":"(G)",
+      {"type":"ASSIGNDLY","name":"","addr":"(GC)","loc":"d,42:8,42:10","dtypep":"(G)",
        "rhsp": [
-        {"type":"VARREF","name":"d","addr":"(UB)","loc":"d,42:11,42:12","dtypep":"(G)","access":"RD","varp":"(U)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+        {"type":"VARREF","name":"d","addr":"(HC)","loc":"d,42:11,42:12","dtypep":"(G)","access":"RD","varp":"(U)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
       ],
        "lhsp": [
-        {"type":"VARREF","name":"q","addr":"(VB)","loc":"d,42:6,42:7","dtypep":"(G)","access":"WR","varp":"(O)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+        {"type":"VARREF","name":"q","addr":"(IC)","loc":"d,42:6,42:7","dtypep":"(G)","access":"WR","varp":"(O)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+      ],"timingControlp": []}
+    ]},
+    {"type":"VAR","name":"assert_port","addr":"(X)","loc":"d,31:8,31:12","dtypep":"(Z)","origName":"assert_port","isSc":false,"isPrimaryIO":false,"direction":"INPUT","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"VAR","dtypeName":"bit","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
+    {"type":"VAR","name":"assert_disabled","addr":"(JC)","loc":"d,31:8,31:12","dtypep":"(Z)","origName":"assert_disabled","isSc":false,"isPrimaryIO":false,"direction":"NONE","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"VAR","dtypeName":"bit","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []},
+    {"type":"INITIALSTATIC","name":"","addr":"(KC)","loc":"d,31:8,31:12","isSuspendable":false,"needProcess":false,
+     "stmtsp": [
+      {"type":"ASSIGN","name":"","addr":"(LC)","loc":"d,31:8,31:12","dtypep":"(Z)",
+       "rhsp": [
+        {"type":"VARREF","name":"assert_port","addr":"(MC)","loc":"d,31:8,31:12","dtypep":"(Z)","access":"RD","varp":"(X)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
+      ],
+       "lhsp": [
+        {"type":"VARREF","name":"assert_disabled","addr":"(NC)","loc":"d,31:8,31:12","dtypep":"(Z)","access":"WR","varp":"(JC)","varScopep":"UNLINKED","classOrPackagep":"UNLINKED"}
       ],"timingControlp": []}
     ]}
   ],"activesp": []}
@@ -89,13 +122,15 @@
    "typesp": [
     {"type":"BASICDTYPE","name":"logic","addr":"(I)","loc":"d,34:24,34:27","dtypep":"(I)","keyword":"logic","generic":true,"rangep": []},
     {"type":"BASICDTYPE","name":"logic","addr":"(G)","loc":"d,15:16,15:17","dtypep":"(G)","keyword":"logic","range":"3:0","generic":true,"rangep": []},
-    {"type":"BASICDTYPE","name":"logic","addr":"(LB)","loc":"d,19:18,19:19","dtypep":"(LB)","keyword":"logic","range":"31:0","generic":true,"rangep": []}
+    {"type":"BASICDTYPE","name":"logic","addr":"(YB)","loc":"d,19:18,19:19","dtypep":"(YB)","keyword":"logic","range":"31:0","generic":true,"rangep": []},
+    {"type":"BASICDTYPE","name":"bit","addr":"(Z)","loc":"d,7:8,7:9","dtypep":"(Z)","keyword":"bit","generic":true,"rangep": []}
   ]},
   {"type":"CONSTPOOL","name":"","addr":"(D)","loc":"a,0:0,0:0",
    "modulep": [
-    {"type":"MODULE","name":"@CONST-POOL@","addr":"(WB)","loc":"a,0:0,0:0","origName":"@CONST-POOL@","level":0,"modPublic":false,"inLibrary":false,"dead":false,"recursiveClone":false,"recursive":false,"timeunit":"NONE","inlinesp": [],
+    {"type":"MODULE","name":"@CONST-POOL@","addr":"(OC)","loc":"a,0:0,0:0","origName":"@CONST-POOL@","level":0,"modPublic":false,"inLibrary":false,"dead":false,"recursiveClone":false,"recursive":false,"timeunit":"NONE","inlinesp": [],
      "stmtsp": [
-      {"type":"SCOPE","name":"@CONST-POOL@","addr":"(XB)","loc":"a,0:0,0:0","aboveScopep":"UNLINKED","aboveCellp":"UNLINKED","modp":"(WB)","varsp": [],"blocksp": [],"inlinesp": []}
+      {"type":"SCOPE","name":"@CONST-POOL@","addr":"(PC)","loc":"a,0:0,0:0","aboveScopep":"UNLINKED","aboveCellp":"UNLINKED","modp":"(OC)","varsp": [],"blocksp": [],"inlinesp": []},
+      {"type":"VAR","name":"assert_disabled","addr":"(QC)","loc":"a,0:0,0:0","dtypep":"(Z)","origName":"assert_disabled","isSc":false,"isPrimaryIO":false,"direction":"NONE","isConst":false,"isPullup":false,"isPulldown":false,"isUsedClock":false,"isSigPublic":false,"isLatched":false,"isUsedLoopIdx":false,"noReset":false,"attrIsolateAssign":false,"attrFileDescr":false,"isDpiOpenArray":false,"isFuncReturn":false,"isFuncLocal":false,"attrClocker":"UNKNOWN","lifetime":"NONE","varType":"VAR","dtypeName":"bit","isSigUserRdPublic":false,"isSigUserRWPublic":false,"isGParam":false,"isParam":false,"attrScBv":false,"attrSFormat":false,"sensIfacep":"UNLINKED","childDTypep": [],"delayp": [],"valuep": [],"attrsp": []}
     ],"activesp": []}
   ]}
 ]}

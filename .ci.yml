@@ -1,0 +1,59 @@
+.common_only: &common_only
+    only:
+        - main
+        - merge_requests
+
+stages:
+  - docker-image
+  - build
+  - test
+
+docker-image:
+  <<: *common_only
+  stage: docker-image
+  tags: ['legacy']
+  variables:
+    GIT_DEPTH: "1"
+  image: docker.antmicro.com:5000/repositories/basic-docker-images:docker-in-docker
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE:verilator-buildenv ./ci/docker/buildenv
+    - docker push $CI_REGISTRY_IMAGE:verilator-buildenv
+
+image: $CI_REGISTRY_IMAGE:verilator-buildenv
+
+build:
+  <<: *common_only
+  stage: build
+  tags: ['legacy']
+  variables:
+    GIT_DEPTH: "1"
+  dependencies:
+    - docker-image
+  script:
+    - autoconf
+    - ./configure --enable-longtests --enable-ccwarn
+    - make -j $SCALENODE_CPU
+    - rm -rfv src/obj_dbg
+    - rm -rfv src/obj_opt
+  artifacts:
+    untracked: true
+    expire_in: 2 hrs
+    paths:
+      - bin/
+      - docs/
+      - include/
+      - src/
+      - test_regress/
+
+test:
+  <<: *common_only
+  stage: test
+  tags: ['legacy']
+  variables:
+    GIT_STRATEGY: none
+  dependencies:
+    - build
+  script:
+    - make -C test_regress SCENARIOS="--dist --vlt" DRIVER_HASHSET=--hashset=$((CI_NODE_INDEX - 1))/$CI_NODE_TOTAL
+  parallel: 6

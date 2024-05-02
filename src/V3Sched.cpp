@@ -431,7 +431,7 @@ void orderSequentially(AstCFunc* funcp, const LogicByScope& lbs) {
                         subFuncp->name(subFuncp->name() + "__Vtiming__"
                                        + cvtToStr(scopep->user2Inc()));
                         subFuncp->rtnType("VlCoroutine");
-                        if (VN_IS(procp, Always)) {
+                        if (VN_IS(procp, Always) && !activep->sensesp()->hasInitial()) {
                             subFuncp->slow(false);
                             FileLine* const flp = procp->fileline();
                             bodyp

@@ -2818,6 +2818,7 @@ class WidthVisitor final : public VNVisitor {
                 nodep->dtypep(varp->dtypep());
                 nodep->varp(varp);
                 nodep->didWidth(true);
+                if (nodep->access().isWriteOrRW()) V3LinkLValue::linkLValueSet(nodep);
                 UINFO(9, "     done clocking msel " << nodep << endl);
                 return;
             }

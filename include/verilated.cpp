@@ -2513,7 +2513,7 @@ bool VerilatedContext::getAssertOn(VerilatedAssertionType_t flags) const {
 }
 void VerilatedContext::setAssertOn(VerilatedAssertionType_t flags) {
     const VerilatedLockGuard lock{m_mutex};
-    m_s.m_assertOn &= flags;
+    m_s.m_assertOn |= flags;
 }
 void VerilatedContext::calcUnusedSigs(bool flag) VL_MT_SAFE {
     const VerilatedLockGuard lock{m_mutex};

@@ -2594,7 +2594,7 @@ class AstAssertCtl final : public AstNodeStmt {
     // Type of assertcontrol task; either known from parser or from evaluated
     // controlTypep expression.
     VAssertCtlType m_ctlType;  // $assert keyword type (control_type)
-    VAssertCtlAssertionType::en m_assertionTypes;  // Type of assertions affected
+    std::underlying_type<VAssertCtlAssertionType::en>::type m_assertionTypes;  // Type of assertions affected
 
 public:
     AstAssertCtl(FileLine* fl, VAssertCtlType ctlType, AstNodeExpr* levelp = nullptr,

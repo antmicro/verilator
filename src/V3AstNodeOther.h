@@ -2588,7 +2588,7 @@ public:
 };
 class AstAssertCtl final : public AstNodeStmt {
     // @astgen op1 := controlTypep : AstNodeExpr
-    // @astgen op2 := assertionTypesp : AstNodeExpr
+    // @astgen op2 := assertionTypesp : Optional[AstNodeExpr]
     // @astgen op3 := levelp : AstNodeExpr
     // @astgen op4 := itemsp : List[AstNodeExpr]
     // Type of assertcontrol task; either known from parser or from evaluated

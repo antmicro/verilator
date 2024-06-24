@@ -554,7 +554,9 @@ class AssertVisitor final : public VNVisitor {
             FileLine* const fl = nodep->fileline();
             const string assertOnStmt
                 = string{"vlSymsp->_vm_contextp__->setAssertOn("}
-            + std::to_string(nodep->ctlType() == VAssertCtlType::ON ? nodep->ctlType() : ~nodep->ctlType()) + ");\n";
+                  + std::to_string(nodep->ctlType() == VAssertCtlType::ON ? nodep->ctlType()
+                                                                          : ~nodep->ctlType())
+                  + ");\n";
             nodep->replaceWith(new AstCExpr{fl, assertOnStmt, 1});
             break;
         }

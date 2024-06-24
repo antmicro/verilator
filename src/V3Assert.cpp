@@ -529,7 +529,8 @@ class AssertVisitor final : public VNVisitor {
 
         if (!nodep->assertionTypesp()) {
             nodep->ctlAssertTypes(255);
-        } else if (const AstConst* const assertionTypesp = VN_CAST(nodep->assertionTypesp(), Const)) {
+        } else if (const AstConst* const assertionTypesp
+                   = VN_CAST(nodep->assertionTypesp(), Const)) {
             nodep->ctlAssertTypes(assertionTypesp->toUInt());
         } else {
             nodep->v3warn(E_UNSUPPORTED, "Can't convert assertion_type to a const");

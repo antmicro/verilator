@@ -553,8 +553,8 @@ class AssertVisitor final : public VNVisitor {
             UINFO(9, "Generating assertctl for a module: " << m_modp << endl);
             FileLine* const fl = nodep->fileline();
             const string assertOnStmt
-                = string{"vlSymsp->_vm_contextp__->assertOn("}
-                  + (nodep->ctlType() == VAssertCtlType::ON ? "true" : "false") + ");\n";
+                = string{"vlSymsp->_vm_contextp__->setAssertOn("}
+            + std::to_string(nodep->ctlType() == VAssertCtlType::ON ? nodep->ctlType() : ~nodep->ctlType()) + ");\n";
             nodep->replaceWith(new AstCExpr{fl, assertOnStmt, 1});
             break;
         }

@@ -2497,8 +2497,7 @@ VerilatedContext::Serialized::Serialized() {
 
 bool VerilatedContext::assertOn() const VL_MT_SAFE {
     const VerilatedLockGuard lock{m_mutex};
-    return m_s.m_assertOn
-           & static_cast<VerilatedAssertionType_t>(VerilatedAssertionType::ASSERT_TYPE_MAX_VALUE);
+    return m_s.m_assertOn;
 }
 void VerilatedContext::assertOn(bool flag) VL_MT_SAFE {
     const VerilatedLockGuard lock{m_mutex};

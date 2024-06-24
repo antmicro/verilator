@@ -527,6 +527,16 @@ class AssertVisitor final : public VNVisitor {
 
         iterateChildren(nodep);
 
+        if (!nodep->assertionTypesp()) {
+            nodep->ctlAssertTypes(255);
+        } else if (const AstConst* const assertionTypesp = VN_CAST(nodep->assertionTypesp(), Const)) {
+            nodep->ctlAssertTypes(assertionTypesp->toUInt());
+        } else {
+            nodep->v3warn(E_UNSUPPORTED, "Can't convert assertion_type to a const");
+            VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
+            return;
+        }
+
         if (const AstConst* const constp = VN_CAST(nodep->controlTypep(), Const)) {
             nodep->ctlType(constp->toSInt());
         } else if (nodep->ctlType() == VAssertCtlType::_TO_BE_EVALUATED) {

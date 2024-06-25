@@ -2850,6 +2850,7 @@ class WidthVisitor final : public VNVisitor {
                     }
                 }
                 if (AstVar* const varp = VN_CAST(foundp, Var)) {
+                    if (!varp->didWidth()) userIterate(varp, nullptr);
                     nodep->dtypep(foundp->dtypep());
                     nodep->varp(varp);
                     AstIface* const ifacep = adtypep->ifacep();

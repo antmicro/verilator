@@ -551,7 +551,7 @@ void EmitCSyms::emitSymHdr() {
     increaseComplexityScore(1);
     puts(symClassName() + "(VerilatedContext* contextp, const char* namep, " + topClassName()
          + "* modelp);\n");
-    puts(string{"~"} + symClassName() + "();\n");
+    puts("~"s + symClassName() + "();\n");
 
     for (const auto& i : m_usesVfinal) {
         increaseComplexityScore(1);

@@ -134,6 +134,180 @@ class BeginVisitor final : public VNVisitor {
         dotNames(nodep, "__FORK__");
         nodep->name("");
     }
+    void visit(AstNodeForeach* nodep) override {
+        const AstSelLoopVars* const loopsp = VN_CAST(nodep->arrayp(), SelLoopVars);
+        UASSERT_OBJ(loopsp, nodep, "No loop variables under foreach");
+        // if (debug()) nodep->dumpTree("-  foreach-old: ");
+        AstNodeExpr* const fromp = loopsp->fromp();
+        UASSERT_OBJ(fromp->dtypep(), fromp, "Missing data type");
+        AstNodeDType* fromDtp = fromp->dtypep()->skipRefp();
+        // Split into for loop
+        // We record where the body needs to eventually go with bodyPointp
+        AstNode* lastBodyPointp = nullptr;
+        AstNode* newp = nullptr;
+        // Major dimension first
+        for (AstNode *argsp = loopsp->elementsp(), *next_argsp; argsp; argsp = next_argsp) {
+            next_argsp = argsp->nextp();
+            const bool empty = VN_IS(argsp, Empty);
+            AstVar* const varp = VN_CAST(argsp, Var);
+            UASSERT_OBJ(varp || empty, argsp, "Missing foreach loop variable");
+            if (varp) varp->usedLoopIdx(true);
+            if (!fromDtp) {
+                argsp->v3error("foreach loop variables exceed number of indices of array");
+                VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
+                return;
+            }
+            fromDtp = fromDtp->skipRefp();
+            UINFO(9, "- foreachArg " << argsp << endl);
+            UINFO(9, "-   from on  " << fromp << endl);
+            UINFO(9, "-   from dtp " << fromDtp << endl);
+
+            argsp->unlinkFrBack();
+
+            FileLine* const fl = argsp->fileline();
+            AstNode* bodyPointp = new AstBegin{fl, "[EditWrapper]", nullptr};
+            AstNode* loopp = nullptr;
+            if (const AstNodeArrayDType* const adtypep = VN_CAST(fromDtp, NodeArrayDType)) {
+                if (varp) {
+                    loopp = createForeachLoopRanged(nodep, bodyPointp, varp, adtypep->declRange());
+                }
+                // Prep for next
+                fromDtp = fromDtp->subDTypep();
+            } else if (AstBasicDType* const adtypep = VN_CAST(fromDtp, BasicDType)) {
+                if (adtypep->isString()) {
+                    if (varp) {
+                        AstConst* const leftp = new AstConst{fl, 0};
+                        AstNodeExpr* const condp
+                            = new AstLt{fl, new AstVarRef{fl, varp, VAccess::READ},
+                                        new AstLenN{fl, fromp->cloneTreePure(false)}};
+                        AstAdd* const incp = new AstAdd{fl, new AstConst{fl, 1},
+                                                        new AstVarRef{fl, varp, VAccess::READ}};
+                        loopp = createForeachLoop(nodep, bodyPointp, varp, leftp, condp, incp);
+                    }
+                } else if (!adtypep->isRanged()) {
+                    argsp->v3error("Illegal to foreach loop on basic '" + fromDtp->prettyTypeName()
+                                   + "'");
+                    VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
+                    VL_DO_DANGLING(bodyPointp->deleteTree(), bodyPointp);
+                    return;
+                } else {
+                    if (varp) {
+                        loopp = createForeachLoopRanged(nodep, bodyPointp, varp,
+                                                        adtypep->declRange());
+                    }
+                }
+                // Prep for next
+                fromDtp = nullptr;
+            } else if (VN_IS(fromDtp, DynArrayDType) || VN_IS(fromDtp, QueueDType)) {
+                if (varp) {
+                    auto* const leftp = new AstConst{fl, 0};
+                    auto* const sizep
+                        = new AstCMethodHard{fl, fromp->cloneTreePure(false), "size"};
+                    sizep->dtypeSetSigned32();
+                    sizep->protect(false);
+                    AstNodeExpr* const condp
+                        = new AstLt{fl, new AstVarRef{fl, varp, VAccess::READ}, sizep};
+                    AstNodeExpr* const incp = new AstAdd{fl, new AstConst{fl, 1},
+                                                         new AstVarRef{fl, varp, VAccess::READ}};
+                    loopp = createForeachLoop(nodep, bodyPointp, varp, leftp, condp, incp);
+                }
+                // Prep for next
+                fromDtp = fromDtp->subDTypep();
+            } else if (const AstAssocArrayDType* const adtypep
+                       = VN_CAST(fromDtp, AssocArrayDType)) {
+                // Make this: var KEY_TYPE index;
+                //            bit index__Vfirst;
+                //            index__Vfirst = 0;
+                //            if (0 != array.first(index))
+                //                 do body while (index__Vfirst || 0 != array.next(index))
+                varp->dtypeFrom(adtypep->keyDTypep());
+                AstVar* const first_varp = new AstVar{
+                    fl, VVarType::BLOCKTEMP, varp->name() + "__Vfirst", VFlagBitPacked{}, 1};
+                first_varp->usedLoopIdx(true);
+                first_varp->lifetime(VLifetime::AUTOMATIC);
+                AstNodeExpr* const firstp
+                    = new AstCMethodHard{fl, fromp->cloneTreePure(false), "first",
+                                         new AstVarRef{fl, varp, VAccess::READWRITE}};
+                firstp->dtypeSetSigned32();
+                AstNodeExpr* const nextp
+                    = new AstCMethodHard{fl, fromp->cloneTreePure(false), "next",
+                                         new AstVarRef{fl, varp, VAccess::READWRITE}};
+                nextp->dtypeSetSigned32();
+                AstNode* const first_clearp
+                    = new AstAssign{fl, new AstVarRef{fl, first_varp, VAccess::WRITE},
+                                    new AstConst{fl, AstConst::BitFalse{}}};
+                auto* const orp = new AstLogOr{fl, new AstVarRef{fl, first_varp, VAccess::READ},
+                                               new AstNeq{fl, new AstConst{fl, 0}, nextp}};
+                AstNode* const whilep = new AstWhile{fl, orp, first_clearp};
+                first_clearp->addNext(bodyPointp);
+                AstNode* const ifbodyp
+                    = new AstAssign{fl, new AstVarRef{fl, first_varp, VAccess::WRITE},
+                                    new AstConst{fl, AstConst::BitTrue{}}};
+                ifbodyp->addNext(whilep);
+                AstNode* const stmtsp = varp;  // New statements for under new Begin
+                stmtsp->addNext(first_varp);
+                stmtsp->addNext(
+                    new AstIf{fl, new AstNeq{fl, new AstConst{fl, 0}, firstp}, ifbodyp});
+                loopp = new AstBegin{nodep->fileline(), "", stmtsp, false, true};
+                // Prep for next
+                fromDtp = fromDtp->subDTypep();
+            } else {
+                argsp->v3error("Illegal to foreach loop on '" + fromDtp->prettyTypeName() + "'");
+                VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
+                return;
+            }
+            // New loop goes UNDER previous loop
+            if (varp) {
+                if (!newp) {
+                    newp = loopp;
+                } else {
+                    lastBodyPointp->replaceWith(loopp);
+                }
+                lastBodyPointp = bodyPointp;
+            }
+        }
+        // The parser validates we don't have "foreach (array[,,,])"
+        AstNode* const bodyp = nodep->stmtsp();
+        UASSERT_OBJ(newp, nodep, "foreach has no non-empty loop variable");
+        if (bodyp) {
+            lastBodyPointp->replaceWith(bodyp->unlinkFrBackWithNext());
+        } else {
+            lastBodyPointp->unlinkFrBack();
+        }
+        // if (debug()) newp->dumpTreeAndNext(cout, "-  foreach-new: ");
+        nodep->replaceWith(newp);
+        if (lastBodyPointp) VL_DO_DANGLING(lastBodyPointp->deleteTree(), lastBodyPointp);
+        VL_DO_DANGLING(nodep->deleteTree(), nodep);
+    }
+    AstNode* createForeachLoopRanged(AstNodeForeach* nodep, AstNode* bodysp, AstVar* varp,
+                                     const VNumRange& declRange) {
+        FileLine* const fl = varp->fileline();
+        AstNodeExpr* const leftp = new AstConst{fl, AstConst::Signed32{}, declRange.left()};
+        AstNodeExpr* const rightp = new AstConst{fl, AstConst::Signed32{}, declRange.right()};
+        leftp->dtypep()->widthMinFromWidth();
+        rightp->dtypep()->widthMinFromWidth();
+        AstNodeExpr* condp;
+        AstNodeExpr* incp;
+        if (declRange.left() < declRange.right()) {
+            condp = new AstLteS{fl, new AstVarRef{fl, varp, VAccess::READ}, rightp};
+            incp = new AstAdd{fl, new AstConst{fl, 1}, new AstVarRef{fl, varp, VAccess::READ}};
+        } else {
+            condp = new AstGteS{fl, new AstVarRef{fl, varp, VAccess::READ}, rightp};
+            incp = new AstSub{fl, new AstVarRef{fl, varp, VAccess::READ}, new AstConst{fl, 1}};
+        }
+        return createForeachLoop(nodep, bodysp, varp, leftp, condp, incp);
+    }
+    AstNode* createForeachLoop(AstNodeForeach* nodep, AstNode* bodysp, AstVar* varp,
+                               AstNodeExpr* leftp, AstNodeExpr* condp, AstNodeExpr* incp) {
+        FileLine* const fl = varp->fileline();
+        auto* const whilep = new AstWhile{
+            fl, condp, bodysp, new AstAssign{fl, new AstVarRef{fl, varp, VAccess::WRITE}, incp}};
+        AstNode* const stmtsp = varp;  // New statements for under new Begin
+        stmtsp->addNext(new AstAssign{fl, new AstVarRef{fl, varp, VAccess::WRITE}, leftp});
+        stmtsp->addNext(whilep);
+        AstNode* const newp = new AstBegin{nodep->fileline(), "", stmtsp, false, true};
+        return newp;
+    }
     void visit(AstNodeAssign* nodep) override {
         // Keep begin under assignment (in nodep->timingControlp())
         VL_RESTORER(m_keepBegins);
@@ -327,6 +501,7 @@ private:
 
     // VISITORS
     void visit(AstNodeFTaskRef* nodep) override {
+        UASSERT_OBJ(nodep->taskp(), nodep, "unlinked");
         if (nodep->taskp()->user1()) {  // It was converted
             UINFO(9, "    relinkFTask " << nodep << endl);
             nodep->name(nodep->taskp()->name());

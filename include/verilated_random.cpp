@@ -25,6 +25,7 @@
 #include <iostream>
 #include <sstream>
 #include <streambuf>
+#include <functional>
 
 #define _VL_SOLVER_HASH_LEN 1
 #define _VL_SOLVER_HASH_LEN_TOTAL 4
@@ -362,6 +363,129 @@ bool VlRandomizer::next(VlRNG& rngr) {
     return true;
 }
 
+namespace smtparse {
+    using std::istream;
+    using std::string;
+
+    bool smtIsCharWhitespace(char c) { return (c == ' ') | (c == '\n') | (c == '\r'); }
+
+    struct SMTParseState {
+        istream& s;
+        char buf = '\0';
+#ifdef VL_DEBUG
+        string d_read;
+#endif
+
+        SMTParseState(istream& s_) :s(s_) {}
+
+        char peekChar() {
+            if (buf) return buf;
+            char c;
+            s >> c;
+            buf = c;
+            return c;
+        }
+
+        char popChar() {
+            char c;
+            if (buf) {
+                c = buf;
+                buf = '\0';
+            } else {
+                s >> c;
+            }
+#ifdef VL_DEBUG
+            d_read += c;
+#endif
+            return c;
+        }
+
+        bool popWhitespace(bool required = true) {
+            bool any_whitespace = false;
+            while (true) {
+                char c = peekChar();
+                bool whitespace = smtIsCharWhitespace(c);
+                any_whitespace |= whitespace;
+                if (!whitespace) break;
+                popChar();
+            }
+            return !required || any_whitespace;
+        }
+    };
+
+
+
+    bool invalidSMT(const char * filename, int linenum, const char* msg = "Internal: Unable to "
+                    "parse solver's response: invalid S-expression") {
+        VL_WARN_MT(filename, linenum, "smt", msg);
+        return false;
+    }
+
+    template <typename ParseInner>
+    bool smtParseParen(SMTParseState& s, ParseInner parseInner) {
+        if (s.popChar() != '(')
+            return invalidSMT(__FILE__, __LINE__, "expected `(`");
+        s.popWhitespace();
+        if (!parseInner(s)) return false;
+        s.popWhitespace();
+        if (s.popChar() != ')')
+            return invalidSMT(__FILE__, __LINE__, "expected `)`");
+        return true;
+    }
+
+    bool smtParseIdent(SMTParseState& s, string& ident) {
+        bool allowNum = false;
+        ident.clear();
+        while (true) {
+            char c = s.peekChar();
+            if (!allowNum && (c >= '0' && c <= '9'))
+                return invalidSMT(__FILE__, __LINE__, "ident can't start with 0-9");
+            if (smtIsCharWhitespace(c) || c == '(' || c == ')' || c == '#') {
+                if (ident.length() == 0)
+                    return invalidSMT(__FILE__, __LINE__, "ident can't be empty");
+                return true;
+            };
+            ident += s.popChar();
+            allowNum = true;
+        }
+    }
+
+    bool smtParseValueRaw(SMTParseState& s, string& value) {
+        bool allowNum = false;
+        value.clear();
+        while (true) {
+            char c = s.peekChar();
+            if (smtIsCharWhitespace(c) || c == '(' || c == ')') return value.length() > 0;
+            value += s.popChar();
+        }
+    }
+
+    template <typename LhsT, typename Assign, typename ParseLhs>
+    bool smtParseAssignList(SMTParseState& s, ParseLhs parseLhs, Assign assign) {
+        string ident, value;
+        s.popWhitespace();
+        smtParseParen(s, [&](SMTParseState& s) {
+            while (true) {
+                bool inner_ok = false;
+                if (!smtParseParen(s, [&](SMTParseState& s) {
+                    LhsT lhs;
+                    if (!parseLhs(s, lhs))
+                        return invalidSMT(__FILE__, __LINE__, "Failed to parse LHS");
+                    s.popWhitespace();
+                    if (!smtParseValueRaw(s, value))
+                        return invalidSMT(__FILE__, __LINE__, "Failed to parse RHS");
+                    assign(lhs, std::move(value));
+                    inner_ok = true;
+                    return true;
+                })) return inner_ok;
+                s.popWhitespace();
+            }
+            return true;
+        });
+        return true;
+    }
+}
+
 bool VlRandomizer::parseSolution(std::iostream& f) {
     std::string sat;
     do { std::getline(f, sat); } while (sat == "");
@@ -380,35 +504,23 @@ bool VlRandomizer::parseSolution(std::iostream& f) {
     f << "))\n";
 
     // Quasi-parse S-expression of the form ((x #xVALUE) (y #bVALUE) (z #xVALUE))
-    char c;
-    f >> c;
-    if (c != '(') {
-        VL_WARN_MT(__FILE__, __LINE__, "randomize",
-                   "Internal: Unable to parse solver's response: invalid S-expression");
-        return false;
-    }
+    {
+        smtparse::SMTParseState s(f);
+        smtparse::smtParseAssignList</*lhs*/ std::string>(s,
+            /*parseLhs*/ smtparse::smtParseIdent,
+            /*assign*/ [&](const std::string& ident, std::string&& value) {
+                VL_PRINTF("SMT assign `%s` <= `%s`\n", &ident[0], &value[0]);
+                auto it = m_vars.find(ident);
+                if (it == m_vars.end()) return false;
 
-    while (true) {
-        f >> c;
-        if (c == ')') break;
-        if (c != '(') {
-            VL_WARN_MT(__FILE__, __LINE__, "randomize",
-                       "Internal: Unable to parse solver's response: invalid S-expression");
-            return false;
-        }
+                if (m_randmode && !it->second->randModeIdxNone()) {
+                    if (!(m_randmode->at(it->second->randModeIdx()))) return true;
+                }
 
-        std::string name, value;
-        f >> name;
-        std::getline(f, value, ')');
-
-        auto it = m_vars.find(name);
-        if (it == m_vars.end()) continue;
-        const VlRandomVar& varr = *it->second;
-        if (m_randmode && !varr.randModeIdxNone()) {
-            if (!(m_randmode->at(varr.randModeIdx()))) continue;
-        }
-
-        varr.set(std::move(value));
+                it->second->set(std::move(value));
+                return true;
+            }
+        );
     }
 
     return true;

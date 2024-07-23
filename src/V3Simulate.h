@@ -785,6 +785,42 @@ private:
             clearOptimizable(nodep, "Select LHS isn't simple variable");
         }
     }
+    void handleForeachRecurse(AstNodeForeach* nodep, AstNodeExpr* arrayp, AstNode* varsp) {
+        // Do a single level of foreach iteration
+        int loops = 0;
+        AstVar* varp = VN_CAST(varsp, Var);
+        if (AstInitArray* const initp = VN_CAST(arrayp, InitArray)) {
+            AstConst* const indexp = fetchConst(nodep->bitp());
+            const uint32_t offset = indexp->num().toUInt();
+            AstNodeExpr* const itemp = initp->getIndexDefaultedValuep(offset);
+        } else if (AstConst* const initp = VN_CAST(arrayp, Const)) {
+            ;
+        } else {
+            clearOptimizable(nodep, "Foreach of non-array");
+        }
+        while (true) {
+            UINFO(5, "    FOREACH-ITER " << nodep << endl);
+            if (!optimizable()) break;
+            if (varp) {
+                ;
+            }
+            if (fetchConst(varp)->num().isNeqZero()) {  //
+                break;
+            }
+            if (varsp->nextp())
+                handleForeachRecurse(nodep, selp, varsp->nextp());
+            else
+                iterateAndNextConstNull(nodep->stmtsp());
+            if (VN_IS(varsp, Empty)) break;  // dimension skip
+            if (loops++ > v3Global.opt.unrollCountAdjusted(VOptionBool{}, m_params, true)) {
+                clearOptimizable(nodep, "Loop unrolling took too long; probably this is an"
+                        "infinite loop, or use /*verilator unroll_full*/, or "
+                        "set --unroll-count above "
+                        + cvtToStr(loops));
+                break;
+            }
+        }
+    }
 
     void visit(AstNodeAssign* nodep) override {
         if (jumpingOver(nodep)) return;
@@ -974,6 +1010,25 @@ private:
                     break;
                 }
             }
+        }
+    }
+
+    void visit(AstForeach* nodep) override {
+        // Doing lots of Whiles is slow, so only for parameters
+        UINFO(5, "   FOREACH " << nodep << endl);
+        if (!m_params) {
+            badNodeType(nodep);
+            return;
+        }
+        checkNodeInfo(nodep);
+        if (m_checkOnly) {
+            iterateChildrenConst(nodep);
+        } else if (optimizable()) {
+            const AstSelLoopVars* const loopsp = VN_CAST(nodep->arrayp(), SelLoopVars);
+            iterateAndNextConstNull(loopsp->fromp());
+            if (!optimizable()) return;
+            AstNodeExpr* valp = fetchValue(loopsp->fromp());
+            handleForeachRecurse(nodep, valp, loopsp->elementsp());
         }
     }
 

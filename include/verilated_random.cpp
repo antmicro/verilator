@@ -27,7 +27,6 @@
 #include <sstream>
 #include <streambuf>
 #include <string>
-#include <sstream>
 
 #define _VL_SOLVER_HASH_LEN 1
 #define _VL_SOLVER_HASH_LEN_TOTAL 4
@@ -256,26 +255,19 @@ static Process& getSolver() {
 //======================================================================
 // VlRandomizer:: Methods
 
-std::ostream& operator<<(std::ostream& os, const VlRandomExpr& dt)
-{
+std::ostream& operator<<(std::ostream& os, const VlRandomExpr& dt) {
     dt.emit(os);
     return os;
 }
 
 void VlRandomSort::emit(std::ostream& s) const {
     switch (constructor()) {
-        case Constructor::VL_RAND_BV:
-            s << "(_ BitVec " << elemWidth() << ")";
-            break;
-        case Constructor::VL_RAND_ABV:
-            s << "(Array (_ BitVec " << idxWidth() << ") (_ BitVec " << elemWidth() << "))";
-            break;
-        case Constructor::VL_RAND_BOOL:
-            s << "Bool";
-            break;
-        default:
-            s << "UNSUP_TYPE";
-            break;
+    case Constructor::VL_RAND_BV: s << "(_ BitVec " << elemWidth() << ")"; break;
+    case Constructor::VL_RAND_ABV:
+        s << "(Array (_ BitVec " << idxWidth() << ") (_ BitVec " << elemWidth() << "))";
+        break;
+    case Constructor::VL_RAND_BOOL: s << "Bool"; break;
+    default: s << "UNSUP_TYPE"; break;
     }
 }
 void VlRandomVarRef::emit(std::ostream& s) const { s << m_name; }
@@ -339,25 +331,21 @@ std::shared_ptr<const VlRandomExpr> VlRandomizer::randomConstraint(VlRNG& rngr, 
     std::vector<std::shared_ptr<const VlRandomExpr>> varbits;
     for (const auto& var : m_vars) {
         switch (var.second->sort().constructor()) {
-            case VlRandomSort::Constructor::VL_RAND_BV:
+        case VlRandomSort::Constructor::VL_RAND_BV:
+            for (int i = 0; i < var.second->sort().elemWidth(); i++)
+                varbits.emplace_back(std::make_shared<const VlRandomExtract>(var.second, i));
+            break;
+        case VlRandomSort::Constructor::VL_RAND_ABV:
+            // TODO: Bypass unconstrained indices and use fast randomization method for them
+            for (int idx = 0; idx < var.second->sort().len(); idx++) {
                 for (int i = 0; i < var.second->sort().elemWidth(); i++)
-                    varbits.emplace_back(std::make_shared<const VlRandomExtract>(var.second, i));
-                break;
-            case VlRandomSort::Constructor::VL_RAND_ABV:
-                // TODO: Bypass unconstrained indices and use fast randomization method for them
-                for (int idx = 0; idx < var.second->sort().len(); idx++) {
-                    for (int i = 0; i < var.second->sort().elemWidth(); i++)
-                        varbits.emplace_back(
-                            std::make_shared<const VlRandomExtract>(
-                                std::make_shared<const VlRandomSelectRef>(var.second, idx),
-                                i
-                            )
-                        );
-                }
-                break;
-            default:
-                VL_WARN_MT(__FILE__, __LINE__, "randomize",
-                           "Internal: Unsupported randomization type");
+                    varbits.emplace_back(std::make_shared<const VlRandomExtract>(
+                        std::make_shared<const VlRandomSelectRef>(var.second, idx), i));
+            }
+            break;
+        default:
+            VL_WARN_MT(__FILE__, __LINE__, "randomize",
+                       "Internal: Unsupported randomization type");
         }
     }
     for (int i = 0; i < bits; i++) {
@@ -370,8 +358,8 @@ std::shared_ptr<const VlRandomExpr> VlRandomizer::randomConstraint(VlRNG& rngr, 
         }
         concat = concat == nullptr ? bit : std::make_shared<const VlRandomConcat>(concat, bit);
     }
-    return std::make_shared<const VlRandomEq>(
-        concat, std::make_shared<const VlRandomBVConst>(hash, bits));
+    return std::make_shared<const VlRandomEq>(concat,
+                                              std::make_shared<const VlRandomBVConst>(hash, bits));
 }
 
 bool VlRandomizer::next(VlRNG& rngr) {
@@ -404,161 +392,158 @@ bool VlRandomizer::next(VlRNG& rngr) {
 }
 
 namespace smtparse {
-    using std::istream;
-    using std::string;
+using std::istream;
+using std::string;
 
-    bool smtIsCharWhitespace(char c) { return (c == ' ') | (c == '\n') | (c == '\r'); }
+bool smtIsCharWhitespace(char c) { return (c == ' ') | (c == '\n') | (c == '\r'); }
 
-    struct SMTParseState {
-        std::istream& s;
-        char buf = '\0';
-        bool err;
-        const char* err_filename;
-        int err_linenum;
+struct SMTParseState {
+    std::istream& s;
+    char buf = '\0';
+    bool err;
+    const char* err_filename;
+    int err_linenum;
 #ifdef VL_DEBUG
-        string d_read;
+    string d_read;
 #endif
 
-        SMTParseState(istream& s_) :s(s_) {}
+    SMTParseState(istream& s_)
+        : s(s_) {}
 
-        char peekChar() {
-            if (buf) return buf;
-            char c;
+    char peekChar() {
+        if (buf) return buf;
+        char c;
+        s >> c;
+        buf = c;
+        return c;
+    }
+
+    char popChar() {
+        char c;
+        if (buf) {
+            c = buf;
+            buf = '\0';
+        } else {
             s >> c;
-            buf = c;
-            return c;
         }
+#ifdef VL_DEBUG
+        d_read += c;
+#endif
+        return c;
+    }
 
-        char popChar() {
-            char c;
+    bool popWhitespace(bool required = true) {
+        bool any_whitespace = false;
+        while (true) {
+            char c = peekChar();
+            bool whitespace = smtIsCharWhitespace(c);
+            any_whitespace |= whitespace;
+            if (!whitespace) break;
+            popChar();
+        }
+        return !required || any_whitespace;
+    }
+
+    bool error(const char* filename, int linenum) {
+        err = true;
+        err_filename = filename;
+        err_linenum = linenum;
+        return false;
+    }
+
+    void clrErr() { err = false; }
+
+    bool checkErr() {
+        if (err) {
+#ifdef VL_DEBUG
+            string err_hl;
+            int pos = -1;
             if (buf) {
-                c = buf;
-                buf = '\0';
-            } else {
-                s >> c;
+                err_hl = d_read + "\033[41;371m" + popChar() + "\033[0m";
+                pos = d_read.length();
+            } else if (d_read.length() > 0) {
+                err_hl = d_read.substr(0, d_read.length() - 1) + "\033[41;371m"
+                         + d_read[d_read.length() - 1] + "\033[0m";
+                pos = d_read.length() - 1;
             }
-#ifdef VL_DEBUG
-            d_read += c;
-#endif
-            return c;
-        }
+            // TODO: Fix this loop hanging
+            // while (!s.fail() && !s.eof()) s >> d_read;
 
-        bool popWhitespace(bool required = true) {
-            bool any_whitespace = false;
-            while (true) {
-                char c = peekChar();
-                bool whitespace = smtIsCharWhitespace(c);
-                any_whitespace |= whitespace;
-                if (!whitespace) break;
-                popChar();
-            }
-            return !required || any_whitespace;
-        }
+            string err_str = "Internal: Unable to parse solver's response: invalid "
+                             "S-expression\nAn error occured at idx "
+                             + std::to_string(pos) + ":\n" + err_hl;
 
-        bool error(const char* filename, int linenum) {
-            err = true;
-            err_filename = filename;
-            err_linenum = linenum;
-            return false;
-        }
-
-        void clrErr() { err = false; }
-
-        bool checkErr() {
-            if (err) {
-#ifdef VL_DEBUG
-                string err_hl;
-                int pos = -1;
-                if (buf) {
-                    err_hl = d_read + "\033[41;371m" + popChar() + "\033[0m";
-                    pos = d_read.length();
-                } else if (d_read.length() > 0) {
-                    err_hl = d_read.substr(0, d_read.length() - 1) + "\033[41;371m"
-                        + d_read[d_read.length() - 1] + "\033[0m";
-                    pos = d_read.length() - 1;
-                }
-                // TODO: Fix this loop hanging
-                // while (!s.fail() && !s.eof()) s >> d_read;
-
-                string err_str = "Internal: Unable to parse solver's response: invalid "
-                                 "S-expression\nAn error occured at idx " + std::to_string(pos) +
-                                 ":\n" + err_hl;
-
-                VL_WARN_MT(err_filename, err_linenum, "smt", &err_str[0]);
+            VL_WARN_MT(err_filename, err_linenum, "smt", &err_str[0]);
 #else
-                VL_WARN_MT(err_filename, err_linenum, "smt", "Internal: Unable to parse solver's "
-                                                      "response: invalid  S-expression");
+            VL_WARN_MT(err_filename, err_linenum, "smt",
+                       "Internal: Unable to parse solver's "
+                       "response: invalid  S-expression");
 #endif
-                return false;
-            }
-            return true;
-        }
-    };
-
-    template <typename ParseInner>
-    bool smtParseParen(SMTParseState& s, ParseInner parseInner) {
-        if (s.popChar() != '(')
             return false;
-        s.popWhitespace();
-        if (!parseInner(s)) return false;
-        s.popWhitespace();
-        if (s.popChar() != ')')
-            return s.error(__FILE__, __LINE__);
+        }
         return true;
     }
+};
 
-    bool smtParseIdent(SMTParseState& s, string& ident) {
-        bool allowNum = false;
-        ident.clear();
-        while (true) {
-            char c = s.peekChar();
-            if (!allowNum && (c >= '0' && c <= '9'))
-                return false;
-            if (smtIsCharWhitespace(c) || c == '(' || c == ')' || c == '#') {
-                if (ident.length() == 0)
-                    return false;
-                return true;
-            };
-            ident += s.popChar();
-            allowNum = true;
-        }
+template <typename ParseInner>
+bool smtParseParen(SMTParseState& s, ParseInner parseInner) {
+    if (s.popChar() != '(') return false;
+    s.popWhitespace();
+    if (!parseInner(s)) return false;
+    s.popWhitespace();
+    if (s.popChar() != ')') return s.error(__FILE__, __LINE__);
+    return true;
+}
+
+bool smtParseIdent(SMTParseState& s, string& ident) {
+    bool allowNum = false;
+    ident.clear();
+    while (true) {
+        char c = s.peekChar();
+        if (!allowNum && (c >= '0' && c <= '9')) return false;
+        if (smtIsCharWhitespace(c) || c == '(' || c == ')' || c == '#') {
+            if (ident.length() == 0) return false;
+            return true;
+        };
+        ident += s.popChar();
+        allowNum = true;
     }
+}
 
-    bool smtParseValueRaw(SMTParseState& s, string& value) {
-        bool allowNum = false;
-        value.clear();
-        while (true) {
-            char c = s.peekChar();
-            if (smtIsCharWhitespace(c) || c == '(' || c == ')') return value.length() > 0;
-            value += s.popChar();
-        }
+bool smtParseValueRaw(SMTParseState& s, string& value) {
+    bool allowNum = false;
+    value.clear();
+    while (true) {
+        char c = s.peekChar();
+        if (smtIsCharWhitespace(c) || c == '(' || c == ')') return value.length() > 0;
+        value += s.popChar();
     }
+}
 
-    template <typename LhsT, typename Assign, typename ParseLhs>
-    bool smtParseAssignList(SMTParseState& s, ParseLhs parseLhs, Assign assign) {
-        string ident, value;
-        s.popWhitespace();
-        smtParseParen(s, [&](SMTParseState& s) {
-            while (true) {
-                bool inner_ok = false;
-                if (!smtParseParen(s, [&](SMTParseState& s) {
+template <typename LhsT, typename Assign, typename ParseLhs>
+bool smtParseAssignList(SMTParseState& s, ParseLhs parseLhs, Assign assign) {
+    string ident, value;
+    s.popWhitespace();
+    smtParseParen(s, [&](SMTParseState& s) {
+        while (true) {
+            bool inner_ok = false;
+            if (!smtParseParen(s, [&](SMTParseState& s) {
                     LhsT lhs;
-                    if (!parseLhs(s, lhs))
-                        return s.error(__FILE__, __LINE__);
+                    if (!parseLhs(s, lhs)) return s.error(__FILE__, __LINE__);
                     s.popWhitespace();
-                    if (!smtParseValueRaw(s, value))
-                        return s.error(__FILE__, __LINE__);
+                    if (!smtParseValueRaw(s, value)) return s.error(__FILE__, __LINE__);
                     assign(lhs, std::move(value));
                     inner_ok = true;
                     return true;
-                })) return inner_ok;
-                s.popWhitespace();
-            }
-            return true;
-        });
+                }))
+                return inner_ok;
+            s.popWhitespace();
+        }
         return true;
-    }
+    });
+    return true;
 }
+}  //namespace smtparse
 
 bool VlRandomizer::parseSolution(std::iostream& f) {
     std::string sat;
@@ -580,7 +565,8 @@ bool VlRandomizer::parseSolution(std::iostream& f) {
     // Quasi-parse S-expression of the form ((x #xVALUE) (y #bVALUE) (z #xVALUE))
     {
         smtparse::SMTParseState s(f);
-        smtparse::smtParseAssignList</*lhs*/ std::string>(s,
+        smtparse::smtParseAssignList</*lhs*/ std::string>(
+            s,
             /*parseLhs*/ smtparse::smtParseIdent,
             /*assign*/ [&](const std::string& ident, std::string&& value) {
                 auto it = m_vars.find(ident);
@@ -588,18 +574,15 @@ bool VlRandomizer::parseSolution(std::iostream& f) {
 
                 auto& ref = it->second;
                 switch (ref->sort().constructor()) {
-                    case VlRandomSort::Constructor::VL_RAND_BV:
-                        const VlRandomVarRef& varref =
-                            static_cast<const VlRandomVarRef&>(*it->second);
-                        if (m_randmode && !varref.randModeIdxNone()) {
-                            if (!(m_randmode->at(varref.randModeIdx()))) return true;
-                        }
-                        varref.set(std::move(value));
-
+                case VlRandomSort::Constructor::VL_RAND_BV:
+                    const VlRandomVarRef& varref = static_cast<const VlRandomVarRef&>(*it->second);
+                    if (m_randmode && !varref.randModeIdxNone()) {
+                        if (!(m_randmode->at(varref.randModeIdx()))) return true;
+                    }
+                    varref.set(std::move(value));
                 }
                 return true;
-            }
-        );
+            });
         (void)s.checkErr();
     }
 

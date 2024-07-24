@@ -26,6 +26,7 @@
 #define VERILATOR_VERILATED_RANDOM_H_
 
 #include "verilatedos.h"
+
 #include "verilated.h"
 
 //=============================================================================
@@ -41,12 +42,7 @@ public:
 
 class VlRandomSort final : public VlRandomExpr {
 public:
-    enum class Constructor {
-        VL_RAND_BV,
-        VL_RAND_ABV,
-        VL_RAND_BOOL,
-        VL_RAND_SORT
-    };
+    enum class Constructor { VL_RAND_BV, VL_RAND_ABV, VL_RAND_BOOL, VL_RAND_SORT };
 
 private:
     Constructor m_ty;
@@ -68,7 +64,7 @@ public:
     static VlRandomSort Sort() { return VlRandomSort(Constructor::VL_RAND_SORT, 0, 0); }
 
     int elemWidth() const { return m_elem_width; }
-    int len() const {return  m_len; }
+    int len() const { return m_len; }
     int idxWidth() const {
 #ifndef _WIN32
         if (m_len == 0) return 1;
@@ -169,7 +165,8 @@ public:
 
 class VlRandomConcat final : public VlRandomBinOp {
 public:
-    VlRandomConcat(std::shared_ptr<const VlRandomExpr> lhs, std::shared_ptr<const VlRandomExpr> rhs)
+    VlRandomConcat(std::shared_ptr<const VlRandomExpr> lhs,
+                   std::shared_ptr<const VlRandomExpr> rhs)
         : VlRandomBinOp("bvxor", std::move(lhs), std::move(rhs)) {}
     VlRandomSort sort() const override {
         return VlRandomSort::BV(m_lhs->sort().elemWidth() + m_rhs->sort().elemWidth());
@@ -185,7 +182,8 @@ public:
 
 class VlRandomSelect final : public VlRandomBinOp {
 public:
-    VlRandomSelect(std::shared_ptr<const VlRandomExpr> lhs, std::shared_ptr<const VlRandomExpr> rhs)
+    VlRandomSelect(std::shared_ptr<const VlRandomExpr> lhs,
+                   std::shared_ptr<const VlRandomExpr> rhs)
         : VlRandomBinOp("select", std::move(lhs), std::move(rhs)) {}
     VlRandomSort sort() const override { return VlRandomSort::BV(m_lhs->sort().elemWidth()); }
 };
@@ -193,6 +191,7 @@ public:
 class VlRandomSelectRef final : public VlRandomRef {
     const std::shared_ptr<const VlRandomRef> m_lhs;
     int m_idx;
+
 public:
     VlRandomSelectRef(std::shared_ptr<const VlRandomRef> lhs, int idx)
         : m_lhs{lhs}

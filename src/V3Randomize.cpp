@@ -742,6 +742,40 @@ class RandomizeVisitor final : public VNVisitor {
         clearp->dtypeSetVoid();
         return clearp->makeStmt();
     }
+    AstNodeStmt* assignRands(const std::vector<std::pair<AstVar*, AstClass*> >& vars, AstVarRef* fvarRefp) {
+        AstNodeStmt* resultp = nullptr;
+        for (auto varClass : vars) {
+            AstVar* varp = varClass.first;
+            AstClass* classp = varClass.second;
+            FileLine* fl = varp->fileline();
+            const AstNodeDType* const dtypep = varp->dtypep()->skipRefp();
+            AstNodeStmt* stmtp = nullptr;
+            if (VN_IS(dtypep, BasicDType) || VN_IS(dtypep, StructDType)) {
+                AstVar* const randcVarp = newRandcVarsp(varp);
+                AstVarRef* const refp = new AstVarRef{fl, classp, varp, VAccess::WRITE};
+                stmtp = newRandStmtsp(fl, refp, randcVarp);
+            } else if (const AstClassRefDType* const classRefp = VN_CAST(dtypep, ClassRefDType)) {
+                AstFunc* const memberFuncp
+                    = V3Randomize::newRandomizeFunc(m_memberMap, classRefp->classp());
+                AstMethodCall* const callp
+                    = new AstMethodCall{fl, new AstVarRef{fl, classp, varp, VAccess::WRITE},
+                    "randomize", nullptr};
+                callp->taskp(memberFuncp);
+                callp->dtypeFrom(memberFuncp);
+                AstVarRef* fvarRefReadp = fvarRefp->cloneTree(false);
+                fvarRefReadp->access(VAccess::READ);
+                stmtp = new AstIf{
+                    fl,
+                    new AstNeq{fl, new AstVarRef{fl, classp, varp, VAccess::READ},
+                        new AstConst{fl, AstConst::Null{}}},
+                    new AstAssign{fl, fvarRefp->cloneTree(false),
+                        new AstAnd{fl, fvarRefReadp, callp}}};
+            }
+            if (resultp && stmtp) resultp->addNext(stmtp);
+            else resultp = stmtp;
+        }
+        return resultp;
+    }
 
     // VISITORS
     void visit(AstNodeModule* nodep) override {
@@ -815,14 +849,12 @@ class RandomizeVisitor final : public VNVisitor {
         AstNodeFTask* const newp = VN_AS(m_memberMap.findMember(nodep, "new"), NodeFTask);
         UASSERT_OBJ(newp, nodep, "No new() in class");
 
+        std::vector<std::pair<AstVar*, AstClass*> > normalRand;
         nodep->foreachMember([&](AstClass* classp, AstVar* memberVarp) {
             if (!memberVarp->isRand() || memberVarp->user3()) return;
             const AstNodeDType* const dtypep = memberVarp->dtypep()->skipRefp();
             if (VN_IS(dtypep, BasicDType) || VN_IS(dtypep, StructDType)) {
-                AstVar* const randcVarp = newRandcVarsp(memberVarp);
-                AstVarRef* const refp = new AstVarRef{fl, classp, memberVarp, VAccess::WRITE};
-                AstNodeStmt* const stmtp = newRandStmtsp(fl, refp, randcVarp);
-                randomizep->addStmtsp(stmtp);
+                normalRand.push_back(std::make_pair(memberVarp, classp));
             } else if (const AstClassRefDType* const classRefp = VN_CAST(dtypep, ClassRefDType)) {
                 if (classRefp->classp() == nodep) {
                     memberVarp->v3warn(E_UNSUPPORTED,
@@ -830,27 +862,13 @@ class RandomizeVisitor final : public VNVisitor {
                                        "type of the containing class");
                     return;
                 }
-                AstFunc* const memberFuncp
-                    = V3Randomize::newRandomizeFunc(m_memberMap, classRefp->classp());
-                AstMethodCall* const callp
-                    = new AstMethodCall{fl, new AstVarRef{fl, classp, memberVarp, VAccess::WRITE},
-                                        "randomize", nullptr};
-                callp->taskp(memberFuncp);
-                callp->dtypeFrom(memberFuncp);
-                AstVarRef* fvarRefReadp = fvarRefp->cloneTree(false);
-                fvarRefReadp->access(VAccess::READ);
-                AstIf* const assignIfNotNullp = new AstIf{
-                    fl,
-                    new AstNeq{fl, new AstVarRef{fl, classp, memberVarp, VAccess::READ},
-                               new AstConst{fl, AstConst::Null{}}},
-                    new AstAssign{fl, fvarRefp->cloneTree(false),
-                                  new AstAnd{fl, fvarRefReadp, callp}}};
-                randomizep->addStmtsp(assignIfNotNullp);
+                normalRand.push_back(std::make_pair(memberVarp, classp));
             } else {
                 memberVarp->v3warn(E_UNSUPPORTED, "Unsupported: random member variable with type "
                                                       << memberVarp->dtypep()->prettyDTypeNameQ());
             }
         });
+        randomizep->addStmtsp(assignRands(normalRand, fvarRefp));
         addPrePostCall(nodep, randomizep, "post_randomize");
         nodep->user1(false);
     }

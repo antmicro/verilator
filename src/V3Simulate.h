@@ -801,9 +801,7 @@ private:
         while (true) {
             UINFO(5, "    FOREACH-ITER " << nodep << endl);
             if (!optimizable()) break;
-            if (varp) {
-                ;
-            }
+            if (varp) { ; }
             if (fetchConst(varp)->num().isNeqZero()) {  //
                 break;
             }
@@ -814,9 +812,9 @@ private:
             if (VN_IS(varsp, Empty)) break;  // dimension skip
             if (loops++ > v3Global.opt.unrollCountAdjusted(VOptionBool{}, m_params, true)) {
                 clearOptimizable(nodep, "Loop unrolling took too long; probably this is an"
-                        "infinite loop, or use /*verilator unroll_full*/, or "
-                        "set --unroll-count above "
-                        + cvtToStr(loops));
+                                        "infinite loop, or use /*verilator unroll_full*/, or "
+                                        "set --unroll-count above "
+                                            + cvtToStr(loops));
                 break;
             }
         }

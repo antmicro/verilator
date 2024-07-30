@@ -23,6 +23,7 @@
 #include "verilated_random.h"
 
 #include <iostream>
+#include <memory>
 #include <ostream>
 #include <sstream>
 #include <streambuf>
@@ -69,6 +70,12 @@ protected:
         char c2 = static_cast<char>(c);
         if (pbase() == pptr()) return 0;
         size_t size = pptr() - pbase();
+#ifdef VL_DEBUG
+//        std::stringstream ss;
+//        ss << "SMTLib:\n";
+//        ss.write(pbase(), size);
+//        VL_WARN_MT(__FILE__, __LINE__, "randomize", ss.str().c_str());
+#endif
         ssize_t n = ::write(m_writeFd, pbase(), size);
         if (n == -1) perror("write");
         if (n <= 0) {
@@ -233,6 +240,7 @@ static Process& getSolver() {
     const char* const* const cmd = &s_argv[0];
     s_solver.open(cmd);
     s_solver << "(set-logic QF_BV)\n";
+    s_solver << "(set-option :smt.phase-selection 5)\n";
     s_solver << "(check-sat)\n";
     s_solver << "(reset)\n";
     std::string s;
@@ -276,13 +284,23 @@ void VlRandomBVConst::emit(std::ostream& s) const {
     for (int i = 0; i < m_width; i++) s << (VL_BITISSET_Q(m_val, m_width - i - 1) ? '1' : '0');
 }
 void VlRandomBinOp::emit(std::ostream& s) const {
-    s << '(' << m_op << ' ' << m_lhs << ' ' << m_rhs << ')';
+    s << '(' << m_op << ' ' << *m_lhs << ' ' << *m_rhs << ')';
 }
 void VlRandomExtract::emit(std::ostream& s) const {
-    s << "((_ extract " << m_idx << ' ' << m_idx << ") " << m_expr << ')';
+    s << "((_ extract " << m_idx << ' ' << m_idx << ") " << *m_expr << ')';
 }
 void VlRandomSelectRef::emit(std::ostream& s) const {
-    s << "(select " << m_lhs << ' ' << m_idx << ')';
+    s << "(select " << *m_lhs << ' ' << m_idx << ')';
+}
+void VlRandomBVXorMany::emit(std::ostream& s) const {
+    s << "(bvxor";
+    for (auto& expr : m_exprs) s << " " << *expr;
+    s << ")";
+}
+void VlRandomConstraint::emit(std::ostream& s) const {
+    s << "(= (bvurem (bvmul (concat";
+    for (auto& expr : m_bv_exprs) s << " " << *expr;
+    s << ") " << *m_mult << ") " << *m_mod << ") " << *m_hash;
 }
 bool VlRandomVarRef::set(std::string&& val) const {
     VlWide<VL_WQ_WORDS_E> qowp;
@@ -325,15 +343,15 @@ bool VlRandomSelectRef::set(std::string&& val) const {
     return false;
 }
 
-std::shared_ptr<const VlRandomExpr> VlRandomizer::randomConstraint(VlRNG& rngr, int bits) {
+std::unique_ptr<const VlRandomExpr> VlRandomizer::randomConstraint(VlRNG& rngr, int bits) {
     unsigned long long hash = VL_RANDOM_RNG_I(rngr) & ((1 << bits) - 1);
-    std::shared_ptr<const VlRandomExpr> concat = nullptr;
-    std::vector<std::shared_ptr<const VlRandomExpr>> varbits;
+    std::unique_ptr<const VlRandomExpr> concat = nullptr;
+    std::vector<std::unique_ptr<const VlRandomExpr>> varbits;
     for (const auto& var : m_vars) {
         switch (var.second->sort().constructor()) {
         case VlRandomSort::Constructor::VL_RAND_BV:
             for (int i = 0; i < var.second->sort().elemWidth(); i++)
-                varbits.emplace_back(std::make_shared<const VlRandomExtract>(var.second, i));
+                varbits.emplace_back(new VlRandomExtract(var.second->cloneRef(), i));
             break;
         case VlRandomSort::Constructor::VL_RAND_ABV:
             // TODO: Bypass unconstrained indices and use fast randomization method for them
@@ -349,17 +367,35 @@ std::shared_ptr<const VlRandomExpr> VlRandomizer::randomConstraint(VlRNG& rngr, 
         }
     }
     for (int i = 0; i < bits; i++) {
-        std::shared_ptr<const VlRandomExpr> bit = nullptr;
+        std::vector<std::shared_ptr<const VlRandomExpr>> xorbits;
         for (unsigned j = 0; j * 2 < varbits.size(); j++) {
             unsigned idx = j + VL_RANDOM_RNG_I(rngr) % (varbits.size() - j);
-            auto sel = varbits[idx];
+            std::unique_ptr<const VlRandomExpr>& sel = varbits[idx];
             std::swap(varbits[idx], varbits[j]);
-            bit = bit == nullptr ? sel : std::make_shared<const VlRandomBVXor>(bit, sel);
+            xorbits.emplace_back(sel->cloneExpr());
         }
+
         concat = concat == nullptr ? bit : std::make_shared<const VlRandomConcat>(concat, bit);
     }
-    return std::make_shared<const VlRandomEq>(concat,
-                                              std::make_shared<const VlRandomBVConst>(hash, bits));
+    return std::make_unique<const VlRandomEq>(std::move(concat),
+                                              std::make_unique<const VlRandomBVConst>(hash, bits));
+}
+
+bool VlRandomizer::checkSat(std::iostream& file) const {
+    file << "(check-sat)\n";
+
+    std::string sat;
+    do { std::getline(file, sat); } while (sat == "");
+
+    if (sat == "unsat") return false;
+    if (sat != "sat") {
+        std::stringstream msg;
+        msg << "Internal: Solver error: " << sat;
+        const std::string str = msg.str();
+        VL_WARN_MT(__FILE__, __LINE__, "randomize", str.c_str());
+        return false;
+    }
+    return true;
 }
 
 bool VlRandomizer::next(VlRNG& rngr) {
@@ -369,23 +405,34 @@ bool VlRandomizer::next(VlRNG& rngr) {
 
     f << "(set-option :produce-models true)\n";
     f << "(set-logic QF_ABV)\n";
+    f << "(set-option :smt.phase-selection 5)\n";
+    unsigned long long seed = VL_RANDOM_RNG_I(rngr) & 0xffff;
+    f << "(set-option :smt.random-seed " << seed << ")\n";
+    f << "(set-option :sat.random-seed " << seed << ")\n";
+    f << "(set-option :nlsat.seed " << seed << ")\n";
+    f << "(set-option :sls.random-seed " << seed << ")\n";
     for (const auto& var : m_vars) {
-        f << "(declare-fun " << var.second << " () " << var.second->sort() << ")\n";
+        f << "(declare-fun " << *var.second << " () " << var.second->sort() << ")\n";
     }
     for (const std::string& constraint : m_constraints) { f << "(assert " << constraint << ")\n"; }
-    f << "(check-sat)\n";
 
-    bool sat = parseSolution(f);
-    if (!sat) {
-        f << "(reset)\n";
-        return false;
+    unsigned long long times = (VL_RANDOM_RNG_I(rngr) % 10) + 1;
+    for (int i = 0; i < times; i++) {
+        if (!checkSat(f)) {
+            f << "(reset)\n";
+            return false;
+        }
     }
 
+    parseSolution(f);
+
+    bool sat = true;
     for (int i = 0; i < _VL_SOLVER_HASH_LEN_TOTAL && sat; i++) {
-        f << "(assert " << randomConstraint(rngr, _VL_SOLVER_HASH_LEN) << ")\n"
-          << "\n(check-sat)\n";
-        sat = parseSolution(f);
+        auto constr = randomConstraint(rngr, _VL_SOLVER_HASH_LEN);
+        f << "(assert " << *constr << ")\n";
+        sat = checkSat(f);
     }
+    parseSolution(f);
 
     f << "(reset)\n";
     return true;
@@ -545,21 +592,9 @@ bool smtParseAssignList(SMTParseState& s, ParseLhs parseLhs, Assign assign) {
 }
 }  //namespace smtparse
 
-bool VlRandomizer::parseSolution(std::iostream& f) {
-    std::string sat;
-    do { std::getline(f, sat); } while (sat == "");
-
-    if (sat == "unsat") return false;
-    if (sat != "sat") {
-        std::stringstream msg;
-        msg << "Internal: Solver error: " << sat;
-        const std::string str = msg.str();
-        VL_WARN_MT(__FILE__, __LINE__, "randomize", str.c_str());
-        return false;
-    }
-
+void VlRandomizer::parseSolution(std::iostream& f) {
     f << "(get-value (";
-    for (const auto& var : m_vars) f << var.second << ' ';
+    for (const auto& var : m_vars) f << *var.second << ' ';
     f << "))\n";
 
     // Quasi-parse S-expression of the form ((x #xVALUE) (y #bVALUE) (z #xVALUE))
@@ -585,8 +620,6 @@ bool VlRandomizer::parseSolution(std::iostream& f) {
             });
         (void)s.checkErr();
     }
-
-    return true;
 }
 
 void VlRandomizer::hard(std::string&& constraint) {

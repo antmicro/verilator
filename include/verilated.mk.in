@@ -128,12 +128,12 @@ LDLIBS   += $(VM_USER_LDLIBS)
 OPT_SLOW =
 # Optimization for performance critical/hot code. Most time is spent in these
 # routines. Optimizing by default for improved execution speed.
-OPT_FAST = -Os
+OPT_FAST = -O0
 # Optimization applied to the common run-time library used by verilated models.
 # For compatibility this is called OPT_GLOBAL even though it only applies to
 # files in the run-time library. Normally there should be no need for the user
 # to change this as the library is small, but can have significant speed impact.
-OPT_GLOBAL = -Os
+OPT_GLOBAL = -O0
 
 #######################################################################
 ##### Profile builds

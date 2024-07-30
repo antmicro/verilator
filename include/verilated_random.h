@@ -28,6 +28,8 @@
 #include "verilatedos.h"
 
 #include "verilated.h"
+#include <istream>
+#include <memory>
 
 //=============================================================================
 // VlRandomExpr and subclasses represent expressions for the constraint solver.
@@ -38,6 +40,7 @@ class VlRandomExpr VL_NOT_FINAL {
 public:
     virtual void emit(std::ostream& s) const = 0;
     virtual VlRandomSort sort() const = 0;
+    virtual std::unique_ptr<VlRandomExpr> cloneExpr() const = 0;
 };
 
 class VlRandomSort final : public VlRandomExpr {
@@ -88,11 +91,17 @@ public:
 
     void emit(std::ostream& s) const override;
     VlRandomSort sort() const override { return Sort(); }
+    std::unique_ptr<VlRandomExpr> cloneExpr() const override {
+        return std::make_unique<VlRandomSort>(*this);
+    }
 };
 
 class VlRandomRef VL_NOT_FINAL : public VlRandomExpr {
 public:
     virtual bool set(std::string&&) const = 0;
+    std::unique_ptr<VlRandomRef> cloneRef() const {
+        return std::unique_ptr<VlRandomRef>(static_cast<VlRandomRef*>(cloneExpr().release()));
+    }
 };
 
 class VlRandomVarRef final : public VlRandomRef {
@@ -114,6 +123,9 @@ public:
     bool randModeIdxNone() const { return randModeIdx() == std::numeric_limits<unsigned>::max(); }
     bool set(std::string&&) const override;
     void emit(std::ostream& s) const override;
+    std::unique_ptr<VlRandomExpr> cloneExpr() const override {
+        return std::make_unique<VlRandomVarRef>(*this);
+    }
 };
 
 class VlRandomBVConst final : public VlRandomExpr {
@@ -128,29 +140,35 @@ public:
     }
     void emit(std::ostream& s) const override;
     VlRandomSort sort() const override { return VlRandomSort::BV(m_width); }
+    std::unique_ptr<VlRandomExpr> cloneExpr() const override {
+        return std::make_unique<VlRandomBVConst>(*this);
+    }
 };
 
 class VlRandomExtract final : public VlRandomExpr {
-    const std::shared_ptr<const VlRandomExpr> m_expr;  // Sub-expression
+    const std::unique_ptr<const VlRandomExpr> m_expr;  // Sub-expression
     const unsigned m_idx;  // Extracted index
 
 public:
-    VlRandomExtract(std::shared_ptr<const VlRandomExpr> expr, unsigned idx)
-        : m_expr{expr}
+    VlRandomExtract(std::unique_ptr<const VlRandomExpr>&& expr, unsigned idx)
+        : m_expr{std::move(expr)}
         , m_idx{idx} {}
     void emit(std::ostream& s) const override;
     VlRandomSort sort() const override { return VlRandomSort::BV(1); }
+    std::unique_ptr<VlRandomExpr> cloneExpr() const override {
+        return std::make_unique<VlRandomExtract>(m_expr->cloneExpr(), m_idx);
+    }
 };
 
 class VlRandomBinOp VL_NOT_FINAL : public VlRandomExpr {
 protected:
-    const std::shared_ptr<const VlRandomExpr> m_lhs, m_rhs;  // Sub-expressions
+    const std::unique_ptr<const VlRandomExpr> m_lhs, m_rhs;  // Sub-expressions
     const char* m_op;
-    VlRandomBinOp(const char* op, std::shared_ptr<const VlRandomExpr> lhs,
-                  std::shared_ptr<const VlRandomExpr> rhs)
+    VlRandomBinOp(const char* op, std::unique_ptr<const VlRandomExpr> lhs,
+                  std::unique_ptr<const VlRandomExpr> rhs)
         : m_op(op)
-        , m_lhs{lhs}
-        , m_rhs{rhs} {}
+        , m_lhs{std::move(lhs)}
+        , m_rhs{std::move(rhs)} {}
 
 public:
     void emit(std::ostream& s) const override;
@@ -158,47 +176,97 @@ public:
 
 class VlRandomBVXor final : public VlRandomBinOp {
 public:
-    VlRandomBVXor(std::shared_ptr<const VlRandomExpr> lhs, std::shared_ptr<const VlRandomExpr> rhs)
+    VlRandomBVXor(std::unique_ptr<const VlRandomExpr> lhs, std::unique_ptr<const VlRandomExpr> rhs)
         : VlRandomBinOp("bvxor", std::move(lhs), std::move(rhs)) {}
     VlRandomSort sort() const override { return m_lhs->sort(); }
+    std::unique_ptr<VlRandomExpr> cloneExpr() const override {
+        return std::make_unique<VlRandomBVXor>(m_lhs->cloneExpr(), m_rhs->cloneExpr());
+    }
+};
+
+class VlRandomBVXorMany final : public VlRandomExpr {
+    std::vector<std::unique_ptr<const VlRandomExpr>> m_exprs;
+public:
+    VlRandomBVXorMany(std::vector<std::unique_ptr<const VlRandomExpr>>&& exprs)
+        : m_exprs{std::move(exprs)} {}
+    void emit(std::ostream& s) const override;
+    VlRandomSort sort() const override { return m_exprs[0]->sort(); }
+    std::unique_ptr<VlRandomExpr> cloneExpr() const override {
+        std::vector<std::unique_ptr<const VlRandomExpr>> new_exprs;
+        for (auto& expr : m_exprs) { new_exprs.emplace_back(expr->cloneExpr()); }
+        return std::make_unique<VlRandomBVXorMany>(std::move(new_exprs));
+    }
 };
 
 class VlRandomConcat final : public VlRandomBinOp {
 public:
-    VlRandomConcat(std::shared_ptr<const VlRandomExpr> lhs,
-                   std::shared_ptr<const VlRandomExpr> rhs)
-        : VlRandomBinOp("bvxor", std::move(lhs), std::move(rhs)) {}
+    VlRandomConcat(std::unique_ptr<const VlRandomExpr> lhs,
+                   std::unique_ptr<const VlRandomExpr> rhs)
+        : VlRandomBinOp("concat", std::move(lhs), std::move(rhs)) {}
     VlRandomSort sort() const override {
         return VlRandomSort::BV(m_lhs->sort().elemWidth() + m_rhs->sort().elemWidth());
+    }
+    std::unique_ptr<VlRandomExpr> cloneExpr() const override {
+        return std::make_unique<VlRandomConcat>(m_lhs->cloneExpr(), m_rhs->cloneExpr()));
     }
 };
 
 class VlRandomEq final : public VlRandomBinOp {
 public:
-    VlRandomEq(std::shared_ptr<const VlRandomExpr> lhs, std::shared_ptr<const VlRandomExpr> rhs)
+    VlRandomEq(std::unique_ptr<const VlRandomExpr> lhs, std::unique_ptr<const VlRandomExpr> rhs)
         : VlRandomBinOp("=", std::move(lhs), std::move(rhs)) {}
     VlRandomSort sort() const override { return VlRandomSort::Bool(); }
+    std::unique_ptr<VlRandomExpr> cloneExpr() const override {
+        return std::make_unique<VlRandomEq>(m_lhs->cloneExpr(), m_rhs->cloneExpr());
+    }
 };
 
 class VlRandomSelect final : public VlRandomBinOp {
 public:
-    VlRandomSelect(std::shared_ptr<const VlRandomExpr> lhs,
-                   std::shared_ptr<const VlRandomExpr> rhs)
+    VlRandomSelect(std::unique_ptr<const VlRandomExpr> lhs,
+                   std::unique_ptr<const VlRandomExpr> rhs)
         : VlRandomBinOp("select", std::move(lhs), std::move(rhs)) {}
     VlRandomSort sort() const override { return VlRandomSort::BV(m_lhs->sort().elemWidth()); }
+    std::unique_ptr<VlRandomExpr> cloneExpr() const override {
+        return std::make_unique<VlRandomSelect>(m_lhs->cloneExpr(), m_rhs->cloneExpr());
+    }
 };
 
 class VlRandomSelectRef final : public VlRandomRef {
-    const std::shared_ptr<const VlRandomRef> m_lhs;
+    const std::unique_ptr<const VlRandomRef> m_lhs;
     int m_idx;
 
 public:
-    VlRandomSelectRef(std::shared_ptr<const VlRandomRef> lhs, int idx)
-        : m_lhs{lhs}
+    VlRandomSelectRef(std::unique_ptr<const VlRandomRef>&& lhs, int idx)
+        : m_lhs{std::move(lhs)}
         , m_idx{idx} {}
     void emit(std::ostream& s) const override;
     VlRandomSort sort() const override { return VlRandomSort::BV(m_lhs->sort().elemWidth()); }
     bool set(std::string&&) const override;
+    std::unique_ptr<VlRandomExpr> cloneExpr() const override {
+        return std::make_unique<VlRandomSelectRef>(m_lhs->cloneRef(), m_idx);
+    }
+};
+
+class VlRandomConstraint final : public VlRandomExpr {
+    std::unique_ptr<VlRandomExpr> m_mult, m_mod, m_hash;
+    std::vector<std::unique_ptr<const VlRandomExpr>> m_bv_exprs;
+public:
+    VlRandomConstraint(std::unique_ptr<VlRandomExpr>&& mult, std::unique_ptr<VlRandomExpr>&& mod,
+                       std::unique_ptr<VlRandomExpr>&& hash,
+                       std::vector<std::unique_ptr<const VlRandomExpr>>&& bv_exprs)
+        : m_mult{std::move(mult)}
+        , m_mod{std::move(mod)}
+        , m_hash{std::move(hash)}
+        , m_bv_exprs{std::move(bv_exprs)} {}
+    void emit(std::ostream& s) const override;
+    VlRandomSort sort() const override { return VlRandomSort::Bool(); }
+    std::unique_ptr<VlRandomExpr> cloneExpr() const override {
+        std::vector<std::unique_ptr<const VlRandomExpr>> new_exprs;
+        for (auto& expr : m_bv_exprs) { new_exprs.emplace_back(expr->cloneExpr()); }
+        return std::make_unique<VlRandomConstraint>(m_mult->cloneExpr(), m_mod->cloneExpr(),
+                                                    m_hash->cloneExpr(), std::move(new_exprs));
+    }
 };
 
 //=============================================================================
@@ -207,13 +275,14 @@ public:
 class VlRandomizer final {
     // MEMBERS
     std::vector<std::string> m_constraints;  // Solver-dependent constraints
-    std::map<std::string, std::shared_ptr<const VlRandomRef>>
+    std::map<std::string, std::unique_ptr<const VlRandomRef>>
         m_vars;  // Solver-dependent variables
     const VlQueue<CData>* m_randmode;  // rand_mode state;
 
     // PRIVATE METHODS
-    std::shared_ptr<const VlRandomExpr> randomConstraint(VlRNG& rngr, int bits);
-    bool parseSolution(std::iostream& file);
+    std::unique_ptr<const VlRandomExpr> randomConstraint(VlRNG& rngr, int bits);
+    bool checkSat(std::iostream& file) const;
+    void parseSolution(std::iostream& file);
 
 public:
     // METHODS

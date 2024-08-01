@@ -2846,7 +2846,8 @@ void AstCMethodHard::setPurity() {
                                                           {"unique", true},
                                                           {"unique_index", true},
                                                           {"word", true},
-                                                          {"write_var", false}};
+                                                          {"writeVar", false},
+                                                          {"writeArr", false}};
 
     auto isPureIt = isPureMethod.find(name());
     UASSERT_OBJ(isPureIt != isPureMethod.end(), this, "Unknown purity of method " + name());

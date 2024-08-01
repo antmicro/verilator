@@ -450,7 +450,7 @@ class ConstraintExprVisitor final : public VNVisitor {
                 varp->fileline(),
                 new AstVarRef{varp->fileline(), VN_AS(m_genp->user2p(), NodeModule), m_genp,
                               VAccess::READWRITE},
-                "write_var"};
+                "writeVar"};
             methodp->dtypeSetVoid();
             AstClass* const classp = VN_AS(varp->user2p(), Class);
             AstVarRef* const varRefp

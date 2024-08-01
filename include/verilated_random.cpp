@@ -21,13 +21,18 @@
 //=========================================================================
 
 #include "verilated_random.h"
+#include "verilated.h"
 
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <ostream>
 #include <sstream>
 #include <streambuf>
 #include <string>
+#include <utility>
+#include <vector>
+#include <type_traits>
 
 #define _VL_SOLVER_HASH_LEN 1
 #define _VL_SOLVER_HASH_LEN_TOTAL 4
@@ -47,6 +52,8 @@
 #endif
 // clang-format on
 
+namespace vlRandom {
+
 class Process final : private std::streambuf, public std::iostream {
     static constexpr int BUFFER_SIZE = 4096;
     const char* const* m_cmd = nullptr;  // fork() process argv
@@ -62,6 +69,10 @@ class Process final : private std::streambuf, public std::iostream {
     char m_readBuf[BUFFER_SIZE];
     char m_writeBuf[BUFFER_SIZE];
 
+#if VL_DEBUG
+    std::string dbg_str;
+#endif
+
 public:
     typedef std::streambuf::traits_type traits_type;
 
@@ -71,10 +82,11 @@ protected:
         if (pbase() == pptr()) return 0;
         size_t size = pptr() - pbase();
 #ifdef VL_DEBUG
-//        std::stringstream ss;
-//        ss << "SMTLib:\n";
-//        ss.write(pbase(), size);
-//        VL_WARN_MT(__FILE__, __LINE__, "randomize", ss.str().c_str());
+        std::stringstream dbg_ss;
+        dbg_ss << "\n; EMIT SMTLib\n";
+        dbg_ss.write(pbase(), size);
+        dbg_str += dbg_ss.str();
+        //VL_WARN_MT(__FILE__, __LINE__, "randomize", dbg_ss.str().c_str());
 #endif
         ssize_t n = ::write(m_writeFd, pbase(), size);
         if (n == -1) perror("write");
@@ -268,46 +280,238 @@ std::ostream& operator<<(std::ostream& os, const VlRandomExpr& dt) {
     return os;
 }
 
-void VlRandomSort::emit(std::ostream& s) const {
-    switch (constructor()) {
-    case Constructor::VL_RAND_BV: s << "(_ BitVec " << elemWidth() << ")"; break;
-    case Constructor::VL_RAND_ABV:
-        s << "(Array (_ BitVec " << idxWidth() << ") (_ BitVec " << elemWidth() << "))";
-        break;
-    case Constructor::VL_RAND_BOOL: s << "Bool"; break;
-    default: s << "UNSUP_TYPE"; break;
+using WValue = std::vector<WData>;
+
+
+size_t sizeWidth(size_t size) {
+#ifndef _WIN32
+    if (size == 0) return 1;
+    return __builtin_clz(size);
+#else
+    int i = m_len;
+    i |= (i >> 1);
+    i |= (i >> 2);
+    i |= (i >> 4);
+    i |= (i >> 8);
+    i |= (i >> 16);
+    i -= ((i >> 1) & 0x55555555);
+    i = (((i >> 2) & 0x33333333) + (i & 0x33333333));
+    i = (((i >> 4) + i) & 0x0f0f0f0f);
+    i += (i >> 8);
+    i += (i >> 16);
+    return i & 0x0000003f;
+#endif
+}
+
+std::pair<WValue, WValue> getPrimePair() {
+    // TODO: This is a mock
+
+    // Maybe we can use prime powers?
+    return std::make_pair(
+        WValue({
+            0x00000121,
+            0x00000000,
+            0x00000000,
+            0x4404A7E8,
+            0x777839E7,
+            0x749CE90C,
+            0x65277B06,
+            0x5A13AE34,
+            0xF2E44DEA,
+            0x2AEA2879,
+            0x000001D4
+        }),
+        WValue({
+            0x000007E1,
+            0x00000000,
+            0x00000000,
+            0xE1178E81,
+            0xE478B23B,
+            0x1C46D01A,
+            0x79F5080F,
+            0x62E7F4A7,
+            0x62CD8A51,
+            0x77D9D58B
+        })
+    );
+}
+
+struct CharBuf {
+    char* buf;
+
+    CharBuf(size_t length)
+        : buf(new char[length + 1]) {
+        buf[length] = '\0';
     }
+    CharBuf(const CharBuf& other) = delete;
+    CharBuf& operator==(const CharBuf& other) = delete;
+    CharBuf(CharBuf&& other) {
+        other.buf = buf;
+        buf = nullptr;
+    }
+    CharBuf& operator==(CharBuf&& other) {
+        other.buf = buf;
+        buf = nullptr;
+        return *this;
+    }
+    ~CharBuf() {
+        delete[] buf;
+    }
+};
+
+std::ostream& operator<<(std::ostream& os, const CharBuf& buf) {
+    os << buf.buf;
+    return os;
 }
-void VlRandomVarRef::emit(std::ostream& s) const { s << m_name; }
-void VlRandomBVConst::emit(std::ostream& s) const {
-    s << "#b";
-    for (int i = 0; i < m_width; i++) s << (VL_BITISSET_Q(m_val, m_width - i - 1) ? '1' : '0');
+
+template <typename OnBit>
+void forEachBitMSB(const WValue& data, int width, OnBit onBit) {
+    using word_t = WData;
+
+    int wordIdx = (width - 1) / (sizeof(word_t) * 8);
+    int bitIdx = (width - 1) % (sizeof(word_t) * 8);
+    do {
+        word_t word = data[wordIdx];
+        while (bitIdx > 0) onBit((word & (0x1 << bitIdx)) != 0);
+        --wordIdx;
+        bitIdx = sizeof(word_t) - 1;
+    } while (wordIdx > 0);
 }
-void VlRandomBinOp::emit(std::ostream& s) const {
-    s << '(' << m_op << ' ' << *m_lhs << ' ' << *m_rhs << ')';
+
+void emitSMTFormatConst(std::ostream& os, const WValue& data, int width) {
+    // TODO: Use hex representations when 4|width
+    static const size_t fmtLen = 2;
+    char* const buf = new char[width + fmtLen + 1];
+    buf[width + fmtLen] = '\0';
+    buf[0] = '#';
+    buf[1] = 'b';
+
+    int bitIdx = 0;
+    for (uint32_t dword : data) {
+        while (bitIdx != width) {
+            buf[fmtLen + width - 1 - bitIdx] = dword & 0x1 ? '1' : '0';
+            dword >>= 1;
+            ++bitIdx;
+            if (bitIdx % 32 == 0) break;
+        }
+    }
+    // Zero-extend
+    while (bitIdx < width) buf[fmtLen + width - 1 - bitIdx] = '0';
+
+    os << buf;
+    delete[] buf;
 }
-void VlRandomExtract::emit(std::ostream& s) const {
-    s << "((_ extract " << m_idx << ' ' << m_idx << ") " << *m_expr << ')';
+
+void emitSMTFormatConst(std::ostream& os, unsigned long long data, int width) {
+    // TODO: Use hex representations when 4|width
+    static const size_t fmtLen = 2;
+    char* const buf = new char[width + fmtLen + 1];
+    buf[width + fmtLen] = '\0';
+    buf[0] = '#';
+    buf[1] = 'b';
+
+    int bitIdx = 0;
+    while (bitIdx != width) {
+        buf[fmtLen + width - 1 - bitIdx] = data & 0x1 ? '1' : '0';
+        data >>= 1;
+        ++bitIdx;
+    }
+    // Zero-extend
+    while (bitIdx < width) buf[fmtLen + width - 1 - bitIdx] = '0';
+
+    os << buf;
+    delete[] buf;
 }
-void VlRandomSelectRef::emit(std::ostream& s) const {
-    s << "(select " << *m_lhs << ' ' << m_idx << ')';
+
+template <typename Emitter>
+void emitSMTExtract(std::ostream& os, int idx, Emitter emitExpr) {
+    static_assert(std::is_invocable<Emitter, std::ostream&>());
+
+    os << "((_ extract " << idx << ' ' << idx << ") ";
+    emitExpr(os);
+    os << ')';
 }
-void VlRandomBVXorMany::emit(std::ostream& s) const {
-    s << "(bvxor";
-    for (auto& expr : m_exprs) s << " " << *expr;
-    s << ")";
+
+template <typename Emitter>
+void emitSMTExtract(std::ostream& os, int idx, int width, Emitter emitExpr) {
+    static_assert(std::is_invocable<Emitter, std::ostream&>());
+
+    os << "((_ extract " << idx + width - 1 << ' ' << idx << ") ";
+    emitExpr(os);
+    os << ')';
 }
-void VlRandomConstraint::emit(std::ostream& s) const {
-    s << "(= (bvurem (bvmul (concat";
-    for (auto& expr : m_bv_exprs) s << " " << *expr;
-    s << ") " << *m_mult << ") " << *m_mod << ") " << *m_hash;
+
+template <typename Emitter>
+void emitSMTConstraintMod(std::ostream& os, VlRNG& rng, Emitter emitConcatVec) {
+    static_assert(std::is_invocable<Emitter, std::ostream&>());
+
+    std::pair<WValue, WValue> primes = getPrimePair();
+    unsigned long long hash = VL_RANDOM_RNG_I(rng);
+
+    auto emitRemainder = [&](std::ostream& os) {
+        os << "(bvurem (bvmul ";
+        size_t totalWidth = emitConcatVec(os);
+        os << ' ';
+        emitSMTFormatConst(os, primes.first, totalWidth);
+        os << ") ";
+        emitSMTFormatConst(os, primes.second, totalWidth);
+        os << ')';
+    };
+
+    os << "(= (let ((vl-xored-remainder (bvxor ";
+    emitSMTExtract(os, 0, 32, emitRemainder);
+    os << ' ';
+    emitSMTFormatConst(os, hash, 32);
+    os << "))) (bvxor";
+    for (int bitIdx = 0; bitIdx < 32; ++bitIdx) {
+        os << ' ';
+        emitSMTExtract(os, bitIdx, [](std::ostream& os){ os << "vl-xored-remainder"; });
+    }
+    os << ")) #b0)"; // XOR to zero
 }
-bool VlRandomVarRef::set(std::string&& val) const {
+
+template <typename Emitter>
+void emitSMTConstraintMul(std::ostream& os, VlRNG& rng, Emitter emitConcatVec) {
+    static_assert(std::is_invocable<Emitter, std::ostream&>());
+
+    std::pair<WValue, WValue> primes = getPrimePair();
+    unsigned long long hash = VL_RANDOM_RNG_I(rng);
+
+    auto emitRemainder = [&](std::ostream& os) {
+        os << "(bvmul ";
+        size_t totalWidth = emitConcatVec(os);
+        os << ' ';
+        emitSMTFormatConst(os, primes.first, totalWidth);
+        os << ") ";
+    };
+
+    os << "(= (let ((vl-xored-remainder (bvxor ";
+    emitSMTExtract(os, 0, 32, emitRemainder);
+    os << ' ';
+    emitSMTFormatConst(os, hash, 32);
+    os << "))) (bvxor";
+    for (int bitIdx = 0; bitIdx < 32; ++bitIdx) {
+        os << ' ';
+        emitSMTExtract(os, bitIdx, [](std::ostream& os){ os << "vl-xored-remainder"; });
+    }
+    os << ")) #b0)"; // XOR to zero
+}
+
+void smtEmitVarDecl(std::ostream& os, const VlRandomVarRef& varref) {
+    os << "(declare-fun " << varref.name << " () (_ BitVec " << varref.width << "))";
+}
+
+void smtEmitArrDecl(std::ostream& os, const VlRandomArrRef& arrref) {
+    os << "(declare-fun " << arrref.arrName << " () (Array (_ BitVec " << sizeWidth(arrref.length)
+       << ") (_ BitVec " << sizeWidth(arrref.width) << ")))";
+}
+
+bool setRef(void* const datap, const int width, std::string&& val) {
     VlWide<VL_WQ_WORDS_E> qowp;
     VL_SET_WQ(qowp, 0ULL);
     WDataOutP owp = qowp;
-    int obits = sort().elemWidth();
-    if (obits > VL_QUADSIZE) owp = reinterpret_cast<WDataOutP>(datap());
+    int obits = width;
+    if (obits > VL_QUADSIZE) owp = reinterpret_cast<WDataOutP>(datap);
     int i;
     for (i = 0; val[i] && val[i] != '#'; i++) {}
     if (val[i++] != '#') return false;
@@ -322,125 +526,22 @@ bool VlRandomVarRef::set(std::string&& val) const {
         return false;
     }
     if (obits <= VL_BYTESIZE) {
-        CData* const p = static_cast<CData*>(datap());
+        CData* const p = static_cast<CData*>(datap);
         *p = VL_CLEAN_II(obits, obits, owp[0]);
     } else if (obits <= VL_SHORTSIZE) {
-        SData* const p = static_cast<SData*>(datap());
+        SData* const p = static_cast<SData*>(datap);
         *p = VL_CLEAN_II(obits, obits, owp[0]);
     } else if (obits <= VL_IDATASIZE) {
-        IData* const p = static_cast<IData*>(datap());
+        IData* const p = static_cast<IData*>(datap);
         *p = VL_CLEAN_II(obits, obits, owp[0]);
     } else if (obits <= VL_QUADSIZE) {
-        QData* const p = static_cast<QData*>(datap());
+        QData* const p = static_cast<QData*>(datap);
         *p = VL_CLEAN_QQ(obits, obits, VL_SET_QW(owp));
     } else {
         _vl_clean_inplace_w(obits, owp);
     }
     return true;
 }
-bool VlRandomSelectRef::set(std::string&& val) const {
-    VL_WARN_MT(__FILE__, __LINE__, "randomize", "Internal: Array assignments unimplemented");
-    return false;
-}
-
-std::unique_ptr<const VlRandomExpr> VlRandomizer::randomConstraint(VlRNG& rngr, int bits) {
-    unsigned long long hash = VL_RANDOM_RNG_I(rngr) & ((1 << bits) - 1);
-    std::unique_ptr<const VlRandomExpr> concat = nullptr;
-    std::vector<std::unique_ptr<const VlRandomExpr>> varbits;
-    for (const auto& var : m_vars) {
-        switch (var.second->sort().constructor()) {
-        case VlRandomSort::Constructor::VL_RAND_BV:
-            for (int i = 0; i < var.second->sort().elemWidth(); i++)
-                varbits.emplace_back(new VlRandomExtract(var.second->cloneRef(), i));
-            break;
-        case VlRandomSort::Constructor::VL_RAND_ABV:
-            // TODO: Bypass unconstrained indices and use fast randomization method for them
-            for (int idx = 0; idx < var.second->sort().len(); idx++) {
-                for (int i = 0; i < var.second->sort().elemWidth(); i++)
-                    varbits.emplace_back(std::make_shared<const VlRandomExtract>(
-                        std::make_shared<const VlRandomSelectRef>(var.second, idx), i));
-            }
-            break;
-        default:
-            VL_WARN_MT(__FILE__, __LINE__, "randomize",
-                       "Internal: Unsupported randomization type");
-        }
-    }
-    for (int i = 0; i < bits; i++) {
-        std::vector<std::shared_ptr<const VlRandomExpr>> xorbits;
-        for (unsigned j = 0; j * 2 < varbits.size(); j++) {
-            unsigned idx = j + VL_RANDOM_RNG_I(rngr) % (varbits.size() - j);
-            std::unique_ptr<const VlRandomExpr>& sel = varbits[idx];
-            std::swap(varbits[idx], varbits[j]);
-            xorbits.emplace_back(sel->cloneExpr());
-        }
-
-        concat = concat == nullptr ? bit : std::make_shared<const VlRandomConcat>(concat, bit);
-    }
-    return std::make_unique<const VlRandomEq>(std::move(concat),
-                                              std::make_unique<const VlRandomBVConst>(hash, bits));
-}
-
-bool VlRandomizer::checkSat(std::iostream& file) const {
-    file << "(check-sat)\n";
-
-    std::string sat;
-    do { std::getline(file, sat); } while (sat == "");
-
-    if (sat == "unsat") return false;
-    if (sat != "sat") {
-        std::stringstream msg;
-        msg << "Internal: Solver error: " << sat;
-        const std::string str = msg.str();
-        VL_WARN_MT(__FILE__, __LINE__, "randomize", str.c_str());
-        return false;
-    }
-    return true;
-}
-
-bool VlRandomizer::next(VlRNG& rngr) {
-    if (m_vars.empty()) return true;
-    std::iostream& f = getSolver();
-    if (!f) return false;
-
-    f << "(set-option :produce-models true)\n";
-    f << "(set-logic QF_ABV)\n";
-    f << "(set-option :smt.phase-selection 5)\n";
-    unsigned long long seed = VL_RANDOM_RNG_I(rngr) & 0xffff;
-    f << "(set-option :smt.random-seed " << seed << ")\n";
-    f << "(set-option :sat.random-seed " << seed << ")\n";
-    f << "(set-option :nlsat.seed " << seed << ")\n";
-    f << "(set-option :sls.random-seed " << seed << ")\n";
-    for (const auto& var : m_vars) {
-        f << "(declare-fun " << *var.second << " () " << var.second->sort() << ")\n";
-    }
-    for (const std::string& constraint : m_constraints) { f << "(assert " << constraint << ")\n"; }
-
-    unsigned long long times = (VL_RANDOM_RNG_I(rngr) % 10) + 1;
-    for (int i = 0; i < times; i++) {
-        if (!checkSat(f)) {
-            f << "(reset)\n";
-            return false;
-        }
-    }
-
-    parseSolution(f);
-
-    bool sat = true;
-    for (int i = 0; i < _VL_SOLVER_HASH_LEN_TOTAL && sat; i++) {
-        auto constr = randomConstraint(rngr, _VL_SOLVER_HASH_LEN);
-        f << "(assert " << *constr << ")\n";
-        sat = checkSat(f);
-    }
-    parseSolution(f);
-
-    f << "(reset)\n";
-    return true;
-}
-
-namespace smtparse {
-using std::istream;
-using std::string;
 
 bool smtIsCharWhitespace(char c) { return (c == ' ') | (c == '\n') | (c == '\r'); }
 
@@ -451,10 +552,10 @@ struct SMTParseState {
     const char* err_filename;
     int err_linenum;
 #ifdef VL_DEBUG
-    string d_read;
+    std::string d_read;
 #endif
 
-    SMTParseState(istream& s_)
+    SMTParseState(std::istream& s_)
         : s(s_) {}
 
     char peekChar() {
@@ -503,7 +604,7 @@ struct SMTParseState {
     bool checkErr() {
         if (err) {
 #ifdef VL_DEBUG
-            string err_hl;
+            std::string err_hl;
             int pos = -1;
             if (buf) {
                 err_hl = d_read + "\033[41;371m" + popChar() + "\033[0m";
@@ -516,9 +617,9 @@ struct SMTParseState {
             // TODO: Fix this loop hanging
             // while (!s.fail() && !s.eof()) s >> d_read;
 
-            string err_str = "Internal: Unable to parse solver's response: invalid "
-                             "S-expression\nAn error occured at idx "
-                             + std::to_string(pos) + ":\n" + err_hl;
+            std::string err_str = "Internal: Unable to parse solver's response: invalid "
+                                  "S-expression\nAn error occured at idx "
+                                + std::to_string(pos) + ":\n" + err_hl;
 
             VL_WARN_MT(err_filename, err_linenum, "smt", &err_str[0]);
 #else
@@ -534,6 +635,8 @@ struct SMTParseState {
 
 template <typename ParseInner>
 bool smtParseParen(SMTParseState& s, ParseInner parseInner) {
+    static_assert(std::is_invocable<ParseInner, SMTParseState&>());
+
     if (s.popChar() != '(') return false;
     s.popWhitespace();
     if (!parseInner(s)) return false;
@@ -542,7 +645,7 @@ bool smtParseParen(SMTParseState& s, ParseInner parseInner) {
     return true;
 }
 
-bool smtParseIdent(SMTParseState& s, string& ident) {
+bool smtParseIdent(SMTParseState& s, std::string& ident) {
     bool allowNum = false;
     ident.clear();
     while (true) {
@@ -557,7 +660,7 @@ bool smtParseIdent(SMTParseState& s, string& ident) {
     }
 }
 
-bool smtParseValueRaw(SMTParseState& s, string& value) {
+bool smtParseValueRaw(SMTParseState& s, std::string& value) {
     bool allowNum = false;
     value.clear();
     while (true) {
@@ -567,9 +670,13 @@ bool smtParseValueRaw(SMTParseState& s, string& value) {
     }
 }
 
-template <typename LhsT, typename Assign, typename ParseLhs>
+template <typename LhsT, typename ParseLhs, typename Assign>
 bool smtParseAssignList(SMTParseState& s, ParseLhs parseLhs, Assign assign) {
-    string ident, value;
+    static_assert(std::is_default_constructible<LhsT>());
+    static_assert(std::is_invocable<ParseLhs, SMTParseState&, LhsT&>());
+    static_assert(std::is_invocable<Assign, LhsT, std::string&&>());
+
+    std::string ident, value;
     s.popWhitespace();
     smtParseParen(s, [&](SMTParseState& s) {
         while (true) {
@@ -590,36 +697,124 @@ bool smtParseAssignList(SMTParseState& s, ParseLhs parseLhs, Assign assign) {
     });
     return true;
 }
-}  //namespace smtparse
+
+}  //namespace vlRandom
+
+bool VlRandomizer::checkSat(std::iostream& file) const {
+    file << "(check-sat)\n";
+
+    std::string sat;
+    do { std::getline(file, sat); } while (sat == "");
+
+    if (sat == "unsat") return false;
+    if (sat != "sat") {
+        std::stringstream msg;
+        msg << "Internal: Solver error: " << sat;
+        const std::string str = msg.str();
+        VL_WARN_MT(__FILE__, __LINE__, "randomize", str.c_str());
+        return false;
+    }
+    return true;
+}
+
+bool VlRandomizer::next(VlRNG& rngr) {
+    if (m_vars.empty()) return true;
+    std::iostream& f = vlRandom::getSolver();
+    if (!f) return false;
+
+    f << "(set-option :produce-models true)\n";
+    f << "(set-logic QF_ABV)\n";
+    f << "(set-option :smt.phase-selection 5)\n";
+    unsigned long long seed = VL_RANDOM_RNG_I(rngr) & 0xffff;
+    f << "(set-option :smt.random-seed " << seed << ")\n";
+    f << "(set-option :sat.random-seed " << seed << ")\n";
+    f << "(set-option :nlsat.seed " << seed << ")\n";
+    f << "(set-option :sls.random-seed " << seed << ")\n";
+    for (const auto& var : m_vars) {
+        vlRandom::smtEmitVarDecl(f, var.second);
+        f << '\n';
+    }
+    for (const auto& arr : m_arrs) {
+        vlRandom::smtEmitArrDecl(f, arr.second);
+        f << '\n';
+    }
+    for (const std::string& constraint : m_constraints) f << "(assert " << constraint << ")\n";
+
+    unsigned long long times = (VL_RANDOM_RNG_I(rngr) % 10) + 1;
+    for (int i = 0; i < times; i++) {
+        if (!checkSat(f)) {
+            f << "(reset)\n";
+            return false;
+        }
+    }
+
+    parseSolution(f);
+
+    f << "(assert ";
+    vlRandom::emitSMTConstraintMod(f, rngr, [this](std::ostream& os) -> size_t {
+        return emitConcatAll(os);
+    });
+    f << ")\n";
+    bool sat = checkSat(f);
+    parseSolution(f);
+
+    f << "(reset)\n";
+    return true;
+}
 
 void VlRandomizer::parseSolution(std::iostream& f) {
     f << "(get-value (";
-    for (const auto& var : m_vars) f << *var.second << ' ';
+    for (const auto& var : m_vars) f << var.second.name << ' ';
     f << "))\n";
 
     // Quasi-parse S-expression of the form ((x #xVALUE) (y #bVALUE) (z #xVALUE))
     {
-        smtparse::SMTParseState s(f);
-        smtparse::smtParseAssignList</*lhs*/ std::string>(
+        vlRandom::SMTParseState s(f);
+        vlRandom::smtParseAssignList</*lhs*/ std::string>(
             s,
-            /*parseLhs*/ smtparse::smtParseIdent,
+            /*parseLhs*/ vlRandom::smtParseIdent,
             /*assign*/ [&](const std::string& ident, std::string&& value) {
-                auto it = m_vars.find(ident);
-                if (it == m_vars.end()) return false;
-
-                auto& ref = it->second;
-                switch (ref->sort().constructor()) {
-                case VlRandomSort::Constructor::VL_RAND_BV:
-                    const VlRandomVarRef& varref = static_cast<const VlRandomVarRef&>(*it->second);
-                    if (m_randmode && !varref.randModeIdxNone()) {
-                        if (!(m_randmode->at(varref.randModeIdx()))) return true;
+                auto vars_it = m_vars.find(ident);
+                if (vars_it != m_vars.end()) {
+                    auto& ref = vars_it->second;
+                    if (m_randmode && !ref.randModeIdxNone()) {
+                        if (!(m_randmode->at(ref.randModeIdx))) return true;
                     }
-                    varref.set(std::move(value));
+                    vlRandom::setRef(ref.datap, ref.width, std::move(value));
+                    return true;
+                }
+
+                auto arrs_it = m_arrs.find(ident);
+                if (arrs_it != m_arrs.end()) {
+                    // TODO: Implement array value setting
                 }
                 return true;
             });
-        (void)s.checkErr();
+        //(void)s.checkErr();
     }
+}
+
+size_t VlRandomizer::emitConcatAll(std::ostream& os) const {
+    size_t width = 0;
+    os << "(concat";
+
+    for (auto& var : m_vars) {
+        os << ' ' << var.second.name;
+        width += var.second.width;
+    }
+
+    for (auto& arr : m_arrs) {
+        size_t idxWidth = vlRandom::sizeWidth(arr.second.length);
+        os << " (concat";
+        for (size_t idx = 0; idx < arr.second.length; ++idx) {
+            os << " (select " << arr.second.arrName << ' ';
+            vlRandom::emitSMTFormatConst(os, idx, idxWidth);
+            os << ')';
+        }
+        width += arr.second.length * arr.second.width;
+    }
+    os << ')';
+    return width;
 }
 
 void VlRandomizer::hard(std::string&& constraint) {
@@ -632,9 +827,14 @@ void VlRandomizer::clear() { m_constraints.clear(); }
 void VlRandomizer::dump() const {
     for (const auto& var : m_vars) {
         std::stringstream ss;
-        var.second->emit(ss);
-        VL_PRINTF("Variable (%d/%d): %s\n", var.second->sort().elemWidth(),
-                  var.second->sort().len(), ss.str().c_str());
+        vlRandom::smtEmitVarDecl(ss, var.second);
+        VL_PRINTF("Variable (.%zu.): %s\n", var.second.width, ss.str().c_str());
+    }
+    for (const auto& arr : m_arrs) {
+        std::stringstream ss;
+        vlRandom::smtEmitArrDecl(ss, arr.second);
+        VL_PRINTF("Array (.%zu. [%zu]): %s\n", arr.second.width, arr.second.length,
+                  ss.str().c_str());
     }
     for (const std::string& c : m_constraints) VL_PRINTF("Constraint: %s\n", c.c_str());
 }

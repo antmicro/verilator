@@ -28,6 +28,7 @@
 #include "verilatedos.h"
 
 #include "verilated.h"
+
 #include <istream>
 #include <memory>
 
@@ -62,7 +63,7 @@ struct VlRandomArrRef final {
     std::string const arrName;  // Array variable name
     void* const datap;  // Reference to variable data
     const size_t length;  // Number of elements
-    const size_t width; // Element width
+    const size_t width;  // Element width
 
     VlRandomArrRef(std::string&& arrName_, size_t length_, size_t width_, void* datap_)
         : arrName{std::move(arrName_)}
@@ -91,7 +92,7 @@ class VlRandomizer final {
     // MEMBERS
     std::vector<std::string> m_constraints;  // Solver-dependent constraints
     std::map<std::string, VlRandomVarRef> m_vars;  // Solver-dependent variables
-    std::map<std::string, VlRandomArrRef> m_arrs; // Sover-dependent arrays
+    std::map<std::string, VlRandomArrRef> m_arrs;  // Sover-dependent arrays
     const VlQueue<CData>* m_randmode;  // rand_mode state;
 
     // PRIVATE METHODS

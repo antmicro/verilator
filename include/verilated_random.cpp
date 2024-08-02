@@ -21,6 +21,7 @@
 //=========================================================================
 
 #include "verilated_random.h"
+
 #include "verilated.h"
 
 #include <cstdint>
@@ -30,9 +31,9 @@
 #include <sstream>
 #include <streambuf>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
-#include <type_traits>
 
 #define _VL_SOLVER_HASH_LEN 1
 #define _VL_SOLVER_HASH_LEN_TOTAL 4
@@ -251,7 +252,7 @@ static Process& getSolver() {
 
     const char* const* const cmd = &s_argv[0];
     s_solver.open(cmd);
-    s_solver << "(set-logic QF_BV)\n";
+    s_solver << "(set-logic QF_AUFBV)\n";
     s_solver << "(set-option :smt.phase-selection 5)\n";
     s_solver << "(check-sat)\n";
     s_solver << "(reset)\n";
@@ -282,7 +283,6 @@ std::ostream& operator<<(std::ostream& os, const VlRandomExpr& dt) {
 
 using WValue = std::vector<WData>;
 
-
 size_t sizeWidth(size_t size) {
 #ifndef _WIN32
     if (size == 0) return 1;
@@ -308,59 +308,39 @@ std::pair<WValue, WValue> getPrimePair() {
 
     // Maybe we can use prime powers?
     return std::make_pair(
-        WValue({
-            0x00000121,
-            0x00000000,
-            0x00000000,
-            0x4404A7E8,
-            0x777839E7,
-            0x749CE90C,
-            0x65277B06,
-            0x5A13AE34,
-            0xF2E44DEA,
-            0x2AEA2879,
-            0x000001D4
-        }),
-        WValue({
-            0x000007E1,
-            0x00000000,
-            0x00000000,
-            0xE1178E81,
-            0xE478B23B,
-            0x1C46D01A,
-            0x79F5080F,
-            0x62E7F4A7,
-            0x62CD8A51,
-            0x77D9D58B
-        })
-    );
+        WValue({0x00000121, 0x00000000, 0x00000000, 0x4404A7E8, 0x777839E7, 0x749CE90C, 0x65277B06,
+                0x5A13AE34, 0xF2E44DEA, 0x2AEA2879, 0x000001D4}),
+        WValue({0x000007E1, 0x00000000, 0x00000000, 0xE1178E81, 0xE478B23B, 0x1C46D01A, 0x79F5080F,
+                0x62E7F4A7, 0x62CD8A51, 0x77D9D58B}));
 }
 
-struct CharBuf {
-    char* buf;
+class CharBuf {
+    char* m_buf;
 
+public:
     CharBuf(size_t length)
-        : buf(new char[length + 1]) {
-        buf[length] = '\0';
+        : m_buf(new char[length + 1]) {
+        m_buf[length] = '\0';
     }
     CharBuf(const CharBuf& other) = delete;
     CharBuf& operator==(const CharBuf& other) = delete;
     CharBuf(CharBuf&& other) {
-        other.buf = buf;
-        buf = nullptr;
+        other.m_buf = m_buf;
+        m_buf = nullptr;
     }
     CharBuf& operator==(CharBuf&& other) {
-        other.buf = buf;
-        buf = nullptr;
+        other.m_buf = m_buf;
+        m_buf = nullptr;
         return *this;
     }
-    ~CharBuf() {
-        delete[] buf;
-    }
+    ~CharBuf() { delete[] m_buf; }
+
+    char& operator[](size_t idx) { return m_buf[idx]; }
+    const char* c_str() const { return m_buf; }
 };
 
 std::ostream& operator<<(std::ostream& os, const CharBuf& buf) {
-    os << buf.buf;
+    os << buf.c_str();
     return os;
 }
 
@@ -381,7 +361,7 @@ void forEachBitMSB(const WValue& data, int width, OnBit onBit) {
 void emitSMTFormatConst(std::ostream& os, const WValue& data, int width) {
     // TODO: Use hex representations when 4|width
     static const size_t fmtLen = 2;
-    char* const buf = new char[width + fmtLen + 1];
+    CharBuf buf(width + fmtLen);
     buf[width + fmtLen] = '\0';
     buf[0] = '#';
     buf[1] = 'b';
@@ -399,13 +379,12 @@ void emitSMTFormatConst(std::ostream& os, const WValue& data, int width) {
     while (bitIdx < width) buf[fmtLen + width - 1 - bitIdx] = '0';
 
     os << buf;
-    delete[] buf;
 }
 
 void emitSMTFormatConst(std::ostream& os, unsigned long long data, int width) {
     // TODO: Use hex representations when 4|width
     static const size_t fmtLen = 2;
-    char* const buf = new char[width + fmtLen + 1];
+    CharBuf buf(width + fmtLen);
     buf[width + fmtLen] = '\0';
     buf[0] = '#';
     buf[1] = 'b';
@@ -420,7 +399,6 @@ void emitSMTFormatConst(std::ostream& os, unsigned long long data, int width) {
     while (bitIdx < width) buf[fmtLen + width - 1 - bitIdx] = '0';
 
     os << buf;
-    delete[] buf;
 }
 
 template <typename Emitter>
@@ -439,6 +417,15 @@ void emitSMTExtract(std::ostream& os, int idx, int width, Emitter emitExpr) {
     os << "((_ extract " << idx + width - 1 << ' ' << idx << ") ";
     emitExpr(os);
     os << ')';
+}
+
+void emitSMTXorAllBits(std::ostream& os, size_t width, std::string&& v) {
+    os << "(bvxor";
+    for (int bitIdx = 0; bitIdx < width; ++bitIdx) {
+        os << ' ';
+        emitSMTExtract(os, bitIdx, [&v](std::ostream& os) { os << v; });
+    }
+    os << ")";
 }
 
 template <typename Emitter>
@@ -462,12 +449,9 @@ void emitSMTConstraintMod(std::ostream& os, VlRNG& rng, Emitter emitConcatVec) {
     emitSMTExtract(os, 0, 32, emitRemainder);
     os << ' ';
     emitSMTFormatConst(os, hash, 32);
-    os << "))) (bvxor";
-    for (int bitIdx = 0; bitIdx < 32; ++bitIdx) {
-        os << ' ';
-        emitSMTExtract(os, bitIdx, [](std::ostream& os){ os << "vl-xored-remainder"; });
-    }
-    os << ")) #b0)"; // XOR to zero
+    os << "))) ";
+    emitSMTXorAllBits(os, 32, "vl-xored-remainder");
+    os << ") #b0)";  // XOR to zero
 }
 
 template <typename Emitter>
@@ -489,12 +473,39 @@ void emitSMTConstraintMul(std::ostream& os, VlRNG& rng, Emitter emitConcatVec) {
     emitSMTExtract(os, 0, 32, emitRemainder);
     os << ' ';
     emitSMTFormatConst(os, hash, 32);
-    os << "))) (bvxor";
-    for (int bitIdx = 0; bitIdx < 32; ++bitIdx) {
+    os << "))) ";
+    emitSMTXorAllBits(os, 32, "vl-xored-remainder");
+    os << ") #b0)";  // XOR to zero
+}
+
+template <typename Emitter>
+void emitSMTConstraintAdd(std::ostream& os, VlRNG& rng, Emitter emitConcatVec) {
+    static_assert(std::is_invocable<Emitter, std::ostream&>());
+
+    std::pair<WValue, WValue> primes = getPrimePair();
+    unsigned long long hash = VL_RANDOM_RNG_I(rng);
+
+    os << "(= (let ((xsum (bvxor (let ((cat ";
+    size_t totalWidth = emitConcatVec(os);
+    os << ")) (bvadd";
+    size_t i;
+    for (i = 0; i + 32 <= totalWidth; i += 32) {
         os << ' ';
-        emitSMTExtract(os, bitIdx, [](std::ostream& os){ os << "vl-xored-remainder"; });
+        emitSMTExtract(os, i, 32, [](std::ostream& os) { os << "cat"; });
     }
-    os << ")) #b0)"; // XOR to zero
+    if (i < totalWidth) {
+        size_t padWidth = 32 - (totalWidth - i);
+        os << " (concat ";
+        emitSMTFormatConst(os, 0, padWidth);
+        os << ' ';
+        emitSMTExtract(os, i, totalWidth - i, [](std::ostream& os) { os << "cat"; });
+        os << ')';
+    }
+    os << ")) ";  // (let ((cat ...)) (bvadd ...)) <--
+    emitSMTFormatConst(os, hash, 32);
+    os << "))) ";  // (let ((xsum ...)) <--
+    emitSMTXorAllBits(os, 32, "xsum");
+    os << ") #b0)";  // XOR to zero
 }
 
 void smtEmitVarDecl(std::ostream& os, const VlRandomVarRef& varref) {
@@ -619,7 +630,7 @@ struct SMTParseState {
 
             std::string err_str = "Internal: Unable to parse solver's response: invalid "
                                   "S-expression\nAn error occured at idx "
-                                + std::to_string(pos) + ":\n" + err_hl;
+                                  + std::to_string(pos) + ":\n" + err_hl;
 
             VL_WARN_MT(err_filename, err_linenum, "smt", &err_str[0]);
 #else
@@ -751,9 +762,8 @@ bool VlRandomizer::next(VlRNG& rngr) {
     parseSolution(f);
 
     f << "(assert ";
-    vlRandom::emitSMTConstraintMod(f, rngr, [this](std::ostream& os) -> size_t {
-        return emitConcatAll(os);
-    });
+    vlRandom::emitSMTConstraintAdd(
+        f, rngr, [this](std::ostream& os) -> size_t { return emitConcatAll(os); });
     f << ")\n";
     bool sat = checkSat(f);
     parseSolution(f);

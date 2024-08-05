@@ -1201,13 +1201,13 @@ class WidthVisitor final : public VNVisitor {
         userIterateAndNext(nodep->bitp(), WidthVP{CONTEXT_DET, PRELIM}.p());  // FINAL in AstSel
         userIterateAndNext(nodep->thsp(), WidthVP{CONTEXT_DET, PRELIM}.p());  // FINAL in AstSel
         userIterateAndNext(nodep->attrp(), WidthVP{SELF, BOTH}.p());
-        AstNode* const selp = V3Width::widthSelNoIterEdit(nodep);
+        AstNode* const selp = V3Width::widthSelNoIterEdit(nodep, m_constraintp != nullptr);
         if (selp != nodep) {
             nodep = nullptr;
             userIterate(selp, m_vup);
             return;
         }
-        nodep->v3fatalSrc("AstSelBit should disappear after widthSel");
+        if (!m_constraintp) nodep->v3fatalSrc("AstSelBit should disappear after widthSel");
     }
     void visit(AstSelExtract* nodep) override {
         // Just a quick check as after V3Param these nodes instead are AstSel's

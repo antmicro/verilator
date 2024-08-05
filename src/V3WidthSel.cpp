@@ -42,6 +42,9 @@ class WidthSelVisitor final : public VNVisitor {
     //  done by the caller (V3Width).  This avoids duplicating much of the
     //  complicated GenCase/GenFor/Cell/Function call logic that all depends
     //  on if widthing top-down or just for parameters.
+
+    bool m_constraint;  // True if Sel is under a constraint
+
 #define iterateChildren DO_NOT_iterateChildern_IN_V3WidthSel
 
     // METHODS
@@ -224,8 +227,12 @@ class WidthSelVisitor final : public VNVisitor {
         UINFO(6, "SELBIT " << nodep << endl);
         if (debug() >= 9) nodep->backp()->dumpTree("-  SELBT0: ");
         // lhsp/rhsp do not need to be constant
-        AstNodeExpr* const fromp = nodep->fromp()->unlinkFrBack();
-        AstNodeExpr* const rhsp = nodep->bitp()->unlinkFrBack();  // bit we're extracting
+        AstNodeExpr* const fromp = nodep->fromp();
+        AstNodeExpr* const rhsp = nodep->bitp();  // bit we're extracting
+        if (!m_constraint) {
+            fromp->unlinkFrBack();
+            rhsp->unlinkFrBack();
+        }
         if (debug() >= 9) nodep->dumpTree("-  SELBT2: ");
         const FromData fromdata = fromDataForArray(nodep, fromp);
         AstNodeDType* const ddtypep = fromdata.m_dtypep;
@@ -282,23 +289,32 @@ class WidthSelVisitor final : public VNVisitor {
             VL_DO_DANGLING(pushDeletep(nodep), nodep);
         } else if (const AstDynArrayDType* const adtypep = VN_CAST(ddtypep, DynArrayDType)) {
             // SELBIT(array, index) -> CMETHODCALL(queue, "at", index)
-            AstCMethodHard* const newp = new AstCMethodHard{nodep->fileline(), fromp, "at", rhsp};
-            newp->dtypeFrom(adtypep->subDTypep());  // Need to strip off queue reference
-            if (debug() >= 9) newp->dumpTree("-  SELBTq: ");
-            nodep->replaceWith(newp);
-            VL_DO_DANGLING(pushDeletep(nodep), nodep);
+            if (m_constraint) {
+                nodep->dtypeFrom(adtypep->subDTypep());
+            } else {
+                AstCMethodHard* const newp
+                    = new AstCMethodHard{nodep->fileline(), fromp, "at", rhsp};
+                newp->dtypeFrom(adtypep->subDTypep());  // Need to strip off queue reference
+                if (debug() >= 9) newp->dumpTree("-  SELBTq: ");
+                nodep->replaceWith(newp);
+                VL_DO_DANGLING(pushDeletep(nodep), nodep);
+            }
         } else if (const AstQueueDType* const adtypep = VN_CAST(ddtypep, QueueDType)) {
             // SELBIT(array, index) -> CMETHODCALL(queue, "at", index)
-            AstCMethodHard* newp;
-            if (AstNodeExpr* const backnessp = selQueueBackness(rhsp)) {
-                newp = new AstCMethodHard{nodep->fileline(), fromp, "atBack", backnessp};
+            if (m_constraint) {
+                nodep->dtypeFrom(adtypep->subDTypep());
             } else {
-                newp = new AstCMethodHard{nodep->fileline(), fromp, "at", rhsp};
+                AstCMethodHard* newp;
+                if (AstNodeExpr* const backnessp = selQueueBackness(rhsp)) {
+                    newp = new AstCMethodHard{nodep->fileline(), fromp, "atBack", backnessp};
+                } else {
+                    newp = new AstCMethodHard{nodep->fileline(), fromp, "at", rhsp};
+                }
+                newp->dtypeFrom(adtypep->subDTypep());  // Need to strip off queue reference
+                if (debug() >= 9) newp->dumpTree("-  SELBTq: ");
+                nodep->replaceWith(newp);
+                VL_DO_DANGLING(pushDeletep(nodep), nodep);
             }
-            newp->dtypeFrom(adtypep->subDTypep());  // Need to strip off queue reference
-            if (debug() >= 9) newp->dumpTree("-  SELBTq: ");
-            nodep->replaceWith(newp);
-            VL_DO_DANGLING(pushDeletep(nodep), nodep);
         } else if (VN_IS(ddtypep, BasicDType) && ddtypep->isString()) {
             // SELBIT(string, index) -> GETC(string, index)
             const AstNodeVarRef* const varrefp = VN_CAST(fromp, NodeVarRef);
@@ -623,7 +639,8 @@ class WidthSelVisitor final : public VNVisitor {
 
 public:
     // CONSTRUCTORS
-    WidthSelVisitor() = default;
+    WidthSelVisitor(bool constraint)
+        : m_constraint{constraint} {};
     ~WidthSelVisitor() override = default;
     AstNode* mainAcceptEdit(AstNode* nodep) { return iterateSubtreeReturnEdits(nodep); }
 };
@@ -631,9 +648,9 @@ public:
 //######################################################################
 // Width class functions
 
-AstNode* V3Width::widthSelNoIterEdit(AstNode* nodep) {
+AstNode* V3Width::widthSelNoIterEdit(AstNode* nodep, bool constraint) {
     UINFO(4, __FUNCTION__ << ": " << nodep << endl);
-    WidthSelVisitor visitor;
+    WidthSelVisitor visitor(constraint);
     nodep = visitor.mainAcceptEdit(nodep);
     return nodep;
 }

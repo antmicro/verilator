@@ -37,7 +37,7 @@ public:
     // For use only in WidthVisitor
     // Replace AstSelBit, etc with AstSel/AstArraySel
     // Returns replacement node if nodep was deleted, or null if none.
-    static AstNode* widthSelNoIterEdit(AstNode* nodep) VL_MT_DISABLED;
+    static AstNode* widthSelNoIterEdit(AstNode* nodep, bool constraint = false) VL_MT_DISABLED;
 };
 
 #endif  // Guard

@@ -43,6 +43,7 @@ class WidthCommitVisitor final : public VNVisitor {
     // STATE
     AstNodeModule* m_modp = nullptr;
     VMemberMap m_memberMap;  // Member names cached for fast lookup
+    bool m_constraint = false;  // Under constraint
 
 public:
     // METHODS
@@ -266,9 +267,13 @@ private:
             pushDeletep(nodep->valuep()->unlinkFrBack());
         }
     }
+    void visit(AstConstraint* nodep) override {
+        VL_RESTORER(m_constraint);
+        m_constraint = true;
+    }
     void visit(AstNodePreSel* nodep) override {  // LCOV_EXCL_LINE
         // This check could go anywhere after V3Param
-        nodep->v3fatalSrc("Presels should have been removed before this point");
+        if (!m_constraint) nodep->v3fatalSrc("Presels should have been removed before this point");
     }
     void visit(AstNode* nodep) override {
         iterateChildren(nodep);

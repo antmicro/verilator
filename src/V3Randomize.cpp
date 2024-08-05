@@ -33,6 +33,7 @@
 
 #include "verilatedos.h"
 
+#include "V3Number.h"
 #include "V3Randomize.h"
 
 #include "V3Ast.h"
@@ -351,9 +352,12 @@ class ConstraintExprVisitor final : public VNVisitor {
         UASSERT_OBJ(smtExpr != "", nodep,
                     "Node needs randomization constraint, but no emitSMT: " << nodep);
 
-        if (lhsp) lhsp = VN_AS(iterateSubtreeReturnEdits(lhsp->unlinkFrBack()), NodeExpr);
-        if (rhsp) rhsp = VN_AS(iterateSubtreeReturnEdits(rhsp->unlinkFrBack()), NodeExpr);
-        if (thsp) thsp = VN_AS(iterateSubtreeReturnEdits(thsp->unlinkFrBack()), NodeExpr);
+        if (lhsp && lhsp->backp()) lhsp->unlinkFrBack();
+        if (rhsp && rhsp->backp()) rhsp->unlinkFrBack();
+        if (thsp && thsp->backp()) thsp->unlinkFrBack();
+        if (lhsp) lhsp = VN_AS(iterateSubtreeReturnEdits(lhsp), NodeExpr);
+        if (rhsp) rhsp = VN_AS(iterateSubtreeReturnEdits(rhsp), NodeExpr);
+        if (thsp) thsp = VN_AS(iterateSubtreeReturnEdits(thsp), NodeExpr);
 
         AstNodeExpr* argsp = nullptr;
         for (string::iterator pos = smtExpr.begin(); pos != smtExpr.end(); ++pos) {
@@ -419,6 +423,82 @@ class ConstraintExprVisitor final : public VNVisitor {
         return new AstSFormatF{fl, fmt.str(), false, exprsp};
     }
 
+    AstCMethodHard* writeVar(AstVar* const varp, AstNodeModule* const classOrPackagep,
+                             VarRandMode randMode) {
+        AstCMethodHard* const methodp = new AstCMethodHard{
+            varp->fileline(),
+            new AstVarRef{varp->fileline(), VN_AS(m_genp->user2p(), NodeModule), m_genp,
+                          VAccess::READWRITE},
+            "writeVar"};
+        methodp->dtypeSetVoid();
+        AstClass* const classp = VN_AS(varp->user2p(), Class);
+        AstVarRef* const varRefp = new AstVarRef{varp->fileline(), classp, varp, VAccess::WRITE};
+        varRefp->classOrPackagep(classOrPackagep);
+        methodp->addPinsp(varRefp);
+        methodp->addPinsp(new AstConst{varp->dtypep()->fileline(), AstConst::Unsized64{},
+                                       (size_t)varp->width()});
+        AstNodeExpr* const varnamep
+            = new AstCExpr{varp->fileline(), "\"" + varp->name() + "\"", varp->width()};
+        varnamep->dtypep(varp->dtypep());
+        methodp->addPinsp(varnamep);
+        if (randMode.usesRandMode) {
+            methodp->addPinsp(
+                new AstConst{varp->fileline(), AstConst::Unsized64{}, randMode.index});
+        }
+        return methodp;
+    }
+
+    AstNodeDType* getArrSubDType(AstNode* const nodep) {
+        AstNodeDType* subDTypep;
+        if (AstQueueDType* queuep = VN_CAST(nodep->dtypep(), QueueDType)) {
+            subDTypep = queuep->subDTypep();
+        } else if (AstDynArrayDType* dynarrp = VN_CAST(nodep->dtypep(), DynArrayDType)) {
+            subDTypep = dynarrp->subDTypep();
+        } else {
+            nodep->v3fatalSrc("Unhandled indexed data type " << nodep);
+            return nullptr;
+        }
+        return subDTypep;
+    }
+
+    AstCMethodHard* writeArr(AstVar* const varp, AstNodeModule* const classOrPackagep,
+                             VarRandMode randMode) {
+        AstCMethodHard* const methodp = new AstCMethodHard{
+            varp->fileline(),
+            new AstVarRef{varp->fileline(), VN_AS(m_genp->user2p(), NodeModule), m_genp,
+                          VAccess::READWRITE},
+            "writeArr"};
+        methodp->dtypeSetVoid();
+        AstClass* const classp = VN_AS(varp->user2p(), Class);
+        AstVarRef* const varRefp = new AstVarRef{varp->fileline(), classp, varp, VAccess::WRITE};
+        varRefp->classOrPackagep(classOrPackagep);
+        methodp->addPinsp(varRefp);
+        AstNodeDType* const subDTypep = getArrSubDType(varp);
+        std::string cSubType = subDTypep->cType("", false, false);
+        AstNodeExpr* const getlengthp = new AstCExpr{
+            varp->fileline(),
+            "[](void* q) -> size_t { return static_cast<VlQueue<" + cSubType +
+            ">*>(q)->size(); }",
+            varp->width()};
+        getlengthp->dtypeSetUInt32();
+        methodp->addPinsp(getlengthp);
+
+        methodp->addPinsp(new AstConst{varp->fileline(), uint32_t(subDTypep->width())});
+        AstNodeExpr* const varnamep
+            = new AstCExpr{varp->fileline(), "\"" + varp->name() + "\"", varp->width()};
+        varnamep->dtypep(varp->dtypep());  // Should be string?
+        methodp->addPinsp(varnamep);
+        AstNodeExpr* const accessp = new AstCExpr{
+            varp->fileline(),
+            "[](void* q, size_t idx) -> void* { return &static_cast<VlQueue<" + cSubType +
+            ">*>(q)->at(idx); }",
+            varp->width()};
+        accessp->dtypep(varp->dtypep());  // Should be VlRandomArrRef::AccessT?
+        methodp->addPinsp(accessp);
+
+        return methodp;
+    }
+
     // VISITORS
     void visit(AstNodeVarRef* nodep) override {
         AstVar* const varp = nodep->varp();
@@ -446,29 +526,14 @@ class ConstraintExprVisitor final : public VNVisitor {
         relinker.relink(exprp);
 
         if (!varp->user3()) {
-            AstCMethodHard* const methodp = new AstCMethodHard{
-                varp->fileline(),
-                new AstVarRef{varp->fileline(), VN_AS(m_genp->user2p(), NodeModule), m_genp,
-                              VAccess::READWRITE},
-                "writeVar"};
-            methodp->dtypeSetVoid();
-            AstClass* const classp = VN_AS(varp->user2p(), Class);
-            AstVarRef* const varRefp
-                = new AstVarRef{varp->fileline(), classp, varp, VAccess::WRITE};
-            varRefp->classOrPackagep(classOrPackagep);
-            methodp->addPinsp(varRefp);
-            methodp->addPinsp(new AstConst{varp->dtypep()->fileline(), AstConst::Unsized64{},
-                                           (size_t)varp->width()});
-            AstNodeExpr* const varnamep
-                = new AstCExpr{varp->fileline(), "\"" + smtName + "\"", varp->width()};
-            varnamep->dtypep(varp->dtypep());
-            methodp->addPinsp(varnamep);
-            if (randMode.usesRandMode) {
-                methodp->addPinsp(
-                    new AstConst{varp->fileline(), AstConst::Unsized64{}, randMode.index});
-            }
+            AstCMethodHard* methodp = nullptr;
+            if (VN_IS(varp->dtypep(), QueueDType) || VN_IS(varp->dtypep(), DynArrayDType))
+                methodp = writeArr(varp, classOrPackagep, randMode);
+            else
+                methodp = writeVar(varp, classOrPackagep, randMode);
             AstNodeFTask* initTaskp = m_inlineInitTaskp;
             if (!initTaskp) {
+                AstClass* const classp = VN_AS(varp->user2p(), Class);
                 varp->user3(true);  // Mark as set up in new()
                 initTaskp = VN_AS(m_memberMap.findMember(classp, "new"), NodeFTask);
                 UASSERT_OBJ(initTaskp, classp, "No new() in class");
@@ -508,6 +573,36 @@ class ConstraintExprVisitor final : public VNVisitor {
         // Biop, but RHS is harmful
         if (editFormat(nodep)) return;
         editSMT(nodep, nodep->srcp());
+    }
+    void visit(AstSelBit* nodep) override {
+        if (editFormat(nodep)) return;
+        if (!VN_IS(nodep->fromp()->dtypep(), QueueDType) &&
+            !VN_IS(nodep->fromp()->dtypep(), DynArrayDType)) {
+            nodep->v3fatalSrc( "Unsupported selection constraint: " << nodep);
+        }
+        VNRelinker bitRelink;
+        AstNodeExpr* bitp = nodep->bitp()->unlinkFrBack(&bitRelink);
+        AstNodeExpr* bitwidthp =
+            new AstCMethodHard(nodep->fileline(), nodep->fromp()->cloneTree(false), "sizeWidth");
+        bitwidthp->dtypep(nodep->findUInt32DType());
+        AstSel* selp =
+            new AstSel(nodep->fileline(), bitp, new AstConst(nodep->fileline(), 0), bitwidthp);
+        selp->dtypeSetUInt32();
+        selp->user1(true);
+        bitRelink.relink(selp);
+        editSMT(nodep, nodep->fromp(), nodep->bitp());
+    }
+    void visit(AstSel* nodep) override {
+        if (editFormat(nodep)) return;
+        AstSub* msbp = new AstSub{
+            nodep->fileline(),
+            new AstAdd{
+                nodep->fileline(), nodep->lsbp()->cloneTree(false) /* Note: Beware side-effects */,
+                nodep->widthp()->unlinkFrBack()},
+            new AstConst{nodep->fileline(), 1}};
+        msbp->dtypeFrom(nodep->lsbp());
+        msbp->lhsp()->dtypeFrom(nodep->lsbp());
+        editSMT(nodep, msbp, nodep->lsbp(), nodep->fromp());
     }
     void visit(AstSFormatF* nodep) override {}
     void visit(AstStmtExpr* nodep) override {}

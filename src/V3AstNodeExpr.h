@@ -4445,6 +4445,7 @@ public:
                     "not coded to create after dtypes resolved");
     }
     ASTGEN_MEMBERS_AstSelBit;
+    string emitSMT() const override { return "(select %l %r)"; }
 };
 class AstSelExtract final : public AstNodePreSel {
     // Range extraction, gets replaced with AstSel
@@ -4706,6 +4707,7 @@ public:
                : isWide()        ? "VL_SEL_%nq%lq%rq%tq(%nw,%lw, %P, %li, %ri, %ti)"
                                  : "VL_SEL_%nq%lq%rq%tq(%lw, %P, %li, %ri, %ti)";
     }
+    string emitSMT() const override { return "((_ extract %l %r) %t)"; }
     bool cleanOut() const override { return false; }
     bool cleanLhs() const override { return true; }
     bool cleanRhs() const override { return true; }

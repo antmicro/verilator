@@ -547,6 +547,25 @@ public:
 
     // Size. Verilog: function int size(), or int num()
     int size() const { return m_deque.size(); }
+    size_t sizeWidth() const {
+#ifndef _WIN32
+        if (size() == 0) return 1;
+        return sizeof(unsigned int) * 8 - __builtin_clz(size());
+#else
+        int i = size();
+        i |= (i >> 1);
+        i |= (i >> 2);
+        i |= (i >> 4);
+        i |= (i >> 8);
+        i |= (i >> 16);
+        i -= ((i >> 1) & 0x55555555);
+        i = (((i >> 2) & 0x33333333) + (i & 0x33333333));
+        i = (((i >> 4) + i) & 0x0f0f0f0f);
+        i += (i >> 8);
+        i += (i >> 16);
+        return i & 0x0000003f;
+#endif
+    }
     // Clear array. Verilog: function void delete([input index])
     void clear() { m_deque.clear(); }
     void erase(int32_t index) {

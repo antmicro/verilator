@@ -29,6 +29,7 @@
 
 #include "verilated.h"
 
+#include <functional>
 #include <istream>
 #include <memory>
 
@@ -44,32 +45,44 @@ public:
     virtual std::unique_ptr<VlRandomExpr> cloneExpr() const = 0;
 };
 
-struct VlRandomVarRef final {
+struct VlRandomRandModeIdx VL_NOT_FINAL {
+    uint32_t randModeIdx;  // rand_mode index
+    bool randModeIdxNone() const { return randModeIdx == std::numeric_limits<uint32_t>::max(); }
+};
+
+struct VlRandomVarRef final : public VlRandomRandModeIdx {
     std::string const name;  // Variable name
     void* const datap;  // Reference to variable data
     const size_t width;  // Variable width in bits
-    uint32_t randModeIdx; // rand_mode index
-
-    bool randModeIdxNone() const { return randModeIdx == std::numeric_limits<uint32_t>::max(); }
 
     VlRandomVarRef(std::string&& name_, size_t width_, void* datap_, uint32_t randModeIdx_)
         : name{std::move(name_)}
         , datap{datap_}
-        , width{width_}
-        , randModeIdx{randModeIdx_} {}
+        , width{width_} {
+        randModeIdx = randModeIdx_;
+    }
 };
 
-struct VlRandomArrRef final {
+struct VlRandomArrRef final : public VlRandomRandModeIdx {
+    using GetLengthT = size_t (*const)(void* containerPtr);
+    using AccessT = void* (*const)(void* containerPtr, size_t idx);
+
     std::string const arrName;  // Array variable name
     void* const datap;  // Reference to variable data
-    const size_t length;  // Number of elements
     const size_t width;  // Element width
+    const GetLengthT getLength;  // Number of elements
+    AccessT getIdxPtr;
+    std::set<size_t> heldIdx;
 
-    VlRandomArrRef(std::string&& arrName_, size_t length_, size_t width_, void* datap_)
+    VlRandomArrRef(std::string&& arrName_, GetLengthT getLength_, size_t width_, void* datap_,
+                   AccessT getIdxPtr_, uint32_t randModeIdx_)
         : arrName{std::move(arrName_)}
         , datap{datap_}
-        , length{length_}
-        , width{width_} {}
+        , width{width_}
+        , getLength{getLength_}
+        , getIdxPtr{getIdxPtr_} {
+        randModeIdx = randModeIdx_;
+    }
 };
 
 struct VlRandomArrIdxRef final {
@@ -113,10 +126,12 @@ public:
         m_vars.emplace(name, VlRandomVarRef{name, (size_t)width, &var, randmodeIdx});
     }
     template <typename T>
-    void writeArr(T& arr, size_t length, const char* name) {
+    void writeArr(T& arr, VlRandomArrRef::GetLengthT getLength, size_t width, const char* name,
+                  VlRandomArrRef::AccessT idxAccess,
+                  uint32_t randmodeIdx = std::numeric_limits<uint32_t>::max()) {
         auto it = m_vars.find(name);
         if (it != m_vars.end()) return;
-        m_arrs.emplace(name, VlRandomArrRef{name, length, &arr});
+        m_arrs.emplace(name, VlRandomArrRef{name, getLength, width, &arr, idxAccess, randmodeIdx});
     }
     void hard(std::string&& constraint);
     void clear();

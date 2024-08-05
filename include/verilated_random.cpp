@@ -286,7 +286,7 @@ using WValue = std::vector<WData>;
 size_t sizeWidth(size_t size) {
 #ifndef _WIN32
     if (size == 0) return 1;
-    return __builtin_clz(size);
+    return sizeof(unsigned int) * 8 - __builtin_clz(size);
 #else
     int i = m_len;
     i |= (i >> 1);
@@ -513,8 +513,8 @@ void smtEmitVarDecl(std::ostream& os, const VlRandomVarRef& varref) {
 }
 
 void smtEmitArrDecl(std::ostream& os, const VlRandomArrRef& arrref) {
-    os << "(declare-fun " << arrref.arrName << " () (Array (_ BitVec " << sizeWidth(arrref.length)
-       << ") (_ BitVec " << sizeWidth(arrref.width) << ")))";
+    os << "(declare-fun " << arrref.arrName << " () (Array (_ BitVec "
+       << sizeWidth(arrref.getLength(arrref.datap)) << ") (_ BitVec " << arrref.width << ")))";
 }
 
 bool setRef(void* const datap, const int width, std::string&& val) {
@@ -656,6 +656,16 @@ bool smtParseParen(SMTParseState& s, ParseInner parseInner) {
     return true;
 }
 
+struct VlLhsRef {
+    enum class LhsKind {
+        LHS_VAR,
+        LHS_ARR,
+    } kind
+        = LhsKind::LHS_VAR;
+    std::string name;
+    size_t index = 0;
+};
+
 bool smtParseIdent(SMTParseState& s, std::string& ident) {
     bool allowNum = false;
     ident.clear();
@@ -671,6 +681,18 @@ bool smtParseIdent(SMTParseState& s, std::string& ident) {
     }
 }
 
+bool smtParseKeyword(SMTParseState& s, const std::string& keyword) {
+    std::string read;
+    while (true) {
+        char c = s.peekChar();
+        if (smtIsCharWhitespace(c) || c == '(' || c == ')' || c == '#') {
+            if (read.length() == 0) return false;
+            return read == keyword;
+        };
+        read += s.popChar();
+    }
+}
+
 bool smtParseValueRaw(SMTParseState& s, std::string& value) {
     bool allowNum = false;
     value.clear();
@@ -681,11 +703,30 @@ bool smtParseValueRaw(SMTParseState& s, std::string& value) {
     }
 }
 
+bool smtParseLhsRef(SMTParseState& s, VlLhsRef& ref) {
+    bool ident = smtParseIdent(s, ref.name);
+    if (ident) {
+        ref.kind = VlLhsRef::LhsKind::LHS_VAR;
+        return true;
+    }
+
+    return smtParseParen(s, [&](SMTParseState& s) {
+        if (!smtParseKeyword(s, "select")) return false;
+        s.popWhitespace();
+        if (!smtParseIdent(s, ref.name)) return false;
+        s.popWhitespace();
+        std::string idx;
+        if (!smtParseValueRaw(s, idx)) return false;
+        ref.kind = VlLhsRef::LhsKind::LHS_ARR;
+        return setRef(&ref.index, sizeof(size_t) * 8, std::move(idx));
+    });
+}
+
 template <typename LhsT, typename ParseLhs, typename Assign>
 bool smtParseAssignList(SMTParseState& s, ParseLhs parseLhs, Assign assign) {
     static_assert(std::is_default_constructible<LhsT>());
     static_assert(std::is_invocable<ParseLhs, SMTParseState&, LhsT&>());
-    static_assert(std::is_invocable<Assign, LhsT, std::string&&>());
+    static_assert(std::is_invocable<Assign, LhsT&&, std::string&&>());
 
     std::string ident, value;
     s.popWhitespace();
@@ -697,7 +738,7 @@ bool smtParseAssignList(SMTParseState& s, ParseLhs parseLhs, Assign assign) {
                     if (!parseLhs(s, lhs)) return s.error(__FILE__, __LINE__);
                     s.popWhitespace();
                     if (!smtParseValueRaw(s, value)) return s.error(__FILE__, __LINE__);
-                    assign(lhs, std::move(value));
+                    assign(std::move(lhs), std::move(value));
                     inner_ok = true;
                     return true;
                 }))
@@ -729,7 +770,7 @@ bool VlRandomizer::checkSat(std::iostream& file) const {
 }
 
 bool VlRandomizer::next(VlRNG& rngr) {
-    if (m_vars.empty()) return true;
+    if (m_vars.empty() && m_arrs.empty()) return true;
     std::iostream& f = vlRandom::getSolver();
     if (!f) return false;
 
@@ -780,12 +821,14 @@ void VlRandomizer::parseSolution(std::iostream& f) {
     // Quasi-parse S-expression of the form ((x #xVALUE) (y #bVALUE) (z #xVALUE))
     {
         vlRandom::SMTParseState s(f);
-        vlRandom::smtParseAssignList</*lhs*/ std::string>(
+        vlRandom::smtParseAssignList</*lhs*/ vlRandom::VlLhsRef>(
             s,
-            /*parseLhs*/ vlRandom::smtParseIdent,
-            /*assign*/ [&](const std::string& ident, std::string&& value) {
-                auto vars_it = m_vars.find(ident);
-                if (vars_it != m_vars.end()) {
+            /*parseLhs*/ vlRandom::smtParseLhsRef,
+            /*assign*/ [&](const vlRandom::VlLhsRef& ident, std::string&& value) {
+                switch (ident.kind) {
+                case vlRandom::VlLhsRef::LhsKind::LHS_VAR: {
+                    auto vars_it = m_vars.find(ident.name);
+                    if (vars_it == m_vars.end()) return false;
                     auto& ref = vars_it->second;
                     if (m_randmode && !ref.randModeIdxNone()) {
                         if (!(m_randmode->at(ref.randModeIdx))) return true;
@@ -794,10 +837,19 @@ void VlRandomizer::parseSolution(std::iostream& f) {
                     return true;
                 }
 
-                auto arrs_it = m_arrs.find(ident);
-                if (arrs_it != m_arrs.end()) {
+                case vlRandom::VlLhsRef::LhsKind::LHS_ARR: {
+                    auto arrs_it = m_arrs.find(ident.name);
+                    if (arrs_it == m_arrs.end()) return false;
+                    auto& ref = arrs_it->second;
+                    if (m_randmode && !ref.randModeIdxNone()) {
+                        if (!(m_randmode->at(ref.randModeIdx))) return true;
+                    }
+                    vlRandom::setRef(ref.getIdxPtr(ref.datap, ident.index), ref.width,
+                                     std::move(value));
                     // TODO: Implement array value setting
                 }
+                }
+
                 return true;
             });
         //(void)s.checkErr();
@@ -814,14 +866,15 @@ size_t VlRandomizer::emitConcatAll(std::ostream& os) const {
     }
 
     for (auto& arr : m_arrs) {
-        size_t idxWidth = vlRandom::sizeWidth(arr.second.length);
+        size_t length = arr.second.getLength(arr.second.datap);
+        size_t idxWidth = vlRandom::sizeWidth(length);
         os << " (concat";
-        for (size_t idx = 0; idx < arr.second.length; ++idx) {
+        for (size_t idx = 0; idx < length; ++idx) {
             os << " (select " << arr.second.arrName << ' ';
             vlRandom::emitSMTFormatConst(os, idx, idxWidth);
             os << ')';
         }
-        width += arr.second.length * arr.second.width;
+        width += length * arr.second.width;
     }
     os << ')';
     return width;
@@ -843,8 +896,8 @@ void VlRandomizer::dump() const {
     for (const auto& arr : m_arrs) {
         std::stringstream ss;
         vlRandom::smtEmitArrDecl(ss, arr.second);
-        VL_PRINTF("Array (.%zu. [%zu]): %s\n", arr.second.width, arr.second.length,
-                  ss.str().c_str());
+        VL_PRINTF("Array (.%zu. [%zu]): %s\n", arr.second.width,
+                  arr.second.getLength(arr.second.datap), ss.str().c_str());
     }
     for (const std::string& c : m_constraints) VL_PRINTF("Constraint: %s\n", c.c_str());
 }

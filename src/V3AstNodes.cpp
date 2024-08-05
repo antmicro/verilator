@@ -2837,6 +2837,7 @@ void AstCMethodHard::setPurity() {
                                                           {"set_randmode", false},
                                                           {"shuffle", false},
                                                           {"size", true},
+                                                          {"sizeWidth", true},
                                                           {"slice", true},
                                                           {"sliceBackBack", true},
                                                           {"sliceFrontBack", true},

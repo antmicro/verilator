@@ -33,7 +33,6 @@
 
 #include "verilatedos.h"
 
-#include "V3Number.h"
 #include "V3Randomize.h"
 
 #include "V3Ast.h"
@@ -41,6 +40,7 @@
 #include "V3FileLine.h"
 #include "V3Global.h"
 #include "V3MemberMap.h"
+#include "V3Number.h"
 #include "V3UniqueNames.h"
 
 #include <queue>
@@ -333,7 +333,8 @@ class ConstraintExprVisitor final : public VNVisitor {
     bool m_wantSingle = false;  // Whether to merge constraint expressions with LOGAND
     VMemberMap& m_memberMap;  // Member names cached for fast lookup
 
-    AstSFormatF* getConstFormat(AstNodeExpr* nodep) {
+    AstNodeExpr* getConstFormat(AstNodeExpr* nodep) {
+        if (nodep->dtypep()->isString()) return nodep;
         return new AstSFormatF{nodep->fileline(), (nodep->width() & 3) ? "#b%b" : "#x%x", false,
                                nodep};
     }
@@ -345,8 +346,8 @@ class ConstraintExprVisitor final : public VNVisitor {
         handle.relink(getConstFormat(nodep));
         return true;
     }
-    void editSMT(AstNodeExpr* nodep, AstNodeExpr* lhsp = nullptr, AstNodeExpr* rhsp = nullptr,
-                 AstNodeExpr* thsp = nullptr) {
+    AstSFormatF* editSMT(AstNodeExpr* nodep, AstNodeExpr* lhsp = nullptr,
+                         AstNodeExpr* rhsp = nullptr, AstNodeExpr* thsp = nullptr) {
         // Replace incomputable (result-dependent) expression with SMT expression
         std::string smtExpr = nodep->emitSMT();  // Might need child width (AstExtend)
         UASSERT_OBJ(smtExpr != "", nodep,
@@ -393,6 +394,8 @@ class ConstraintExprVisitor final : public VNVisitor {
         AstSFormatF* const newp = new AstSFormatF{nodep->fileline(), smtExpr, false, argsp};
         nodep->replaceWith(newp);
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
+
+        return newp;
     }
 
     AstNodeExpr* editSingle(FileLine* fl, AstNode* itemsp) {
@@ -477,8 +480,7 @@ class ConstraintExprVisitor final : public VNVisitor {
         std::string cSubType = subDTypep->cType("", false, false);
         AstNodeExpr* const getlengthp = new AstCExpr{
             varp->fileline(),
-            "[](void* q) -> size_t { return static_cast<VlQueue<" + cSubType +
-            ">*>(q)->size(); }",
+            "[](void* q) -> size_t { return static_cast<VlQueue<" + cSubType + ">*>(q)->size(); }",
             varp->width()};
         getlengthp->dtypeSetUInt32();
         methodp->addPinsp(getlengthp);
@@ -488,11 +490,11 @@ class ConstraintExprVisitor final : public VNVisitor {
             = new AstCExpr{varp->fileline(), "\"" + varp->name() + "\"", varp->width()};
         varnamep->dtypep(varp->dtypep());  // Should be string?
         methodp->addPinsp(varnamep);
-        AstNodeExpr* const accessp = new AstCExpr{
-            varp->fileline(),
-            "[](void* q, size_t idx) -> void* { return &static_cast<VlQueue<" + cSubType +
-            ">*>(q)->at(idx); }",
-            varp->width()};
+        AstNodeExpr* const accessp
+            = new AstCExpr{varp->fileline(),
+                           "[](void* q, size_t idx) -> void* { return &static_cast<VlQueue<"
+                               + cSubType + ">*>(q)->at(idx); }",
+                           varp->width()};
         accessp->dtypep(varp->dtypep());  // Should be VlRandomArrRef::AccessT?
         methodp->addPinsp(accessp);
 
@@ -576,29 +578,50 @@ class ConstraintExprVisitor final : public VNVisitor {
     }
     void visit(AstSelBit* nodep) override {
         if (editFormat(nodep)) return;
-        if (!VN_IS(nodep->fromp()->dtypep(), QueueDType) &&
-            !VN_IS(nodep->fromp()->dtypep(), DynArrayDType)) {
-            nodep->v3fatalSrc( "Unsupported selection constraint: " << nodep);
+        if (!VN_IS(nodep->fromp()->dtypep(), QueueDType)
+            && !VN_IS(nodep->fromp()->dtypep(), DynArrayDType)) {
+            nodep->v3fatalSrc("Unsupported selection constraint: " << nodep);
         }
         VNRelinker bitRelink;
         AstNodeExpr* bitp = nodep->bitp()->unlinkFrBack(&bitRelink);
-        AstNodeExpr* bitwidthp =
-            new AstCMethodHard(nodep->fileline(), nodep->fromp()->cloneTree(false), "sizeWidth");
+        AstNodeExpr* bitwidthp
+            = new AstCMethodHard(nodep->fileline(), nodep->fromp()->cloneTree(false), "sizeWidth");
         bitwidthp->dtypep(nodep->findUInt32DType());
-        AstSel* selp =
-            new AstSel(nodep->fileline(), bitp, new AstConst(nodep->fileline(), 0), bitwidthp);
+        AstSel* selp
+            = new AstSel(nodep->fileline(), bitp, new AstConst(nodep->fileline(), 0), bitwidthp);
         selp->dtypeSetUInt32();
         selp->user1(true);
         bitRelink.relink(selp);
+
+        std::string fromName = nodep->fromp()->name();
+
+        iterateChildren(nodep);
+
+        bitp = nodep->bitp()->unlinkFrBack(&bitRelink);
+        // TODO: This needs to be either moved inside the extract to match width, or we need
+        // some method to determine the index with at this point in runtime.
+        AstCMethodHard* const constrainIndexp = new AstCMethodHard{
+            nodep->fileline(),
+            new AstVarRef{nodep->fileline(), VN_AS(m_genp->user2p(), NodeModule), m_genp,
+                          VAccess::READWRITE},
+            "constrainIndex"};
+        constrainIndexp->dtypeSetString();
+        AstCExpr* const fromNameExprp = new AstCExpr(nodep->fileline(), "\"" + fromName + "\"", 0);
+        constrainIndexp->addPinsp(fromNameExprp);
+        constrainIndexp->addPinsp(bitp);
+        bitRelink.relink(constrainIndexp);
+
         editSMT(nodep, nodep->fromp(), nodep->bitp());
+
+        fromNameExprp->dtypeSetString();
     }
     void visit(AstSel* nodep) override {
         if (editFormat(nodep)) return;
         AstSub* msbp = new AstSub{
             nodep->fileline(),
-            new AstAdd{
-                nodep->fileline(), nodep->lsbp()->cloneTree(false) /* Note: Beware side-effects */,
-                nodep->widthp()->unlinkFrBack()},
+            new AstAdd{nodep->fileline(),
+                       nodep->lsbp()->cloneTree(false) /* Note: Beware side-effects */,
+                       nodep->widthp()->unlinkFrBack()},
             new AstConst{nodep->fileline(), 1}};
         msbp->dtypeFrom(nodep->lsbp());
         msbp->lhsp()->dtypeFrom(nodep->lsbp());

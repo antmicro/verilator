@@ -32,6 +32,7 @@
 #include <functional>
 #include <istream>
 #include <memory>
+#include <utility>
 
 //=============================================================================
 // VlRandomExpr and subclasses represent expressions for the constraint solver.
@@ -70,9 +71,9 @@ struct VlRandomArrRef final : public VlRandomRandModeIdx {
     std::string const arrName;  // Array variable name
     void* const datap;  // Reference to variable data
     const size_t width;  // Element width
-    const GetLengthT getLength;  // Number of elements
-    AccessT getIdxPtr;
-    std::set<size_t> heldIdx;
+    const GetLengthT getLength;  // Get number of elements
+    const AccessT getIdxPtr;  // Get pointer to an element given index
+    size_t constrainedIdxCount;  // Number of constrained indices
 
     VlRandomArrRef(std::string&& arrName_, GetLengthT getLength_, size_t width_, void* datap_,
                    AccessT getIdxPtr_, uint32_t randModeIdx_)
@@ -98,6 +99,11 @@ struct VlRandomArrIdxRef final {
         , width{width_} {}
 };
 
+struct VlRandomInternalVarRef final {
+    std::string value;
+    size_t width;
+};
+
 //=============================================================================
 // VlRandomizer is the object holding constraints and variable references.
 
@@ -105,6 +111,8 @@ class VlRandomizer final {
     // MEMBERS
     std::vector<std::string> m_constraints;  // Solver-dependent constraints
     std::map<std::string, VlRandomVarRef> m_vars;  // Solver-dependent variables
+    std::map<std::string, VlRandomInternalVarRef>
+        m_internalVars;  // Solver-depenedent variables (internal)
     std::map<std::string, VlRandomArrRef> m_arrs;  // Sover-dependent arrays
     const VlQueue<CData>* m_randmode;  // rand_mode state;
 
@@ -134,6 +142,7 @@ public:
         m_arrs.emplace(name, VlRandomArrRef{name, getLength, width, &arr, idxAccess, randmodeIdx});
     }
     void hard(std::string&& constraint);
+    std::string constrainIndex(const std::string& arrName, std::string&& constraint);
     void clear();
     void set_randmode(const VlQueue<CData>& randmode) { m_randmode = &randmode; }
 #ifdef VL_DEBUG

@@ -512,6 +512,11 @@ void smtEmitVarDecl(std::ostream& os, const VlRandomVarRef& varref) {
     os << "(declare-fun " << varref.name << " () (_ BitVec " << varref.width << "))";
 }
 
+void smtEmitBVDef(std::ostream& os, const std::string& name, size_t width,
+                  const std::string& body) {
+    os << "(define-fun " << name << " () (_ BitVec " << width << ") " << body << ")";
+}
+
 void smtEmitArrDecl(std::ostream& os, const VlRandomArrRef& arrref) {
     os << "(declare-fun " << arrref.arrName << " () (Array (_ BitVec "
        << sizeWidth(arrref.getLength(arrref.datap)) << ") (_ BitVec " << arrref.width << ")))";
@@ -786,6 +791,10 @@ bool VlRandomizer::next(VlRNG& rngr) {
         vlRandom::smtEmitVarDecl(f, var.second);
         f << '\n';
     }
+    for (const auto& var : m_internalVars) {
+        vlRandom::smtEmitBVDef(f, var.first, var.second.width, var.second.value);
+        f << '\n';
+    }
     for (const auto& arr : m_arrs) {
         vlRandom::smtEmitArrDecl(f, arr.second);
         f << '\n';
@@ -874,6 +883,7 @@ size_t VlRandomizer::emitConcatAll(std::ostream& os) const {
             vlRandom::emitSMTFormatConst(os, idx, idxWidth);
             os << ')';
         }
+        os << ')';
         width += length * arr.second.width;
     }
     os << ')';
@@ -884,7 +894,20 @@ void VlRandomizer::hard(std::string&& constraint) {
     m_constraints.emplace_back(std::move(constraint));
 }
 
-void VlRandomizer::clear() { m_constraints.clear(); }
+std::string VlRandomizer::constrainIndex(const std::string& arrName, std::string&& constraint) {
+    VlRandomArrRef& arrRef = m_arrs.at(arrName);
+    std::string varName = "vli-" + arrName + "_" + std::to_string(arrRef.constrainedIdxCount++);
+    m_internalVars.emplace(
+        varName, VlRandomInternalVarRef{std::move(constraint),
+                                        vlRandom::sizeWidth(arrRef.getLength(arrRef.datap))});
+    return varName;
+}
+
+void VlRandomizer::clear() {
+    m_constraints.clear();
+    for (auto& arr : m_arrs) arr.second.constrainedIdxCount = 0;
+    m_internalVars.clear();
+}
 
 #ifdef VL_DEBUG
 void VlRandomizer::dump() const {

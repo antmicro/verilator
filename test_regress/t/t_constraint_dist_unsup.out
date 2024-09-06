@@ -1,0 +1,13 @@
+%Warning-CONSTRAINTIGN: t/t_constraint_dist_unsup.v:27:10: Constraint expression ignored (imperfect distribution)
+                                                         : ... note: In instance 't'
+   27 |        x dist {que};
+      |          ^~~~
+                        ... For warning description see https://verilator.org/warn/CONSTRAINTIGN?v=latest
+                        ... Use "/* verilator lint_off CONSTRAINTIGN */" and lint_on around source to disable this message.
+%Warning-CONSTRAINTIGN: t/t_constraint_dist_unsup.v:28:10: Constraint expression ignored (imperfect distribution)
+                                                         : ... note: In instance 't'
+   28 |        y dist {arr};
+      |          ^~~~
+%Error: Internal Error: t/t_constraint_dist_unsup.v:27:10: ../V3Randomize.cpp:#: Non-size method call in constraints
+   27 |        x dist {que};
+      |          ^~~~

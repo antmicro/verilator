@@ -79,11 +79,13 @@ protected:
             puts("{");
             ofp()->putsNoTracking("{");
             puts("\n");
+            std::cout << std::endl << "Entered" << std::endl;
             for (uint64_t n = 0; n < size; ++n) {
                 m_unpackedWord = n;
                 if (n) puts((n % tabMod) ? ", " : ",\n");
                 iterateConst(nodep->getIndexDefaultedValuep(n));
             }
+            std::cout << std::endl << "No seg fault" << std::endl;
             puts("\n");
             puts("}");
             ofp()->putsNoTracking("}");

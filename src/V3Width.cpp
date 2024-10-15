@@ -3125,12 +3125,6 @@ class WidthVisitor final : public VNVisitor {
         if (debug() >= 9) nodep->dumpTree("-  mts-in: ");
         // Should check types the method requires, but at present we don't do much
         userIterate(nodep->fromp(), WidthVP{SELF, BOTH}.p());
-        // Any AstWith is checked later when know types, in methodWithArgument
-        for (AstNode* pinp = nodep->pinsp(); pinp; pinp = pinp->nextp()) {
-            if (AstArg* const argp = VN_CAST(pinp, Arg)) {
-                if (argp->exprp()) userIterate(argp->exprp(), WidthVP{SELF, BOTH}.p());
-            }
-        }
         // Find the fromp dtype - should be a class
         UASSERT_OBJ(nodep->fromp() && nodep->fromp()->dtypep(), nodep, "Unsized expression");
         AstNodeDType* const fromDtp = nodep->fromp()->dtypep()->skipRefToEnump();
@@ -3170,6 +3164,8 @@ class WidthVisitor final : public VNVisitor {
                                              << nodep->fromp()->dtypep()->prettyTypeName() << "'");
             nodep->dtypep(m_vup->dtypeNullp());
         }
+        // Any AstWith is checked later when know types, in methodWithArgument
+        processFTaskRefArgs(nodep);
     }
     AstWith* methodWithArgument(AstNodeFTaskRef* nodep, bool required, bool arbReturn,
                                 AstNodeDType* returnDtp, AstNodeDType* indexDtp,

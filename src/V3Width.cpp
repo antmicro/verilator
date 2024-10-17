@@ -3164,8 +3164,6 @@ class WidthVisitor final : public VNVisitor {
                                              << nodep->fromp()->dtypep()->prettyTypeName() << "'");
             nodep->dtypep(m_vup->dtypeNullp());
         }
-        // Any AstWith is checked later when know types, in methodWithArgument
-        processFTaskRefArgs(nodep);
     }
     AstWith* methodWithArgument(AstNodeFTaskRef* nodep, bool required, bool arbReturn,
                                 AstNodeDType* returnDtp, AstNodeDType* indexDtp,

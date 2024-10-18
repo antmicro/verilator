@@ -3921,7 +3921,6 @@ class WidthVisitor final : public VNVisitor {
                     nodep->classOrPackagep(classp);
                     if (VN_IS(ftaskp, Task)) nodep->dtypeSetVoid();
                     if (withp) nodep->addPinsp(withp);
-                    processFTaskRefArgs(nodep);
                 }
                 return;
             } else if (nodep->name() == "get_randstate" || nodep->name() == "set_randstate") {

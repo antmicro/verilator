@@ -2892,7 +2892,10 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     UINFO(9, indent()
                                  << "varref-ifaceref " << m_ds.m_dotText << "  " << nodep << endl);
                     m_ds.m_dotText = VString::dot(m_ds.m_dotText, ".", nodep->name());
-                    m_ds.m_dotSymp = m_statep->getNodeSym(ifacerefp->ifaceViaCellp());
+                    AstNode* varDefp;
+                    if (ifacerefp->isModport()) varDefp = ifacerefp->modportp();
+                    else varDefp = ifacerefp->ifaceViaCellp();
+                    m_ds.m_dotSymp = m_statep->getNodeSym(varDefp);
                     m_ds.m_dotPos = DP_SCOPE;
                     ok = true;
                     AstNode* const newp = new AstVarRef{nodep->fileline(), varp, VAccess::READ};

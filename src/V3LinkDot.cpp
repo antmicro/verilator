@@ -2888,6 +2888,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     = LinkDotState::ifaceRefFromArray(varp->subDTypep());
                 if (ifacerefp && varp->isIfaceRef()) {
                     UASSERT_OBJ(ifacerefp->ifaceViaCellp(), ifacerefp, "Unlinked interface");
+                    UASSERT_OBJ(!ifacerefp->isModport(), nodep, "Modport accessed by dot");
                     // Really this is a scope reference into an interface
                     UINFO(9, indent()
                                  << "varref-ifaceref " << m_ds.m_dotText << "  " << nodep << endl);

@@ -29,17 +29,19 @@ module module_with_assert(input clk);
 endmodule
 
 module module_with_assertctl(input clk);
-   function void assert_off; begin
-      $assertoff;
-   end
+   function void assert_off; $assertoff;
    endfunction
-   function void assert_on; begin
-      $asserton;
-   end
+   function void assert_on; $asserton;
    endfunction
-   function void f_assert; begin
-      assert(0);
-   end
+   function void f_assert; assert(0);
+   endfunction
+   function void f_assert0; assert(0);
+   endfunction
+   function void f_assert_0; assert(0);
+   endfunction
+   function void f_assert__0; assert(0);
+   endfunction
+   function void f_assert___0; assert(0);
    endfunction
 
    initial begin
@@ -57,5 +59,11 @@ module module_with_assertctl(input clk);
       assert_off();
       f_assert();
       f_assert();
+
+      // Assert scope with 0 bug
+      f_assert0();
+      f_assert_0();
+      f_assert__0();
+      f_assert___0();
    end
 endmodule

@@ -173,15 +173,6 @@ class EmitCSyms final : EmitCBaseVisitorConst {
         }
 
         if (pos != std::string::npos) out.erase(0, pos + 1);
-
-        // Decode all escaped characters
-        while ((pos = out.find("__0")) != string::npos) {
-            unsigned int x;
-            std::stringstream ss;
-            ss << std::hex << out.substr(pos + 3, 2);
-            ss >> x;
-            out.replace(pos, 5, 1, (char)x);
-        }
         return out;
     }
 

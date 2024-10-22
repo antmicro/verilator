@@ -102,13 +102,6 @@ string AstNode::encodeName(const string& namein) {
         if ((pos == namein.begin()) ? std::isalpha(pos[0])  // digits can't lead identifiers
                                     : std::isalnum(pos[0])) {
             out += pos[0];
-        } else if (pos[0] == '_') {
-            out += pos[0];
-            if (pos + 1 == namein.end()) break;
-            if (pos[1] == '_') {
-                ++pos;
-                out += "__05F";  // hex(_) = 0x5F
-            }
         } else {
             // Need the leading 0 so this will never collide with
             // a user identifier nor a temp we create in Verilator.

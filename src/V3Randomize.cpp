@@ -1460,8 +1460,7 @@ class RandomizeVisitor final : public VNVisitor {
         } else if (AstClassRefDType* const classRefDtp = VN_CAST(memberDtp, ClassRefDType)) {
             AstFunc* const memberFuncp
                 = V3Randomize::newRandomizeFunc(m_memberMap, classRefDtp->classp());
-            AstMethodCall* const callp
-                = new AstMethodCall{fl, exprp, "randomize", nullptr};
+            AstMethodCall* const callp = new AstMethodCall{fl, exprp, "randomize", nullptr};
             callp->taskp(memberFuncp);
             callp->dtypeFrom(memberFuncp);
             return new AstStmtExpr{fl, callp};

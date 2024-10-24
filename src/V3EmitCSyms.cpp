@@ -156,7 +156,6 @@ class EmitCSyms final : EmitCBaseVisitorConst {
     }
 
     static string scopeDecodeIdentifier(const string& scpname) {
-        string out = scpname;
         string::size_type pos = string::npos;
 
         // Remove hierarchy
@@ -172,8 +171,7 @@ class EmitCSyms final : EmitCBaseVisitorConst {
             }
         }
 
-        if (pos != std::string::npos) out.erase(0, pos + 1);
-        return out;
+        return pos != string::npos ? scpname.substr(pos + 1) : scpname;
     }
 
     /// (scp, m_vpiScopeCandidates, m_scopeNames) -> m_scopeNames

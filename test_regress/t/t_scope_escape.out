@@ -1,0 +1,8 @@
+*-* All Finished *-*
+[0] %Error: t_scope_escape.v:22: Assertion failed in top.t.___0_.assert0: 'assert' failed.
+-Info: t/t_scope_escape.v:22: Verilog $stop, ignored due to +verilator+error+limit
+[0] %Error: t_scope_escape.v:24: Assertion failed in top.t.___0_.assert_0: 'assert' failed.
+[0] %Error: t_scope_escape.v:27: Assertion failed in top.t.___0_.assert__0_: 'assert' failed.
+[0] %Error: t_scope_escape.v:30: Assertion failed in top.t.___0_.assert___0$: 'assert' failed.
+[0] %Error: t_scope_escape.v:33: Assertion failed in top.t.___0_.assert___05F: 'assert' failed.
+[0] %Error: t_scope_escape.v:36: Assertion failed in top.t.___0_.assert___05F0: 'assert' failed.

@@ -13,6 +13,6 @@ test.scenarios('vlt')
 
 test.compile(verilator_flags2=["--assert"])
 
-test.execute()
+test.execute(all_run_flags=["+verilator+error+limit+100"], expect_filename=test.golden_filename)
 
 test.passes()

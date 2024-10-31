@@ -63,6 +63,8 @@ extern "C" int mon_check();
 
    sub \mod.with_dot (.cyc(cyc));
 
+   sub ___0_ (.cyc(cyc));
+
    initial begin
 
 `ifdef VERILATOR

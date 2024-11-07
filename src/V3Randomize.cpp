@@ -39,6 +39,7 @@
 #include "V3Error.h"
 #include "V3FileLine.h"
 #include "V3Global.h"
+#include "V3LinkLValue.h"
 #include "V3MemberMap.h"
 #include "V3UniqueNames.h"
 
@@ -1274,10 +1275,12 @@ class RandomizeVisitor final : public VNVisitor {
         AstVar* const iterVarp = new AstVar{fl, VVarType::BLOCKTEMP, "i", lhsp->findUInt32DType()};
         iterVarp->funcLocal(inTask);
         iterVarp->lifetime(VLifetime::AUTOMATIC);
-        AstCMethodHard* const sizep = new AstCMethodHard{fl, lhsp, "size", nullptr};
+        AstNodeExpr* const lhsReadp = lhsp->cloneTree(false);
+        V3LinkLValue::linkLValueSet(lhsReadp, VAccess::READ);
+        AstCMethodHard* const sizep = new AstCMethodHard{fl, lhsReadp, "size", nullptr};
         sizep->dtypeSetUInt32();
-        AstCMethodHard* const setp = new AstCMethodHard{
-            fl, lhsp->cloneTree(false), "atWrite", new AstVarRef{fl, iterVarp, VAccess::READ}};
+        AstCMethodHard* const setp
+            = new AstCMethodHard{fl, lhsp, "atWrite", new AstVarRef{fl, iterVarp, VAccess::READ}};
         setp->dtypeSetUInt32();
         AstNode* const stmtsp = iterVarp;
         stmtsp->addNext(

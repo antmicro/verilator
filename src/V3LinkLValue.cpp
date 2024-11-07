@@ -362,9 +362,8 @@ void V3LinkLValue::linkLValue(AstNetlist* nodep) {
     { LinkLValueVisitor{nodep, VAccess::NOCHANGE}; }  // Destruct before checking
     V3Global::dumpCheckGlobalTree("linklvalue", 0, dumpTreeEitherLevel() >= 6);
 }
-void V3LinkLValue::linkLValueSet(AstNode* nodep) {
-    // Called by later link functions when it is known a node needs
-    // to be converted to a lvalue.
+void V3LinkLValue::linkLValueSet(AstNode* nodep, VAccess access) {
+    // Called by later phases when it is known a node needs a different access mode
     UINFO(9, __FUNCTION__ << ": " << endl);
-    { LinkLValueVisitor{nodep, VAccess::WRITE}; }
+    { LinkLValueVisitor{nodep, access}; }
 }

@@ -2897,7 +2897,9 @@ class WidthVisitor final : public VNVisitor {
                 VL_DO_DANGLING(fromp->deleteTree(), fromp);
                 nodep->dtypep(varp->dtypep());
                 nodep->varp(varp);
-                if (nodep->access().isWriteOrRW()) V3LinkLValue::linkLValueSet(nodep);
+                if (nodep->access().isWriteOrRW()) {
+                    V3LinkLValue::linkLValueSet(nodep, VAccess::WRITE);
+                }
                 if (AstIfaceRefDType* const adtypep
                     = VN_CAST(nodep->fromp()->dtypep(), IfaceRefDType)) {
                     nodep->varp()->sensIfacep(adtypep->ifacep());
@@ -2985,7 +2987,7 @@ class WidthVisitor final : public VNVisitor {
                     nodep->varp(varp);
                     nodep->didWidth(true);
                     if (nodep->fromp()->sameTree(m_randomizeFromp) && varp->isRand())  // null-safe
-                        V3LinkLValue::linkLValueSet(nodep);
+                        V3LinkLValue::linkLValueSet(nodep, VAccess::WRITE);
                     return true;
                 }
                 if (AstConstraint* constrp = VN_CAST(foundp, Constraint)) {
@@ -5991,7 +5993,7 @@ class WidthVisitor final : public VNVisitor {
                     AstNodeExpr* const newp = new AstResizeLValue{pinp->fileline(), pinp};
                     relinkHandle.relink(newp);
                 }
-                if (portp->isWritable()) V3LinkLValue::linkLValueSet(pinp);
+                if (portp->isWritable()) V3LinkLValue::linkLValueSet(pinp, VAccess::WRITE);
                 if (!portp->basicp() || portp->basicp()->isOpaque()) {
                     checkClassAssign(nodep, "Function Argument", pinp, portDTypep);
                     userIterate(pinp, WidthVP{portDTypep, FINAL}.p());

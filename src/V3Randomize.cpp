@@ -2103,36 +2103,16 @@ class RandomizeVisitor final : public VNVisitor {
         AstFunc* const randomizeFuncp = V3Randomize::newRandomizeFunc(
             m_memberMap, classp, m_inlineUniqueNames.get(nodep), false);
 
-        addPrePostCall(classp, randomizeFuncp, "pre_randomize");
-
         // Detach the expression and prepare variable copies
         const CaptureVisitor captured{withp->exprp(), m_modp, classp};
 
         // Add function arguments
         captured.addFunctionArguments(randomizeFuncp);
 
-        // Add constraints clearing code
-        if (classGenp) {
-            randomizeFuncp->addStmtsp(
-                implementConstraintsClear(randomizeFuncp->fileline(), classGenp));
-        }
-
         randomizeFuncp->addStmtsp(localGenp);
-
-        AstFunc* const basicRandomizeFuncp
-            = V3Randomize::newRandomizeFunc(m_memberMap, classp, "__Vbasic_randomize");
-        AstFuncRef* const basicRandomizeFuncCallp
-            = new AstFuncRef{nodep->fileline(), "__Vbasic_randomize", nullptr};
-        basicRandomizeFuncCallp->taskp(basicRandomizeFuncp);
-        basicRandomizeFuncCallp->dtypep(basicRandomizeFuncp->dtypep());
 
         // Copy (derive) class constraints if present
         if (classGenp) {
-            AstTask* const constrSetupFuncp = getCreateConstraintSetupFunc(classp);
-            AstTaskRef* const callp
-                = new AstTaskRef{nodep->fileline(), constrSetupFuncp->name(), nullptr};
-            callp->taskp(constrSetupFuncp);
-            randomizeFuncp->addStmtsp(callp->makeStmt());
             randomizeFuncp->addStmtsp(new AstAssign{
                 nodep->fileline(), new AstVarRef{nodep->fileline(), localGenp, VAccess::WRITE},
                 new AstVarRef{nodep->fileline(), VN_AS(classGenp->user2p(), NodeModule), classGenp,
@@ -2150,19 +2130,7 @@ class RandomizeVisitor final : public VNVisitor {
             ConstraintExprVisitor{m_memberMap, capturedTreep, randomizeFuncp, localGenp,
                                   randModeVarp};
         }
-
-        // Call the solver and set return value
-        AstVarRef* const randNextp
-            = new AstVarRef{nodep->fileline(), localGenp, VAccess::READWRITE};
-        randNextp->AstNode::addNext(new AstText{nodep->fileline(), ".next(__Vm_rng)"});
-        AstNodeExpr* const solverCallp = new AstCExpr{nodep->fileline(), randNextp};
-        solverCallp->dtypeSetBit();
-        randomizeFuncp->addStmtsp(new AstAssign{
-            nodep->fileline(),
-            new AstVarRef{nodep->fileline(), VN_AS(randomizeFuncp->fvarp(), Var), VAccess::WRITE},
-            new AstAnd{nodep->fileline(), basicRandomizeFuncCallp, solverCallp}});
-
-        addPrePostCall(classp, randomizeFuncp, "post_randomize");
+        addRandomizeBody(classp, randomizeFuncp, localGenp);
 
         // Replace the node with a call to that function
         nodep->name(randomizeFuncp->name());

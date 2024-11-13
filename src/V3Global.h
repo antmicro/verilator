@@ -118,6 +118,7 @@ class V3Global final {
     bool m_hasEvents = false;  // Design uses SystemVerilog named events
     bool m_hasClasses = false;  // Design uses SystemVerilog classes
     bool m_hasSampled = false;  // Design uses SAMPLED expresions
+    bool m_hasTable = false;  // Desgin has the UDP Table.
     bool m_hasVirtIfaces = false;  // Design uses virtual interfaces
     bool m_usesProbDist = false;  // Uses $dist_*
     bool m_usesStdPackage = false;  // Design uses the std package
@@ -181,7 +182,9 @@ public:
     bool hasClasses() const { return m_hasClasses; }
     void setHasClasses() { m_hasClasses = true; }
     bool hasSampled() const { return m_hasSampled; }
+    bool hasTable() const { return m_hasTable; }
     void setHasSampled() { m_hasSampled = true; }
+    void setHasTable() { m_hasTable = true; }
     bool hasVirtIfaces() const { return m_hasVirtIfaces; }
     void setHasVirtIfaces() { m_hasVirtIfaces = true; }
     bool usesProbDist() const { return m_usesProbDist; }

@@ -1850,6 +1850,47 @@ class RandomizeVisitor final : public VNVisitor {
             relinker.relink(new AstBegin{nodep->fileline(), "", stmtsp, false, true});
         }
     }
+    void addRandomizeBody(AstClass* const classp, AstFunc* const randomizep,
+                          AstVar* const constrainedRandomGenp) {
+        FileLine* fl = randomizep->fileline();
+        AstNodeExpr* beginValp = nullptr;
+        AstVar* const fvarp = VN_AS(randomizep->fvarp(), Var);
+        addPrePostCall(classp, randomizep, "pre_randomize");
+
+        if (constrainedRandomGenp) {
+            randomizep->addStmtsp(implementConstraintsClear(fl, constrainedRandomGenp));
+            AstTask* setupAllTaskp = getCreateConstraintSetupFunc(classp);
+            AstTaskRef* const setupTaskRefp = new AstTaskRef{fl, setupAllTaskp->name(), nullptr};
+            setupTaskRefp->taskp(setupAllTaskp);
+            randomizep->addStmtsp(setupTaskRefp->makeStmt());
+
+            AstNodeModule* const genModp = VN_AS(constrainedRandomGenp->user2p(), NodeModule);
+            AstVarRef* const genRefp
+                = new AstVarRef{fl, genModp, constrainedRandomGenp, VAccess::READWRITE};
+            AstNode* const argsp = genRefp;
+            argsp->addNext(new AstText{fl, ".next(__Vm_rng)"});
+
+            AstNodeExpr* const solverCallp = new AstCExpr{fl, argsp};
+            solverCallp->dtypeSetBit();
+            beginValp = solverCallp;
+        } else {
+            beginValp = new AstConst{fl, AstConst::WidthedValue{}, 32, 1};
+        }
+        AstVarRef* const fvarRefp = new AstVarRef{fl, fvarp, VAccess::WRITE};
+        randomizep->addStmtsp(new AstAssign{fl, fvarRefp, beginValp});
+        AstFunc* const basicRandomizep
+            = V3Randomize::newRandomizeFunc(m_memberMap, classp, "__Vbasic_randomize");
+
+        AstFuncRef* const basicRandomizeCallp = new AstFuncRef{fl, "__Vbasic_randomize", nullptr};
+        basicRandomizeCallp->taskp(basicRandomizep);
+        basicRandomizeCallp->dtypep(basicRandomizep->dtypep());
+        AstVarRef* const fvarRefReadp = fvarRefp->cloneTree(false);
+        fvarRefReadp->access(VAccess::READ);
+
+        randomizep->addStmtsp(new AstAssign{fl, fvarRefp->cloneTree(false),
+                                            new AstAnd{fl, fvarRefReadp, basicRandomizeCallp}});
+        addPrePostCall(classp, randomizep, "post_randomize");
+    }
 
     // VISITORS
     void visit(AstNodeModule* nodep) override {
@@ -1875,12 +1916,9 @@ class RandomizeVisitor final : public VNVisitor {
         UINFO(9, "Define randomize() for " << nodep << endl);
         nodep->baseMostClassp()->needRNG(true);
         AstFunc* const randomizep = V3Randomize::newRandomizeFunc(m_memberMap, nodep);
-        AstVar* const fvarp = VN_AS(randomizep->fvarp(), Var);
-        addPrePostCall(nodep, randomizep, "pre_randomize");
         FileLine* fl = nodep->fileline();
 
         AstVar* const randModeVarp = getRandModeVar(nodep);
-        AstNodeExpr* beginValp = nullptr;
         AstVar* genp = getRandomGenerator(nodep);
         if (genp) {
             nodep->foreachMember([&](AstClass* const classp, AstConstraint* const constrp) {
@@ -1904,20 +1942,6 @@ class RandomizeVisitor final : public VNVisitor {
                         nodep, constrp, constrp->itemsp()->unlinkFrBackWithNext()));
                 }
             });
-            randomizep->addStmtsp(implementConstraintsClear(fl, genp));
-            AstTask* setupAllTaskp = getCreateConstraintSetupFunc(nodep);
-            AstTaskRef* const setupTaskRefp = new AstTaskRef{fl, setupAllTaskp->name(), nullptr};
-            setupTaskRefp->taskp(setupAllTaskp);
-            randomizep->addStmtsp(setupTaskRefp->makeStmt());
-
-            AstNodeModule* const genModp = VN_AS(genp->user2p(), NodeModule);
-            AstVarRef* const genRefp = new AstVarRef{fl, genModp, genp, VAccess::READWRITE};
-            AstNode* const argsp = genRefp;
-            argsp->addNext(new AstText{fl, ".next(__Vm_rng)"});
-
-            AstNodeExpr* const solverCallp = new AstCExpr{fl, argsp};
-            solverCallp->dtypeSetBit();
-            beginValp = solverCallp;
 
             if (randModeVarp) {
                 AstNodeModule* const randModeClassp = VN_AS(randModeVarp->user2p(), Class);
@@ -1926,25 +1950,13 @@ class RandomizeVisitor final : public VNVisitor {
                 UASSERT_OBJ(newp, randModeClassp, "No new() in class");
                 addSetRandMode(newp, genp, randModeVarp);
             }
-        } else {
-            beginValp = new AstConst{fl, AstConst::WidthedValue{}, 32, 1};
         }
-
-        AstVarRef* const fvarRefp = new AstVarRef{fl, fvarp, VAccess::WRITE};
-        randomizep->addStmtsp(new AstAssign{fl, fvarRefp, beginValp});
-
         AstFunc* const basicRandomizep
             = V3Randomize::newRandomizeFunc(m_memberMap, nodep, "__Vbasic_randomize");
-        addBasicRandomizeBody(basicRandomizep, nodep, randModeVarp);
-        AstFuncRef* const basicRandomizeCallp = new AstFuncRef{fl, "__Vbasic_randomize", nullptr};
-        basicRandomizeCallp->taskp(basicRandomizep);
-        basicRandomizeCallp->dtypep(basicRandomizep->dtypep());
-        AstVarRef* const fvarRefReadp = fvarRefp->cloneTree(false);
-        fvarRefReadp->access(VAccess::READ);
 
-        randomizep->addStmtsp(new AstAssign{fl, fvarRefp->cloneTree(false),
-                                            new AstAnd{fl, fvarRefReadp, basicRandomizeCallp}});
-        addPrePostCall(nodep, randomizep, "post_randomize");
+        addRandomizeBody(nodep, randomizep, genp);
+        addBasicRandomizeBody(basicRandomizep, nodep, randModeVarp);
+
         nodep->user1(false);
     }
     void visit(AstRandCase* nodep) override {

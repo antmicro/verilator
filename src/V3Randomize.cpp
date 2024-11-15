@@ -1692,14 +1692,8 @@ class RandomizeVisitor final : public VNVisitor {
         }
         return commonp;
     }
-
-    void addBasicRandomizeBody(AstFunc* const basicRandomizep, AstClass* const nodep,
-                               AstVar* randModeVarp) {
+    void handleRandMode(AstClass* const nodep, AstVar* const randModeVarp) {
         FileLine* const fl = nodep->fileline();
-        AstVar* const basicFvarp = VN_AS(basicRandomizep->fvarp(), Var);
-        AstVarRef* const basicFvarRefp = new AstVarRef{fl, basicFvarp, VAccess::WRITE};
-        AstConst* const beginBasicValp = new AstConst{fl, AstConst::WidthedValue{}, 32, 1};
-        basicRandomizep->addStmtsp(new AstAssign{fl, basicFvarRefp, beginBasicValp});
         AstNodeFTask* const newp = VN_AS(m_memberMap.findMember(nodep, "new"), NodeFTask);
         UASSERT_OBJ(newp, nodep, "No new() in class");
         nodep->foreachMember([&](AstClass* classp, AstVar* memberVarp) {
@@ -1715,6 +1709,16 @@ class RandomizeVisitor final : public VNVisitor {
                 setp->dtypeSetUInt32();
                 newp->addStmtsp(new AstAssign{fl, setp, new AstConst{fl, 0}});
             }
+        });
+    }
+    void addBasicRandomizeBody(AstFunc* const basicRandomizep, AstClass* const nodep) {
+        FileLine* const fl = nodep->fileline();
+        AstVar* const basicFvarp = VN_AS(basicRandomizep->fvarp(), Var);
+        AstVarRef* const basicFvarRefp = new AstVarRef{fl, basicFvarp, VAccess::WRITE};
+        AstConst* const beginBasicValp = new AstConst{fl, AstConst::WidthedValue{}, 32, 1};
+        basicRandomizep->addStmtsp(new AstAssign{fl, basicFvarRefp, beginBasicValp});
+        nodep->foreachMember([&](AstClass* classp, AstVar* memberVarp) {
+            if (!memberVarp->rand().isRandomizable()) return;
             if (memberVarp->user3()) return;  // Handled in constraints
             const AstNodeDType* const dtypep = memberVarp->dtypep()->skipRefp();
             if (const AstClassRefDType* const classRefp = VN_CAST(dtypep, ClassRefDType)) {
@@ -1981,7 +1985,8 @@ class RandomizeVisitor final : public VNVisitor {
 
         AstFunc* const basicRandomizep
             = V3Randomize::newRandomizeFunc(m_memberMap, nodep, "__Vbasic_randomize");
-        addBasicRandomizeBody(basicRandomizep, nodep, randModeVarp);
+        handleRandMode(nodep, randModeVarp);
+        addBasicRandomizeBody(basicRandomizep, nodep);
         AstFuncRef* const basicRandomizeCallp = new AstFuncRef{fl, "__Vbasic_randomize", nullptr};
         basicRandomizeCallp->taskp(basicRandomizep);
         basicRandomizeCallp->dtypep(basicRandomizep->dtypep());

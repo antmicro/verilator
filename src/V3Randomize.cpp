@@ -444,6 +444,7 @@ class RandomizeMarkVisitor final : public VNVisitor {
             backp->user1(true);
     }
     void visit(AstMemberSel* nodep) override {
+        iterateChildrenConst(nodep);
         if (!m_constraintExprGenp) return;
         if (VN_IS(nodep->fromp(), LambdaArgRef)) {
             if (!nodep->varp()->rand().isRandomizable()) return;

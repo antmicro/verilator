@@ -2154,12 +2154,6 @@ class RandomizeVisitor final : public VNVisitor {
         // Add function arguments
         captured.addFunctionArguments(randomizeFuncp);
 
-        // Add constraints clearing code
-        if (classGenp) {
-            randomizeFuncp->addStmtsp(
-                implementConstraintsClear(randomizeFuncp->fileline(), classGenp));
-        }
-
         randomizeFuncp->addStmtsp(localGenp);
 
         AstFunc* const basicRandomizeFuncp = V3Randomize::newRandomizeFunc(
@@ -2172,6 +2166,8 @@ class RandomizeVisitor final : public VNVisitor {
 
         // Copy (derive) class constraints if present
         if (classGenp) {
+            randomizeFuncp->addStmtsp(
+                implementConstraintsClear(randomizeFuncp->fileline(), classGenp));
             AstTask* const constrSetupFuncp = getCreateConstraintSetupFunc(classp);
             AstTaskRef* const callp
                 = new AstTaskRef{nodep->fileline(), constrSetupFuncp->name(), nullptr};

@@ -2209,7 +2209,7 @@ class RandomizeVisitor final : public VNVisitor {
         randomizeFuncp->addStmtsp(new AstAssign{
             nodep->fileline(),
             new AstVarRef{nodep->fileline(), VN_AS(randomizeFuncp->fvarp(), Var), VAccess::WRITE},
-            new AstAnd{nodep->fileline(), basicRandomizeFuncCallp, solverCallp}});
+            new AstAnd{nodep->fileline(), solverCallp, basicRandomizeFuncCallp}});
 
         addPrePostCall(classp, randomizeFuncp, "post_randomize");
 

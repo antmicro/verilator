@@ -2070,6 +2070,7 @@ class RandomizeVisitor final : public VNVisitor {
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
     void visit(AstNodeFTaskRef* nodep) override {
+        FileLine* const fl = nodep->fileline();
         if (nodep->name() == "rand_mode") {
             AstMethodCall* const methodCallp = VN_CAST(nodep, MethodCall);
             AstNodeExpr* const fromp = methodCallp ? methodCallp->fromp() : nullptr;
@@ -2078,8 +2079,8 @@ class RandomizeVisitor final : public VNVisitor {
                         "Should have checked in RandomizeMarkVisitor");
             AstVar* const receiverp = randModeTarget.receiverp;
             AstVar* const randModeVarp = getRandModeVar(randModeTarget.classp);
-            AstNodeExpr* const lhsp = makeModeAssignLhs(nodep->fileline(), randModeTarget.classp,
-                                                        randModeTarget.fromp, randModeVarp);
+            AstNodeExpr* const lhsp
+                = makeModeAssignLhs(fl, randModeTarget.classp, randModeTarget.fromp, randModeVarp);
             replaceWithModeAssign(nodep,
                                   // If the receiver is not rand, set the rand_mode for all members
                                   receiverp && receiverp->rand().isRand() ? receiverp : nullptr,
@@ -2103,8 +2104,7 @@ class RandomizeVisitor final : public VNVisitor {
             }
             UASSERT_OBJ(classp, nodep, "Failed to find class");
             AstVar* const constraintModeVarp = getConstraintModeVar(classp);
-            AstNodeExpr* const lhsp
-                = makeModeAssignLhs(nodep->fileline(), classp, fromp, constraintModeVarp);
+            AstNodeExpr* const lhsp = makeModeAssignLhs(fl, classp, fromp, constraintModeVarp);
             replaceWithModeAssign(nodep, constrp, lhsp);
             return;
         }
@@ -2148,7 +2148,7 @@ class RandomizeVisitor final : public VNVisitor {
 
         AstVar* const classGenp = getRandomGenerator(classp);
         AstVar* const localGenp
-            = new AstVar{nodep->fileline(), VVarType::BLOCKTEMP, "randomizer",
+            = new AstVar{fl, VVarType::BLOCKTEMP, "randomizer",
                          classp->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR)};
         localGenp->funcLocal(true);
 
@@ -2170,14 +2170,13 @@ class RandomizeVisitor final : public VNVisitor {
             randomizeFuncp->addStmtsp(
                 implementConstraintsClear(randomizeFuncp->fileline(), classGenp));
             AstTask* const constrSetupFuncp = getCreateConstraintSetupFunc(classp);
-            AstTaskRef* const callp
-                = new AstTaskRef{nodep->fileline(), constrSetupFuncp->name(), nullptr};
+            AstTaskRef* const callp = new AstTaskRef{fl, constrSetupFuncp->name(), nullptr};
             callp->taskp(constrSetupFuncp);
             randomizeFuncp->addStmtsp(callp->makeStmt());
-            randomizeFuncp->addStmtsp(new AstAssign{
-                nodep->fileline(), new AstVarRef{nodep->fileline(), localGenp, VAccess::WRITE},
-                new AstVarRef{nodep->fileline(), VN_AS(classGenp->user2p(), NodeModule), classGenp,
-                              VAccess::READ}});
+            randomizeFuncp->addStmtsp(
+                new AstAssign{fl, new AstVarRef{fl, localGenp, VAccess::WRITE},
+                              new AstVarRef{fl, VN_AS(classGenp->user2p(), NodeModule), classGenp,
+                                            VAccess::READ}});
         }
 
         // Set rand mode if present (not needed if classGenp exists and was copied)
@@ -2192,24 +2191,34 @@ class RandomizeVisitor final : public VNVisitor {
                                   localGenp,   randModeVarp,  ++m_withCnt};
         }
 
+        // Call the solver and set return value
+        AstVarRef* const randNextp = new AstVarRef{fl, localGenp, VAccess::READWRITE};
+        randNextp->AstNode::addNext(new AstText{fl, ".next(__Vm_rng)"});
+        AstNodeExpr* const solverCallp = new AstCExpr{fl, randNextp};
+        solverCallp->dtypeSetBit();
+        AstVarRef* const fvarWriteRefp
+            = new AstVarRef{fl, VN_AS(randomizeFuncp->fvarp(), Var), VAccess::WRITE};
+        randomizeFuncp->addStmtsp(new AstAssign{fl, fvarWriteRefp, solverCallp});
+
+        if (AstTask* const resizeAllTaskp
+            = VN_AS(m_memberMap.findMember(classp, "__Vresize_constrained_arrays"), Task)) {
+            AstTaskRef* const resizeTaskRefp = new AstTaskRef{fl, resizeAllTaskp->name(), nullptr};
+            resizeTaskRefp->taskp(resizeAllTaskp);
+            randomizeFuncp->addStmtsp(resizeTaskRefp->makeStmt());
+        }
+
         AstFunc* const basicRandomizeFuncp = V3Randomize::newRandomizeFunc(
             m_memberMap, classp, m_uniqueBasicNames.get(nodep), false);
         AstFuncRef* const basicRandomizeFuncCallp
-            = new AstFuncRef{nodep->fileline(), basicRandomizeFuncp->name(), nullptr};
+            = new AstFuncRef{fl, basicRandomizeFuncp->name(), nullptr};
         basicRandomizeFuncCallp->taskp(basicRandomizeFuncp);
         basicRandomizeFuncCallp->dtypep(basicRandomizeFuncp->dtypep());
         addBasicRandomizeBody(basicRandomizeFuncp, classp, m_withCnt);
 
-        // Call the solver and set return value
-        AstVarRef* const randNextp
-            = new AstVarRef{nodep->fileline(), localGenp, VAccess::READWRITE};
-        randNextp->AstNode::addNext(new AstText{nodep->fileline(), ".next(__Vm_rng)"});
-        AstNodeExpr* const solverCallp = new AstCExpr{nodep->fileline(), randNextp};
-        solverCallp->dtypeSetBit();
         randomizeFuncp->addStmtsp(new AstAssign{
-            nodep->fileline(),
-            new AstVarRef{nodep->fileline(), VN_AS(randomizeFuncp->fvarp(), Var), VAccess::WRITE},
-            new AstAnd{nodep->fileline(), solverCallp, basicRandomizeFuncCallp}});
+            fl, fvarWriteRefp->cloneTree(false),
+            new AstAnd{fl, new AstVarRef{fl, VN_AS(randomizeFuncp->fvarp(), Var), VAccess::READ},
+                       basicRandomizeFuncCallp}});
 
         addPrePostCall(classp, randomizeFuncp, "post_randomize");
 

@@ -2179,9 +2179,9 @@ class RandomizeVisitor final : public VNVisitor {
                                             VAccess::READ}});
         }
 
-        // Set rand mode if present (not needed if classGenp exists and was copied)
+        // Set rand mode if present
         AstVar* const randModeVarp = getRandModeVar(classp);
-        if (!classGenp && randModeVarp) addSetRandMode(randomizeFuncp, localGenp, randModeVarp);
+        if (randModeVarp) addSetRandMode(randomizeFuncp, localGenp, randModeVarp);
 
         // Generate constraint setup code and a hardcoded call to the solver
         AstNode* const capturedTreep = withp->exprp()->unlinkFrBackWithNext();

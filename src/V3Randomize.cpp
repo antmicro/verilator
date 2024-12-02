@@ -1172,17 +1172,6 @@ class RandomizeVisitor final : public VNVisitor {
     int m_withCnt = 1;  // AstWith count, 1 is for class constraints
 
     // METHODS
-    AstTask* getCreateConstraintSetupFunc(AstClass* const classp, AstVar* const genp) {
-        static const char* const name = "__Vsetup_constraints";
-        AstTask* setupAllTaskp = VN_AS(m_memberMap.findMember(classp, name), Task);
-        if (setupAllTaskp) return setupAllTaskp;
-        setupAllTaskp = new AstTask{classp->fileline(), "__Vsetup_constraints", nullptr};
-        setupAllTaskp->classMethod(true);
-        setupAllTaskp->isVirtual(true);
-        classp->addMembersp(setupAllTaskp);
-        m_memberMap.insert(classp, setupAllTaskp);
-        return setupAllTaskp;
-    }
     AstTask* getCreateAggrResizeTask(AstClass* const classp) {
         static const char* const name = "__Vresize_constrained_arrays";
         AstTask* resizeTaskp = VN_AS(m_memberMap.findMember(classp, name), Task);
@@ -1571,12 +1560,6 @@ class RandomizeVisitor final : public VNVisitor {
             funcp->addStmtsp(callp->makeStmt());
         }
     }
-    AstTask* newSetupConstraintTask(AstClass* const nodep, const std::string& name) {
-        AstTask* const taskp = new AstTask{nodep->fileline(), name + "_setup_constraint", nullptr};
-        taskp->classMethod(true);
-        nodep->addMembersp(taskp);
-        return taskp;
-    }
     AstTask* newResizeConstrainedArrayTask(AstClass* const nodep, const std::string& name) {
         AstTask* const taskp
             = new AstTask{nodep->fileline(), name + "_resize_constrained_array", nullptr};
@@ -1907,20 +1890,6 @@ class RandomizeVisitor final : public VNVisitor {
                 genp->funcLocal(true);
                 randomizep->addStmtsp(genp);
             }
-            AstTask* taskp = VN_AS(constrp->user2p(), Task);
-            if (!taskp) {
-                taskp = newSetupConstraintTask(classp, constrp->name());
-                constrp->user2p(taskp);
-            }
-            AstTaskRef* const setupTaskRefp
-                = new AstTaskRef{constrp->fileline(), taskp->name(), nullptr};
-            setupTaskRefp->taskp(taskp);
-            setupTaskRefp->classOrPackagep(classp);
-
-            AstTask* const setupAllTaskp = getCreateConstraintSetupFunc(nodep, genp);
-
-            setupAllTaskp->addStmtsp(setupTaskRefp->makeStmt());
-
             if (AstTask* const resizeTaskp = VN_CAST(constrp->user3p(), Task)) {
                 AstTask* const resizeAllTaskp = getCreateAggrResizeTask(nodep);
                 AstTaskRef* const resizeTaskRefp
@@ -1933,16 +1902,11 @@ class RandomizeVisitor final : public VNVisitor {
             ConstraintExprVisitor{m_memberMap, constrp->itemsp(), randomizep,
                                   genp,        randModeVarp,      1};
             if (constrp->itemsp()) {
-                taskp->addStmtsp(wrapIfConstraintMode(nodep, constrp,
-                                                      constrp->itemsp()->unlinkFrBackWithNext()));
+                randomizep->addStmtsp(wrapIfConstraintMode(
+                    nodep, constrp, constrp->itemsp()->unlinkFrBackWithNext()));
             }
         });
         if (genp) {
-            AstTask* setupAllTaskp = getCreateConstraintSetupFunc(nodep, genp);
-            AstTaskRef* const setupTaskRefp = new AstTaskRef{fl, setupAllTaskp->name(), nullptr};
-            setupTaskRefp->taskp(setupAllTaskp);
-            randomizep->addStmtsp(setupTaskRefp->makeStmt());
-
             AstVarRef* const genRefp = new AstVarRef{fl, genp, VAccess::READWRITE};
             AstNode* const argsp = genRefp;
             argsp->addNext(new AstText{fl, ".next(__Vm_rng)"});

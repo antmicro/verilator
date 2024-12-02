@@ -312,7 +312,6 @@ public:
         }
     }
     void hard(std::string&& constraint);
-    void clear();
     void set_randmode(const VlQueue<CData>& randmode) { m_randmode = &randmode; }
 #ifdef VL_DEBUG
     void dump() const;

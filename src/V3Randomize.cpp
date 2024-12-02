@@ -1145,7 +1145,6 @@ class RandomizeVisitor final : public VNVisitor {
     //  AstConstraint::user2p() -> AstTask*. Pointer to constraint setup procedure
     //  AstClass::user2p()      -> AstVar*.  Rand mode state variable
     //  AstVar::user3()         -> int.      Handled in constraints
-    //  AstClass::user3p()      -> AstVar*.  Constrained randomizer variable
     //  AstConstraint::user3p() -> AstTask*. Pointer to resize procedure
     //  AstClass::user4p()      -> AstVar*.  Constraint mode state variable
     //  AstVar::user4p()        -> AstVar*.  Size variable for constrained queues
@@ -1173,24 +1172,7 @@ class RandomizeVisitor final : public VNVisitor {
     int m_withCnt = 1;  // AstWith count, 1 is for class constraints
 
     // METHODS
-    void createRandomGenerator(AstClass* const classp) {
-        if (classp->user3p()) return;
-        if (classp->extendsp()) {
-            createRandomGenerator(classp->extendsp()->classp());
-            return;
-        }
-        AstVar* const genp = new AstVar{classp->fileline(), VVarType::MEMBER, "constraint",
-                                        classp->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR)};
-        genp->user2p(classp);
-        classp->addMembersp(genp);
-        classp->user3p(genp);
-    }
-    AstVar* getRandomGenerator(AstClass* const classp) {
-        if (classp->user3p()) return VN_AS(classp->user3p(), Var);
-        if (classp->extendsp()) return getRandomGenerator(classp->extendsp()->classp());
-        return nullptr;
-    }
-    AstTask* getCreateConstraintSetupFunc(AstClass* classp) {
+    AstTask* getCreateConstraintSetupFunc(AstClass* const classp, AstVar* const genp) {
         static const char* const name = "__Vsetup_constraints";
         AstTask* setupAllTaskp = VN_AS(m_memberMap.findMember(classp, name), Task);
         if (setupAllTaskp) return setupAllTaskp;
@@ -1260,11 +1242,10 @@ class RandomizeVisitor final : public VNVisitor {
     static void addSetRandMode(AstNodeFTask* const ftaskp, AstVar* const genp,
                                AstVar* const randModeVarp) {
         FileLine* const fl = ftaskp->fileline();
-        AstCMethodHard* const setRandModep = new AstCMethodHard{
-            fl, new AstVarRef{fl, VN_AS(genp->user2p(), NodeModule), genp, VAccess::WRITE},
-            "set_randmode",
-            new AstVarRef{fl, VN_AS(randModeVarp->user2p(), NodeModule), randModeVarp,
-                          VAccess::READ}};
+        AstCMethodHard* const setRandModep
+            = new AstCMethodHard{fl, new AstVarRef{fl, genp, VAccess::WRITE}, "set_randmode",
+                                 new AstVarRef{fl, VN_AS(randModeVarp->user2p(), NodeModule),
+                                               randModeVarp, VAccess::READ}};
         setRandModep->dtypeSetVoid();
         ftaskp->addStmtsp(setRandModep->makeStmt());
     }
@@ -1297,7 +1278,6 @@ class RandomizeVisitor final : public VNVisitor {
                     }
                 }
             });
-            if (hasConstraints) createRandomGenerator(classp);
             if (randModeCount > 0) {
                 AstVar* const randModeVarp = getCreateRandModeVar(classp);
                 makeModeInit(randModeVarp, classp, randModeCount);
@@ -1603,14 +1583,6 @@ class RandomizeVisitor final : public VNVisitor {
         taskp->classMethod(true);
         nodep->addMembersp(taskp);
         return taskp;
-    }
-    AstNodeStmt* implementConstraintsClear(FileLine* const fileline, AstVar* const genp) {
-        AstCMethodHard* const clearp = new AstCMethodHard{
-            fileline,
-            new AstVarRef{fileline, VN_AS(genp->user2p(), NodeModule), genp, VAccess::READWRITE},
-            "clear"};
-        clearp->dtypeSetVoid();
-        return clearp->makeStmt();
     }
     AstVar* getVarFromRef(AstNodeExpr* const exprp) {
         if (AstMemberSel* const memberSelp = VN_CAST(exprp, MemberSel)) {
@@ -1927,47 +1899,51 @@ class RandomizeVisitor final : public VNVisitor {
 
         AstVar* const randModeVarp = getRandModeVar(nodep);
         AstNodeExpr* beginValp = nullptr;
-        AstVar* genp = getRandomGenerator(nodep);
+        AstVar* genp = nullptr;
+        nodep->foreachMember([&](AstClass* const classp, AstConstraint* const constrp) {
+            if (!genp) {
+                genp = new AstVar{classp->fileline(), VVarType::BLOCKTEMP, "constraint",
+                                  classp->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR)};
+                genp->funcLocal(true);
+                randomizep->addStmtsp(genp);
+            }
+            AstTask* taskp = VN_AS(constrp->user2p(), Task);
+            if (!taskp) {
+                taskp = newSetupConstraintTask(classp, constrp->name());
+                constrp->user2p(taskp);
+            }
+            AstTaskRef* const setupTaskRefp
+                = new AstTaskRef{constrp->fileline(), taskp->name(), nullptr};
+            setupTaskRefp->taskp(taskp);
+            setupTaskRefp->classOrPackagep(classp);
+
+            AstTask* const setupAllTaskp = getCreateConstraintSetupFunc(nodep, genp);
+
+            setupAllTaskp->addStmtsp(setupTaskRefp->makeStmt());
+
+            if (AstTask* const resizeTaskp = VN_CAST(constrp->user3p(), Task)) {
+                AstTask* const resizeAllTaskp = getCreateAggrResizeTask(nodep);
+                AstTaskRef* const resizeTaskRefp
+                    = new AstTaskRef{constrp->fileline(), resizeTaskp->name(), nullptr};
+                resizeTaskRefp->taskp(resizeTaskp);
+                resizeTaskRefp->classOrPackagep(classp);
+                resizeAllTaskp->addStmtsp(resizeTaskRefp->makeStmt());
+            }
+
+            ConstraintExprVisitor{m_memberMap, constrp->itemsp(), randomizep,
+                                  genp,        randModeVarp,      1};
+            if (constrp->itemsp()) {
+                taskp->addStmtsp(wrapIfConstraintMode(nodep, constrp,
+                                                      constrp->itemsp()->unlinkFrBackWithNext()));
+            }
+        });
         if (genp) {
-            nodep->foreachMember([&](AstClass* const classp, AstConstraint* const constrp) {
-                AstTask* taskp = VN_AS(constrp->user2p(), Task);
-                if (!taskp) {
-                    taskp = newSetupConstraintTask(classp, constrp->name());
-                    constrp->user2p(taskp);
-                }
-                AstTaskRef* const setupTaskRefp
-                    = new AstTaskRef{constrp->fileline(), taskp->name(), nullptr};
-                setupTaskRefp->taskp(taskp);
-                setupTaskRefp->classOrPackagep(classp);
-
-                AstTask* const setupAllTaskp = getCreateConstraintSetupFunc(nodep);
-
-                setupAllTaskp->addStmtsp(setupTaskRefp->makeStmt());
-
-                if (AstTask* const resizeTaskp = VN_CAST(constrp->user3p(), Task)) {
-                    AstTask* const resizeAllTaskp = getCreateAggrResizeTask(nodep);
-                    AstTaskRef* const resizeTaskRefp
-                        = new AstTaskRef{constrp->fileline(), resizeTaskp->name(), nullptr};
-                    resizeTaskRefp->taskp(resizeTaskp);
-                    resizeTaskRefp->classOrPackagep(classp);
-                    resizeAllTaskp->addStmtsp(resizeTaskRefp->makeStmt());
-                }
-
-                ConstraintExprVisitor{m_memberMap, constrp->itemsp(), nullptr,
-                                      genp,        randModeVarp,      1};
-                if (constrp->itemsp()) {
-                    taskp->addStmtsp(wrapIfConstraintMode(
-                        nodep, constrp, constrp->itemsp()->unlinkFrBackWithNext()));
-                }
-            });
-            randomizep->addStmtsp(implementConstraintsClear(fl, genp));
-            AstTask* setupAllTaskp = getCreateConstraintSetupFunc(nodep);
+            AstTask* setupAllTaskp = getCreateConstraintSetupFunc(nodep, genp);
             AstTaskRef* const setupTaskRefp = new AstTaskRef{fl, setupAllTaskp->name(), nullptr};
             setupTaskRefp->taskp(setupAllTaskp);
             randomizep->addStmtsp(setupTaskRefp->makeStmt());
 
-            AstNodeModule* const genModp = VN_AS(genp->user2p(), NodeModule);
-            AstVarRef* const genRefp = new AstVarRef{fl, genModp, genp, VAccess::READWRITE};
+            AstVarRef* const genRefp = new AstVarRef{fl, genp, VAccess::READWRITE};
             AstNode* const argsp = genRefp;
             argsp->addNext(new AstText{fl, ".next(__Vm_rng)"});
 
@@ -1975,13 +1951,7 @@ class RandomizeVisitor final : public VNVisitor {
             solverCallp->dtypeSetBit();
             beginValp = solverCallp;
 
-            if (randModeVarp) {
-                AstNodeModule* const randModeClassp = VN_AS(randModeVarp->user2p(), Class);
-                AstNodeFTask* const newp
-                    = VN_AS(m_memberMap.findMember(randModeClassp, "new"), NodeFTask);
-                UASSERT_OBJ(newp, randModeClassp, "No new() in class");
-                addSetRandMode(newp, genp, randModeVarp);
-            }
+            if (randModeVarp) addSetRandMode(randomizep, genp, randModeVarp);
         } else {
             beginValp = new AstConst{fl, AstConst::WidthedValue{}, 32, 1};
         }
@@ -2146,7 +2116,6 @@ class RandomizeVisitor final : public VNVisitor {
             iterate(classp);
         }
 
-        AstVar* const classGenp = getRandomGenerator(classp);
         AstVar* const localGenp
             = new AstVar{fl, VVarType::BLOCKTEMP, "randomizer",
                          classp->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR)};
@@ -2164,20 +2133,6 @@ class RandomizeVisitor final : public VNVisitor {
         captured.addFunctionArguments(randomizeFuncp);
 
         randomizeFuncp->addStmtsp(localGenp);
-
-        // Copy (derive) class constraints if present
-        if (classGenp) {
-            randomizeFuncp->addStmtsp(
-                implementConstraintsClear(randomizeFuncp->fileline(), classGenp));
-            AstTask* const constrSetupFuncp = getCreateConstraintSetupFunc(classp);
-            AstTaskRef* const callp = new AstTaskRef{fl, constrSetupFuncp->name(), nullptr};
-            callp->taskp(constrSetupFuncp);
-            randomizeFuncp->addStmtsp(callp->makeStmt());
-            randomizeFuncp->addStmtsp(
-                new AstAssign{fl, new AstVarRef{fl, localGenp, VAccess::WRITE},
-                              new AstVarRef{fl, VN_AS(classGenp->user2p(), NodeModule), classGenp,
-                                            VAccess::READ}});
-        }
 
         // Set rand mode if present
         AstVar* const randModeVarp = getRandModeVar(classp);

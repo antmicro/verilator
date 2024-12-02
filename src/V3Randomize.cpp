@@ -2080,13 +2080,14 @@ class RandomizeVisitor final : public VNVisitor {
             iterate(classp);
         }
 
+        AstFunc* const randomizeFuncp = V3Randomize::newRandomizeFunc(
+            m_memberMap, classp, m_uniqueRandNames.get(nodep), false);
+
         AstVar* const localGenp
             = new AstVar{fl, VVarType::BLOCKTEMP, "randomizer",
                          classp->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR)};
         localGenp->funcLocal(true);
-
-        AstFunc* const randomizeFuncp = V3Randomize::newRandomizeFunc(
-            m_memberMap, classp, m_uniqueRandNames.get(nodep), false);
+        randomizeFuncp->addStmtsp(localGenp);
 
         addPrePostCall(classp, randomizeFuncp, "pre_randomize");
 
@@ -2095,8 +2096,6 @@ class RandomizeVisitor final : public VNVisitor {
 
         // Add function arguments
         captured.addFunctionArguments(randomizeFuncp);
-
-        randomizeFuncp->addStmtsp(localGenp);
 
         // Set rand mode if present
         AstVar* const randModeVarp = getRandModeVar(classp);

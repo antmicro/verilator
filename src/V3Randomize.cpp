@@ -1909,7 +1909,8 @@ class RandomizeVisitor final : public VNVisitor {
                 fl, setupTaskp->name(),
                 new AstArg{fl, "constraint", new AstVarRef{fl, genp, VAccess::READWRITE}}};
             setupRefp->taskp(setupTaskp);
-            randomizep->addStmtsp(wrapIfConstraintMode(nodep, constrp, setupRefp));
+            randomizep->addStmtsp(
+                wrapIfConstraintMode(nodep, constrp, new AstStmtExpr{fl, setupRefp}));
         });
         if (genp) {
             AstVarRef* const genRefp = new AstVarRef{fl, genp, VAccess::READWRITE};
@@ -2116,9 +2117,10 @@ class RandomizeVisitor final : public VNVisitor {
         classp->addMembersp(setupTaskp);
         setupTaskp->classMethod(true);
         AstTaskRef* const setupRefp = new AstTaskRef{
-            fl, setupTaskp->name(), new AstVarRef{fl, localGenp, VAccess::READWRITE}};
+            fl, setupTaskp->name(),
+            new AstArg{fl, "constraint", new AstVarRef{fl, localGenp, VAccess::READWRITE}}};
         setupRefp->taskp(setupTaskp);
-        randomizeFuncp->addStmtsp(setupRefp);
+        randomizeFuncp->addStmtsp(new AstStmtExpr{fl, setupRefp});
 
         // Call the solver and set return value
         AstVarRef* const randNextp = new AstVarRef{fl, localGenp, VAccess::READWRITE};

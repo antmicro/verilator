@@ -498,7 +498,6 @@ class ConstraintExprVisitor final : public VNVisitor {
     AstVar* m_genp;  // VlRandomizer variable of the class
     AstVar* m_randModeVarp;  // Relevant randmode state variable
     bool m_wantSingle = false;  // Whether to merge constraint expressions with LOGAND
-    VMemberMap& m_memberMap;  // Member names cached for fast lookup
     const int m_visitCnt = 0;  // visit count
 
     AstSFormatF* getConstFormat(AstNodeExpr* nodep) {
@@ -873,10 +872,9 @@ class ConstraintExprVisitor final : public VNVisitor {
 
 public:
     // CONSTRUCTORS
-    explicit ConstraintExprVisitor(VMemberMap& memberMap, AstNode* nodep, const std::string& name,
-                                   AstVar* randModeVarp, const int visitCnt)
+    explicit ConstraintExprVisitor(AstNode* nodep, const std::string& name, AstVar* randModeVarp,
+                                   const int visitCnt)
         : m_randModeVarp{randModeVarp}
-        , m_memberMap{memberMap}
         , m_visitCnt{visitCnt} {
         m_genp = new AstVar{nodep->fileline(), VVarType::VAR, "constraint",
                             nodep->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR)};
@@ -1903,12 +1901,13 @@ class RandomizeVisitor final : public VNVisitor {
             }
 
             if (!constrp->user2p()) {
-                ConstraintExprVisitor{m_memberMap, constrp, constrp->name(), randModeVarp, 1};
+                ConstraintExprVisitor{constrp, constrp->name(), randModeVarp, 1};
             }
             AstTask* const setupTaskp = VN_AS(constrp->user2p(), Task);
             if (!setupTaskp->backp()) {
                 nodep->addMembersp(setupTaskp);
                 setupTaskp->classMethod(true);
+                m_memberMap.insert(nodep, setupTaskp);
             }
             AstTaskRef* const setupRefp = new AstTaskRef{
                 fl, setupTaskp->name(),
@@ -2115,11 +2114,12 @@ class RandomizeVisitor final : public VNVisitor {
         // Generate constraint setup code and a hardcoded call to the solver
         AstNode* const capturedTreep = withp;
         {
-            ConstraintExprVisitor{m_memberMap, capturedTreep, m_uniqueBasicNames.get(nodep),
-                                  randModeVarp, ++m_withCnt};
+            ConstraintExprVisitor{capturedTreep, m_uniqueBasicNames.get(nodep), randModeVarp,
+                                  ++m_withCnt};
         }
         AstTask* const setupTaskp = VN_AS(capturedTreep->user2p(), Task);
         classp->addMembersp(setupTaskp);
+        m_memberMap.insert(classp, setupTaskp);
         setupTaskp->classMethod(true);
         AstTaskRef* const setupRefp = new AstTaskRef{
             fl, setupTaskp->name(),

@@ -1905,9 +1905,9 @@ class RandomizeVisitor final : public VNVisitor {
             }
             AstTask* const setupTaskp = VN_AS(constrp->user2p(), Task);
             if (!setupTaskp->backp()) {
-                nodep->addMembersp(setupTaskp);
+                classp->addMembersp(setupTaskp);
                 setupTaskp->classMethod(true);
-                m_memberMap.insert(nodep, setupTaskp);
+                m_memberMap.insert(classp, setupTaskp);
             }
             AstTaskRef* const setupRefp = new AstTaskRef{
                 fl, setupTaskp->name(),

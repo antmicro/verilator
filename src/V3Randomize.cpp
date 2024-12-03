@@ -881,7 +881,7 @@ public:
         m_genp = new AstVar{nodep->fileline(), VVarType::VAR, "constraint",
                             nodep->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR)};
         m_genp->funcLocal(true);
-        m_genp->direction(VDirection::INPUT);
+        m_genp->direction(VDirection::REF);
         m_genp->lifetime(VLifetime::AUTOMATIC);
         m_taskp = new AstTask{nodep->fileline(), name + "_setup_constraint", m_genp};
         nodep->user2p(m_taskp);

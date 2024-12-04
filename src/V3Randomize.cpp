@@ -884,10 +884,12 @@ public:
         m_taskp = new AstTask{nodep->fileline(), name + "_setup_constraint", m_genp};
         nodep->user2p(m_taskp);
         iterateChildren(nodep);
-        if (AstConstraint* constrp = VN_CAST(nodep, Constraint)) {
-            m_taskp->addStmtsp(constrp->itemsp()->unlinkFrBackWithNext());
-        } else if (AstWith* withp = VN_CAST(nodep, With)) {
-            m_taskp->addStmtsp(withp->exprp()->unlinkFrBackWithNext());
+        if (AstConstraint* const constrp = VN_CAST(nodep, Constraint)) {
+            if (constrp->itemsp()) {
+                m_taskp->addStmtsp(constrp->itemsp()->unlinkFrBackWithNext());
+            }
+        } else if (AstWith* const withp = VN_CAST(nodep, With)) {
+            if (withp->exprp()) m_taskp->addStmtsp(withp->exprp()->unlinkFrBackWithNext());
         }
     }
 };

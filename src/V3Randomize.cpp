@@ -2111,6 +2111,17 @@ class RandomizeVisitor final : public VNVisitor {
         AstVar* const randModeVarp = getRandModeVar(classp);
         if (randModeVarp) addSetRandMode(randomizeFuncp, localGenp, randModeVarp);
 
+        // Get constraints from the class
+        classp->foreachMember([&](AstClass* const clp, AstConstraint* const constrp) {
+            AstTask* const setupTaskp = VN_AS(constrp->user2p(), Task);
+            UASSERT_OBJ(setupTaskp, constrp, "Constraint should have setup task generated before");
+            AstTaskRef* const setupRefp = new AstTaskRef{
+                fl, setupTaskp->name(),
+                new AstArg{fl, "constraint", new AstVarRef{fl, localGenp, VAccess::READWRITE}}};
+            setupRefp->taskp(setupTaskp);
+            randomizeFuncp->addStmtsp(
+                wrapIfConstraintMode(classp, constrp, new AstStmtExpr{fl, setupRefp}));
+        });
         // Generate constraint setup code and a hardcoded call to the solver
         AstNode* const capturedTreep = withp->exprp()->unlinkFrBackWithNext();
         randomizeFuncp->addStmtsp(capturedTreep);

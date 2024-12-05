@@ -1158,6 +1158,8 @@ class RandomizeVisitor final : public VNVisitor {
     size_t m_enumValueTabCount = 0;  // Number of tables with enum values created
     int m_randCaseNum = 0;  // Randcase number within a module for var naming
     std::map<std::string, AstCDType*> m_randcDtypes;  // RandC data type deduplication
+    std::map<AstClass*, std::set<AstVar*>>
+        m_constrainedVars;  // Variables constrained by constraints defined in class
     AstConstraint* m_constraintp = nullptr;  // Current constraint
     int m_withCnt = 1;  // AstWith count, 1 is for class constraints
 

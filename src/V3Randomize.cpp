@@ -1923,6 +1923,7 @@ class RandomizeVisitor final : public VNVisitor {
                     setupTaskp->addStmtsp(constrp->itemsp()->unlinkFrBackWithNext());
                 }
             }
+            for (auto varp : m_constrainedVars[nodep]) addWriteVar(varp, 1, genp, randomizep);
             AstTask* const setupTaskp = VN_AS(constrp->user2p(), Task);
             AstTaskRef* const setupRefp = new AstTaskRef{
                 fl, setupTaskp->name(),

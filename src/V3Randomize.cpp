@@ -1166,9 +1166,11 @@ class RandomizeVisitor final : public VNVisitor {
     // METHODS
     void fillConstrainedMapRecurse(AstNode* const nodep) {
         if (AstVarRef* const varRefp = VN_CAST(nodep, VarRef)) {
-            AstVar* const varp = varRefp->varp();
-            AstClass* const classp = VN_AS(varp->user2p(), Class);
-            m_constrainedVars[classp].insert(varp);
+            if (varRefp->user1()) {
+                AstVar* const varp = varRefp->varp();
+                AstClass* const classp = VN_AS(varp->user2p(), Class);
+                m_constrainedVars[classp].insert(varp);
+            }
             return;
         }
         if (nodep->op1p()) fillConstrainedMapRecurse(nodep->op1p());

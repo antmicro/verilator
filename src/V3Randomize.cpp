@@ -1161,19 +1161,18 @@ class RandomizeVisitor final : public VNVisitor {
         }
         randomizeFuncp->addStmtsp(methodp->makeStmt());
     }
-    void fillConstrainedMapRecurse(AstNode* const nodep) {
+    void fillConstrainedMapRecurse(AstNode* const nodep, AstClass* const classp) {
         if (AstVarRef* const varRefp = VN_CAST(nodep, VarRef)) {
             if (varRefp->user1()) {
                 AstVar* const varp = varRefp->varp();
-                AstClass* const classp = VN_AS(varp->user2p(), Class);
                 m_constrainedVars[classp].insert(varp);
             }
             return;
         }
-        if (nodep->op1p()) fillConstrainedMapRecurse(nodep->op1p());
-        if (nodep->op2p()) fillConstrainedMapRecurse(nodep->op2p());
-        if (nodep->op3p()) fillConstrainedMapRecurse(nodep->op3p());
-        if (nodep->op4p()) fillConstrainedMapRecurse(nodep->op4p());
+        if (nodep->op1p()) fillConstrainedMapRecurse(nodep->op1p(), classp);
+        if (nodep->op2p()) fillConstrainedMapRecurse(nodep->op2p(), classp);
+        if (nodep->op3p()) fillConstrainedMapRecurse(nodep->op3p(), classp);
+        if (nodep->op4p()) fillConstrainedMapRecurse(nodep->op4p(), classp);
     }
     AstTask* getCreateAggrResizeTask(AstClass* const classp) {
         static const char* const name = "__Vresize_constrained_arrays";
@@ -1917,7 +1916,7 @@ class RandomizeVisitor final : public VNVisitor {
                 m_memberMap.insert(classp, setupTaskp);
 
                 for (AstNode* itemp = constrp->itemsp(); itemp; itemp = itemp->nextp()) {
-                    fillConstrainedMapRecurse(itemp);
+                    fillConstrainedMapRecurse(itemp, nodep);
                 }
                 ConstraintExprVisitor{constrp->itemsp(), setupTaskp, genArgp, randModeVarp, 1};
                 if (constrp->itemsp()) {

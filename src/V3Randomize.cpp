@@ -632,48 +632,6 @@ class ConstraintExprVisitor final : public VNVisitor {
             VL_DO_DANGLING(pushDeletep(nodep), nodep);
         }
         relinker.relink(exprp);
-
-        if (varp->user3() != 1 && varp->user3() != m_visitCnt) {
-            varp->user3(m_visitCnt);
-            AstCMethodHard* const methodp = new AstCMethodHard{
-                varp->fileline(),
-                new AstVarRef{varp->fileline(), VN_AS(m_genp->user2p(), NodeModule), m_genp,
-                              VAccess::READWRITE},
-                "write_var"};
-            uint32_t dimension = 0;
-            if (VN_IS(varp->dtypep(), UnpackArrayDType) || VN_IS(varp->dtypep(), DynArrayDType)
-                || VN_IS(varp->dtypep(), QueueDType)) {
-                const std::pair<uint32_t, uint32_t> dims
-                    = varp->dtypep()->dimensions(/*includeBasic=*/true);
-                const uint32_t unpackedDimensions = dims.second;
-                dimension = unpackedDimensions;
-            }
-            methodp->dtypeSetVoid();
-            AstClass* const classp = VN_AS(varp->user2p(), Class);
-            AstVarRef* const varRefp
-                = new AstVarRef{varp->fileline(), classp, varp, VAccess::WRITE};
-            varRefp->classOrPackagep(classOrPackagep);
-            methodp->addPinsp(varRefp);
-            size_t width = varp->width();
-            AstNodeDType* tmpDtypep = varp->dtypep();
-            while (VN_IS(tmpDtypep, UnpackArrayDType) || VN_IS(tmpDtypep, DynArrayDType)
-                   || VN_IS(tmpDtypep, QueueDType))
-                tmpDtypep = tmpDtypep->subDTypep();
-            width = tmpDtypep->width();
-            methodp->addPinsp(
-                new AstConst{varp->dtypep()->fileline(), AstConst::Unsized64{}, width});
-            AstNodeExpr* const varnamep
-                = new AstCExpr{varp->fileline(), "\"" + smtName + "\"", varp->width()};
-            varnamep->dtypep(varp->dtypep());
-            methodp->addPinsp(varnamep);
-            methodp->addPinsp(
-                new AstConst{varp->dtypep()->fileline(), AstConst::Unsized64{}, dimension});
-            if (randMode.usesMode) {
-                methodp->addPinsp(
-                    new AstConst{varp->fileline(), AstConst::Unsized64{}, randMode.index});
-            }
-            m_taskp->addStmtsp(methodp->makeStmt());
-        }
     }
     void visit(AstNodeBiop* nodep) override {
         if (editFormat(nodep)) return;
@@ -1164,6 +1122,45 @@ class RandomizeVisitor final : public VNVisitor {
     int m_withCnt = 1;  // AstWith count, 1 is for class constraints
 
     // METHODS
+    void addWriteVar(AstVar* const varp, const int cnt, AstVar* const genp,
+                     AstFunc* const randomizeFuncp) {
+        varp->user3(cnt);
+        AstCMethodHard* const methodp = new AstCMethodHard{
+            varp->fileline(), new AstVarRef{varp->fileline(), genp, VAccess::READWRITE},
+            "write_var"};
+        uint32_t dimension = 0;
+        if (VN_IS(varp->dtypep(), UnpackArrayDType) || VN_IS(varp->dtypep(), DynArrayDType)
+            || VN_IS(varp->dtypep(), QueueDType)) {
+            const std::pair<uint32_t, uint32_t> dims
+                = varp->dtypep()->dimensions(/*includeBasic=*/true);
+            const uint32_t unpackedDimensions = dims.second;
+            dimension = unpackedDimensions;
+        }
+        methodp->dtypeSetVoid();
+        AstClass* const classp = VN_AS(varp->user2p(), Class);
+        AstVarRef* const varRefp = new AstVarRef{varp->fileline(), classp, varp, VAccess::WRITE};
+        varRefp->classOrPackagep(classp);
+        methodp->addPinsp(varRefp);
+        size_t width = varp->width();
+        AstNodeDType* tmpDtypep = varp->dtypep();
+        while (VN_IS(tmpDtypep, UnpackArrayDType) || VN_IS(tmpDtypep, DynArrayDType)
+               || VN_IS(tmpDtypep, QueueDType))
+            tmpDtypep = tmpDtypep->subDTypep();
+        width = tmpDtypep->width();
+        methodp->addPinsp(new AstConst{varp->dtypep()->fileline(), AstConst::Unsized64{}, width});
+        AstNodeExpr* const varnamep
+            = new AstCExpr{varp->fileline(), "\"" + varp->name() + "\"", varp->width()};
+        varnamep->dtypep(varp->dtypep());
+        methodp->addPinsp(varnamep);
+        methodp->addPinsp(
+            new AstConst{varp->dtypep()->fileline(), AstConst::Unsized64{}, dimension});
+        const RandomizeMode randMode = {.asInt = varp->user1()};
+        if (randMode.usesMode) {
+            methodp->addPinsp(
+                new AstConst{varp->fileline(), AstConst::Unsized64{}, randMode.index});
+        }
+        randomizeFuncp->addStmtsp(methodp->makeStmt());
+    }
     void fillConstrainedMapRecurse(AstNode* const nodep) {
         if (AstVarRef* const varRefp = VN_CAST(nodep, VarRef)) {
             if (varRefp->user1()) {

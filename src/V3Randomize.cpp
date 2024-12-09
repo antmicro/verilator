@@ -2122,9 +2122,13 @@ class RandomizeVisitor final : public VNVisitor {
         AstVar* const randModeVarp = getRandModeVar(classp);
         if (randModeVarp) addSetRandMode(randomizeFuncp, localGenp, randModeVarp);
 
-        // Get constrained variables from the class
-        for (auto varp : m_constrainedVars[classp]) {
-            addWriteVar(varp, 1, localGenp, randomizeFuncp);
+        AstNode* const capturedTreep = withp->exprp()->unlinkFrBackWithNext();
+        std::set<AstVar*> constrainedVars = m_constrainedVars[classp];
+        for (AstNode* itemp = capturedTreep; itemp; itemp = itemp->nextp()) {
+            fillConstrainedSetRecurse(itemp, constrainedVars);
+        }
+        for (auto varp : constrainedVars) {
+            addWriteVar(varp, ++m_withCnt, localGenp, randomizeFuncp);
         }
 
         // Get constraints from the class
@@ -2138,8 +2142,7 @@ class RandomizeVisitor final : public VNVisitor {
             randomizeFuncp->addStmtsp(
                 wrapIfConstraintMode(classp, constrp, new AstStmtExpr{fl, setupRefp}));
         });
-        // Generate constraint setup code and a hardcoded call to the solver
-        AstNode* const capturedTreep = withp->exprp()->unlinkFrBackWithNext();
+
         randomizeFuncp->addStmtsp(capturedTreep);
         { ConstraintExprVisitor{capturedTreep, localGenp, randModeVarp}; }
 

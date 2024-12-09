@@ -2075,6 +2075,7 @@ class RandomizeVisitor final : public VNVisitor {
             return;
         }
         withp->unlinkFrBack();
+        ++m_withCnt;
 
         iterateChildren(nodep);
 
@@ -2128,7 +2129,7 @@ class RandomizeVisitor final : public VNVisitor {
             fillConstrainedSetRecurse(itemp, constrainedVars);
         }
         for (auto varp : constrainedVars) {
-            addWriteVar(varp, ++m_withCnt, localGenp, randomizeFuncp);
+            addWriteVar(varp, m_withCnt, localGenp, randomizeFuncp);
         }
 
         // Get constraints from the class

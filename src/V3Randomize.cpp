@@ -826,8 +826,7 @@ class ConstraintExprVisitor final : public VNVisitor {
 
 public:
     // CONSTRUCTORS
-    explicit ConstraintExprVisitor(AstNode* nodep, AstVar* genp,
-                                   AstVar* randModeVarp)
+    explicit ConstraintExprVisitor(AstNode* nodep, AstVar* genp, AstVar* randModeVarp)
         : m_genp{genp}
         , m_randModeVarp{randModeVarp} {
         iterateAndNextNull(nodep);
@@ -2122,6 +2121,11 @@ class RandomizeVisitor final : public VNVisitor {
         // Set rand mode if present
         AstVar* const randModeVarp = getRandModeVar(classp);
         if (randModeVarp) addSetRandMode(randomizeFuncp, localGenp, randModeVarp);
+
+        // Get constrained variables from the class
+        for (auto varp : m_constrainedVars[classp]) {
+            addWriteVar(varp, 1, localGenp, randomizeFuncp);
+        }
 
         // Get constraints from the class
         classp->foreachMember([&](AstClass* const clp, AstConstraint* const constrp) {

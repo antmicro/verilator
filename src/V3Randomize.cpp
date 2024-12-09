@@ -493,11 +493,9 @@ class ConstraintExprVisitor final : public VNVisitor {
     //  AstNodeExpr::user1()    -> bool. Depending on a randomized variable
     // VNuser3InUse m_inuser3; (Allocated for use in RandomizeVisitor)
 
-    AstNodeFTask* const m_taskp;  // Method to add write_var calls to
     AstVar* const m_genp;  // VlRandomizer variable of the class
     AstVar* m_randModeVarp;  // Relevant randmode state variable
     bool m_wantSingle = false;  // Whether to merge constraint expressions with LOGAND
-    const int m_visitCnt = 0;  // visit count
 
     AstSFormatF* getConstFormat(AstNodeExpr* nodep) {
         return new AstSFormatF{nodep->fileline(), (nodep->width() & 3) ? "#b%b" : "#x%x", false,
@@ -828,12 +826,10 @@ class ConstraintExprVisitor final : public VNVisitor {
 
 public:
     // CONSTRUCTORS
-    explicit ConstraintExprVisitor(AstNode* nodep, AstNodeFTask* taskp, AstVar* genp,
-                                   AstVar* randModeVarp, const int visitCnt)
-        : m_taskp{taskp}
-        , m_genp{genp}
-        , m_randModeVarp{randModeVarp}
-        , m_visitCnt{visitCnt} {
+    explicit ConstraintExprVisitor(AstNode* nodep, AstVar* genp,
+                                   AstVar* randModeVarp)
+        : m_genp{genp}
+        , m_randModeVarp{randModeVarp} {
         iterateAndNextNull(nodep);
     }
 };
@@ -1917,7 +1913,7 @@ class RandomizeVisitor final : public VNVisitor {
                 m_memberMap.insert(classp, setupTaskp);
 
                 AstConstraint* const constrCopyp = constrp->cloneTree(false);
-                ConstraintExprVisitor{constrCopyp->itemsp(), setupTaskp, genArgp, randModeVarp, 1};
+                ConstraintExprVisitor{constrCopyp->itemsp(), genArgp, randModeVarp};
                 if (constrCopyp->itemsp()) {
                     setupTaskp->addStmtsp(constrCopyp->itemsp()->unlinkFrBackWithNext());
                 }
@@ -2141,10 +2137,7 @@ class RandomizeVisitor final : public VNVisitor {
         // Generate constraint setup code and a hardcoded call to the solver
         AstNode* const capturedTreep = withp->exprp()->unlinkFrBackWithNext();
         randomizeFuncp->addStmtsp(capturedTreep);
-        {
-            ConstraintExprVisitor{capturedTreep, randomizeFuncp, localGenp, randModeVarp,
-                                  ++m_withCnt};
-        }
+        { ConstraintExprVisitor{capturedTreep, localGenp, randModeVarp}; }
 
         // Call the solver and set return value
         AstVarRef* const randNextp = new AstVarRef{fl, localGenp, VAccess::READWRITE};

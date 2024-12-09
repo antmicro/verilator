@@ -610,7 +610,6 @@ class ConstraintExprVisitor final : public VNVisitor {
                 "Size constraint combined with element constraint may not work correctly");
         }
 
-        AstNodeModule* const classOrPackagep = nodep->classOrPackagep();
         const RandomizeMode randMode = {.asInt = varp->user1()};
         if (!randMode.usesMode && editFormat(nodep)) return;
 
@@ -1899,6 +1898,10 @@ class RandomizeVisitor final : public VNVisitor {
                 resizeAllTaskp->addStmtsp(resizeTaskRefp->makeStmt());
             }
 
+            for (AstNode* itemp = constrp->itemsp(); itemp; itemp = itemp->nextp()) {
+                fillConstrainedMapRecurse(itemp, nodep);
+            }
+
             if (!constrp->user2p()) {
                 AstVar* const genArgp
                     = new AstVar{constrp->fileline(), VVarType::VAR, "constraint",
@@ -1913,13 +1916,12 @@ class RandomizeVisitor final : public VNVisitor {
                 setupTaskp->classMethod(true);
                 m_memberMap.insert(classp, setupTaskp);
 
-                for (AstNode* itemp = constrp->itemsp(); itemp; itemp = itemp->nextp()) {
-                    fillConstrainedMapRecurse(itemp, nodep);
+                AstConstraint* const constrCopyp = constrp->cloneTree(false);
+                ConstraintExprVisitor{constrCopyp->itemsp(), setupTaskp, genArgp, randModeVarp, 1};
+                if (constrCopyp->itemsp()) {
+                    setupTaskp->addStmtsp(constrCopyp->itemsp()->unlinkFrBackWithNext());
                 }
-                ConstraintExprVisitor{constrp->itemsp(), setupTaskp, genArgp, randModeVarp, 1};
-                if (constrp->itemsp()) {
-                    setupTaskp->addStmtsp(constrp->itemsp()->unlinkFrBackWithNext());
-                }
+                constrCopyp->deleteTree();
             }
             for (auto varp : m_constrainedVars[nodep]) addWriteVar(varp, 1, genp, randomizep);
             AstTask* const setupTaskp = VN_AS(constrp->user2p(), Task);

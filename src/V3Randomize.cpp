@@ -1150,6 +1150,7 @@ class RandomizeVisitor final : public VNVisitor {
         randomizeFuncp->addStmtsp(methodp->makeStmt());
     }
     void fillConstrainedSetRecurse(AstNode* const nodep, std::set<AstVar*>& constrainedVars) {
+        if (VN_IS(nodep, NodeExpr) && !nodep->user1()) return;
         if (AstVarRef* const varRefp = VN_CAST(nodep, VarRef)) {
             AstVar* const varp = varRefp->varp();
             if (varRefp->user1() || varp->user1()) constrainedVars.insert(varp);

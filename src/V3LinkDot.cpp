@@ -3298,7 +3298,9 @@ class LinkDotResolveVisitor final : public VNVisitor {
         }
 
         if (nodep->name() == "local::") {
-            if (!m_randSymp) {
+            if (!m_randSymp && !m_ds.m_unresolvedClass) {
+                // m_randSymp is not set in the 1st pass of V3LinkDot
+                // if randomize is called on a parameterized class
                 nodep->v3error("Illegal 'local::' outside 'randomize() with'"
                                " (IEEE 1800-2023 18.7.1)");
                 m_ds.m_dotErr = true;

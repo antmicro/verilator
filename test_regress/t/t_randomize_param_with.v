@@ -31,15 +31,17 @@ endclass
 module t;
    initial begin
       Cls#() cd = new;
+      int y = 1;
       Cls#(5) c5 = new;
 
       `check_rand(cd, cd.x, x > 0, cd.x > 0 && cd.x <= 3);
       `check_rand(cd, cd.x, x > y, cd.x > -100 && cd.x <= 3);
+      `check_rand(cd, cd.x, x > local::y, cd.x > 1 && cd.x <= 3);
       if (cd.randomize() with {x > 3;} == 1) $stop;
 
       `check_rand(c5, c5.x, x > 0, c5.x > 0 && c5.x <= 5);
       `check_rand(c5, c5.x, x > y, c5.x > -100 && c5.x <= 5);
-      if (c5.randomize() with {x >= 5;} == 0) $stop;
+      `check_rand(c5, c5.x, x > local::y, c5.x > 1 && c5.x <= 5);
       if (c5.x != 5) $stop;
 
       $write("*-* All Finished *-*\n");

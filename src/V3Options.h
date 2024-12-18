@@ -315,6 +315,7 @@ private:
     int         m_expandLimit = 64;  // main switch: --expand-limit
     int         m_gateStmts = 100;    // main switch: --gate-stmts
     int         m_hierChild = 0;      // main switch: --hierarchical-child
+    int         m_hierThreads = 1; // main switch: --hierarchical-threads
     int         m_ifDepth = 0;      // main switch: --if-depth
     int         m_inlineMult = 2000;   // main switch: --inline-mult
     int         m_instrCountDpi = 200;   // main switch: --instr-count-dpi
@@ -731,6 +732,7 @@ public:
 
     bool hierarchical() const { return m_hierarchical; }
     int hierChild() const VL_MT_SAFE { return m_hierChild; }
+    int hierThreads() const VL_MT_SAFE { return m_hierThreads; }
     bool hierTop() const VL_MT_SAFE { return !m_hierChild && !m_hierBlocks.empty(); }
     const V3HierBlockOptSet& hierBlocks() const { return m_hierBlocks; }
     // Directory to save .tree, .dot, .dat, .vpp for hierarchical block top

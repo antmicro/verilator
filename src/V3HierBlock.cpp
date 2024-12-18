@@ -188,6 +188,8 @@ V3StringList V3HierBlock::commandArgs(bool forCMake) const {
     if (!params().gTypeParams().empty())
         opts.push_back(" --hierarchical-params-file " + typeParametersFilename());
 
+    if (!hasParent()) opts.push_back(" --threads " + std::to_string(v3Global.opt.hierThreads()));
+
     return opts;
 }
 

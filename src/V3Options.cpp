@@ -1379,6 +1379,13 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc,
         m_hierBlocks.emplace(opt.mangledName(), opt);
     });
     DECL_OPTION("-hierarchical-child", Set, &m_hierChild);
+    DECL_OPTION("-hierarchical-threads", CbVal, [this, fl](const char* valp) {
+        m_hierThreads = std::atoi(valp);
+        if (m_hierThreads < 0) fl->v3fatal("--hierarchical-threads must be >= 0: " << valp);
+        if (m_hierThreads == 0) m_hierThreads = 1;
+        if (m_hierThreads > m_threads)
+            fl->v3fatal("--hierarchical-threads must be <= threads: " << valp);
+    });
     DECL_OPTION("-hierarchical-params-file", CbVal,
                 [this](const char* optp) { m_hierParamsFile = optp; });
 

@@ -636,146 +636,6 @@ public:
     void invalidate() { m_id = 0; }
 };
 
-class VerilatedVpiPutHolder final {
-    VerilatedVpioVar m_var;
-    s_vpi_value m_value;
-    union Storage {
-        char init = 0;  // to ensure trivial constructor
-        std::string str;
-        std::vector<s_vpi_vecval> vec;
-        ~Storage() noexcept {/* handled by VerilatedVpiPutHolder */};
-    } m_storage{};
-
-public:
-    VerilatedVpiPutHolder(const VerilatedVpioVar* vop, p_vpi_value valuep)
-        : m_var{vop} {
-        m_value.format = valuep->format;
-        switch (valuep->format) {
-        case vpiBinStrVal:  // FALLTHRU
-        case vpiOctStrVal:  // FALLTHRU
-        case vpiDecStrVal:  // FALLTHRU
-        case vpiHexStrVal:  // FALLTHRU
-        case vpiStringVal: {
-            new (&m_storage.str) std::string{valuep->value.str};
-            m_value.value.str = const_cast<char*>(m_storage.str.c_str());
-            break;
-        }
-        case vpiScalarVal: {
-            m_value.value.scalar = valuep->value.scalar;
-            break;
-        }
-        case vpiIntVal: {
-            m_value.value.integer = valuep->value.integer;
-            break;
-        }
-        case vpiRealVal: {
-            m_value.value.real = valuep->value.real;
-            break;
-        }
-        case vpiVectorVal: {
-            size_t words = 0;
-            switch (vop->varp()->vltype()) {
-            case VLVT_UINT8:
-            case VLVT_UINT16:
-            case VLVT_UINT32: {
-                words = 1;
-                break;
-            }
-            case VLVT_UINT64: {
-                words = 2;
-                break;
-            }
-            case VLVT_WDATA: {
-                words = VL_WORDS_I(vop->varp()->packed().elements());
-                break;
-            }
-            default: break;
-            }
-            new (&m_storage.vec)
-                std::vector<s_vpi_vecval>{valuep->value.vector, &valuep->value.vector[words]};
-            m_value.value.vector = m_storage.vec.data();
-            break;
-        }
-        }
-    }
-
-    VerilatedVpiPutHolder(VerilatedVpiPutHolder const& o)
-        : m_var{o.m_var}
-        , m_value{o.m_value} {
-        switch (m_value.format) {
-        case vpiBinStrVal:  // FALLTHRU
-        case vpiOctStrVal:  // FALLTHRU
-        case vpiDecStrVal:  // FALLTHRU
-        case vpiHexStrVal:  // FALLTHRU
-        case vpiStringVal: {
-            new (&m_storage.str) std::string{o.m_storage.str};
-            break;
-        }
-        case vpiVectorVal: {
-            new (&m_storage.vec) std::vector<s_vpi_vecval>{o.m_storage.vec};
-            break;
-        }
-        }
-    }
-
-    VerilatedVpiPutHolder(VerilatedVpiPutHolder&& o) noexcept
-        : m_var{std::move(o.m_var)}
-        , m_value{std::move(o.m_value)} {
-        switch (m_value.format) {
-        case vpiBinStrVal:  // FALLTHRU
-        case vpiOctStrVal:  // FALLTHRU
-        case vpiDecStrVal:  // FALLTHRU
-        case vpiHexStrVal:  // FALLTHRU
-        case vpiStringVal: {
-            new (&m_storage.str) std::string{std::move(o.m_storage.str)};
-            break;
-        }
-        case vpiVectorVal: {
-            new (&m_storage.vec) std::vector<s_vpi_vecval>{std::move(o.m_storage.vec)};
-            break;
-        }
-        }
-    }
-
-    ~VerilatedVpiPutHolder() noexcept {
-        switch (m_value.format) {
-        case vpiBinStrVal:  // FALLTHRU
-        case vpiOctStrVal:  // FALLTHRU
-        case vpiDecStrVal:  // FALLTHRU
-        case vpiHexStrVal:  // FALLTHRU
-        case vpiStringVal: m_storage.str.~basic_string(); break;
-        case vpiVectorVal: m_storage.vec.~vector(); break;
-        }
-    }
-
-    VerilatedVpioVar* varp() { return &m_var; }
-    p_vpi_value valuep() { return &m_value; }
-
-    static bool canInertialDelay(p_vpi_value valuep) {
-        switch (valuep->format) {
-        case vpiBinStrVal:  // FALLTHRU
-        case vpiOctStrVal:  // FALLTHRU
-        case vpiDecStrVal:  // FALLTHRU
-        case vpiHexStrVal:  // FALLTHRU
-        case vpiStringVal: {
-            if (VL_UNLIKELY(!valuep->value.str)) return false;
-            break;
-        }
-        case vpiScalarVal:  // FALLTHRU
-        case vpiIntVal:  // FALLTHRU
-        case vpiRealVal: break;
-        case vpiVectorVal: {
-            if (VL_UNLIKELY(!valuep->value.vector)) return false;
-            break;
-        }
-        default: {
-            return false;
-        }
-        }
-        return true;
-    }
-};
-
 struct VerilatedVpiTimedCbsCmp final {
     // Ordering sets keyed by time, then callback unique id
     bool operator()(const std::pair<QData, uint64_t>& a,
@@ -798,7 +658,6 @@ class VerilatedVpiImp final {
     std::array<VpioCbList, CB_ENUM_MAX_VALUE> m_cbCurrentLists;
     VpioFutureCbs m_futureCbs;  // Time based callbacks for future timestamps
     VpioFutureCbs m_nextCbs;  // cbNextSimTime callbacks
-    std::list<VerilatedVpiPutHolder> m_inertialPuts;  // Pending vpi puts due to vpiInertialDelay
     VerilatedVpiError* m_errorInfop = nullptr;  // Container for vpi error info
     VerilatedAssertOneThread m_assertOne;  // Assert only called from single thread
     uint64_t m_nextCallbackId = 1;  // Id to identify callback
@@ -964,17 +823,8 @@ public:
     }
     static void dumpCbs() VL_MT_UNSAFE_ONE;
     static VerilatedVpiError* error_info() VL_MT_UNSAFE_ONE;  // getter for vpi error info
-    static bool evalNeeded() { return s().m_evalNeeded; }
     static void evalNeeded(bool evalNeeded) { s().m_evalNeeded = evalNeeded; }
-    static void inertialDelay(const VerilatedVpioVar* vop, p_vpi_value valuep) {
-        s().m_inertialPuts.emplace_back(vop, valuep);
-    }
-    static void doInertialPuts() {
-        for (auto& it : s().m_inertialPuts) {
-            vpi_put_value(it.varp()->castVpiHandle(), it.valuep(), nullptr, vpiNoDelay);
-        }
-        s().m_inertialPuts.clear();
-    }
+    static bool evalNeeded() { return s().m_evalNeeded; }
 };
 
 //======================================================================
@@ -1083,8 +933,6 @@ PLI_INT32 VerilatedVpioReasonCb::dovpi_remove_cb() {
 
 void VerilatedVpi::clearEvalNeeded() VL_MT_UNSAFE_ONE { VerilatedVpiImp::evalNeeded(false); }
 bool VerilatedVpi::evalNeeded() VL_MT_UNSAFE_ONE { return VerilatedVpiImp::evalNeeded(); }
-
-void VerilatedVpi::doInertialPuts() VL_MT_UNSAFE_ONE { VerilatedVpiImp::doInertialPuts(); }
 
 //======================================================================
 // VerilatedVpiImp implementation
@@ -2572,7 +2420,7 @@ void vpi_get_value(vpiHandle object, p_vpi_value valuep) {
 }
 
 vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_p*/,
-                        PLI_INT32 flags) {
+                        PLI_INT32 /*flags*/) {
     VL_DEBUG_IF_PLI(VL_DBG_MSGF("- vpi: vpi_put_value %p %p\n", object, valuep););
     VerilatedVpiImp::assertOneCheck();
     VL_VPI_ERROR_RESET_();
@@ -2580,19 +2428,7 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
         VL_VPI_WARNING_(__FILE__, __LINE__, "Ignoring vpi_put_value with nullptr value pointer");
         return nullptr;
     }
-    PLI_INT32 delay_mode = flags & 0xfff;
     if (const VerilatedVpioVar* const vop = VerilatedVpioVar::castp(object)) {
-        if (delay_mode == vpiInertialDelay) {
-            if (!VerilatedVpiPutHolder::canInertialDelay(valuep)) {
-                VL_VPI_WARNING_(
-                    __FILE__, __LINE__,
-                    "%s: Unsupported p_vpi_value as requested for '%s' with vpiInertialDelay",
-                    __func__, vop->fullname());
-                return nullptr;
-            }
-            VerilatedVpiImp::inertialDelay(vop, valuep);
-            return object;
-        }
         VL_DEBUG_IF_PLI(
             VL_DBG_MSGF("- vpi:   vpi_put_value name=%s fmt=%d vali=%d\n", vop->fullname(),
                         valuep->format, valuep->value.integer);

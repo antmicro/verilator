@@ -676,49 +676,6 @@ int _mon_check_quad() {
     return 0;
 }
 
-int _mon_check_delayed() {
-    TestVpiHandle vh = VPI_HANDLE("delayed");
-    CHECK_RESULT_NZ(vh);
-
-    s_vpi_time t;
-    t.type = vpiSimTime;
-    t.high = 0;
-    t.low = 0;
-
-    s_vpi_value v;
-    v.format = vpiIntVal;
-    v.value.integer = 123;
-    vpi_put_value(vh, &v, &t, vpiInertialDelay);
-    CHECK_RESULT_Z(vpi_chk_error(nullptr));
-    vpi_get_value(vh, &v);
-    CHECK_RESULT(v.value.integer, 0);
-
-    TestVpiHandle vhMem = VPI_HANDLE("delayed_mem");
-    CHECK_RESULT_NZ(vhMem);
-    TestVpiHandle vhMemWord = vpi_handle_by_index(vhMem, 7);
-    CHECK_RESULT_NZ(vhMemWord);
-    v.value.integer = 456;
-    vpi_put_value(vhMemWord, &v, &t, vpiInertialDelay);
-    CHECK_RESULT_Z(vpi_chk_error(nullptr));
-
-    // test unsupported vpiInertialDelay cases
-    v.format = vpiStringVal;
-    v.value.str = nullptr;
-    vpi_put_value(vh, &v, &t, vpiInertialDelay);
-    CHECK_RESULT_NZ(vpi_chk_error(nullptr));
-
-    v.format = vpiVectorVal;
-    v.value.vector = nullptr;
-    vpi_put_value(vh, &v, &t, vpiInertialDelay);
-    CHECK_RESULT_NZ(vpi_chk_error(nullptr));
-
-    v.format = vpiObjTypeVal;
-    vpi_put_value(vh, &v, &t, vpiInertialDelay);
-    CHECK_RESULT_NZ(vpi_chk_error(nullptr));
-
-    return 0;
-}
-
 int _mon_check_string() {
     static struct {
         const char* name;
@@ -927,8 +884,6 @@ extern "C" int mon_check() {
     if (int status = _mon_check_string()) return status;
     if (int status = _mon_check_putget_str(NULL)) return status;
     if (int status = _mon_check_vlog_info()) return status;
-    if (int status = _mon_check_delayed()) return status;
-    if (int status = _mon_check_too_big()) return status;
 #ifndef IS_VPI
     VerilatedVpi::selfTest();
 #endif
@@ -998,7 +953,6 @@ int main(int argc, char** argv) {
 
     while (vl_time_stamp64() < sim_time && !contextp->gotFinish()) {
         main_time += 1;
-        VerilatedVpi::doInertialPuts();
         topp->eval();
         VerilatedVpi::callValueCbs();
         topp->clk = !topp->clk;

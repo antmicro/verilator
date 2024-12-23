@@ -486,6 +486,10 @@ void V3PreProcImp::comment(const string& text) {
             //}
             // else ignore the comment we don't recognize
         }  // else no assertions
+        else if (VString::startsWith(cmd, "coverage off")
+                 || VString::startsWith(cmd, "coverage on")) {
+            if (!printed) insertUnreadback("/*pragma " + cmd + "*/");
+        }
     } else if (vlcomment) {
         if (VString::startsWith(cmd, "public_flat_rw")) {
             // "/*verilator public_flat_rw @(foo) */" -> "/*verilator public_flat_rw*/ @(foo)"

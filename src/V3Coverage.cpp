@@ -220,6 +220,11 @@ class CoverageVisitor final : public VNVisitor {
         }
         iterateChildren(nodep);
     }
+    void visit(AstFunc* nodep) override {
+        VL_RESTORER(m_state);
+        m_state.m_on = false;
+        iterateChildren(nodep);
+    }
 
     void visit(AstNodeProcedure* nodep) override { iterateProcedure(nodep); }
     void visit(AstWhile* nodep) override { iterateProcedure(nodep); }
@@ -405,10 +410,10 @@ class CoverageVisitor final : public VNVisitor {
     void visit(AstCond* nodep) override {
         UINFO(4, " COND: " << nodep << endl);
 
+        if (!m_state.m_on) { return; }
+
         // Current method cannot run coverage for impure statements
-        if (!nodep->condp()->isPure()) {
-            return;
-        }
+        if (!nodep->condp()->isPure()) { return; }
 
         auto fakeIf = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
         FileLine* newFl = new FileLine{nodep->fileline()};

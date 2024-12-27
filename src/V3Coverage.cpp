@@ -220,6 +220,11 @@ class CoverageVisitor final : public VNVisitor {
         }
         iterateChildren(nodep);
     }
+    void visit(AstFunc* nodep) override {
+        VL_RESTORER(m_state);
+        m_state.m_on = false;
+        iterateChildren(nodep);
+    }
 
     void visit(AstNodeProcedure* nodep) override { iterateProcedure(nodep); }
     void visit(AstWhile* nodep) override { iterateProcedure(nodep); }
@@ -404,6 +409,10 @@ class CoverageVisitor final : public VNVisitor {
     // VISITORS - LINE COVERAGE
     void visit(AstCond* nodep) override {
         UINFO(4, " COND: " << nodep << endl);
+
+        if (!m_state.m_on) {
+                return;
+        }
 
         // Current method cannot run coverage for impure statements
         if (!nodep->condp()->isPure()) {

@@ -402,6 +402,21 @@ class CoverageVisitor final : public VNVisitor {
     }
 
     // VISITORS - LINE COVERAGE
+    void visit(AstCond* nodep) override {
+        UINFO(4, " COND: " << nodep << endl);
+
+        // Current method cannot run coverage for impure statements
+        if (!nodep->condp()->isPure()) {
+            return;
+        }
+
+        auto fake_if = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
+        FileLine* newFl = new FileLine{nodep->fileline()};
+        auto always = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fake_if};
+        // Disable coverage for this fake always block
+        newFl->coverageOn(false);
+        m_modp->addStmtsp(always);
+    }
     // Note not AstNodeIf; other types don't get covered
     void visit(AstIf* nodep) override {
         UINFO(4, " IF: " << nodep << endl);

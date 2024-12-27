@@ -410,9 +410,10 @@ class CoverageVisitor final : public VNVisitor {
             return;
         }
 
-        auto fake_if = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
+        auto fakeIf = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
         FileLine* newFl = new FileLine{nodep->fileline()};
-        auto always = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fake_if};
+        auto always = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIf};
+
         // Disable coverage for this fake always block
         newFl->coverageOn(false);
         m_modp->addStmtsp(always);

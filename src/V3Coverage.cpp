@@ -414,10 +414,11 @@ class CoverageVisitor final : public VNVisitor {
 
         iterateChildren(nodep);
 
-        if (!m_state.m_on) { return; }
-
-        // Current method cannot run coverage for impure statements
-        if (!nodep->condp()->isPure()) { return; }
+        if (!m_state.m_on || !nodep->condp()->isPure()) {
+            // Current method cannot run coverage for impure statements
+            lineTrack(nodep);
+            return;
+        }
 
         auto fakeIf = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
         FileLine* newFl = new FileLine{nodep->fileline()};

@@ -223,6 +223,8 @@ class CoverageVisitor final : public VNVisitor {
     void visit(AstFunc* nodep) override {
         VL_RESTORER(m_state);
         m_state.m_on = false;
+        VL_RESTORER(m_inToggleOff);
+        m_inToggleOff = true;
         iterateChildren(nodep);
     }
 

@@ -407,7 +407,7 @@ class CoverageVisitor final : public VNVisitor {
     }
 
     // VISITORS - LINE COVERAGE
-    void visit(AstCond* nodep) override {
+    void visit(AstNodeCond* nodep) override {
         UINFO(4, " COND: " << nodep << endl);
 
         iterateChildren(nodep);

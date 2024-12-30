@@ -410,6 +410,8 @@ class CoverageVisitor final : public VNVisitor {
     void visit(AstCond* nodep) override {
         UINFO(4, " COND: " << nodep << endl);
 
+        iterateChildren(nodep);
+
         if (!m_state.m_on) { return; }
 
         // Current method cannot run coverage for impure statements

@@ -82,6 +82,28 @@ void VlcTop::writeCoverage(const string& filename) {
         os << "C '" << point.name() << "' " << point.count() << '\n';
     }
 }
+std::string getKey(VlcPoint* const point) {
+    std::string comment = point->comment().substr(0, point->comment().find("="));
+    if (comment.find("toggle") != std::string::npos) {
+        return comment;
+    } else {
+        return std::to_string(point->lineno()) + std::to_string(point->column());
+    }
+}
+void processPoints(VlcSourceCount& sc) {
+    std::map<std::string, VlcPoint*> pointsMap;
+    std::set<VlcPoint*> toErase;
+    for (auto& point : sc.points()) {
+        std::string key = getKey(point);
+        if (pointsMap.find(key) == pointsMap.end()) {
+            pointsMap[key] = point;
+        } else {
+            pointsMap[key]->countInc(point->count());
+            toErase.insert(point);
+        }
+    }
+    for (auto& point : toErase) { sc.points().erase(point); }
+}
 
 void VlcTop::writeInfo(const string& filename) {
     UINFO(2, "writeInfo " << filename);
@@ -122,15 +144,64 @@ void VlcTop::writeInfo(const string& filename) {
         int branchesHit = 0;
         for (auto& li : lines) {
             VlcSourceCount& sc = li.second;
+            processPoints(sc);
             os << "DA:" << sc.lineno() << "," << sc.maxCount() << "\n";
             int num_branches = sc.points().size();
             if (num_branches == 1) continue;
             branchesFound += num_branches;
             int point_num = 0;
-            for (const auto& point : sc.points()) {
+            std::vector<VlcPoint*> sortedPoints(sc.points().begin(), sc.points().end());
+            struct PointCmp {
+                static int getIndexLength(const std::string& s) {
+                    int indexLength = 0;
+                    while (std::isdigit(s[s.size() - 1 - indexLength])) { indexLength++; }
+                    return indexLength;
+                }
+                static int compareStrippedRecurse(const string& s1, const string& s2) {
+                    int indexLength1 = getIndexLength(s1);
+                    int indexLength2 = getIndexLength(s2);
+                    if (indexLength1 == 0 || indexLength2 == 0
+                        || s1[s1.size() - indexLength1 - 1] != '_'
+                        || s2[s2.size() - indexLength2 - 1] != '_') {
+                        // at least one of them is not array variable
+                        // compare strings in such a case
+                        return s1.compare(s2);
+                    }
+                    const std::string s1WithoutIndex = s1.substr(0, s1.size() - indexLength1 - 1);
+                    const std::string s2WithoutIndex = s2.substr(0, s2.size() - indexLength2 - 1);
+                    int cmpStripped = compareStrippedRecurse(s1WithoutIndex, s2WithoutIndex);
+                    if (cmpStripped == 0) {
+                        const int index1 = std::stoi(s1.substr(s1.size() - indexLength1));
+                        const int index2 = std::stoi(s2.substr(s2.size() - indexLength2));
+                        return (index1 < index2) ? -1 : ((index1 == index2) ? 0 : 1);
+                    } else {
+                        return cmpStripped;
+                    }
+                }
+                bool operator()(const VlcPoint* a, const VlcPoint* b) const {
+                    if (a->comment().rfind("toggle", 0) != 0) {
+                        // not toggle coverage, compare pointers
+                        return a < b;
+                    }
+                    const std::string aStripped = a->commentStripped();
+                    const std::string bStripped = b->commentStripped();
+                    return compareStrippedRecurse(aStripped, bStripped) < 0;
+                }
+            };
+            std::sort(sortedPoints.begin(), sortedPoints.end(), PointCmp());
+
+            for (const auto& point : sortedPoints) {
                 os << "BRDA:" << sc.lineno() << ",";
-                os << "0,";
                 os << point_num << ",";
+                const string cmt = point->commentStripped();
+
+                if (cmt.rfind("toggle_", 0) != 0) {
+                    std::string typeStr = cmt.substr(0, cmt.find("_"));
+                    os << typeStr << "_" << point_num;
+                } else {
+                    os << cmt;
+                }
+                os << ",";
                 os << point->count() << "\n";
 
                 branchesHit += opt.countOk(point->count());
@@ -210,7 +281,7 @@ void VlcTop::rank() {
 void VlcTop::annotateCalc() {
     // Calculate per-line information into filedata structure
     for (const auto& i : m_points) {
-        const VlcPoint& point = m_points.pointNumber(i.second);
+        VlcPoint& point = m_points.pointNumber(i.second);
         const string filename = point.filename();
         const int lineno = point.lineno();
         if (!filename.empty() && lineno != 0) {

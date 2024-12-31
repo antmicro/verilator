@@ -35,7 +35,7 @@ class VlcPoint;
 
 class VlcSourceCount final {
     // TYPES
-    using PointsSet = std::set<const VlcPoint*>;
+    using PointsSet = std::set<VlcPoint*>;
 
     // MEMBERS
     const int m_lineno;  ///< Line number
@@ -55,12 +55,12 @@ public:
     uint64_t minCount() const { return m_minCount; }
 
     // METHODS
-    void insertPoint(const VlcPoint* pointp) {
+    void insertPoint(VlcPoint* pointp) {
         m_maxCount = std::max(m_maxCount, pointp->count());
         m_minCount = std::min(m_minCount, pointp->count());
         m_points.emplace(pointp);
     }
-    const PointsSet& points() { return m_points; }
+    PointsSet& points() { return m_points; }
 };
 
 //********************************************************************
@@ -90,7 +90,7 @@ public:
     LinenoMap& lines() { return m_lines; }
 
     // METHODS
-    void insertPoint(int lineno, const VlcPoint* pointp) {
+    void insertPoint(int lineno, VlcPoint* pointp) {
         VlcSourceCount& sc = m_lines.emplace(lineno, lineno).first->second;
         sc.insertPoint(pointp);
     }

@@ -299,7 +299,7 @@ class CoverageVisitor final : public VNVisitor {
 
     void toggleVarBottom(const ToggleEnt& above, const AstVar* varp) {
         char comment[100];
-        snprintf(comment, 100, "toggle_%p_", m_modp);
+        snprintf(comment, 100, "toggle_%pZ_", m_modp);
         AstCoverToggle* const newp = new AstCoverToggle{
             varp->fileline(),
             newCoverInc(varp->fileline(), "", "v_toggle", string(comment) + varp->name() + above.m_comment, "", 0,
@@ -434,11 +434,11 @@ class CoverageVisitor final : public VNVisitor {
     void visit(AstIf* nodep) override {
         UINFO(4, " IF: " << nodep << endl);
         char comment_if[100];
-        snprintf(comment_if, 100, "if_%p", m_modp);
+        snprintf(comment_if, 100, "if_%pZ", m_modp);
         char comment_else[100];
-        snprintf(comment_else, 100, "else_%p", m_modp);
+        snprintf(comment_else, 100, "else_%pZ", m_modp);
         char comment_elsif[100];
-        snprintf(comment_elsif, 100, "elsif_%p", m_modp);
+        snprintf(comment_elsif, 100, "elsif_%pZ", m_modp);
         if (m_state.m_on) {
             // An else-if.  When we iterate the if, use "elsif" marking
             const bool elsif
@@ -518,7 +518,7 @@ class CoverageVisitor final : public VNVisitor {
         // We don't add an explicit "default" coverage if not provided,
         // as we already have a warning when there is no default.
         char comment[100];
-        snprintf(comment, 100, "case_%p", m_modp);
+        snprintf(comment, 100, "case_%pZ", m_modp);
         UINFO(4, " CASEI: " << nodep << endl);
         if (m_state.lineCoverageOn(nodep)) {
             VL_RESTORER(m_state);

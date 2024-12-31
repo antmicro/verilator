@@ -127,7 +127,8 @@ void VlcTop::writeInfo(const string& filename) {
             int point_num = 0;
             for (const auto& point : sc.points()) {
                 os << "BRDA:" << sc.lineno() << ",";
-                os << point->comment() << ",";
+                os << "0,";
+                os << point->comment() << "_";
                 os << point_num << ",";
                 os << point->count() << "\n";
 

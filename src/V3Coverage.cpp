@@ -515,8 +515,11 @@ class CoverageVisitor final : public VNVisitor {
             createHandle(nodep);
             iterateAndNextNull(nodep->stmtsp());
             if (m_state.lineCoverageOn(nodep)) {  // if the case body didn't disable it
-                lineTrack(nodep);
                 UINFO(4, "   COVER: " << nodep << endl);
+                nodep->addStmtsp(newCoverInc(nodep->fileline(), "", "v_branch", "case",
+                                             linesCov(m_state, nodep), 1,
+                                             traceNameForLine(nodep, "case")));
+                lineTrack(nodep);
                 nodep->addStmtsp(newCoverInc(nodep->fileline(), "", "v_line", "case",
                                              linesCov(m_state, nodep), 0,
                                              traceNameForLine(nodep, "case")));

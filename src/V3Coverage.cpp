@@ -395,11 +395,13 @@ class CoverageVisitor final : public VNVisitor {
     }
 
     void toggleVarBottom(const ToggleEnt& above, const AstVar* varp, const VNumRange& range) {
+        char comment[100];
+        snprintf(comment, 100, "toggle_%pZ_", m_modp);
         const std::string hierPrefix
             = (m_beginHier != "") ? AstNode::prettyName(m_beginHier) + "." : "";
-        AstCoverToggleDecl* const declp
-            = new AstCoverToggleDecl{varp->fileline(), "v_toggle/" + m_modp->prettyName(),
-                                     hierPrefix + varp->name() + above.m_comment, range};
+        AstCoverToggleDecl* const declp = new AstCoverToggleDecl{
+            varp->fileline(), "v_toggle/" + m_modp->prettyName(),
+            hierPrefix + string(comment) + varp->name() + above.m_comment, range};
         m_modp->addStmtsp(declp);
         AstCoverToggle* const newp = new AstCoverToggle{
             varp->fileline(), newCoverInc(varp->fileline(), declp, ""),
@@ -548,6 +550,22 @@ class CoverageVisitor final : public VNVisitor {
         } else {
             lineTrack(nodep);
         }
+
+        iterateChildren(nodep);
+
+        if (!m_state.m_on || !nodep->condp()->isPure()) {
+            // Current method cannot run coverage for impure statements
+            lineTrack(nodep);
+            return;
+        }
+
+        auto fakeIf = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
+        FileLine* newFl = new FileLine{nodep->fileline()};
+        auto always = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIf};
+
+        // Disable coverage for this fake always block
+        newFl->coverageOn(false);
+        m_modp->addStmtsp(always);
     }
     // Note not AstNodeIf; other types don't get covered
     void visit(AstIf* nodep) override {
@@ -674,6 +692,12 @@ class CoverageVisitor final : public VNVisitor {
                 m_modp->addStmtsp(declp);
                 nodep->addStmtsp(
                     newCoverInc(nodep->fileline(), declp, traceNameForLine(nodep, "case")));
+                AstCoverOtherDecl* const declBranchp
+                    = new AstCoverOtherDecl{nodep->fileline(), "v_branch/" + m_modp->prettyName(),
+                                            "case", linesCov(m_state, nodep), 1};
+                m_modp->addStmtsp(declBranchp);
+                nodep->addStmtsp(
+                    newCoverInc(nodep->fileline(), declBranchp, traceNameForLine(nodep, "case")));
             }
         }
     }

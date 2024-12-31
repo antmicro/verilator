@@ -129,7 +129,11 @@ void VlcTop::writeInfo(const string& filename) {
             int point_num = 0;
             for (const auto& point : sc.points()) {
                 os << "BRDA:" << sc.lineno() << ",";
-                os << "0,";
+                if (point->comment() == "case") {
+                    os << "42,";
+                } else {
+                    os << "0,";
+                }
                 os << point_num << ",";
                 os << point->count() << "\n";
 

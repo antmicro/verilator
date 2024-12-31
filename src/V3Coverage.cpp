@@ -299,10 +299,10 @@ class CoverageVisitor final : public VNVisitor {
 
     void toggleVarBottom(const ToggleEnt& above, const AstVar* varp) {
         char comment[100];
-        snprintf(comment, 100, "toggle_%p", m_modp);
+        snprintf(comment, 100, "toggle_%p_", m_modp);
         AstCoverToggle* const newp = new AstCoverToggle{
             varp->fileline(),
-            newCoverInc(varp->fileline(), "", "v_toggle", comment, "", 0,
+            newCoverInc(varp->fileline(), "", "v_toggle", string(comment) + varp->name() + above.m_comment, "", 0,
                         ""),
             above.m_varRefp->cloneTree(true), above.m_chgRefp->cloneTree(true)};
         m_modp->addStmtsp(newp);
@@ -526,10 +526,10 @@ class CoverageVisitor final : public VNVisitor {
             iterateAndNextNull(nodep->stmtsp());
             if (m_state.lineCoverageOn(nodep)) {  // if the case body didn't disable it
                 UINFO(4, "   COVER: " << nodep << endl);
-                lineTrack(nodep);
                 nodep->addStmtsp(newCoverInc(nodep->fileline(), "", "v_branch", comment,
                                              linesCov(m_state, nodep), 1,
                                              traceNameForLine(nodep, "case")));
+                lineTrack(nodep);
                 nodep->addStmtsp(newCoverInc(nodep->fileline(), "", "v_line", comment,
                                              linesCov(m_state, nodep), 0,
                                              traceNameForLine(nodep, "case")));

@@ -302,8 +302,8 @@ class CoverageVisitor final : public VNVisitor {
         snprintf(comment, 100, "toggle_%pZ_", m_modp);
         AstCoverToggle* const newp = new AstCoverToggle{
             varp->fileline(),
-            newCoverInc(varp->fileline(), "", "v_toggle", string(comment) + varp->name() + above.m_comment, "", 0,
-                        ""),
+            newCoverInc(varp->fileline(), "", "v_toggle",
+                        string(comment) + varp->name() + above.m_comment, "", 0, ""),
             above.m_varRefp->cloneTree(true), above.m_chgRefp->cloneTree(true)};
         m_modp->addStmtsp(newp);
     }

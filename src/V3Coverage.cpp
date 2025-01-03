@@ -234,6 +234,8 @@ class CoverageVisitor final : public VNVisitor {
         if (!nodep->dpiImport()) iterateProcedure(nodep);
     }
     void iterateProcedure(AstNode* nodep) {
+        char comment[100];
+        snprintf(comment, 100, "block_%pZ", m_modp);
         VL_RESTORER(m_state);
         VL_RESTORER(m_inToggleOff);
         m_inToggleOff = true;
@@ -242,7 +244,7 @@ class CoverageVisitor final : public VNVisitor {
         if (m_state.lineCoverageOn(nodep)) {
             lineTrack(nodep);
             AstNode* const newp
-                = newCoverInc(nodep->fileline(), "", "v_line", "block", linesCov(m_state, nodep),
+                = newCoverInc(nodep->fileline(), "", "v_line", comment, linesCov(m_state, nodep),
                               0, traceNameForLine(nodep, "block"));
             if (AstNodeProcedure* const itemp = VN_CAST(nodep, NodeProcedure)) {
                 itemp->addStmtsp(newp);
@@ -538,6 +540,8 @@ class CoverageVisitor final : public VNVisitor {
     }
     void visit(AstCover* nodep) override {
         UINFO(4, " COVER: " << nodep << endl);
+        char comment[100];
+        snprintf(comment, 100, "cover_%pZ", m_modp);
         VL_RESTORER(m_state);
         m_state.m_on = true;  // Always do cover blocks, even if there's a $stop
         createHandle(nodep);
@@ -545,7 +549,7 @@ class CoverageVisitor final : public VNVisitor {
         if (!nodep->coverincsp() && v3Global.opt.coverageUser()) {
             // Note the name may be overridden by V3Assert processing
             lineTrack(nodep);
-            nodep->addCoverincsp(newCoverInc(nodep->fileline(), m_beginHier, "v_user", "cover",
+            nodep->addCoverincsp(newCoverInc(nodep->fileline(), m_beginHier, "v_user", comment,
                                              linesCov(m_state, nodep), 0,
                                              m_beginHier + "_vlCoverageUserTrace"));
         }

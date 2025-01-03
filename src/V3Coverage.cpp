@@ -334,6 +334,8 @@ class CoverageVisitor final : public VNVisitor {
         }
     }
     void iterateProcedure(AstNode* nodep) {
+        char comment[100];
+        snprintf(comment, 100, "block_%pZ", m_modp);
         VL_RESTORER(m_state);
         VL_RESTORER(m_exprStmtsp);
         VL_RESTORER(m_inToggleOff);
@@ -345,7 +347,7 @@ class CoverageVisitor final : public VNVisitor {
             lineTrack(nodep);
             AstCoverOtherDecl* const declp
                 = new AstCoverOtherDecl{nodep->fileline(), "v_line/" + m_modp->prettyName(),
-                                        "block", linesCov(m_state, nodep), 0};
+                                        comment, linesCov(m_state, nodep), 0};
             m_modp->addStmtsp(declp);
             AstNode* const newp
                 = newCoverInc(nodep->fileline(), declp, traceNameForLine(nodep, "block"));
@@ -703,6 +705,8 @@ class CoverageVisitor final : public VNVisitor {
     }
     void visit(AstCover* nodep) override {
         UINFO(4, " COVER: " << nodep);
+        char comment[100];
+        snprintf(comment, 100, "cover_%pZ", m_modp);
         VL_RESTORER(m_state);
         m_state.m_on = true;  // Always do cover blocks, even if there's a $stop
         createHandle(nodep);
@@ -712,7 +716,7 @@ class CoverageVisitor final : public VNVisitor {
             lineTrack(nodep);
             AstCoverOtherDecl* const declp
                 = new AstCoverOtherDecl{nodep->fileline(), "v_user/" + m_modp->prettyName(),
-                                        "cover", linesCov(m_state, nodep), 0};
+                                        comment, linesCov(m_state, nodep), 0};
             declp->hier(m_beginHier);
             m_modp->addStmtsp(declp);
             nodep->addCoverincsp(

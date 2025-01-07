@@ -2889,7 +2889,8 @@ int AstCMethodHard::instrCount() const {
     return 0;
 }
 void AstCMethodHard::setPurity() {
-    static const std::map<std::string, bool> isPureMethod{{"andNot", false},
+    static const std::map<std::string, bool> isPureMethod{{"add_solve_before", false},
+                                                          {"andNot", false},
                                                           {"any", true},
                                                           {"anyTriggered", false},
                                                           {"assign", false},

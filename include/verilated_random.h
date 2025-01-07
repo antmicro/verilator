@@ -182,6 +182,8 @@ class VlRandomizer final {
     std::vector<std::string> m_constraints;  // Solver-dependent constraints
     std::map<std::string, std::shared_ptr<const VlRandomVar>> m_vars;  // Solver-dependent
                                                                        // variables
+    std::vector<std::pair<std::string, std::string>> m_solveBefores;  // solve..before rules
+                                                                      // solve 1st begore 2nd
     ArrayInfoMap m_arr_vars;  // Tracks each element in array structures for iteration
     std::map<size_t, std::string> seen_values;  // Record String Index to avoid conflicts
     const VlQueue<CData>* m_randmode;  // rand_mode state;
@@ -346,6 +348,9 @@ public:
                 indices.pop_back();
             }
         }
+    }
+    void add_solve_before(std::string first, std::string second) {
+        m_solveBefores.push_back(std::make_pair(first, second));
     }
 
     void hard(std::string&& constraint);

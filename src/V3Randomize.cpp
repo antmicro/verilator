@@ -812,7 +812,15 @@ class ConstraintExprVisitor final : public VNVisitor {
         VL_DO_DANGLING(nodep->deleteTree(), nodep);
     }
     void visit(AstConstraintBefore* nodep) override {
-        nodep->v3warn(CONSTRAINTIGN, "Constraint expression ignored (imperfect distribution)");
+        iterateChildren(nodep);
+        AstCMethodHard* const methodp = new AstCMethodHard{
+            nodep->fileline(),
+            new AstVarRef{nodep->fileline(), VN_AS(m_genp->user2p(), NodeModule), m_genp,
+                          VAccess::READWRITE},
+            "add_solve_before"};
+        methodp->addPinsp(nodep->lhssp()->unlinkFrBack());
+        methodp->addPinsp(nodep->rhssp()->unlinkFrBack());
+
         VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
     }
     void visit(AstConstraintUnique* nodep) override {

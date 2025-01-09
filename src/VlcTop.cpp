@@ -124,16 +124,14 @@ void VlcTop::writeInfo(const string& filename) {
             int num_branches = sc.points().size();
             if (num_branches == 1) continue;
             branchesFound += num_branches;
-            int point_num = 0;
+            os << "BRDA:" << sc.lineno() << ",";
+            os << "0,0,";
+            int point_count_sum = 0;
             for (const auto& point : sc.points()) {
-                os << "BRDA:" << sc.lineno() << ",";
-                os << "0,";
-                os << point_num << ",";
-                os << point->count() << "\n";
-
+                point_count_sum += point->count();
                 branchesHit += opt.countOk(point->count());
-                ++point_num;
             }
+            os << point_count_sum << "\n";
         }
         os << "BRF:" << branchesFound << '\n';
         os << "BRH:" << branchesHit << '\n';

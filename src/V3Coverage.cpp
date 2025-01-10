@@ -117,7 +117,7 @@ class CoverageVisitor final : public VNVisitor {
 
         AstCoverDecl* const declp = new AstCoverDecl{fl, page, comment, linescov, offset};
         declp->hier(hier);
-        m_modp->addStmtsp(declp);
+        v3Global.rootp()->dollarUnitPkgAddp()->addStmtsp(declp);
         UINFO(9, "new " << declp << endl);
 
         AstCoverInc* const incp = new AstCoverInc{fl, declp};

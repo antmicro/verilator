@@ -499,6 +499,8 @@ void EmitCSyms::emitSymHdr() {
         puts(v3Global.opt.threads() > 1 ? "std::atomic<uint32_t>" : "uint32_t");
         puts(" __Vcoverage[");
         puts(cvtToStr(m_coverBins));
+        puts("], __Vcoverage_indices[");
+        puts(cvtToStr(m_coverBins));
         puts("];\n");
     }
 

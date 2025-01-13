@@ -609,8 +609,7 @@ public:
     void visit(AstCoverDecl* nodep) override {
         putns(nodep, "vlSelf->__vlCoverInsert(");  // As Declared in emitCoverageDecl
         puts("&(vlSymsp->__Vcoverage[");
-        std::string key = nodep->modName() + nodep->varName() + " "
-                          + cvtToStr(nodep->dataDeclThisp()->binNum());
+        std::string key = nodep->modName() + nodep->varName();
         if (m_indices.find(key) == m_indices.end()) {
             m_indices[key] = nodep->dataDeclThisp()->binNum();
         }
@@ -640,8 +639,8 @@ public:
         puts(");\n");
     }
     void visit(AstCoverInc* nodep) override {
-        std::string key = nodep->declp()->modName() + nodep->declp()->varName() + " "
-                          + cvtToStr(nodep->declp()->dataDeclThisp()->binNum());
+        std::string key = nodep->declp()->modName() + nodep->declp()->varName();
+        std::cout << std::endl << key << std::endl;
         if (m_indices.find(key) == m_indices.end()) {
             m_indices[key] = nodep->declp()->dataDeclThisp()->binNum();
         }

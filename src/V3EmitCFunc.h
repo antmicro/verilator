@@ -116,6 +116,7 @@ public:
 
 class EmitCFunc VL_NOT_FINAL : public EmitCConstInit {
     VMemberMap m_memberMap;
+    std::map <AstNode*, int> m_indices;
     AstVarRef* m_wideTempRefp = nullptr;  // Variable that _WW macros should be setting
     int m_labelNum = 0;  // Next label number
     bool m_inUC = false;  // Inside an AstUCStmt or AstUCExpr
@@ -608,6 +609,7 @@ public:
     void visit(AstCoverDecl* nodep) override {
         putns(nodep, "vlSelf->__vlCoverInsert(");  // As Declared in emitCoverageDecl
         puts("&(vlSymsp->__Vcoverage[");
+        m_indices[nodep] = nodep->dataDeclThisp()->binNum();
         puts(cvtToStr(nodep->dataDeclThisp()->binNum()));
         puts("])");
         // If this isn't the first instantiation of this module under this
@@ -636,11 +638,11 @@ public:
     void visit(AstCoverInc* nodep) override {
         if (v3Global.opt.threads() > 1) {
             putns(nodep, "vlSymsp->__Vcoverage[");
-            puts(cvtToStr(nodep->declp()->dataDeclThisp()->binNum()));
+            puts(cvtToStr(m_indices[nodep->declp()]));
             puts("].fetch_add(1, std::memory_order_relaxed);\n");
         } else {
             putns(nodep, "++(vlSymsp->__Vcoverage[");
-            puts(cvtToStr(nodep->declp()->dataDeclThisp()->binNum()));
+            puts(cvtToStr(m_indices[nodep->declp()]));
             puts("]);\n");
         }
     }

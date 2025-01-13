@@ -2842,6 +2842,7 @@ class AstCoverDecl final : public AstNodeStmt {
     int m_binNum = 0;  // Set by V3EmitCSyms to tell final V3Emit what to increment
     string m_modName;
     string m_varName;
+
 public:
     AstCoverDecl(FileLine* fl, const string& page, const string& comment, const string& linescov,
                  int offset, const string& mod_name, const string& var_name)

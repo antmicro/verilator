@@ -116,7 +116,7 @@ public:
 
 class EmitCFunc VL_NOT_FINAL : public EmitCConstInit {
     VMemberMap m_memberMap;
-    std::map <AstNode*, int> m_indices;
+    std::map<string, int> m_indices;
     AstVarRef* m_wideTempRefp = nullptr;  // Variable that _WW macros should be setting
     int m_labelNum = 0;  // Next label number
     bool m_inUC = false;  // Inside an AstUCStmt or AstUCExpr
@@ -609,7 +609,11 @@ public:
     void visit(AstCoverDecl* nodep) override {
         putns(nodep, "vlSelf->__vlCoverInsert(");  // As Declared in emitCoverageDecl
         puts("&(vlSymsp->__Vcoverage[");
-        m_indices[nodep] = nodep->dataDeclThisp()->binNum();
+        std::string key = nodep->modName() + nodep->varName() + " "
+                          + cvtToStr(nodep->dataDeclThisp()->binNum());
+        if (m_indices.find(key) == m_indices.end()) {
+            m_indices[key] = nodep->dataDeclThisp()->binNum();
+        }
         puts(cvtToStr(nodep->dataDeclThisp()->binNum()));
         puts("])");
         // If this isn't the first instantiation of this module under this
@@ -636,13 +640,19 @@ public:
         puts(");\n");
     }
     void visit(AstCoverInc* nodep) override {
+        std::string key = nodep->declp()->modName() + nodep->declp()->varName() + " "
+                          + cvtToStr(nodep->declp()->dataDeclThisp()->binNum());
+        if (m_indices.find(key) == m_indices.end()) {
+            m_indices[key] = nodep->declp()->dataDeclThisp()->binNum();
+        }
+
         if (v3Global.opt.threads() > 1) {
             putns(nodep, "vlSymsp->__Vcoverage[");
-            puts(cvtToStr(m_indices[nodep->declp()]));
+            puts(cvtToStr(m_indices[key]));
             puts("].fetch_add(1, std::memory_order_relaxed);\n");
         } else {
             putns(nodep, "++(vlSymsp->__Vcoverage[");
-            puts(cvtToStr(m_indices[nodep->declp()]));
+            puts(cvtToStr(m_indices[key]));
             puts("]);\n");
         }
     }

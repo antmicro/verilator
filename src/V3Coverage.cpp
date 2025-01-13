@@ -117,7 +117,8 @@ class CoverageVisitor final : public VNVisitor {
 
         AstCoverDecl* declp;
         if (AstVar* varp = VN_CAST(nodep, Var)) {
-            declp = new AstCoverDecl{fl, page, comment, linescov, offset, m_modp->origName(), varp->name()};
+            declp = new AstCoverDecl{
+                fl, page, comment, linescov, offset, m_modp->origName(), varp->name()};
         } else {
             declp = new AstCoverDecl{fl, page, comment, linescov, offset, "", ""};
         }

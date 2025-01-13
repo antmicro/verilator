@@ -116,6 +116,7 @@ public:
 
 class EmitCFunc VL_NOT_FINAL : public EmitCConstInit {
     VMemberMap m_memberMap;
+    // std::map <std::string, int> m_indices;
     AstVarRef* m_wideTempRefp = nullptr;  // Variable that _WW macros should be setting
     int m_labelNum = 0;  // Next label number
     bool m_inUC = false;  // Inside an AstUCStmt or AstUCExpr
@@ -606,6 +607,11 @@ public:
         iterateChildrenConst(nodep);
     }
     void visit(AstCoverDecl* nodep) override {
+        puts("vlSymsp->__Vcoverage_indices[");
+        puts(cvtToStr(nodep->dataDeclThisp()->binNum()));
+        puts("] = ");
+        puts(cvtToStr(nodep->dataDeclThisp()->binNum()));
+        puts(";\n");
         putns(nodep, "vlSelf->__vlCoverInsert(");  // As Declared in emitCoverageDecl
         puts("&(vlSymsp->__Vcoverage[");
         puts(cvtToStr(nodep->dataDeclThisp()->binNum()));
@@ -635,13 +641,13 @@ public:
     }
     void visit(AstCoverInc* nodep) override {
         if (v3Global.opt.threads() > 1) {
-            putns(nodep, "vlSymsp->__Vcoverage[");
+            putns(nodep, "vlSymsp->__Vcoverage[vlSymsp->__Vcoverage_indices[");
             puts(cvtToStr(nodep->declp()->dataDeclThisp()->binNum()));
-            puts("].fetch_add(1, std::memory_order_relaxed);\n");
+            puts("]].fetch_add(1, std::memory_order_relaxed);\n");
         } else {
-            putns(nodep, "++(vlSymsp->__Vcoverage[");
+            putns(nodep, "++(vlSymsp->__Vcoverage[vlSymsp->__Vcoverage_indices[");
             puts(cvtToStr(nodep->declp()->dataDeclThisp()->binNum()));
-            puts("]);\n");
+            puts("]]);\n");
         }
     }
     void visit(AstDisableFork* nodep) override { putns(nodep, "vlProcess->disableFork();\n"); }

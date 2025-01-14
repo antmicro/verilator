@@ -305,7 +305,7 @@ class CoverageVisitor final : public VNVisitor {
         }
     }
 
-void toggleVarBottom(const ToggleEnt& above, const AstVar* varp, int index) {
+    void toggleVarBottom(const ToggleEnt& above, const AstVar* varp, int index) {
         char comment[100];
         snprintf(comment, 100, "toggle_%pZ_", m_modp);
         AstCoverToggle* const newp = new AstCoverToggle{

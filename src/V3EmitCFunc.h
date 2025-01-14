@@ -609,10 +609,6 @@ public:
     void visit(AstCoverDecl* nodep) override {
         putns(nodep, "vlSelf->__vlCoverInsert(");  // As Declared in emitCoverageDecl
         puts("&(vlSymsp->__Vcoverage[");
-        std::string key = nodep->modName() + nodep->varName() + cvtToStr(nodep->index());
-        if (m_indices.find(key) == m_indices.end()) {
-            m_indices[key] = nodep->dataDeclThisp()->binNum();
-        }
         puts(cvtToStr(nodep->dataDeclThisp()->binNum()));
         puts("])");
         // If this isn't the first instantiation of this module under this
@@ -639,19 +635,25 @@ public:
         puts(");\n");
     }
     void visit(AstCoverInc* nodep) override {
-        std::string key = nodep->declp()->modName() + nodep->declp()->varName()
-                          + cvtToStr(nodep->declp()->index());
-        if (m_indices.find(key) == m_indices.end()) {
-            m_indices[key] = nodep->declp()->dataDeclThisp()->binNum();
+        int binNum;
+        if (nodep->declp()->varName() != "") {
+            std::string key = nodep->declp()->modName() + nodep->declp()->varName()
+                              + cvtToStr(nodep->declp()->index());
+            if (m_indices.find(key) == m_indices.end()) {
+                m_indices[key] = nodep->declp()->dataDeclThisp()->binNum();
+            }
+            binNum = m_indices[key];
+        } else {
+            binNum = nodep->declp()->dataDeclThisp()->binNum();
         }
 
         if (v3Global.opt.threads() > 1) {
             putns(nodep, "vlSymsp->__Vcoverage[");
-            puts(cvtToStr(m_indices[key]));
+            puts(cvtToStr(binNum));
             puts("].fetch_add(1, std::memory_order_relaxed);\n");
         } else {
             putns(nodep, "++(vlSymsp->__Vcoverage[");
-            puts(cvtToStr(m_indices[key]));
+            puts(cvtToStr(binNum));
             puts("]);\n");
         }
     }

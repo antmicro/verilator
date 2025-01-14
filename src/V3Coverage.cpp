@@ -301,14 +301,14 @@ class CoverageVisitor final : public VNVisitor {
 
     void toggleVarBottom(const ToggleEnt& above, const AstVar* varp, int index) {
         char comment[100];
-        if (index >=0 )
+        if (index >= 0)
             snprintf(comment, 100, "toggle_%p_%dZ_", m_modp, index);
         else
             snprintf(comment, 100, "toggle_%pZ_", m_modp);
         AstCoverToggle* const newp = new AstCoverToggle{
             varp->fileline(),
-            newCoverInc(varp->fileline(), "", "v_toggle", string(comment) + varp->name() + above.m_comment, "", 0,
-                        ""),
+            newCoverInc(varp->fileline(), "", "v_toggle",
+                        string(comment) + varp->name() + above.m_comment, "", 0, ""),
             above.m_varRefp->cloneTree(true), above.m_chgRefp->cloneTree(true)};
         m_modp->addStmtsp(newp);
     }

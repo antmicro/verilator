@@ -299,9 +299,12 @@ class CoverageVisitor final : public VNVisitor {
         }
     }
 
-    void toggleVarBottom(const ToggleEnt& above, const AstVar* varp) {
+    void toggleVarBottom(const ToggleEnt& above, const AstVar* varp, int index) {
         char comment[100];
-        snprintf(comment, 100, "toggle_%pZ_", m_modp);
+        if (index >=0 )
+            snprintf(comment, 100, "toggle_%p_%dZ_", m_modp, index);
+        else
+            snprintf(comment, 100, "toggle_%pZ_", m_modp);
         AstCoverToggle* const newp = new AstCoverToggle{
             varp->fileline(),
             newCoverInc(varp->fileline(), "", "v_toggle", string(comment) + varp->name() + above.m_comment, "", 0,
@@ -322,11 +325,11 @@ class CoverageVisitor final : public VNVisitor {
                                                 index_code, 1},
                                      new AstSel{varp->fileline(), above.m_chgRefp->cloneTree(true),
                                                 index_code, 1}};
-                    toggleVarBottom(newent, varp);
+                    toggleVarBottom(newent, varp, index_docs);
                     newent.cleanup();
                 }
             } else {
-                toggleVarBottom(above, varp);
+                toggleVarBottom(above, varp, -1);
             }
         } else if (const AstUnpackArrayDType* const adtypep = VN_CAST(dtypep, UnpackArrayDType)) {
             for (int index_docs = adtypep->lo(); index_docs <= adtypep->hi(); ++index_docs) {

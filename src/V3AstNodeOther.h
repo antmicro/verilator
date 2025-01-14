@@ -2838,11 +2838,11 @@ class AstCoverDecl final : public AstNodeStmt {
     string m_text;
     string m_hier;
     string m_linescov;
+    string m_modName;
+    string m_varName;
     int m_offset;  // Offset column numbers to uniq-ify IFs
     int m_binNum = 0;  // Set by V3EmitCSyms to tell final V3Emit what to increment
     int m_index;
-    string m_modName;
-    string m_varName;
 
 public:
     AstCoverDecl(FileLine* fl, const string& page, const string& comment, const string& linescov,

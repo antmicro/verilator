@@ -128,8 +128,14 @@ void VlcTop::writeInfo(const string& filename) {
             for (const auto& point : sc.points()) {
                 os << "BRDA:" << sc.lineno() << ",";
                 os << "0,";
-                os << point->comment().substr(0, point->comment().find("Z")) << "_";
-                os << point_num << ",";
+                const string cmt = point->comment().substr(0, point->comment().find("="));
+                size_t u_cnt = std::count_if(cmt.begin(), cmt.end(), []( char c ){return c =='_';});
+                os << cmt;
+                cout << "for comment: " << point->comment() << " cmt: " << cmt << " count is " << u_cnt << "\n";
+                if (u_cnt == 1) {
+                    os << "_" << point_num;
+                }
+                os << ",";
                 os << point->count() << "\n";
 
                 branchesHit += opt.countOk(point->count());

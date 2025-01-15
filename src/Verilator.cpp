@@ -411,9 +411,6 @@ static void process() {
                        "This may cause ordering problems.");
             }
 
-            // Combine COVERINCs with duplicate terms
-            if (v3Global.opt.coverage()) V3CoverageJoin::coverageJoin(v3Global.rootp());
-
             // Remove unused vars
             V3Const::constifyAll(v3Global.rootp());
             V3Dead::deadifyAllScoped(v3Global.rootp());

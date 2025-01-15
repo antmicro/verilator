@@ -235,7 +235,7 @@ class CoverageVisitor final : public VNVisitor {
     }
     void iterateProcedure(AstNode* nodep) {
         char comment[100];
-        snprintf(comment, 100, "block_%pZ", m_modp);
+        snprintf(comment, 100, "block_%p=", m_modp);
         VL_RESTORER(m_state);
         VL_RESTORER(m_inToggleOff);
         m_inToggleOff = true;
@@ -299,15 +299,10 @@ class CoverageVisitor final : public VNVisitor {
         }
     }
 
-    void toggleVarBottom(const ToggleEnt& above, const AstVar* varp, int index) {
-        char comment[100];
-        if (index >=0 )
-            snprintf(comment, 100, "toggle_%p_%dZ_", m_modp, index);
-        else
-            snprintf(comment, 100, "toggle_%pZ_", m_modp);
+    void toggleVarBottom(const ToggleEnt& above, const AstVar* varp) {
         AstCoverToggle* const newp = new AstCoverToggle{
             varp->fileline(),
-            newCoverInc(varp->fileline(), "", "v_toggle", string(comment) + varp->name() + above.m_comment, "", 0,
+            newCoverInc(varp->fileline(), "", "v_toggle", "toggle_" + varp->name() + above.m_comment + "=_", "", 0,
                         ""),
             above.m_varRefp->cloneTree(true), above.m_chgRefp->cloneTree(true)};
         m_modp->addStmtsp(newp);
@@ -320,21 +315,21 @@ class CoverageVisitor final : public VNVisitor {
                 for (int index_docs = bdtypep->lo(); index_docs < bdtypep->hi() + 1;
                      ++index_docs) {
                     const int index_code = index_docs - bdtypep->lo();
-                    ToggleEnt newent{above.m_comment + "["s + cvtToStr(index_docs) + "]",
+                    ToggleEnt newent{above.m_comment + "_"s + cvtToStr(index_docs),
                                      new AstSel{varp->fileline(), above.m_varRefp->cloneTree(true),
                                                 index_code, 1},
                                      new AstSel{varp->fileline(), above.m_chgRefp->cloneTree(true),
                                                 index_code, 1}};
-                    toggleVarBottom(newent, varp, index_docs);
+                    toggleVarBottom(newent, varp);
                     newent.cleanup();
                 }
             } else {
-                toggleVarBottom(above, varp, -1);
+                toggleVarBottom(above, varp);
             }
         } else if (const AstUnpackArrayDType* const adtypep = VN_CAST(dtypep, UnpackArrayDType)) {
             for (int index_docs = adtypep->lo(); index_docs <= adtypep->hi(); ++index_docs) {
                 const int index_code = index_docs - adtypep->lo();
-                ToggleEnt newent{above.m_comment + "["s + cvtToStr(index_docs) + "]",
+                ToggleEnt newent{above.m_comment + "_"s + cvtToStr(index_docs),
                                  new AstArraySel{varp->fileline(),
                                                  above.m_varRefp->cloneTree(true), index_code},
                                  new AstArraySel{varp->fileline(),
@@ -347,7 +342,7 @@ class CoverageVisitor final : public VNVisitor {
             for (int index_docs = adtypep->lo(); index_docs <= adtypep->hi(); ++index_docs) {
                 const AstNodeDType* const subtypep = adtypep->subDTypep()->skipRefp();
                 const int index_code = index_docs - adtypep->lo();
-                ToggleEnt newent{above.m_comment + "["s + cvtToStr(index_docs) + "]",
+                ToggleEnt newent{above.m_comment + "_"s + cvtToStr(index_docs),
                                  new AstSel{varp->fileline(), above.m_varRefp->cloneTree(true),
                                             index_code * subtypep->width(), subtypep->width()},
                                  new AstSel{varp->fileline(), above.m_chgRefp->cloneTree(true),
@@ -439,11 +434,11 @@ class CoverageVisitor final : public VNVisitor {
     void visit(AstIf* nodep) override {
         UINFO(4, " IF: " << nodep << endl);
         char comment_if[100];
-        snprintf(comment_if, 100, "if_%pZ", m_modp);
+        snprintf(comment_if, 100, "if_%p=", m_modp);
         char comment_else[100];
-        snprintf(comment_else, 100, "else_%pZ", m_modp);
+        snprintf(comment_else, 100, "else_%p=", m_modp);
         char comment_elsif[100];
-        snprintf(comment_elsif, 100, "elsif_%pZ", m_modp);
+        snprintf(comment_elsif, 100, "elsif_%p=", m_modp);
         if (m_state.m_on) {
             // An else-if.  When we iterate the if, use "elsif" marking
             const bool elsif
@@ -523,7 +518,7 @@ class CoverageVisitor final : public VNVisitor {
         // We don't add an explicit "default" coverage if not provided,
         // as we already have a warning when there is no default.
         char comment[100];
-        snprintf(comment, 100, "case_%pZ", m_modp);
+        snprintf(comment, 100, "case_%p=", m_modp);
         UINFO(4, " CASEI: " << nodep << endl);
         if (m_state.lineCoverageOn(nodep)) {
             VL_RESTORER(m_state);
@@ -541,7 +536,7 @@ class CoverageVisitor final : public VNVisitor {
     void visit(AstCover* nodep) override {
         UINFO(4, " COVER: " << nodep << endl);
         char comment[100];
-        snprintf(comment, 100, "cover_%pZ", m_modp);
+        snprintf(comment, 100, "cover_%p=", m_modp);
         VL_RESTORER(m_state);
         m_state.m_on = true;  // Always do cover blocks, even if there's a $stop
         createHandle(nodep);

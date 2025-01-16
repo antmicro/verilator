@@ -607,10 +607,10 @@ public:
         iterateChildrenConst(nodep);
     }
     void visit(AstCoverDecl* nodep) override {
-        std::string key = nodep->modName() + nodep->varName() + cvtToStr(nodep->index());
-        if (nodep->varName() == "" || m_indices.find(key) == m_indices.end()
+        std::string key = nodep->mapKey();
+        if (key == "" || m_indices.find(key) == m_indices.end()
             || m_indices[key] == nodep->dataDeclThisp()->binNum()) {
-            if (nodep->varName() != "") { m_indices[key] = nodep->dataDeclThisp()->binNum(); }
+            if (key != "") m_indices[key] = nodep->dataDeclThisp()->binNum();
             putns(nodep, "vlSelf->__vlCoverInsert(");  // As Declared in emitCoverageDecl
             puts("&(vlSymsp->__Vcoverage[");
             puts(cvtToStr(nodep->dataDeclThisp()->binNum()));
@@ -641,9 +641,8 @@ public:
     }
     void visit(AstCoverInc* nodep) override {
         int binNum;
-        if (nodep->declp()->varName() != "") {
-            std::string key = nodep->declp()->modName() + nodep->declp()->varName()
-                              + cvtToStr(nodep->declp()->index());
+        if (nodep->declp()->mapKey() != "") {
+            std::string key = nodep->declp()->mapKey();
             if (m_indices.find(key) == m_indices.end()) {
                 m_indices[key] = nodep->declp()->dataDeclThisp()->binNum();
             }

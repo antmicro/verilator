@@ -2838,23 +2838,19 @@ class AstCoverDecl final : public AstNodeStmt {
     string m_text;
     string m_hier;
     string m_linescov;
-    string m_modName;
-    string m_varName;
+    string m_mapKey;
     int m_offset;  // Offset column numbers to uniq-ify IFs
     int m_binNum = 0;  // Set by V3EmitCSyms to tell final V3Emit what to increment
-    int m_index;
 
 public:
     AstCoverDecl(FileLine* fl, const string& page, const string& comment, const string& linescov,
-                 int offset, const string& mod_name, const string& var_name, int index)
+                 int offset, const string& mapKey)
         : ASTGEN_SUPER_CoverDecl(fl)
         , m_page{page}
         , m_text{comment}
         , m_linescov{linescov}
-        , m_modName{mod_name}
-        , m_varName{var_name}
-        , m_offset{offset}
-        , m_index{index} {}
+        , m_mapKey{mapKey}
+        , m_offset{offset} {}
     ASTGEN_MEMBERS_AstCoverDecl;
     const char* broken() const override {
         if (m_dataDeclp
@@ -2874,9 +2870,7 @@ public:
     const string& linescov() const { return m_linescov; }
     const string& page() const { return m_page; }
     const string& hier() const { return m_hier; }
-    const string& modName() const { return m_modName; }
-    const string& varName() const { return m_varName; }
-    int index() const { return m_index; }
+    const string& mapKey() const { return m_mapKey; }
     void hier(const string& flag) { m_hier = flag; }
     void comment(const string& flag) { m_text = flag; }
     bool sameNode(const AstNode* samep) const override {

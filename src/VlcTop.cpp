@@ -131,10 +131,9 @@ void VlcTop::writeInfo(const string& filename) {
                 os << "BRDA:" << sc.lineno() << ",";
                 os << "0,";
                 const string cmt = point->comment().substr(0, point->comment().find("="));
-                size_t u_cnt = std::count_if(cmt.begin(), cmt.end(), []( char c ){return c =='_';});
                 os << cmt;
-                cout << "for comment: " << point->comment() << " cmt: " << cmt << " count is " << u_cnt << "\n";
-                if (u_cnt == 1) {
+
+                if (cmt.rfind("toggle_", 0) != 0) {
                     os << "_" << point_num;
                 }
                 os << ",";

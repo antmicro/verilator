@@ -324,7 +324,7 @@ class CoverageVisitor final : public VNVisitor {
                                                 index_code, 1},
                                      new AstSel{varp->fileline(), above.m_chgRefp->cloneTree(true),
                                                 index_code, 1}};
-                    toggleVarBottom(newent, varp, index + index_docs);
+                    toggleVarBottom(newent, varp, index + index_code);
                     newent.cleanup();
                 }
             } else {

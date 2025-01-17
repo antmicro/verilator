@@ -306,7 +306,7 @@ class CoverageVisitor final : public VNVisitor {
             varp->fileline(),
             newCoverInc(varp->fileline(), "", "v_toggle",
                         string(comment) + varp->name() + above.m_comment, "", 0, "",
-                        m_modp->origName() + "_" + varp->name() + cvtToStr(index)),
+                        varp->fileline()->ascii() + "_" + varp->name() + cvtToStr(index)),
             above.m_varRefp->cloneTree(true), above.m_chgRefp->cloneTree(true)};
         m_modp->addStmtsp(newp);
     }

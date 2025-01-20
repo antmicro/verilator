@@ -131,9 +131,7 @@ void VlcTop::writeInfo(const string& filename) {
                 const string cmt = point->comment().substr(0, point->comment().find("="));
                 os << cmt;
 
-                if (cmt.rfind("toggle_", 0) != 0) {
-                    os << "_" << point_num;
-                }
+                if (cmt.rfind("toggle_", 0) != 0) { os << "_" << point_num; }
                 os << ",";
                 os << point->count() << "\n";
 

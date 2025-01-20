@@ -572,7 +572,6 @@ class CoverageVisitor final : public VNVisitor {
         // covers the code in that line.)
         VL_RESTORER(m_beginHier);
         VL_RESTORER(m_inToggleOff);
-        m_inToggleOff = true;
         if (nodep->name() != "") {
             m_beginHier = m_beginHier + (m_beginHier != "" ? "." : "") + nodep->name();
         }

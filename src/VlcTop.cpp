@@ -150,8 +150,7 @@ void VlcTop::writeInfo(const string& filename) {
             int point_num = 0;
             for (const auto& point : sc.points()) {
                 os << "BRDA:" << sc.lineno() << ",";
-                static int cnt = 0;
-                os << cnt++ << ",";
+                os << sc.lineno() << "_" << point->column() << ",";
                 const string cmt = point->comment().substr(0, point->comment().find("="));
 
                 if (cmt.rfind("toggle_", 0) != 0) {

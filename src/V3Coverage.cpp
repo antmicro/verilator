@@ -293,27 +293,27 @@ class CoverageVisitor final : public VNVisitor {
 
                 ToggleEnt newvec{""s, new AstVarRef{fl_nowarn, nodep, VAccess::READ},
                                  new AstVarRef{fl_nowarn, chgVarp, VAccess::WRITE}};
-                toggleVarRecurse(nodep->dtypeSkipRefp(), 0, newvec, nodep, chgVarp, 0);
+                toggleVarRecurse(nodep->dtypeSkipRefp(), 0, newvec, nodep, chgVarp, "");
                 newvec.cleanup();
             }
         }
     }
 
-    void toggleVarBottom(const ToggleEnt& above, AstVar* varp, int index) {
+    void toggleVarBottom(const ToggleEnt& above, AstVar* varp, const string& indexString) {
         char comment[100];
         snprintf(comment, 100, "toggle_%pZ_", m_modp);
         AstCoverToggle* const newp = new AstCoverToggle{
             varp->fileline(),
             newCoverInc(varp->fileline(), "", "v_toggle",
                         string(comment) + varp->name() + above.m_comment, "", 0, "",
-                        varp->fileline()->ascii() + "_" + varp->name() + cvtToStr(index)),
+                        varp->fileline()->ascii() + "_" + varp->name() + indexString),
             above.m_varRefp->cloneTree(true), above.m_chgRefp->cloneTree(true)};
         m_modp->addStmtsp(newp);
     }
 
     void toggleVarRecurse(AstNodeDType* dtypep, int depth,  // per-iteration
                           const ToggleEnt& above, AstVar* varp, AstVar* chgVarp,
-                          int index) {  // Constant
+                          const string& indexString) {  // Constant
         if (const AstBasicDType* const bdtypep = VN_CAST(dtypep, BasicDType)) {
             if (bdtypep->isRanged()) {
                 for (int index_docs = bdtypep->lo(); index_docs < bdtypep->hi() + 1;
@@ -324,11 +324,11 @@ class CoverageVisitor final : public VNVisitor {
                                                 index_code, 1},
                                      new AstSel{varp->fileline(), above.m_chgRefp->cloneTree(true),
                                                 index_code, 1}};
-                    toggleVarBottom(newent, varp, index + index_code);
+                    toggleVarBottom(newent, varp, indexString + "_" + cvtToStr(index_docs));
                     newent.cleanup();
                 }
             } else {
-                toggleVarBottom(above, varp, index);
+                toggleVarBottom(above, varp, indexString);
             }
         } else if (const AstUnpackArrayDType* const adtypep = VN_CAST(dtypep, UnpackArrayDType)) {
             for (int index_docs = adtypep->lo(); index_docs <= adtypep->hi(); ++index_docs) {
@@ -339,7 +339,7 @@ class CoverageVisitor final : public VNVisitor {
                                  new AstArraySel{varp->fileline(),
                                                  above.m_chgRefp->cloneTree(true), index_code}};
                 toggleVarRecurse(adtypep->subDTypep()->skipRefp(), depth + 1, newent, varp,
-                                 chgVarp, index + index_code);
+                                 chgVarp, indexString + "_" + cvtToStr(index_docs));
                 newent.cleanup();
             }
         } else if (const AstPackArrayDType* const adtypep = VN_CAST(dtypep, PackArrayDType)) {
@@ -352,7 +352,7 @@ class CoverageVisitor final : public VNVisitor {
                                  new AstSel{varp->fileline(), above.m_chgRefp->cloneTree(true),
                                             index_code * subtypep->width(), subtypep->width()}};
                 toggleVarRecurse(adtypep->subDTypep()->skipRefp(), depth + 1, newent, varp,
-                                 chgVarp, index + index_code);
+                                 chgVarp, indexString + "_" + cvtToStr(index_docs));
                 newent.cleanup();
             }
         } else if (const AstStructDType* const adtypep = VN_CAST(dtypep, StructDType)) {
@@ -367,7 +367,7 @@ class CoverageVisitor final : public VNVisitor {
                                      new AstSel{varp->fileline(), above.m_chgRefp->cloneTree(true),
                                                 index_code, subtypep->width()}};
                     toggleVarRecurse(subtypep, depth + 1, newent, varp, chgVarp,
-                                     index + index_code);
+                                     indexString + "_" + itemp->name());
                     newent.cleanup();
                 }
             } else {
@@ -381,7 +381,8 @@ class CoverageVisitor final : public VNVisitor {
                     varRefp->dtypep(subtypep);
                     chgRefp->dtypep(subtypep);
                     ToggleEnt newent{above.m_comment + "."s + itemp->name(), varRefp, chgRefp};
-                    toggleVarRecurse(subtypep, depth + 1, newent, varp, chgVarp, index);
+                    toggleVarRecurse(subtypep, depth + 1, newent, varp, chgVarp,
+                                     indexString + "_" + itemp->name());
                     newent.cleanup();
                 }
             }
@@ -393,7 +394,7 @@ class CoverageVisitor final : public VNVisitor {
                     ToggleEnt newent{above.m_comment + "."s + itemp->name(),
                                      above.m_varRefp->cloneTree(true),
                                      above.m_chgRefp->cloneTree(true)};
-                    toggleVarRecurse(subtypep, depth + 1, newent, varp, chgVarp, index);
+                    toggleVarRecurse(subtypep, depth + 1, newent, varp, chgVarp, indexString);
                     newent.cleanup();
                 } else {
                     AstNodeExpr* const varRefp = new AstStructSel{
@@ -403,7 +404,7 @@ class CoverageVisitor final : public VNVisitor {
                     varRefp->dtypep(subtypep);
                     chgRefp->dtypep(subtypep);
                     ToggleEnt newent{above.m_comment + "."s + itemp->name(), varRefp, chgRefp};
-                    toggleVarRecurse(subtypep, depth + 1, newent, varp, chgVarp, index);
+                    toggleVarRecurse(subtypep, depth + 1, newent, varp, chgVarp, indexString);
                     newent.cleanup();
                 }
             }

@@ -82,6 +82,28 @@ void VlcTop::writeCoverage(const string& filename) {
         os << "C '" << point.name() << "' " << point.count() << '\n';
     }
 }
+std::string getKey(VlcPoint* const point) {
+    std::string comment = point->comment().substr(0, point->comment().find("="));
+    if (comment.find("toggle") != std::string::npos) {
+        return comment;
+    } else {
+        return std::to_string(point->lineno()) + std::to_string(point->column());
+    }
+}
+void processPoints(VlcSourceCount& sc) {
+    std::map<std::string, VlcPoint*> pointsMap;
+    std::set<VlcPoint*> toErase;
+    for (auto& point : sc.points()) {
+        std::string key = getKey(point);
+        if (pointsMap.find(key) == pointsMap.end()) {
+            pointsMap[key] = point;
+        } else {
+            pointsMap[key]->countInc(point->count());
+            toErase.insert(point);
+        }
+    }
+    for (auto& point : toErase) { sc.points().erase(point); }
+}
 
 void VlcTop::writeInfo(const string& filename) {
     UINFO(2, "writeInfo " << filename);
@@ -122,6 +144,7 @@ void VlcTop::writeInfo(const string& filename) {
         int branchesHit = 0;
         for (auto& li : lines) {
             VlcSourceCount& sc = li.second;
+            processPoints(sc);
             os << "DA:" << sc.lineno() << "," << sc.maxCount() << "\n";
             int num_branches = sc.points().size();
             if (num_branches == 1) continue;
@@ -131,10 +154,12 @@ void VlcTop::writeInfo(const string& filename) {
                 os << "BRDA:" << sc.lineno() << ",";
                 os << "0,";
                 const string cmt = point->comment().substr(0, point->comment().find("="));
-                os << cmt;
 
                 if (cmt.rfind("toggle_", 0) != 0) {
-                    os << "_" << point_num;
+                    std::string typeStr = cmt.substr(0, cmt.find("_"));
+                    os << typeStr << "_" << point_num;
+                } else {
+                    os << cmt;
                 }
                 os << ",";
                 os << point->count() << "\n";
@@ -216,7 +241,7 @@ void VlcTop::rank() {
 void VlcTop::annotateCalc() {
     // Calculate per-line information into filedata structure
     for (const auto& i : m_points) {
-        const VlcPoint& point = m_points.pointNumber(i.second);
+        VlcPoint& point = m_points.pointNumber(i.second);
         const string filename = point.filename();
         const int lineno = point.lineno();
         if (!filename.empty() && lineno != 0) {

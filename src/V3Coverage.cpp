@@ -302,8 +302,9 @@ class CoverageVisitor final : public VNVisitor {
     void toggleVarBottom(const ToggleEnt& above, const AstVar* varp) {
         AstCoverToggle* const newp = new AstCoverToggle{
             varp->fileline(),
-            newCoverInc(varp->fileline(), "", "v_toggle", "toggle_" + m_beginHier + "_" + varp->name() + above.m_comment + "=_", "", 0,
-                        ""),
+            newCoverInc(varp->fileline(), "", "v_toggle",
+                        "toggle_" + m_beginHier + "_" + varp->name() + above.m_comment + "=_", "",
+                        0, ""),
             above.m_varRefp->cloneTree(true), above.m_chgRefp->cloneTree(true)};
         m_modp->addStmtsp(newp);
     }

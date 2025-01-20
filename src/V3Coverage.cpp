@@ -423,6 +423,11 @@ class CoverageVisitor final : public VNVisitor {
             return;
         }
 
+        if (nodep->condp()->exists([](AstVarRef* refp) { return refp->varp()->isFuncLocal(); })) {
+            // If the condition has locals, bail out. They won't be resolved in the fake always
+            return;
+        }
+
         auto fakeIf = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
         FileLine* newFl = new FileLine{nodep->fileline()};
         auto always = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIf};

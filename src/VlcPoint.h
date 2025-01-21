@@ -63,6 +63,7 @@ public:
     // KEY ACCESSORS
     string filename() const { return keyExtract(VL_CIK_FILENAME); }
     string comment() const { return keyExtract(VL_CIK_COMMENT); }
+    string commentStripped() const { return comment().substr(0, comment().find("=")); }
     string hier() const { return keyExtract(VL_CIK_HIER); }
     string type() const { return keyExtract(VL_CIK_TYPE); }
     string thresh() const { return keyExtract(VL_CIK_THRESH); }  // string as maybe ""

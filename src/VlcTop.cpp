@@ -153,7 +153,7 @@ void VlcTop::writeInfo(const string& filename) {
             for (const auto& point : sc.points()) {
                 os << "BRDA:" << sc.lineno() << ",";
                 os << point_num << ",";
-                const string cmt = point->comment().substr(0, point->comment().find("="));
+                const string cmt = point->commentStripped();
 
                 if (cmt.rfind("toggle_", 0) != 0) {
                     std::string typeStr = cmt.substr(0, cmt.find("_"));

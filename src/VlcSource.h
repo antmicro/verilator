@@ -53,8 +53,8 @@ class VlcSourceCount final {
             const std::string aWithoutIndex = aStripped.substr(0, aStripped.size() - aIndexLength);
             const std::string bWithoutIndex = bStripped.substr(0, bStripped.size() - bIndexLength);
             if (aWithoutIndex != bWithoutIndex) {
-                // different variables, compare names
-                return aWithoutIndex < bWithoutIndex;
+                // different variables, compare pointers
+                return a < b;
             }
             if (aIndexLength == 0 || bIndexLength == 0) {
                 // probably a case like:

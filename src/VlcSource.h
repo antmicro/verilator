@@ -37,10 +37,16 @@ class VlcSourceCount final {
     // TYPES
     struct PointCmp {
         bool operator()(const VlcPoint* a, const VlcPoint* b) const {
-            const std::string aStripped = a->commentStripped();
-            const std::string bStripped = b->commentStripped();
-            // operands of nested condition operators may have the same commentStripped()
-            return aStripped < bStripped || ((aStripped == bStripped) && a < b);
+            if (a->comment().rfind("toggle", 0) != 0) {
+                // not toggle coverage, compare pointers
+                return a < b;
+            } else {
+                const std::string aStripped = a->commentStripped();
+                const std::string bStripped = b->commentStripped();
+                const int aIndex = std::stoi(aStripped.substr(aStripped.rfind("_") + 1));
+                const int bIndex = std::stoi(bStripped.substr(bStripped.rfind("_") + 1));
+                return aIndex < bIndex;
+            }
         }
     };
     using PointsSet = std::set<VlcPoint*, PointCmp>;

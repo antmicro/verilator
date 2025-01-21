@@ -37,7 +37,10 @@ class VlcSourceCount final {
     // TYPES
     struct PointCmp {
         bool operator()(const VlcPoint* a, const VlcPoint* b) const {
-            return a->commentStripped() < b->commentStripped();
+            const std::string aStripped = a->commentStripped();
+            const std::string bStripped = b->commentStripped();
+            // operands of nested condition operators may have the same commentStripped()
+            return aStripped < bStripped || ((aStripped == bStripped) && a < b);
         }
     };
     using PointsSet = std::set<VlcPoint*, PointCmp>;

@@ -35,7 +35,12 @@ class VlcPoint;
 
 class VlcSourceCount final {
     // TYPES
-    using PointsSet = std::set<VlcPoint*>;
+    struct PointCmp {
+        bool operator()(const VlcPoint* a, const VlcPoint* b) const {
+            return a->commentStripped() < b->commentStripped();
+        }
+    };
+    using PointsSet = std::set<VlcPoint*, PointCmp>;
 
     // MEMBERS
     const int m_lineno;  ///< Line number

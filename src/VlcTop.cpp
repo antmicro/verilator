@@ -157,6 +157,27 @@ void VlcTop::writeInfo(const string& filename) {
                     while (std::isdigit(s[s.size() - 1 - indexLength])) { indexLength++; }
                     return indexLength;
                 }
+                static int compareStrippedRecurse(const string& s1, const string& s2) {
+                    int indexLength1 = getIndexLength(s1);
+                    int indexLength2 = getIndexLength(s2);
+                    if (indexLength1 == 0 || indexLength2 == 0
+                        || s1[s1.size() - indexLength1 - 1] != '_'
+                        || s2[s2.size() - indexLength2 - 1] != '_') {
+                        // at least one of them is not array variable
+                        // compare strings in such a case
+                        return s1.compare(s2);
+                    }
+                    const std::string s1WithoutIndex = s1.substr(0, s1.size() - indexLength1 - 1);
+                    const std::string s2WithoutIndex = s2.substr(0, s2.size() - indexLength2 - 1);
+                    int cmpStripped = compareStrippedRecurse(s1WithoutIndex, s2WithoutIndex);
+                    if (cmpStripped == 0) {
+                        const int index1 = std::stoi(s1.substr(s1.size() - indexLength1));
+                        const int index2 = std::stoi(s2.substr(s2.size() - indexLength2));
+                        return (index1 < index2) ? -1 : ((index1 == index2) ? 0 : 1);
+                    } else {
+                        return cmpStripped;
+                    }
+                }
                 bool operator()(const VlcPoint* a, const VlcPoint* b) const {
                     if (a->comment().rfind("toggle", 0) != 0) {
                         // not toggle coverage, compare pointers
@@ -164,27 +185,7 @@ void VlcTop::writeInfo(const string& filename) {
                     }
                     const std::string aStripped = a->commentStripped();
                     const std::string bStripped = b->commentStripped();
-                    int aIndexLength = getIndexLength(aStripped);
-                    int bIndexLength = getIndexLength(bStripped);
-                    const std::string aWithoutIndex
-                        = aStripped.substr(0, aStripped.size() - aIndexLength);
-                    const std::string bWithoutIndex
-                        = bStripped.substr(0, bStripped.size() - bIndexLength);
-                    if (aWithoutIndex != bWithoutIndex) {
-                        // different variables, compare pointers
-                        return a < b;
-                    }
-                    if (aIndexLength == 0 || bIndexLength == 0) {
-                        // probably a case like:
-                        // reg clk, clk2;
-                        // compare pointers, as done in old way
-                        return a < b;
-                    }
-                    const int aIndex
-                        = std::stoi(aStripped.substr(aStripped.size() - aIndexLength));
-                    const int bIndex
-                        = std::stoi(bStripped.substr(bStripped.size() - bIndexLength));
-                    return aIndex < bIndex;
+                    return compareStrippedRecurse(aStripped, bStripped) == -1;
                 }
             };
             std::sort(sortedPoints.begin(), sortedPoints.end(), PointCmp());

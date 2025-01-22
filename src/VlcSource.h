@@ -35,39 +35,7 @@ class VlcPoint;
 
 class VlcSourceCount final {
     // TYPES
-    struct PointCmp {
-        static int getIndexLength(const std::string& s) {
-            int indexLength = 0;
-            while (std::isdigit(s[s.size() - 1 - indexLength])) { indexLength++; }
-            return indexLength;
-        }
-        bool operator()(const VlcPoint* a, const VlcPoint* b) const {
-            if (a->comment().rfind("toggle", 0) != 0) {
-                // not toggle coverage, compare pointers
-                return a < b;
-            }
-            const std::string aStripped = a->commentStripped();
-            const std::string bStripped = b->commentStripped();
-            int aIndexLength = getIndexLength(aStripped);
-            int bIndexLength = getIndexLength(bStripped);
-            const std::string aWithoutIndex = aStripped.substr(0, aStripped.size() - aIndexLength);
-            const std::string bWithoutIndex = bStripped.substr(0, bStripped.size() - bIndexLength);
-            if (aWithoutIndex != bWithoutIndex) {
-                // different variables, compare pointers
-                return a < b;
-            }
-            if (aIndexLength == 0 || bIndexLength == 0) {
-                // probably a case like:
-                // reg clk, clk2;
-                // compare pointers, as done in old way
-                return a < b;
-            }
-            const int aIndex = std::stoi(aStripped.substr(aStripped.size() - aIndexLength));
-            const int bIndex = std::stoi(bStripped.substr(bStripped.size() - bIndexLength));
-            return aIndex < bIndex;
-        }
-    };
-    using PointsSet = std::set<VlcPoint*, PointCmp>;
+    using PointsSet = std::set<VlcPoint*>;
 
     // MEMBERS
     const int m_lineno;  ///< Line number

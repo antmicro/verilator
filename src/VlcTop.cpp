@@ -183,7 +183,7 @@ void VlcTop::writeInfo(const string& filename) {
                     }
                     const std::string aStripped = a->commentStripped();
                     const std::string bStripped = b->commentStripped();
-                    return compareStrippedRecurse(aStripped, bStripped) == -1;
+                    return compareStrippedRecurse(aStripped, bStripped) < 0;
                 }
             };
             std::sort(sortedPoints.begin(), sortedPoints.end(), PointCmp());

@@ -82,11 +82,7 @@ void VlcTop::writeCoverage(const string& filename) {
 }
 std::string getKey(VlcPoint* const point) {
     std::string comment = point->comment().substr(0, point->comment().find("="));
-    if (comment.find("toggle") != std::string::npos) {
-        return comment;
-    } else {
-        return std::to_string(point->lineno()) + std::to_string(point->column());
-    }
+    return comment;
 }
 void processPoints(VlcSourceCount& sc) {
     std::map<std::string, VlcPoint*> pointsMap;

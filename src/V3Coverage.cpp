@@ -406,9 +406,7 @@ class CoverageVisitor final : public VNVisitor {
         UINFO(4, " COND: " << nodep << endl);
 
         // Current method cannot run coverage for impure statements
-        if (!nodep->condp()->isPure()) {
-            return;
-        }
+        if (!nodep->condp()->isPure()) { return; }
 
         auto fake_if = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
         FileLine* newFl = new FileLine{nodep->fileline()};

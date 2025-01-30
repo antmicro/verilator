@@ -78,6 +78,7 @@ class CoverageVisitor final : public VNVisitor {
     CheckState m_state;  // State save-restored on each new coverage scope/block
     AstNodeModule* m_modp = nullptr;  // Current module to add statement to
     bool m_inToggleOff = false;  // In function/task etc
+    bool m_inProcedure = false;  // Entered into proecural block
     string m_beginHier;  // AstBegin hier name for user coverage points
 
     // STATE - cleared each module
@@ -220,13 +221,6 @@ class CoverageVisitor final : public VNVisitor {
         }
         iterateChildren(nodep);
     }
-    void visit(AstFunc* nodep) override {
-        VL_RESTORER(m_state);
-        m_state.m_on = false;
-        VL_RESTORER(m_inToggleOff);
-        m_inToggleOff = true;
-        iterateChildren(nodep);
-    }
 
     void visit(AstNodeProcedure* nodep) override { iterateProcedure(nodep); }
     void visit(AstWhile* nodep) override { iterateProcedure(nodep); }
@@ -236,7 +230,9 @@ class CoverageVisitor final : public VNVisitor {
     void iterateProcedure(AstNode* nodep) {
         VL_RESTORER(m_state);
         VL_RESTORER(m_inToggleOff);
+        VL_RESTORER(m_inProcedure);
         m_inToggleOff = true;
+        m_inProcedure = true;
         createHandle(nodep);
         iterateChildren(nodep);
         if (m_state.lineCoverageOn(nodep)) {
@@ -426,13 +422,16 @@ class CoverageVisitor final : public VNVisitor {
             return;
         }
 
-        auto fakeIf = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
-        FileLine* newFl = new FileLine{nodep->fileline()};
-        auto always = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIf};
+        if (m_inProcedure) {
+        } else {
+            AstIf* const fakeIfp = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
+            FileLine* const newFl = new FileLine{nodep->fileline()};
+            AstAlways* const alwaysp = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIfp};
 
-        // Disable coverage for this fake always block
-        newFl->coverageOn(false);
-        m_modp->addStmtsp(always);
+            // Disable coverage for this fake always block
+            newFl->coverageOn(false);
+            m_modp->addStmtsp(alwaysp);
+        }
     }
     // Note not AstNodeIf; other types don't get covered
     void visit(AstIf* nodep) override {

@@ -417,11 +417,6 @@ class CoverageVisitor final : public VNVisitor {
             return;
         }
 
-        if (nodep->condp()->exists([](AstVarRef* refp) { return refp->varp()->isFuncLocal(); })) {
-            // If the condition has locals, bail out. They won't be resolved in the fake always
-            return;
-        }
-
         if (m_inProcedure) {
         } else if (VN_IS(m_modp, Module)) {
             AstIf* const fakeIfp = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));

@@ -417,8 +417,7 @@ class CoverageVisitor final : public VNVisitor {
             return;
         }
 
-        if (m_inProcedure) {
-        } else if (VN_IS(m_modp, Module)) {
+        if (!m_inProcedure && VN_IS(m_modp, Module)) {
             AstIf* const fakeIfp = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
             FileLine* const newFl = new FileLine{nodep->fileline()};
             AstAlways* const alwaysp = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIfp};

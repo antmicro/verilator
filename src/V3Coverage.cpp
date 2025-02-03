@@ -79,6 +79,8 @@ class CoverageVisitor final : public VNVisitor {
     AstNodeModule* m_modp = nullptr;  // Current module to add statement to
     bool m_inToggleOff = false;  // In function/task etc
     bool m_inProcedure = false;  // Entered into proecural block
+    AstIf* m_fakeIfp = nullptr;  // Fake if for branch coverage of cond expression
+    bool m_then = false;  // Then or Else branch of fakeIf to which we should add nested if
     string m_beginHier;  // AstBegin hier name for user coverage points
 
     // STATE - cleared each module
@@ -407,24 +409,44 @@ class CoverageVisitor final : public VNVisitor {
 
     // VISITORS - LINE COVERAGE
     void visit(AstCond* nodep) override {
+        VL_RESTORER(m_fakeIfp);
+        VL_RESTORER(m_then);
         UINFO(4, " COND: " << nodep << endl);
-
-        iterateChildren(nodep);
 
         if (!m_state.m_on || !nodep->condp()->isPure()) {
             // Current method cannot run coverage for impure statements
+            iterateChildren(nodep);
             lineTrack(nodep);
             return;
         }
 
         if (!m_inProcedure && VN_IS(m_modp, Module)) {
-            AstIf* const fakeIfp = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
-            FileLine* const newFl = new FileLine{nodep->fileline()};
-            AstAlways* const alwaysp = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIfp};
+            // Do not consider nested ?: expression in condition
+            iterate(nodep->condp());
 
-            // Disable coverage for this fake always block
-            newFl->coverageOn(false);
-            m_modp->addStmtsp(alwaysp);
+            AstIf* const fakeIfp = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
+            if (m_fakeIfp) {
+                if (m_then) {
+                    AstNode::addNext(m_fakeIfp->thensp(), fakeIfp);
+                } else {
+                    AstNode::addNext(m_fakeIfp->elsesp(), fakeIfp);
+                }
+            } else {
+                FileLine* const newFl = new FileLine{nodep->fileline()};
+                AstAlways* const alwaysp
+                    = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIfp};
+
+                // Disable coverage for this fake always block
+                newFl->coverageOn(false);
+                m_modp->addStmtsp(alwaysp);
+            }
+            m_fakeIfp = fakeIfp;
+            m_then = true;
+            iterateNull(nodep->thenp());
+            m_then = false;
+            iterateNull(nodep->elsep());
+        } else {
+            iterateChildren(nodep);
         }
     }
     // Note not AstNodeIf; other types don't get covered

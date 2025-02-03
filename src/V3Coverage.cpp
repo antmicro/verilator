@@ -434,9 +434,9 @@ class CoverageVisitor final : public VNVisitor {
             AstIf* const fakeIfp = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(false));
             if (m_fakeIfp) {
                 if (m_then) {
-                    AstNode::addNext(m_fakeIfp->thensp(), fakeIfp);
+                    m_fakeIfp->addThensp(fakeIfp);
                 } else {
-                    AstNode::addNext(m_fakeIfp->elsesp(), fakeIfp);
+                    m_fakeIfp->addElsesp(fakeIfp);
                 }
             } else {
                 if (!m_alwaysp) {

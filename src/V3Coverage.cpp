@@ -424,7 +424,7 @@ class CoverageVisitor final : public VNVisitor {
             // Do not consider nested ?: expression in condition
             iterate(nodep->condp());
 
-            AstIf* const fakeIfp = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
+            AstIf* const fakeIfp = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(false));
             if (m_fakeIfp) {
                 if (m_then) {
                     AstNode::addNext(m_fakeIfp->thensp(), fakeIfp);

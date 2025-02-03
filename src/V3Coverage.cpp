@@ -125,6 +125,10 @@ class CoverageVisitor final : public VNVisitor {
     bool m_objective = false;  // Expression objective
     bool m_ifCond = false;  // Visiting if condition
     bool m_inToggleOff = false;  // In function/task etc
+    bool m_condBranchOff = false;  // Do not include cond expr in branch coverage
+    AstIf* m_fakeIfp = nullptr;  // Fake if for branch coverage of cond expression
+    bool m_fakeThen = false;  // Then or Else branch of fakeIf to which we should add nested if
+    AstAlways* m_alwaysp = nullptr;  // Always node to add ifs to handle condition expression
     string m_beginHier;  // AstBegin hier name for user coverage points
 
     // STATE - cleared each module
@@ -257,6 +261,8 @@ class CoverageVisitor final : public VNVisitor {
         const AstNodeModule* const origModp = m_modp;
         VL_RESTORER(m_modp);
         VL_RESTORER(m_state);
+        VL_RESTORER(m_alwaysp);
+        m_alwaysp = nullptr;
         createHandle(nodep);
         m_modp = nodep;
         m_state.m_inModOff
@@ -299,8 +305,10 @@ class CoverageVisitor final : public VNVisitor {
         VL_RESTORER(m_state);
         VL_RESTORER(m_exprStmtsp);
         VL_RESTORER(m_inToggleOff);
+        VL_RESTORER(m_condBranchOff);
         if (exprProc) m_exprStmtsp = nodep;
         m_inToggleOff = true;
+        m_condBranchOff = true;
         createHandle(nodep);
         iterateChildren(nodep);
         if (m_state.lineCoverageOn(nodep)) {
@@ -465,6 +473,56 @@ class CoverageVisitor final : public VNVisitor {
     }
 
     // VISITORS - LINE COVERAGE
+    void visit(AstCond* nodep) override {
+        VL_RESTORER(m_fakeIfp);
+        VL_RESTORER(m_fakeThen);
+        VL_RESTORER(m_condBranchOff);
+        UINFO(4, " COND: " << nodep << endl);
+
+        if (m_seeking == NONE) coverExprs(nodep->condp());
+
+        if (!m_state.m_on || !nodep->condp()->isPure()) {
+            // Current method cannot run coverage for impure statements
+            m_condBranchOff = true;
+            iterateChildren(nodep);
+            lineTrack(nodep);
+            return;
+        }
+
+        if (!m_condBranchOff && VN_IS(m_modp, Module)) {
+            // Do not consider nested ?: expression in condition
+            m_condBranchOff = true;
+            iterate(nodep->condp());
+            m_condBranchOff = false;
+
+            AstIf* const fakeIfp = new AstIf{nodep->fileline(), nodep->condp()->cloneTree(false)};
+            if (m_fakeIfp) {
+                if (m_fakeThen) {
+                    m_fakeIfp->addThensp(fakeIfp);
+                } else {
+                    m_fakeIfp->addElsesp(fakeIfp);
+                }
+            } else {
+                if (!m_alwaysp) {
+                    FileLine* const newFl = new FileLine{nodep->fileline()};
+                    m_alwaysp = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIfp};
+
+                    // Disable coverage for this fake always block
+                    newFl->coverageOn(false);
+                    m_modp->addStmtsp(m_alwaysp);
+                } else {
+                    m_alwaysp->addStmtsp(fakeIfp);
+                }
+            }
+            m_fakeIfp = fakeIfp;
+            m_fakeThen = true;
+            iterateNull(nodep->thenp());
+            m_fakeThen = false;
+            iterateNull(nodep->elsep());
+        } else {
+            iterateChildren(nodep);
+        }
+    }
     // Note not AstNodeIf; other types don't get covered
     void visit(AstIf* nodep) override {
         if (nodep->user2()) return;
@@ -883,11 +941,6 @@ class CoverageVisitor final : public VNVisitor {
             xorExpr(nodep);
             lineTrack(nodep);
         }
-    }
-
-    void visit(AstCond* nodep) override {
-        if (m_seeking == NONE) coverExprs(nodep->condp());
-        lineTrack(nodep);
     }
 
     void visit(AstFuncRef* nodep) override {

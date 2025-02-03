@@ -78,7 +78,7 @@ class CoverageVisitor final : public VNVisitor {
     CheckState m_state;  // State save-restored on each new coverage scope/block
     AstNodeModule* m_modp = nullptr;  // Current module to add statement to
     bool m_inToggleOff = false;  // In function/task etc
-    bool m_inProcedure = false;  // Entered into proecural block
+    bool m_condBranchOff = false;  // Do not include cond expr in branch coverage
     AstIf* m_fakeIfp = nullptr;  // Fake if for branch coverage of cond expression
     bool m_then = false;  // Then or Else branch of fakeIf to which we should add nested if
     string m_beginHier;  // AstBegin hier name for user coverage points
@@ -232,9 +232,9 @@ class CoverageVisitor final : public VNVisitor {
     void iterateProcedure(AstNode* nodep) {
         VL_RESTORER(m_state);
         VL_RESTORER(m_inToggleOff);
-        VL_RESTORER(m_inProcedure);
+        VL_RESTORER(m_condBranchOff);
         m_inToggleOff = true;
-        m_inProcedure = true;
+        m_condBranchOff = true;
         createHandle(nodep);
         iterateChildren(nodep);
         if (m_state.lineCoverageOn(nodep)) {
@@ -411,18 +411,22 @@ class CoverageVisitor final : public VNVisitor {
     void visit(AstCond* nodep) override {
         VL_RESTORER(m_fakeIfp);
         VL_RESTORER(m_then);
+        VL_RESTORER(m_condBranchOff);
         UINFO(4, " COND: " << nodep << endl);
 
         if (!m_state.m_on || !nodep->condp()->isPure()) {
             // Current method cannot run coverage for impure statements
+            m_condBranchOff = true;
             iterateChildren(nodep);
             lineTrack(nodep);
             return;
         }
 
-        if (!m_inProcedure && VN_IS(m_modp, Module)) {
+        if (!m_condBranchOff && VN_IS(m_modp, Module)) {
             // Do not consider nested ?: expression in condition
+            m_condBranchOff = true;
             iterate(nodep->condp());
+            m_condBranchOff = false;
 
             AstIf* const fakeIfp = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(false));
             if (m_fakeIfp) {

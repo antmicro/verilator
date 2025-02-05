@@ -354,10 +354,11 @@ class CoverageVisitor final : public VNVisitor {
     }
 
     void toggleVarBottom(const ToggleEnt& above, const AstVar* varp) {
+        const std::string hierPrefix = (m_beginHier != "") ? m_beginHier + "." : "";
         AstCoverToggle* const newp = new AstCoverToggle{
             varp->fileline(),
             newCoverInc(varp->fileline(), "", "v_toggle",
-                        m_beginHier + "_" + varp->name() + above.m_comment, "", 0, ""),
+                        hierPrefix + varp->name() + above.m_comment, "", 0, ""),
             above.m_varRefp->cloneTree(true), above.m_chgRefp->cloneTree(true)};
         m_modp->addStmtsp(newp);
     }

@@ -230,6 +230,8 @@ class CoverageVisitor final : public VNVisitor {
     void visit(AstNodeProcedure* nodep) override { iterateProcedure(nodep); }
     void visit(AstWhile* nodep) override { iterateProcedure(nodep); }
     void visit(AstNodeFTask* nodep) override {
+        VL_RESTORER(m_condBranchOff);
+        m_condBranchOff = true;
         if (!nodep->dpiImport()) iterateProcedure(nodep);
     }
     void iterateProcedure(AstNode* nodep) {

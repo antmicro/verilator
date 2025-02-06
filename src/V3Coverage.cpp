@@ -81,7 +81,7 @@ class CoverageVisitor final : public VNVisitor {
     bool m_condBranchOff = false;  // Do not include cond expr in branch coverage
     AstIf* m_fakeIfp = nullptr;  // Fake if for branch coverage of cond expression
     bool m_then = false;  // Then or Else branch of fakeIf to which we should add nested if
-    AstAlways* m_alwaysp = nullptr;  // Always node to add ifs to handle condition expression
+    AstBegin* m_beginp = nullptr;  // Begin node to add ifs to handle condition expression
     string m_beginHier;  // AstBegin hier name for user coverage points
 
     // STATE - cleared each module
@@ -213,8 +213,8 @@ class CoverageVisitor final : public VNVisitor {
         const AstNodeModule* const origModp = m_modp;
         VL_RESTORER(m_modp);
         VL_RESTORER(m_state);
-        VL_RESTORER(m_alwaysp);
-        m_alwaysp = nullptr;
+        VL_RESTORER(m_beginp);
+        m_beginp = nullptr;
         createHandle(nodep);
         m_modp = nodep;
         m_state.m_inModOff
@@ -235,9 +235,7 @@ class CoverageVisitor final : public VNVisitor {
     void iterateProcedure(AstNode* nodep) {
         VL_RESTORER(m_state);
         VL_RESTORER(m_inToggleOff);
-        VL_RESTORER(m_condBranchOff);
         m_inToggleOff = true;
-        m_condBranchOff = true;
         createHandle(nodep);
         iterateChildren(nodep);
         if (m_state.lineCoverageOn(nodep)) {
@@ -439,15 +437,17 @@ class CoverageVisitor final : public VNVisitor {
                     m_fakeIfp->addElsesp(fakeIfp);
                 }
             } else {
-                if (!m_alwaysp) {
+                if (!m_beginp) {
                     FileLine* const newFl = new FileLine{nodep->fileline()};
-                    m_alwaysp = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIfp};
-
-                    // Disable coverage for this fake always block
+                    // Disable coverage for these fake always and begin blocks
                     newFl->coverageOn(false);
-                    m_modp->addStmtsp(m_alwaysp);
+
+                    m_beginp = new AstBegin{newFl, "", fakeIfp};
+                    AstAlways* const alwaysp
+                        = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, m_beginp};
+                    m_modp->addStmtsp(alwaysp);
                 } else {
-                    m_alwaysp->addStmtsp(fakeIfp);
+                    m_beginp->addStmtsp(fakeIfp);
                 }
             }
             m_fakeIfp = fakeIfp;
@@ -589,8 +589,10 @@ class CoverageVisitor final : public VNVisitor {
         // generate blocks; each point should get separate consideration.
         // (Currently ignored for line coverage, since any generate iteration
         // covers the code in that line.)
+        VL_RESTORER(m_beginp);
         VL_RESTORER(m_beginHier);
         VL_RESTORER(m_inToggleOff);
+        m_beginp = nodep;
         if (nodep->name() != "") {
             m_beginHier = m_beginHier + (m_beginHier != "" ? "_dot_" : "") + nodep->name();
         }

@@ -594,7 +594,8 @@ class CoverageVisitor final : public VNVisitor {
         VL_RESTORER(m_beginp);
         VL_RESTORER(m_beginHier);
         VL_RESTORER(m_inToggleOff);
-        m_beginp = nodep;
+        // Normal if statement can't be put under generate begin block
+        m_beginp = nodep->generate() ? nullptr : nodep;
         if (nodep->name() != "") {
             m_beginHier = m_beginHier + (m_beginHier != "" ? "_dot_" : "") + nodep->name();
         }

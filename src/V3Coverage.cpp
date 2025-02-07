@@ -412,7 +412,6 @@ class CoverageVisitor final : public VNVisitor {
             if (elsif) VN_AS(nodep->elsesp(), If)->user1(true);
             const bool first_elsif = !nodep->user1() && elsif;
             const bool cont_elsif = nodep->user1() && elsif;
-            const bool final_elsif = nodep->user1() && !elsif && nodep->elsesp();
             //
             // Considered: If conditional is on a different line from if/else then we
             // can show it as part of line coverage of the statement
@@ -434,35 +433,10 @@ class CoverageVisitor final : public VNVisitor {
                 elseState = m_state;
             }
             m_state = lastState;
-            //
-            // If both if and else are "on", and we're not in an if/else, then
-            // we do branch coverage
-            if (!(first_elsif || cont_elsif || final_elsif) && ifState.lineCoverageOn(nodep)
-                && elseState.lineCoverageOn(nodep)) {
+
+            if (!(first_elsif || cont_elsif)) {
                 // Normal if. Linecov shows what's inside the if (not condition that is
                 // always executed)
-                UINFO(4, "   COVER-branch: " << nodep << endl);
-                nodep->addThensp(newCoverInc(nodep->fileline(), "", "v_branch", "if",
-                                             linesCov(ifState, nodep), 0,
-                                             traceNameForLine(nodep, "if")));
-                // The else has a column offset of 1 to uniquify it relative to the if
-                // As "if" and "else" are more than one character wide, this won't overlap
-                // another token
-                nodep->addElsesp(newCoverInc(nodep->fileline(), "", "v_branch", "else",
-                                             linesCov(elseState, nodep), 1,
-                                             traceNameForLine(nodep, "else")));
-            }
-            // If/else attributes to each block as non-branch coverage
-            else if (first_elsif || cont_elsif) {
-                UINFO(4, "   COVER-elsif: " << nodep << endl);
-                if (ifState.lineCoverageOn(nodep)) {
-                    nodep->addThensp(newCoverInc(nodep->fileline(), "", "v_line", "elsif",
-                                                 linesCov(ifState, nodep), 0,
-                                                 traceNameForLine(nodep, "elsif")));
-                }
-                // and we don't insert the else as the child if-else will do so
-            } else {
-                // Cover as separate blocks (not a branch as is not two-legged)
                 if (ifState.lineCoverageOn(nodep)) {
                     UINFO(4, "   COVER-half-if: " << nodep << endl);
                     nodep->addThensp(newCoverInc(nodep->fileline(), "", "v_line", "if",
@@ -475,6 +449,14 @@ class CoverageVisitor final : public VNVisitor {
                                                  linesCov(elseState, nodep), 1,
                                                  traceNameForLine(nodep, "else")));
                 }
+            } else {
+                UINFO(4, "   COVER-elsif: " << nodep << endl);
+                if (ifState.lineCoverageOn(nodep)) {
+                    nodep->addThensp(newCoverInc(nodep->fileline(), "", "v_line", "elsif",
+                                                 linesCov(ifState, nodep), 0,
+                                                 traceNameForLine(nodep, "elsif")));
+                }
+                // and we don't insert the else as the child if-else will do so
             }
             m_state = lastState;
         }

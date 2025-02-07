@@ -83,6 +83,7 @@ class CoverageVisitor final : public VNVisitor {
     bool m_then = false;  // Then or Else branch of fakeIf to which we should add nested if
     AstBegin* m_beginp = nullptr;  // Begin node to add ifs to handle condition expression
     string m_beginHier;  // AstBegin hier name for user coverage points
+    bool m_containsBranches = false;  // Substree contains branches
 
     // STATE - cleared each module
     std::unordered_map<std::string, uint32_t> m_varnames;  // Uniquify inserted variable names
@@ -480,17 +481,23 @@ class CoverageVisitor final : public VNVisitor {
             const CheckState lastState = m_state;
             CheckState ifState;
             CheckState elseState;
+            bool thenContainsBranches;
+            bool elseContainsBranches;
             {
+                m_containsBranches = false;
                 createHandle(nodep);
                 iterateAndNextNull(nodep->thensp());
                 lineTrack(nodep);
                 ifState = m_state;
+                thenContainsBranches = m_containsBranches;
             }
             m_state = lastState;
             {
+                m_containsBranches = false;
                 createHandle(nodep);
                 iterateAndNextNull(nodep->elsesp());
                 elseState = m_state;
+                elseContainsBranches = m_containsBranches;
             }
             m_state = lastState;
             //
@@ -501,15 +508,19 @@ class CoverageVisitor final : public VNVisitor {
                 // Normal if. Linecov shows what's inside the if (not condition that is
                 // always executed)
                 UINFO(4, "   COVER-branch: " << nodep << endl);
-                nodep->addThensp(newCoverInc(nodep->fileline(), "", "v_branch", "if",
-                                             linesCov(ifState, nodep), 0,
-                                             traceNameForLine(nodep, "if")));
+                if (!thenContainsBranches) {
+                    nodep->addThensp(newCoverInc(nodep->fileline(), "", "v_branch", "if",
+                                                 linesCov(ifState, nodep), 0,
+                                                 traceNameForLine(nodep, "if")));
+                }
                 // The else has a column offset of 1 to uniquify it relative to the if
                 // As "if" and "else" are more than one character wide, this won't overlap
                 // another token
-                nodep->addElsesp(newCoverInc(nodep->fileline(), "", "v_branch", "else",
-                                             linesCov(elseState, nodep), 1,
-                                             traceNameForLine(nodep, "else")));
+                if (!elseContainsBranches) {
+                    nodep->addElsesp(newCoverInc(nodep->fileline(), "", "v_branch", "else",
+                                                 linesCov(elseState, nodep), 1,
+                                                 traceNameForLine(nodep, "else")));
+                }
             }
             // If/else attributes to each block as non-branch coverage
             else if (first_elsif || cont_elsif) {
@@ -535,6 +546,7 @@ class CoverageVisitor final : public VNVisitor {
                                                  traceNameForLine(nodep, "else")));
                 }
             }
+            m_containsBranches = true;
             m_state = lastState;
         }
         UINFO(9, " done HANDLE " << m_state.m_handle << " for " << nodep << endl);

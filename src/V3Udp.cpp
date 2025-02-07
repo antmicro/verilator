@@ -65,11 +65,11 @@ class UdpVisitor final : public VNVisitor {
     uint32_t m_outputNum = 0;  // The output var number.
     AstVarRef* m_outputInitVerfp = nullptr;
 
-    void visit(AstInitial* nodep) {
+    void visit(AstInitial* nodep) override {
         if (m_primp) { m_inInitial = true; }
         iterateChildren(nodep);
     }
-    void visit(AstAssign* nodep) {
+    void visit(AstAssign* nodep) override {
         if (m_inInitial) { m_outputInitVerfp = VN_CAST(nodep->lhsp(), VarRef); }
         iterateChildren(nodep);
     }
@@ -210,7 +210,6 @@ class UdpVisitor final : public VNVisitor {
         if (nodep->type() == AstUdpTableLine::UDP_SEQUENT && !m_oFieldVarp->isBitLogic()) {
             m_oFieldVarp->v3error("For sequential udp, the output var should be the reg type!");
         }
-        auto fl = nodep->fileline();
         AstNode* iNodep = nodep->iFieldp();
         AstNode* oNodep = nodep->oFieldp();
         std::vector<std::string> iFieldNames;

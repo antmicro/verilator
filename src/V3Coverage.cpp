@@ -481,7 +481,10 @@ class CoverageVisitor final : public VNVisitor {
             // can show it as part of line coverage of the statement
             // above. Otherwise show it based on what is inside.
             // But: Seemed too complicated, and fragile.
-            if (!m_outerIfFl) m_outerIfFl = nodep->fileline();
+            if (!m_outerIfFl) {
+                m_outerIfFl = nodep->fileline();
+                m_offset = 0;
+            }
             const CheckState lastState = m_state;
             CheckState ifState;
             CheckState elseState;

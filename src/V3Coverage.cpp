@@ -618,7 +618,7 @@ class CoverageVisitor final : public VNVisitor {
         if (nodep->name() != "") {
             m_beginHier = m_beginHier + (m_beginHier != "" ? "_dot_" : "") + nodep->name();
         }
-        iterateChildren(nodep);
+        if (!nodep->generate()) iterateChildren(nodep);
         lineTrack(nodep);
     }
 

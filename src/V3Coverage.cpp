@@ -85,6 +85,7 @@ class CoverageVisitor final : public VNVisitor {
     string m_beginHier;  // AstBegin hier name for user coverage points
     bool m_containsBranches = false;  // Substree contains branches
     FileLine* m_outerIfFl = nullptr;  // Fileline of outer if
+    int m_offset = 0;  // Offset to uniq-fy IFs, which is passed to AstCoverDecl constructor
 
     // STATE - cleared each module
     std::unordered_map<std::string, uint32_t> m_varnames;  // Uniquify inserted variable names
@@ -513,7 +514,7 @@ class CoverageVisitor final : public VNVisitor {
                 UINFO(4, "   COVER-branch: " << nodep << endl);
                 if (!thenContainsBranches) {
                     nodep->addThensp(newCoverInc(m_outerIfFl, "", "v_branch", "if",
-                                                 linesCov(ifState, nodep), 0,
+                                                 linesCov(ifState, nodep), m_offset++,
                                                  traceNameForLine(nodep, "if")));
                 }
                 // The else has a column offset of 1 to uniquify it relative to the if
@@ -521,7 +522,7 @@ class CoverageVisitor final : public VNVisitor {
                 // another token
                 if (!elseContainsBranches) {
                     nodep->addElsesp(newCoverInc(m_outerIfFl, "", "v_branch", "else",
-                                                 linesCov(elseState, nodep), 1,
+                                                 linesCov(elseState, nodep), m_offset++,
                                                  traceNameForLine(nodep, "else")));
                 }
             }
@@ -530,7 +531,7 @@ class CoverageVisitor final : public VNVisitor {
                 UINFO(4, "   COVER-elsif: " << nodep << endl);
                 if (ifState.lineCoverageOn(nodep)) {
                     nodep->addThensp(newCoverInc(m_outerIfFl, "", "v_line", "elsif",
-                                                 linesCov(ifState, nodep), 0,
+                                                 linesCov(ifState, nodep), m_offset++,
                                                  traceNameForLine(nodep, "elsif")));
                 }
                 // and we don't insert the else as the child if-else will do so
@@ -539,13 +540,13 @@ class CoverageVisitor final : public VNVisitor {
                 if (ifState.lineCoverageOn(nodep)) {
                     UINFO(4, "   COVER-half-if: " << nodep << endl);
                     nodep->addThensp(newCoverInc(m_outerIfFl, "", "v_line", "if",
-                                                 linesCov(ifState, nodep), 0,
+                                                 linesCov(ifState, nodep), m_offset++,
                                                  traceNameForLine(nodep, "if")));
                 }
                 if (elseState.lineCoverageOn(nodep)) {
                     UINFO(4, "   COVER-half-el: " << nodep << endl);
                     nodep->addElsesp(newCoverInc(m_outerIfFl, "", "v_line", "else",
-                                                 linesCov(elseState, nodep), 1,
+                                                 linesCov(elseState, nodep), m_offset++,
                                                  traceNameForLine(nodep, "else")));
                 }
             }

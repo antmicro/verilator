@@ -84,6 +84,7 @@ class CoverageVisitor final : public VNVisitor {
     AstBegin* m_beginp = nullptr;  // Begin node to add ifs to handle condition expression
     string m_beginHier;  // AstBegin hier name for user coverage points
     bool m_containsBranches = false;  // Substree contains branches
+    FileLine* m_outerIfFl = nullptr;  // Fileline of outer if
 
     // STATE - cleared each module
     std::unordered_map<std::string, uint32_t> m_varnames;  // Uniquify inserted variable names
@@ -464,6 +465,7 @@ class CoverageVisitor final : public VNVisitor {
     }
     // Note not AstNodeIf; other types don't get covered
     void visit(AstIf* nodep) override {
+        VL_RESTORER(m_outerIfFl);
         UINFO(4, " IF: " << nodep << endl);
         if (m_state.m_on) {
             // An else-if.  When we iterate the if, use "elsif" marking
@@ -478,6 +480,7 @@ class CoverageVisitor final : public VNVisitor {
             // can show it as part of line coverage of the statement
             // above. Otherwise show it based on what is inside.
             // But: Seemed too complicated, and fragile.
+            if (!m_outerIfFl) m_outerIfFl = nodep->fileline();
             const CheckState lastState = m_state;
             CheckState ifState;
             CheckState elseState;
@@ -509,7 +512,7 @@ class CoverageVisitor final : public VNVisitor {
                 // always executed)
                 UINFO(4, "   COVER-branch: " << nodep << endl);
                 if (!thenContainsBranches) {
-                    nodep->addThensp(newCoverInc(nodep->fileline(), "", "v_branch", "if",
+                    nodep->addThensp(newCoverInc(m_outerIfFl, "", "v_branch", "if",
                                                  linesCov(ifState, nodep), 0,
                                                  traceNameForLine(nodep, "if")));
                 }
@@ -517,7 +520,7 @@ class CoverageVisitor final : public VNVisitor {
                 // As "if" and "else" are more than one character wide, this won't overlap
                 // another token
                 if (!elseContainsBranches) {
-                    nodep->addElsesp(newCoverInc(nodep->fileline(), "", "v_branch", "else",
+                    nodep->addElsesp(newCoverInc(m_outerIfFl, "", "v_branch", "else",
                                                  linesCov(elseState, nodep), 1,
                                                  traceNameForLine(nodep, "else")));
                 }
@@ -526,7 +529,7 @@ class CoverageVisitor final : public VNVisitor {
             else if (first_elsif || cont_elsif) {
                 UINFO(4, "   COVER-elsif: " << nodep << endl);
                 if (ifState.lineCoverageOn(nodep)) {
-                    nodep->addThensp(newCoverInc(nodep->fileline(), "", "v_line", "elsif",
+                    nodep->addThensp(newCoverInc(m_outerIfFl, "", "v_line", "elsif",
                                                  linesCov(ifState, nodep), 0,
                                                  traceNameForLine(nodep, "elsif")));
                 }
@@ -535,13 +538,13 @@ class CoverageVisitor final : public VNVisitor {
                 // Cover as separate blocks (not a branch as is not two-legged)
                 if (ifState.lineCoverageOn(nodep)) {
                     UINFO(4, "   COVER-half-if: " << nodep << endl);
-                    nodep->addThensp(newCoverInc(nodep->fileline(), "", "v_line", "if",
+                    nodep->addThensp(newCoverInc(m_outerIfFl, "", "v_line", "if",
                                                  linesCov(ifState, nodep), 0,
                                                  traceNameForLine(nodep, "if")));
                 }
                 if (elseState.lineCoverageOn(nodep)) {
                     UINFO(4, "   COVER-half-el: " << nodep << endl);
-                    nodep->addElsesp(newCoverInc(nodep->fileline(), "", "v_line", "else",
+                    nodep->addElsesp(newCoverInc(m_outerIfFl, "", "v_line", "else",
                                                  linesCov(elseState, nodep), 1,
                                                  traceNameForLine(nodep, "else")));
                 }

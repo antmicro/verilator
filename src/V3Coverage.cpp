@@ -563,6 +563,15 @@ class CoverageVisitor final : public VNVisitor {
         }
         UINFO(9, " done HANDLE " << m_state.m_handle << " for " << nodep << endl);
     }
+    void visit(AstCase* nodep) override {
+        VL_RESTORER(m_outerIfFl);
+        if (!m_outerIfFl) {
+            m_outerIfFl = nodep->fileline();
+            m_offset = 0;
+        }
+        iterateChildren(nodep);
+        lineTrack(nodep);
+    }
     void visit(AstCaseItem* nodep) override {
         // We don't add an explicit "default" coverage if not provided,
         // as we already have a warning when there is no default.
@@ -574,8 +583,8 @@ class CoverageVisitor final : public VNVisitor {
             if (m_state.lineCoverageOn(nodep)) {  // if the case body didn't disable it
                 lineTrack(nodep);
                 UINFO(4, "   COVER: " << nodep << endl);
-                nodep->addStmtsp(newCoverInc(nodep->fileline(), "", "v_line", "case",
-                                             linesCov(m_state, nodep), 0,
+                nodep->addStmtsp(newCoverInc(m_outerIfFl, "", "v_branch", "case",
+                                             linesCov(m_state, nodep), m_offset++,
                                              traceNameForLine(nodep, "case")));
             }
         }

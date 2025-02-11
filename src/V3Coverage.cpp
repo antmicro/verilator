@@ -469,6 +469,10 @@ class CoverageVisitor final : public VNVisitor {
                                << dtypep->prettyTypeName());
         }
     }
+    AstNodeStmt* getContainingStmt(AstNode* nodep) {
+        while (VN_IS(nodep, NodeExpr)) nodep = nodep->backp();
+        return VN_CAST(nodep, NodeStmt);
+    }
 
     // VISITORS - LINE COVERAGE
     void visit(AstCond* nodep) override {
@@ -505,17 +509,22 @@ class CoverageVisitor final : public VNVisitor {
                     m_fakeIfp->addElsesp(fakeIfp);
                 }
             } else {
-                if (!m_beginp) {
-                    FileLine* const newFl = new FileLine{nodep->fileline()};
-                    // Disable coverage for these fake always and begin blocks
-                    newFl->coverageOn(false);
-
-                    m_beginp = new AstBegin{newFl, "", fakeIfp};
-                    AstAlways* const alwaysp
-                        = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, m_beginp};
-                    m_modp->addStmtsp(alwaysp);
+                AstNodeStmt* const stmtp = getContainingStmt(nodep);
+                if (stmtp && !VN_IS(stmtp, AssignW)) {
+                    stmtp->addNext(fakeIfp);
                 } else {
-                    m_beginp->addStmtsp(fakeIfp);
+                    if (!m_beginp) {
+                        FileLine* const newFl = new FileLine{nodep->fileline()};
+                        // Disable coverage for these fake always and begin blocks
+                        newFl->coverageOn(false);
+
+                        m_beginp = new AstBegin{newFl, "", fakeIfp};
+                        AstAlways* const alwaysp
+                            = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, m_beginp};
+                        m_modp->addStmtsp(alwaysp);
+                    } else {
+                        m_beginp->addStmtsp(fakeIfp);
+                    }
                 }
             }
             m_fakeIfp = fakeIfp;

@@ -412,6 +412,10 @@ class CoverageVisitor final : public VNVisitor {
                                << dtypep->prettyTypeName());
         }
     }
+    AstNodeStmt* getContainingStmt(AstNode* nodep) {
+        while (VN_IS(nodep, NodeExpr)) nodep = nodep->abovep();
+        return VN_CAST(nodep, NodeStmt);
+    }
 
     // VISITORS - LINE COVERAGE
     void visit(AstCond* nodep) override {
@@ -441,6 +445,8 @@ class CoverageVisitor final : public VNVisitor {
                 } else {
                     m_ifToAddCondp->addElsesp(fakeIfp);
                 }
+            } else if (AstNodeStmt* const stmtp = getContainingStmt(nodep)) {
+                stmtp->addNext(fakeIfp);
             } else {
                 if (!m_beginp) {
                     FileLine* const newFl = new FileLine{nodep->fileline()};

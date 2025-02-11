@@ -410,13 +410,8 @@ void VerilatedSaif::declare(uint32_t code, const char* name, const char* wirep, 
     m_activityArena.back().resize(m_activityArena.back().size() + bits);
     m_codeToActivity[code] = m_activity.size();
 
-    m_activity.emplace_back(
-        name,
-        static_cast<uint32_t>(lsb),
-        static_cast<uint32_t>(bits),
-        m_activityArena.back().data() + bitsIdx,
-        0
-    );
+    m_activity.emplace_back(name, static_cast<uint32_t>(lsb), static_cast<uint32_t>(bits),
+                            m_activityArena.back().data() + bitsIdx, 0);
 }
 
 void VerilatedSaif::declEvent(uint32_t code, uint32_t fidx, const char* name, int dtypenum,

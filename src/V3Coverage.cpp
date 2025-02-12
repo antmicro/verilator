@@ -445,20 +445,23 @@ class CoverageVisitor final : public VNVisitor {
                 } else {
                     m_ifToAddCondp->addElsesp(fakeIfp);
                 }
-            } else if (AstNodeStmt* const stmtp = getContainingStmt(nodep)) {
-                stmtp->addNext(fakeIfp);
             } else {
-                if (!m_beginp) {
-                    FileLine* const newFl = new FileLine{nodep->fileline()};
-                    // Disable coverage for these fake always and begin blocks
-                    newFl->coverageOn(false);
-
-                    m_beginp = new AstBegin{newFl, "", fakeIfp};
-                    AstAlways* const alwaysp
-                        = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, m_beginp};
-                    m_modp->addStmtsp(alwaysp);
+                AstNodeStmt* const stmtp = getContainingStmt(nodep);
+                if (!VN_IS(stmtp, AssignW)) {
+                    stmtp->addNext(fakeIfp);
                 } else {
-                    m_beginp->addStmtsp(fakeIfp);
+                    if (!m_beginp) {
+                        FileLine* const newFl = new FileLine{nodep->fileline()};
+                        // Disable coverage for these fake always and begin blocks
+                        newFl->coverageOn(false);
+
+                        m_beginp = new AstBegin{newFl, "", fakeIfp};
+                        AstAlways* const alwaysp
+                            = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, m_beginp};
+                        m_modp->addStmtsp(alwaysp);
+                    } else {
+                        m_beginp->addStmtsp(fakeIfp);
+                    }
                 }
             }
             m_ifToAddCondp = fakeIfp;

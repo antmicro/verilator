@@ -413,7 +413,7 @@ class CoverageVisitor final : public VNVisitor {
         }
     }
     AstNodeStmt* getContainingStmt(AstNode* nodep) {
-        while (VN_IS(nodep, NodeExpr)) nodep = nodep->abovep();
+        while (VN_IS(nodep, NodeExpr)) nodep = nodep->backp();
         return VN_CAST(nodep, NodeStmt);
     }
 

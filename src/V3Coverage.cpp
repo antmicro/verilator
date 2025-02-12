@@ -79,8 +79,8 @@ class CoverageVisitor final : public VNVisitor {
     AstNodeModule* m_modp = nullptr;  // Current module to add statement to
     bool m_inToggleOff = false;  // In function/task etc
     bool m_condBranchOff = false;  // Do not include cond expr in branch coverage
-    AstIf* m_ifToAddCondp = nullptr;  // If where to put if statements added to handle ?:
-    bool m_then = false;  // Then or Else branch of that if
+    AstIf* m_fakeIfp = nullptr;  // Fake if for branch coverage of cond expression
+    bool m_then = false;  // Then or Else branch of fakeIf to which we should add nested if
     AstBegin* m_beginp = nullptr;  // Begin node to add ifs to handle condition expression
     string m_beginHier;  // AstBegin hier name for user coverage points
     bool m_containsBranches = false;  // Substree contains branches
@@ -419,7 +419,7 @@ class CoverageVisitor final : public VNVisitor {
 
     // VISITORS - LINE COVERAGE
     void visit(AstCond* nodep) override {
-        VL_RESTORER(m_ifToAddCondp);
+        VL_RESTORER(m_fakeIfp);
         VL_RESTORER(m_then);
         VL_RESTORER(m_condBranchOff);
         UINFO(4, " COND: " << nodep << endl);
@@ -439,11 +439,11 @@ class CoverageVisitor final : public VNVisitor {
             m_condBranchOff = false;
 
             AstIf* const fakeIfp = new AstIf{nodep->fileline(), nodep->condp()->cloneTree(false)};
-            if (m_ifToAddCondp) {
+            if (m_fakeIfp) {
                 if (m_then) {
-                    m_ifToAddCondp->addThensp(fakeIfp);
+                    m_fakeIfp->addThensp(fakeIfp);
                 } else {
-                    m_ifToAddCondp->addElsesp(fakeIfp);
+                    m_fakeIfp->addElsesp(fakeIfp);
                 }
             } else {
                 AstNodeStmt* const stmtp = getContainingStmt(nodep);
@@ -464,7 +464,7 @@ class CoverageVisitor final : public VNVisitor {
                     }
                 }
             }
-            m_ifToAddCondp = fakeIfp;
+            m_fakeIfp = fakeIfp;
             m_then = true;
             iterateNull(nodep->thenp());
             m_then = false;
@@ -476,8 +476,6 @@ class CoverageVisitor final : public VNVisitor {
     // Note not AstNodeIf; other types don't get covered
     void visit(AstIf* nodep) override {
         VL_RESTORER(m_outerIfFl);
-        VL_RESTORER(m_ifToAddCondp);
-        VL_RESTORER(m_then);
         UINFO(4, " IF: " << nodep << endl);
         if (m_state.m_on) {
             // An else-if.  When we iterate the if, use "elsif" marking
@@ -496,14 +494,12 @@ class CoverageVisitor final : public VNVisitor {
                 m_outerIfFl = nodep->fileline();
                 m_offset = 0;
             }
-            m_ifToAddCondp = nodep;
             const CheckState lastState = m_state;
             CheckState ifState;
             CheckState elseState;
             bool thenContainsBranches;
             bool elseContainsBranches;
             {
-                m_then = true;
                 m_containsBranches = false;
                 createHandle(nodep);
                 iterateAndNextNull(nodep->thensp());
@@ -513,7 +509,6 @@ class CoverageVisitor final : public VNVisitor {
             }
             m_state = lastState;
             {
-                m_then = false;
                 m_containsBranches = false;
                 createHandle(nodep);
                 iterateAndNextNull(nodep->elsesp());

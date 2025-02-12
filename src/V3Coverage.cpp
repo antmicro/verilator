@@ -447,7 +447,7 @@ class CoverageVisitor final : public VNVisitor {
                 }
             } else {
                 AstNodeStmt* const stmtp = getContainingStmt(nodep);
-                if (!VN_IS(stmtp, AssignW)) {
+                if (stmtp && !VN_IS(stmtp, AssignW)) {
                     stmtp->addNext(fakeIfp);
                 } else {
                     if (!m_beginp) {

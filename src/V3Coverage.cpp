@@ -568,11 +568,13 @@ class CoverageVisitor final : public VNVisitor {
         UINFO(9, " done HANDLE " << m_state.m_handle << " for " << nodep << endl);
     }
     void visit(AstCase* nodep) override {
+        VL_RESTORER(m_state);
         VL_RESTORER(m_outerIfFl);
         if (!m_outerIfFl) {
             m_outerIfFl = nodep->fileline();
             m_offset = 0;
         }
+        createHandle(nodep);
         iterateChildren(nodep);
         lineTrack(nodep);
     }

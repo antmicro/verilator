@@ -1015,7 +1015,9 @@ vnum    {vnum1}|{vnum2}|{vnum3}|{vnum4}|{vnum5}
 
   /************************************************************************/
   /* Tables */
-<TABLE>([f01xX\?br\*-]{1}|[01\?\*]{2}|\([01\?]{2}\)) {FL; yylval.strp = PARSEP->newString(yytext, yyleng); return yaTABLEIFIELDVAL; } /* Input field symbol. */
+<TABLE>([rRfFpPnN\*]{1}) {FL; yylval.strp = PARSEP->newString(yytext, yyleng); return yaTABLEIFIELDVAL; } /* edge_symbol */
+<TABLE>([01xX\?bB\-]{1}) {FL; yylval.strp = PARSEP->newString(yytext, yyleng); return yaTABLEIFIELDVAL; } /* level_symbol, next_state */
+<TABLE>(\([01xX\?bB]{2}\)) {FL; yylval.strp = PARSEP->newString(yytext, yyleng); return yaTABLEIFIELDVAL; } /* edge_indicator */
 <TABLE>[ \t]+           { FL; return yaTABLESEP; } /* Separator for table line. */
 <TABLE>[ \t]*[\\]+[ \t]*[\n][ \t]*           { FL; return yaTABLELSEP; } /* Separator for table line. */
 <TABLE>[:]              { FL; return yaTABLELRSEP; } /* LHS and RHS separator for table line. */

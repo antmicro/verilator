@@ -451,12 +451,12 @@ BISONPRE_VERSION(3.7,%define api.header.include {"V3ParseBison.h"})
 %token<fl>              ygenSTRENGTH    "STRENGTH keyword (strong1/etc)"
 
 %token<strp>            yaTABLELINE     "TABLE LINE"
-%token<strp>            yaTABLEIFIELDVAL     "Table_line_input_field_value"
-%token<strp>            yaTABLEOFIELDVAL     "Table_line_output_field_value"
+%token<strp>            yaTABLEIFIELDVAL            "UDP table input symbol"
+%token<strp>            yaTABLEOFIELDVAL            "UDP table output symbol"
 %token<fl>              yaTABLELRSEP    ":"
-%token<fl>              yaTABLESEP      "Table_line_input_field_value_sep"
-%token<fl>              yaTABLELSEP     "Table_line_input_line_field_value_sep"
-%token<fl>              yaTABLELINEEND  "Table_line_end"
+%token<fl>              yaTABLESEP      "UDP table input field separator"
+%token<fl>              yaTABLELSEP     "UDP table input line separator"
+%token<fl>              yaTABLELINEEND  "UDP table line end"
 
 %token<strp>            yaSCCTOR        "`systemc_ctor block"
 %token<strp>            yaSCDTOR        "`systemc_dtor block"
@@ -5797,31 +5797,34 @@ tableEntryList<udpTableLinep>:  // IEEE: { combinational_entry }
         ;
 
 tableEntry<udpTableLinep>:      // IEEE: combinational_entry
-                tableLine                             { $$ = $1; }
+                tableLine                               { $$ = $1; }
         |       error                                   { $$ = nullptr; }
         ;
 
-tableLine<udpTableLinep>:
-                tableIField yaTABLELRSEP tableOField yaTABLELINEEND { $$ = new AstUdpTableLine{$<fl>1, $1, $3, AstUdpTableLine::UDP_COMB}; }
-        |       tableIField yaTABLELRSEP tableOField yaTABLELRSEP tableOField yaTABLELINEEND { $$ = new AstUdpTableLine{$<fl>1, $1, $3, $5, AstUdpTableLine::UDP_SEQUENT}; }
-        |       tableIField yaTABLELRSEP tableOField yaTABLESEP yaTABLELRSEP tableOField yaTABLELINEEND { $$ = new AstUdpTableLine{$<fl>1, $1, $3, $6, AstUdpTableLine::UDP_SEQUENT}; }
+tableLine<udpTableLinep>:       // IEEE: TODO
+                tableIField yaTABLELRSEP tableOField yaTABLELINEEND 
+                        { $$ = new AstUdpTableLine{$<fl>1, $1, $3, AstUdpTableLine::UDP_COMB}; }
+        |       tableIField yaTABLELRSEP tableOField yaTABLELRSEP tableOField yaTABLELINEEND
+                        { $$ = new AstUdpTableLine{$<fl>1, $1, $3, $5, AstUdpTableLine::UDP_SEQUENT}; }
+        |       tableIField yaTABLELRSEP tableOField yaTABLESEP yaTABLELRSEP tableOField yaTABLELINEEND 
+                        { $$ = new AstUdpTableLine{$<fl>1, $1, $3, $6, AstUdpTableLine::UDP_SEQUENT}; }
         ;
 
-tableIField<udpTableLineValp>:
-                yaTABLESEP tablelVal { $$ = $2; }
-        |       tablelVal yaTABLESEP { $$ = $1; }
-        |       yaTABLESEP tablelVal yaTABLESEP   { $$ = $2; }
-        |       tableIField tablelVal yaTABLESEP  { $$ = addNextNull($1, $2); }
-        |       tableIField tablelVal yaTABLELSEP { $$ = addNextNull($1, $2); }
+tableIField<udpTableLineValp>:  // IEEE: TODO
+                yaTABLESEP tablelVal                    { $$ = $2; }
+        |       tablelVal yaTABLESEP                    { $$ = $1; }
+        |       yaTABLESEP tablelVal yaTABLESEP         { $$ = $2; }
+        |       tableIField tablelVal yaTABLESEP        { $$ = addNextNull($1, $2); }
+        |       tableIField tablelVal yaTABLELSEP       { $$ = addNextNull($1, $2); }
         ;
 
 tablelVal<udpTableLineValp>:
-                yaTABLEIFIELDVAL    { $$ = new AstUdpTableLineVal{$<fl>1, *$1}; }
+                yaTABLEIFIELDVAL                        { $$ = new AstUdpTableLineVal{$<fl>1, *$1}; }
         ;
 
 tableOField<udpTableLineValp>:
-                yaTABLEIFIELDVAL { $$ = new AstUdpTableLineVal{$<fl>1, *$1}; }
-        |       yaTABLESEP yaTABLEIFIELDVAL { $$ = new AstUdpTableLineVal{$<fl>2, *$2}; }
+                yaTABLEIFIELDVAL                        { $$ = new AstUdpTableLineVal{$<fl>1, *$1}; }
+        |       yaTABLESEP yaTABLEIFIELDVAL             { $$ = new AstUdpTableLineVal{$<fl>2, *$2}; }
         ;
 
 //************************************************

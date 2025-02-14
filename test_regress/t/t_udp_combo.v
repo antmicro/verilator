@@ -12,31 +12,31 @@ module t (/*AUTOARG*/
    reg a, b, sel, z;
    udp_mux2(z, a, b, sel);
 
-   int cycle=0;
+   int cycle = 0;
 
    always @(posedge clk) begin
-     cycle <= cycle+1;
+     cycle <= cycle + 1;
      if (cycle==0) begin
-        a = 0;
-        b = 1;
-        sel = 0;
+        a <= 0;
+        b <= 1;
+        sel <= 0;
      end
      else if (cycle==1) begin
-        a = 1;
-        b = 1;
-        sel = 0;
+        a <= 1;
+        b <= 1;
+        sel <= 0;
         if (z != 0) $stop;
      end
      else if (cycle==2) begin
-        a = 0;
-        b = 1;
-        sel = 0;
+        a <= 0;
+        b <= 1;
+        sel <= 0;
         if (z != 1) $stop;
      end
      else if (cycle==3) begin
-        a = 1;
-        b = 0;
-        sel = 0;
+        a <= 1;
+        b <= 0;
+        sel <= 0;
         if (z != 0) $stop;
      end
      else if (cycle==4) begin

@@ -1,17 +1,12 @@
 // -*- mode: C++; c-file-style: "cc-mode" -*-
 //*************************************************************************
-// DESCRIPTION: Verilator: Implementation of Christofides algorithm to
-//              approximate the solution to the traveling salesman problem.
-//
-// ISSUES: This isn't exactly Christofides algorithm; see the TODO
-//         in perfectMatching(). True minimum-weight perfect matching
-//         would produce a better result. How much better is TBD.
+// DESCRIPTION: Verilator: Resolve user-defined primitives
 //
 // Code available from: https://verilator.org
 //
 //*************************************************************************
 //
-// Copyright 2003-2024 by Wilson Snyder. This program is free software; you
+// Copyright 2003-2025 by Wilson Snyder. This program is free software; you
 // can redistribute it and/or modify it under the terms of either the GNU
 // Lesser General Public License Version 3 or the Perl Artistic License
 // Version 2.0.
@@ -22,6 +17,8 @@
 #include "V3PchAstNoMT.h"  // VL_MT_DISABLED_CODE_UNIT
 
 #include "V3Udp.h"
+
+#include "V3FileLine.h"
 
 #include <map>
 #include <vector>
@@ -44,15 +41,15 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 // before V3Inline and V3Tristate.
 
 class UdpVisitor final : public VNVisitor {
-    bool m_inInitial = false;
+    // STATE
+    bool m_inInitial = false;  // Inside an initial.
     AstVar* m_iFieldVarp = nullptr;  // Input field var of table line.
     AstVar* m_oFieldVarp = nullptr;  // Output filed var of table line.
     std::vector<AstVar*> m_inputVars;  // All the input vars in the AstPrimitive.
     std::vector<AstVar*> m_outputVars;  // All the output vars in the AstPrimitive.
-    AstPrimitive* m_primp = nullptr;
+    bool m_inPrim = false;  // Inside a primitive.
     AstNodeStmt* m_comboNodeStmtp = nullptr;  // The stmt for all the combinational lines.
     AstIf* m_lineStmtp = nullptr;  // The stmt for the current combinational lines.
-    AstAlways* m_alwaysp = nullptr;  // The the always_latch realizing the combinational part.
     bool m_isFirstOutput = false;  // Whether the first IO port is output.
     AstUdpTableLineVal* m_edgeTrigValp = nullptr;  // The edge trigger value.
     AstVar* m_trigVarp = nullptr;  // The edge trigger var.
@@ -61,114 +58,11 @@ class UdpVisitor final : public VNVisitor {
     std::map<AstAlways*, AstIf*>
         m_alwaysIfMapp;  // The map between always and if stmt for sequent line.
     AstVar* m_newOutVarp = nullptr;  // The output varp.
-    uint32_t m_inputNum = 0;  // The input var number.
-    uint32_t m_outputNum = 0;  // The output var number.
     AstVarRef* m_outputInitVerfp = nullptr;
 
-    void visit(AstInitial* nodep) override {
-        if (m_primp) { m_inInitial = true; }
-        iterateChildren(nodep);
-    }
-    void visit(AstAssign* nodep) override {
-        if (m_inInitial) { m_outputInitVerfp = VN_CAST(nodep->lhsp(), VarRef); }
-        iterateChildren(nodep);
-    }
-    void visit(AstPrimitive* nodep) override {
-        m_outputInitVerfp = nullptr;
-        m_primp = nodep;
-        m_isFirstOutput = false;
-        iterateChildren(nodep);
-        m_inputVars.clear();
-        m_outputVars.clear();
-        m_primp = nullptr;
-        m_inInitial = false;
-    }
-    void visit(AstVar* nodep) override {
-        // Push the input and output vars for primitive.
-        if (m_primp) {
-            if (nodep->isIO()) {
-                if (nodep->isInput()) {
-                    m_inputVars.push_back(nodep);
-                } else {
-                    m_outputVars.push_back(nodep);
-                }
-                if ((m_inputVars.size() == 0) && (m_outputVars.size() == 1)) {
-                    m_isFirstOutput = true;
-                }
-            }
-        }
-        iterateChildren(nodep);
-    }
-    void visit(AstUdpTable* nodep) override {
-        auto fl = nodep->fileline();
-        m_comboNodeStmtp = nullptr;
-        m_lineStmtp = nullptr;
-        m_inputNum = m_inputVars.size();
-        m_outputNum = m_outputVars.size();
-        if (m_outputNum != 1) {
-            m_outputVars.back()->v3error(
-                m_outputNum << " output ports for udp table, there must be one output port!");
-        }
-        if (!m_isFirstOutput && m_outputNum) {
-            m_inputVars[0]->v3error("The first port must be the output port!");
-        }
-        m_oFieldVarp = m_outputVars[0];
-        // Input var for the iField,
-        // Add the input filed var and corresponding varref.
-        AstNodeDType* const typep = nodep->findBitDType(m_inputNum, m_inputNum, VSigning::NOSIGN);
-        m_iFieldVarp = new AstVar{fl, VVarType::MODULETEMP, "tableline__ifield__udptmp", typep};
-        m_inputVars.back()->addNextHere(m_iFieldVarp);
-        AstVarRef* const iFieldRefp = new AstVarRef{fl, m_iFieldVarp, VAccess::WRITE};
-        auto itr = m_inputVars.begin();
-        // Relate the input vars with the input field var by concat
-        AstNodeExpr* contactp = new AstVarRef{fl, *itr, VAccess::READ};
-        while (++itr != m_inputVars.end()) {
-            contactp = new AstConcat{fl, new AstVarRef{fl, *itr, VAccess::READ}, contactp};
-        }
-        AstNodeStmt* const iFieldStmtp = new AstAssignW{fl, iFieldRefp, contactp};
-        AstNode* currentNode = iFieldStmtp;
-        // Process every table line.
-        iterateChildren(nodep);
-        // First for the sequent parts;
-        if (!m_alwaysIfMapp.empty()) {
-            for (auto itr = m_alwaysIfMapp.begin(); itr != m_alwaysIfMapp.end(); itr++) {
-                currentNode->addNextHere(itr->first);
-                currentNode = itr->first;
-            }
-            AstAssignW* const sequentAssignStmtp
-                = new AstAssignW{fl, new AstVarRef{fl, m_oFieldVarp, VAccess::WRITE},
-                                 new AstVarRef{fl, m_newOutVarp, VAccess::READ}};
-            currentNode->addNextHere(sequentAssignStmtp);
-            currentNode = sequentAssignStmtp;
-        }
-        // Then for the comb parts.
-        if (m_comboNodeStmtp) {
-            // Use the always_latch to realize the UDP table.
-            m_alwaysp = new AstAlways{fl, VAlwaysKwd::ALWAYS, nullptr, nullptr};
-            currentNode->addNextHere(m_alwaysp);
-            m_alwaysp->addStmtsp(m_comboNodeStmtp);
-        }
-        // For initial block, initialize the tmp out var.
-        if (m_outputInitVerfp && m_newOutVarp) {
-            m_outputInitVerfp->replaceWith(
-                new AstVarRef{nodep->fileline(), m_newOutVarp, VAccess::WRITE});
-            VL_DO_DANGLING(pushDeletep(m_outputInitVerfp), m_outputInitVerfp);
-        }
-
-        nodep->replaceWith(iFieldStmtp);
-        m_trigAlwaysMapp.clear();
-        m_alwaysIfMapp.clear();
-        m_newOutVarp = nullptr;
-        VL_DO_DANGLING(pushDeletep(nodep), nodep);
-    }
-    void visit(AstUdpTableLine* nodep) override { processLogic(nodep); }
-    void visit(AstNode* nodep) override { iterateChildren(nodep); }
-    // For logic processing.
-    bool isEdgeTrig(std::string& valName) {
-        auto isNum = [](char str) {
-            if (str == '1' || str == '0') return true;
-            return false;
-        };
+    // FUNCTIONS
+    static bool isEdgeTrig(std::string& valName) {
+        auto isNum = [](char str) { return str == '1' || str == '0'; };
         if (valName == "r" || valName == "f" || valName == "R" || valName == "F") return true;
         if (valName.length() == 4) {
             std::string valNum = valName.substr(1, 2);
@@ -198,86 +92,15 @@ class UdpVisitor final : public VNVisitor {
         }
         return false;
     }
-    bool isMultiSig(const std::string& valName) { return valName.length() >= 2; }
-    bool isCombOutputSig(const std::string& valName) {
+    static bool isMultiSig(const std::string& valName) { return valName.length() >= 2; }
+    static bool isCombOutputSig(const std::string& valName) {
         return (valName == "0" || valName == "1" || valName == "x" || valName == "X");
     }
-    bool isSequentOutputSig(const std::string& valName) {
+    static bool isSequentOutputSig(const std::string& valName) {
         return (valName == "0" || valName == "1" || valName == "x" || valName == "X"
                 || valName == "-");
     }
-    void processLogic(AstUdpTableLine* nodep) {
-        if (nodep->type() == AstUdpTableLine::UDP_SEQUENT && !m_oFieldVarp->isBitLogic()) {
-            m_oFieldVarp->v3error("For sequential udp, the output var should be the reg type!");
-        }
-        AstNode* iNodep = nodep->iFieldp();
-        AstNode* oNodep = nodep->oFieldp();
-        std::vector<std::string> iFieldNames;
-        std::vector<std::string> oFieldNames;
-        m_edgeTrigValp = nullptr;
-        m_trigVarp = nullptr;
-        int index = 0;
-        while (iNodep) {
-            if (AstUdpTableLineVal* linevalp = VN_CAST(iNodep, UdpTableLineVal)) {
-                std::string valName = linevalp->name();
-                if (isEdgeTrig(valName)) {
-                    if (!m_edgeTrigValp) {
-                        m_edgeTrigValp = linevalp;
-                        linevalp->name(valName);
-                        m_trigVarp = m_inputVars[index];
-                    } else {
-                        iNodep->v3error("There can be only one edge tigger signal!");
-                    }
-                    iFieldNames.push_back(valName);
-                } else if (isMultiSig(valName)) {
-                    for (auto name : valName) {
-                        std::string subName = std::string{name};
-                        iFieldNames.push_back(subName);
-                    }
-                } else {
-                    iFieldNames.push_back(valName);
-                }
-                ++index;
-            }
-            iNodep = iNodep->nextp();
-        }
-        if (iFieldNames.size() != m_inputNum) {
-            nodep->v3error(m_inputNum << " input var required, while there are "
-                                      << iFieldNames.size() << " input for the table line!");
-        }
-        while (oNodep) {
-            if (AstUdpTableLineVal* linevalp = VN_CAST(oNodep, UdpTableLineVal)) {
-                if (nodep->type() == AstUdpTableLine::UDP_COMB) {
-                    if (oFieldNames.empty()) {
-                        if (!isCombOutputSig(linevalp->name())) {
-                            linevalp->v3error("Illegal value for combinational udp line output!");
-                        }
-                    }
-                } else {
-                    if (oFieldNames.size() == 1) {
-                        if (!isSequentOutputSig(linevalp->name())) {
-                            linevalp->v3error("Illegal value for sequential udp line output!");
-                        }
-                    }
-                }
-                oFieldNames.push_back(linevalp->name());
-            }
-            oNodep = oNodep->nextp();
-        }
-        if (nodep->type() == AstUdpTableLine::UDP_COMB) {
-            if (m_edgeTrigValp) {
-                m_edgeTrigValp->v3error(
-                    "There should not be a edge trigger for combinational UDP table line!");
-                m_edgeTrigValp = nullptr;
-            }
-        }
-        if (!m_edgeTrigValp) {
-            addCombLogic(nodep, iFieldNames, oFieldNames);
-        } else {
-            addEdgTriglogic(nodep, iFieldNames, oFieldNames);
-        }
-    }
-    V3Number getMaskNum(AstNode* nodep, const std::vector<std::string>& fieldNames) {
+    static V3Number getMaskNum(AstNode* nodep, const std::vector<std::string>& fieldNames) {
         V3Number maskNum{nodep, (int)fieldNames.size()};
         int bitIndex = 0;
         for (auto name : fieldNames) {
@@ -292,7 +115,7 @@ class UdpVisitor final : public VNVisitor {
         }
         return maskNum;
     }
-    V3Number getCmpNum(AstNode* nodep, const std::vector<std::string>& fieldNames) {
+    static V3Number getCmpNum(AstNode* nodep, const std::vector<std::string>& fieldNames) {
         V3Number cmpNum{nodep, (int)fieldNames.size()};
         int bitIndex = 0;
         for (auto name : fieldNames) {
@@ -307,7 +130,7 @@ class UdpVisitor final : public VNVisitor {
         }
         return cmpNum;
     }
-    V3Number getOutputNum(AstNode* nodep, const std::string& fieldNames) {
+    static V3Number getOutputNum(AstNode* nodep, const std::string& fieldNames) {
         V3Number outputNum{nodep, 1};
         if (fieldNames == "0") {
             outputNum.setBit(0, 0);
@@ -318,6 +141,8 @@ class UdpVisitor final : public VNVisitor {
         }
         return outputNum;
     }
+
+    // METHODS
     void addEdgTriglogic(AstUdpTableLine* nodep, std::vector<std::string>& iFieldNames,
                          std::vector<std::string>& oFieldNames) {
         auto oValName = oFieldNames[1];
@@ -412,9 +237,188 @@ class UdpVisitor final : public VNVisitor {
         }
     }
 
+    // VISITORS
+    void visit(AstInitial* nodep) override {
+        m_inInitial = true;
+        iterateChildren(nodep);
+    }
+    void visit(AstAssign* nodep) override {
+        if (m_inInitial && m_inPrim) m_outputInitVerfp = VN_CAST(nodep->lhsp(), VarRef);
+        iterateChildren(nodep);
+    }
+    void visit(AstPrimitive* nodep) override {
+        UASSERT_OBJ(!m_inPrim, nodep, "UdpTable inside UdpTable");
+        VL_RESTORER(m_inPrim);
+        VL_RESTORER(m_outputInitVerfp);
+        VL_RESTORER(m_inInitial);
+        m_inPrim = true;
+        m_isFirstOutput = false;
+        m_inputVars.clear();
+        m_outputVars.clear();
+        iterateChildren(nodep);
+    }
+    void visit(AstVar* nodep) override {
+        // Push the input and output vars for primitive.
+        if (m_inPrim) {
+            if (nodep->isIO()) {
+                if (nodep->isInput()) {
+                    m_inputVars.push_back(nodep);
+                } else {
+                    m_outputVars.push_back(nodep);
+                }
+                if ((m_inputVars.size() == 0) && (m_outputVars.size() == 1)) {
+                    m_isFirstOutput = true;
+                }
+            }
+        }
+        iterateChildren(nodep);
+    }
+    void visit(AstUdpTable* nodep) override {
+        VL_RESTORER(m_lineStmtp);
+        VL_RESTORER(m_comboNodeStmtp);
+        VL_RESTORER(m_newOutVarp);
+
+        const size_t inputNum = m_inputVars.size();
+        const size_t outputNum = m_outputVars.size();
+        if (outputNum != 1) {
+            m_outputVars.back()->v3error(
+                outputNum << " output ports for udp table, there must be one output port!");
+        }
+        if (!m_isFirstOutput && outputNum) {
+            m_inputVars[0]->v3error("The first port must be the output port!");
+        }
+        m_oFieldVarp = m_outputVars[0];
+
+        // Input var for the iField,
+        // Add the input filed var and corresponding varref.
+        AstNodeDType* const typep = nodep->findBitDType(inputNum, inputNum, VSigning::NOSIGN);
+        FileLine* const flp = nodep->fileline();
+        m_iFieldVarp = new AstVar{flp, VVarType::MODULETEMP, "tableline__ifield__udptmp", typep};
+        m_inputVars.back()->addNextHere(m_iFieldVarp);
+        AstVarRef* const iFieldRefp = new AstVarRef{flp, m_iFieldVarp, VAccess::WRITE};
+        auto itr = m_inputVars.begin();
+        // Relate the input vars with the input field var by concat
+        AstNodeExpr* contactp = new AstVarRef{flp, *itr, VAccess::READ};
+        while (++itr != m_inputVars.end()) {
+            contactp = new AstConcat{flp, new AstVarRef{flp, *itr, VAccess::READ}, contactp};
+        }
+        AstNodeStmt* const iFieldStmtp = new AstAssignW{flp, iFieldRefp, contactp};
+        AstNode* currentNode = iFieldStmtp;
+
+        // Process every table line.
+        iterateChildren(nodep);
+
+        // First for the sequent parts;
+        if (!m_alwaysIfMapp.empty()) {
+            for (auto alwaysIf : m_alwaysIfMapp) {
+                AstAlways* const alwaysp = alwaysIf.first;
+                currentNode->addNextHere(alwaysp);
+                currentNode = alwaysp;
+            }
+            AstAssignW* const sequentAssignStmtp
+                = new AstAssignW{flp, new AstVarRef{flp, m_oFieldVarp, VAccess::WRITE},
+                                 new AstVarRef{flp, m_newOutVarp, VAccess::READ}};
+            currentNode->addNextHere(sequentAssignStmtp);
+            currentNode = sequentAssignStmtp;
+        }
+
+        // Then for the comb parts.
+        if (m_comboNodeStmtp) {
+            // Use the always_latch to realize the UDP table.
+            AstAlways* const alwaysp = new AstAlways{flp, VAlwaysKwd::ALWAYS, nullptr, nullptr};
+            alwaysp->addStmtsp(m_comboNodeStmtp);
+            currentNode->addNextHere(alwaysp);
+        }
+
+        // For initial block, initialize the tmp out var.
+        if (m_outputInitVerfp && m_newOutVarp) {
+            m_outputInitVerfp->replaceWith(
+                new AstVarRef{nodep->fileline(), m_newOutVarp, VAccess::WRITE});
+            VL_DO_DANGLING(pushDeletep(m_outputInitVerfp), m_outputInitVerfp);
+        }
+
+        nodep->replaceWith(iFieldStmtp);
+        m_trigAlwaysMapp.clear();
+        m_alwaysIfMapp.clear();
+        VL_DO_DANGLING(pushDeletep(nodep), nodep);
+    }
+    void visit(AstUdpTableLine* nodep) override {
+        if (nodep->type() == AstUdpTableLine::UDP_SEQUENT && !m_oFieldVarp->isBitLogic()) {
+            m_oFieldVarp->v3error("For sequential udp, the output var should be the reg type!");
+        }
+        AstNode* iNodep = nodep->iFieldp();
+        AstNode* oNodep = nodep->oFieldp();
+        std::vector<std::string> iFieldNames;
+        std::vector<std::string> oFieldNames;
+        m_edgeTrigValp = nullptr;
+        m_trigVarp = nullptr;
+        int index = 0;
+        while (iNodep) {
+            if (AstUdpTableLineVal* linevalp = VN_CAST(iNodep, UdpTableLineVal)) {
+                std::string valName = linevalp->name();
+                if (isEdgeTrig(valName)) {
+                    if (!m_edgeTrigValp) {
+                        m_edgeTrigValp = linevalp;
+                        linevalp->name(valName);
+                        m_trigVarp = m_inputVars[index];
+                    } else {
+                        iNodep->v3error("There can be only one edge tigger signal!");
+                    }
+                    iFieldNames.push_back(valName);
+                } else if (isMultiSig(valName)) {
+                    for (auto name : valName) {
+                        std::string subName = std::string{name};
+                        iFieldNames.push_back(subName);
+                    }
+                } else {
+                    iFieldNames.push_back(valName);
+                }
+                ++index;
+            }
+            iNodep = iNodep->nextp();
+        }
+        if (iFieldNames.size() != m_inputVars.size()) {
+            nodep->v3error(m_inputVars.size()
+                           << " input var required, while there are " << iFieldNames.size()
+                           << " input for the table line!");
+        }
+        while (oNodep) {
+            if (AstUdpTableLineVal* linevalp = VN_CAST(oNodep, UdpTableLineVal)) {
+                if (nodep->type() == AstUdpTableLine::UDP_COMB) {
+                    if (oFieldNames.empty()) {
+                        if (!isCombOutputSig(linevalp->name())) {
+                            linevalp->v3error("Illegal value for combinational udp line output!");
+                        }
+                    }
+                } else {
+                    if (oFieldNames.size() == 1) {
+                        if (!isSequentOutputSig(linevalp->name())) {
+                            linevalp->v3error("Illegal value for sequential udp line output!");
+                        }
+                    }
+                }
+                oFieldNames.push_back(linevalp->name());
+            }
+            oNodep = oNodep->nextp();
+        }
+        if (nodep->type() == AstUdpTableLine::UDP_COMB) {
+            if (m_edgeTrigValp) {
+                m_edgeTrigValp->v3error(
+                    "There should not be a edge trigger for combinational UDP table line!");
+                m_edgeTrigValp = nullptr;
+            }
+        }
+        if (!m_edgeTrigValp) {
+            addCombLogic(nodep, iFieldNames, oFieldNames);
+        } else {
+            addEdgTriglogic(nodep, iFieldNames, oFieldNames);
+        }
+    }
+    void visit(AstNode* nodep) override { iterateChildren(nodep); }
+
 public:
     // CONSTRUCTORS
-    explicit UdpVisitor(AstNetlist* nodep) { iterate(nodep); }
+    explicit UdpVisitor(AstNetlist* nodep) { iterateChildren(nodep); }
     ~UdpVisitor() override = default;
 };
 

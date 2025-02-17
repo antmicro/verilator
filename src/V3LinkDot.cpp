@@ -765,10 +765,15 @@ public:
         if (!foundp) baddot = dotname;
         return foundp;
     }
-    VSymEnt* resolveClassOrPackage(VSymEnt* lookSymp, AstClassOrPackageRef* nodep, bool classOnly,
-                                   const string& forWhat) {
+    VSymEnt* resolveClassOrPackage(VSymEnt* lookSymp, AstClassOrPackageRef* nodep, bool fallback,
+                                   bool classOnly, const string& forWhat) {
         if (nodep->classOrPackageSkipp()) return getNodeSym(nodep->classOrPackageSkipp());
-        VSymEnt* foundp = lookSymp->findIdFallback(nodep->name());
+        VSymEnt* foundp;
+        if (fallback) {
+            foundp = lookSymp->findIdFallback(nodep->name());
+        } else {
+            foundp = lookSymp->findIdFlat(nodep->name());
+        }
         if (!foundp && v3Global.rootp()->stdPackagep()) {  // Look under implied std::
             foundp = getNodeSym(v3Global.rootp()->stdPackagep())->findIdFlat(nodep->name());
         }
@@ -1037,12 +1042,8 @@ class LinkDotFindVisitor final : public VNVisitor {
         }
     }
     void visit(AstClassOrPackageRef* nodep) override {
-        if (!nodep->classOrPackageNodep()) {
-            if (nodep->name() == "$unit") {
-                nodep->classOrPackageNodep(v3Global.rootp()->dollarUnitPkgAddp());
-            } else if (nodep->name() == "std") {
-                nodep->classOrPackageNodep(v3Global.rootp()->stdPackagep());
-            }
+        if (!nodep->classOrPackageNodep() && nodep->name() == "$unit") {
+            nodep->classOrPackageNodep(v3Global.rootp()->dollarUnitPkgAddp());
         }
         iterateChildren(nodep);
     }
@@ -1183,7 +1184,7 @@ class LinkDotFindVisitor final : public VNVisitor {
                                   "Unsupported: extern function definition with class-in-class");
                 } else {
                     if (!cpackagerefp->classOrPackageSkipp()) {
-                        m_statep->resolveClassOrPackage(m_curSymp, cpackagerefp, false,
+                        m_statep->resolveClassOrPackage(m_curSymp, cpackagerefp, true, false,
                                                         "External definition :: reference");
                     }
                     AstClass* const classp = VN_CAST(cpackagerefp->classOrPackageSkipp(), Class);
@@ -1308,7 +1309,7 @@ class LinkDotFindVisitor final : public VNVisitor {
                               "Unsupported: extern constraint definition with class-in-class");
             } else {
                 if (!cpackagerefp->classOrPackageSkipp()) {
-                    m_statep->resolveClassOrPackage(m_curSymp, cpackagerefp, false,
+                    m_statep->resolveClassOrPackage(m_curSymp, cpackagerefp, true, false,
                                                     "External definition :: reference");
                 }
                 AstClass* const classp = VN_CAST(cpackagerefp->classOrPackageSkipp(), Class);
@@ -1872,7 +1873,7 @@ class LinkDotParamVisitor final : public VNVisitor {
     void visit(AstClassOrPackageRef* nodep) override {
         if (auto* const fwdp = VN_CAST(nodep->classOrPackageNodep(), TypedefFwd)) {
             // Relink forward definitions to the "real" definition
-            VSymEnt* const foundp = m_statep->getNodeSym(fwdp)->findIdFallback(fwdp->name());
+            VSymEnt* const foundp = m_statep->getNodeSym(fwdp)->findIdFlat(fwdp->name());
             if (foundp && (VN_IS(foundp->nodep(), Class) || VN_IS(foundp->nodep(), Package))) {
                 nodep->classOrPackagep(VN_AS(foundp->nodep(), NodeModule));
             } else if (foundp && VN_IS(foundp->nodep(), ParamTypeDType)) {
@@ -2713,11 +2714,22 @@ class LinkDotResolveVisitor final : public VNVisitor {
                         }
                     }
                 }
-            } else if (VN_IS(nodep->lhsp(), ClassOrPackageRef)
-                       || (VN_IS(nodep->lhsp(), Dot) && VN_AS(nodep->lhsp(), Dot)->colon())) {
+            } else if (VN_IS(nodep->lhsp(), ClassOrPackageRef)) {
                 // m_ds.m_dotText communicates the cell prefix between stages
-                m_ds.m_dotPos = DP_PACKAGE;
                 UINFO(8, indent() << "iter.lhs   " << m_ds.ascii() << " " << nodep << endl);
+                iterateAndNextNull(nodep->lhsp());
+                m_ds.m_dotPos = DP_PACKAGE;
+                if (AstClassOrPackageRef* const classOrPackageRefp
+                    = VN_CAST(nodep->lhsp(), ClassOrPackageRef)) {
+                    if (AstNode* classOrPackageNodep = classOrPackageRefp->classOrPackageNodep()) {
+                        m_ds.m_dotSymp = m_statep->getNodeSym(classOrPackageNodep);
+                    }
+                }
+                UINFO(8, indent() << "iter.ldone " << m_ds.ascii() << " " << nodep << endl);
+            } else if ((VN_IS(nodep->lhsp(), Dot) && VN_AS(nodep->lhsp(), Dot)->colon())) {
+                // m_ds.m_dotText communicates the cell prefix between stages
+                UINFO(8, indent() << "iter.lhs   " << m_ds.ascii() << " " << nodep << endl);
+                m_ds.m_dotPos = DP_PACKAGE;
                 iterateAndNextNull(nodep->lhsp());
                 UINFO(8, indent() << "iter.ldone " << m_ds.ascii() << " " << nodep << endl);
             } else {
@@ -2901,7 +2913,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     first = true;
                 } else if (!cpackagerefp->classOrPackageSkipp()) {
                     VSymEnt* const foundp = m_statep->resolveClassOrPackage(
-                        m_ds.m_dotSymp, cpackagerefp, false, ":: reference");
+                        m_ds.m_dotSymp, cpackagerefp, true, false, ":: reference");
                     if (!foundp) return;
                     classOrPackagep = cpackagerefp->classOrPackageSkipp();
                     m_ds.m_dotSymp = m_statep->getNodeSym(classOrPackagep);
@@ -3262,7 +3274,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
             VL_RESTORER(m_pinSymp);
 
             if (!nodep->classOrPackageSkipp() && nodep->name() != "local::") {
-                m_statep->resolveClassOrPackage(m_ds.m_dotSymp, nodep, false, ":: reference");
+                m_statep->resolveClassOrPackage(m_ds.m_dotSymp, nodep, m_ds.m_dotPos != DP_PACKAGE,
+                                                false, ":: reference");
             }
 
             // ClassRef's have pins, so track
@@ -3577,7 +3590,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 first = true;
             } else if (!cpackagerefp->classOrPackageSkipp()) {
                 VSymEnt* const foundp = m_statep->resolveClassOrPackage(
-                    m_ds.m_dotSymp, cpackagerefp, false, ":: reference");
+                    m_ds.m_dotSymp, cpackagerefp, true, false, ":: reference");
                 if (foundp) nodep->classOrPackagep(cpackagerefp->classOrPackageSkipp());
             } else {
                 nodep->classOrPackagep(cpackagerefp->classOrPackageSkipp());
@@ -3937,7 +3950,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     iterate(lookNodep);
                     cprp = dotp->rhsp();
                     VSymEnt* const foundp = m_statep->resolveClassOrPackage(
-                        lookSymp, lookNodep, false, nodep->verilogKwd());
+                        lookSymp, lookNodep, true, false, nodep->verilogKwd());
                     if (!foundp) return;
                     UASSERT_OBJ(lookNodep->classOrPackageSkipp(), nodep, "Bad package link");
                     lookSymp = m_statep->getNodeSym(lookNodep->classOrPackageSkipp());
@@ -3953,7 +3966,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 return;
             }
             VSymEnt* const foundp = m_statep->resolveClassOrPackage(lookSymp, cpackagerefp, true,
-                                                                    nodep->verilogKwd());
+                                                                    true, nodep->verilogKwd());
             if (foundp) {
                 if (AstClass* const classp = VN_CAST(foundp->nodep(), Class)) {
                     AstPin* paramsp = cpackagerefp->paramsp();
@@ -4115,7 +4128,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 }
                 if (!cpackagerefp->classOrPackageSkipp()) {
                     VSymEnt* const foundp = m_statep->resolveClassOrPackage(
-                        m_ds.m_dotSymp, cpackagerefp, false, "class/package reference");
+                        m_ds.m_dotSymp, cpackagerefp, true, false, "class/package reference");
                     if (!foundp) return;
                 }
                 nodep->classOrPackagep(cpackagerefp->classOrPackageSkipp());

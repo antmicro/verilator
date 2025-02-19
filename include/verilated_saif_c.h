@@ -30,7 +30,6 @@
 
 class VerilatedSaifBuffer;
 class VerilatedSaifFile;
-
 struct ActivityBit {
     bool lastVal = false;
     uint64_t highTime = 0;
@@ -43,20 +42,12 @@ struct ActivityBit {
         lastVal = newVal;
     }
 };
-
 struct ActivityVar {
     std::string name;
     uint32_t lsb;
     uint32_t width;
     ActivityBit* bits;
     uint64_t lastTime = 0;
-};
-
-struct SaifScope {
-    std::string scopeName{};
-    std::vector<int32_t> childScopesIndices{};
-    std::vector<uint32_t> childSignalCodes{};
-    int32_t parentScopeIndex{-1};
 };
 
 //=============================================================================
@@ -79,11 +70,6 @@ private:
     bool m_isOpen = false;  // True indicates open file
     std::string m_filename;  // Filename we're writing to (if open)
     uint64_t m_rolloverSize = 0;  // File size to rollover at
-
-    void incrementIndent();
-    void decrementIndent();
-    void printIndent();
-
     int m_indent = 0;  // Indentation depth
 
     char* m_wrBufp;  // Output buffer
@@ -92,10 +78,6 @@ private:
     size_t m_wrChunkSize;  // Output buffer size
     size_t m_maxSignalBytes = 0;  // Upper bound on number of bytes a single signal can generate
     uint64_t m_wroteBytes = 0;  // Number of bytes written to this file
-
-    std::vector<SaifScope> m_scopes{};
-    std::vector<uint32_t> m_topScopes{};
-    int32_t m_currentScope{-1};
 
     std::unordered_map<uint32_t, ActivityVar> m_activity;
     std::vector<std::vector<ActivityBit>> m_activityArena;
@@ -122,8 +104,6 @@ private:
     void printStr(const char* str);
     void declare(uint32_t code, const char* name, const char* wirep, bool array, int arraynum,
                  bool bussed, int msb, int lsb);
-
-    void printInstance(uint32_t scopeIndex);
 
     // CONSTRUCTORS
     VL_UNCOPYABLE(VerilatedSaif);

@@ -1341,6 +1341,9 @@ class WidthVisitor final : public VNVisitor {
         }
     }
 
+    void visit(AstSetuphold* nodep) override {
+    }
+
     void visit(AstStable* nodep) override {
         if (m_vup->prelim()) {
             iterateCheckSizedSelf(nodep, "LHS", nodep->exprp(), SELF, BOTH);

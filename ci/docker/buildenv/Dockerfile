@@ -40,7 +40,6 @@ RUN apt-get update \
                         libgoogle-perftools-dev \
                         libsystemc \
                         libsystemc-dev \
-                        numactl \
                         perl \
                         python3 \
                         python3-distro \
@@ -48,22 +47,33 @@ RUN apt-get update \
                         z3 \
                         zlib1g \
                         zlib1g-dev \
+                        locales \
+                        bear \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp
+
+RUN cpan install -fi Parallel::Forker
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir libclang packaging distro
 
 RUN git clone https://github.com/veripool/vcddiff.git && \
     make -C vcddiff && \
     cp -p vcddiff/vcddiff /usr/local/bin/vcddiff && \
     rm -rf vcddiff
 
-COPY build.sh /tmp/build.sh
-
 ENV VERILATOR_AUTHOR_SITE=1
 
 USER verilator
 
-WORKDIR /work
+RUN sudo sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && \
+    sudo locale-gen
 
-ENTRYPOINT [ "/tmp/build.sh" ]
+RUN echo "export LC_ALL=en_US.UTF-8" >> ~/.bashrc && \
+    echo "export LANG=en_US.UTF-8" >> ~/.bashrc && \
+    echo "export LANGUAGE=en_US.UTF-8" >> ~/.bashrc
+
+RUN mkdir -p ~/.config/gdb && \
+    echo "set auto-load safe-path /" > ~/.config/gdb/gdbinit

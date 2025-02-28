@@ -1344,18 +1344,28 @@ class WidthVisitor final : public VNVisitor {
     void visit(AstSetuphold* nodep) override {
         FileLine* const flp = nodep->fileline();
 
-        AstNodeVarRef* lhs1p = nodep->delrefp()->varrefp()->cloneTreePure(false);
-        lhs1p->access(VAccess::WRITE);
-        AstNodeVarRef* rhs1p = nodep->refevp()->varrefp()->cloneTreePure(false);
-        AstAssignW* new1p = new AstAssignW{flp, lhs1p, rhs1p};
+        AstAssignW* newp = nullptr;
 
-        AstNodeVarRef* lhs2p = nodep->deldatap()->varrefp()->cloneTreePure(false);
-        lhs2p->access(VAccess::WRITE);
-        AstNodeVarRef* rhs2p = nodep->dataevp()->varrefp()->cloneTreePure(false);
-        AstAssignW* new2p = new AstAssignW{flp, lhs2p, rhs2p};
+        if (nodep->delrefp() != nullptr) {
+            AstNodeVarRef* lhsp = nodep->delrefp()->varrefp()->cloneTreePure(false);
+            lhsp->access(VAccess::WRITE);
+            AstNodeVarRef* rhsp = nodep->refevp()->varrefp()->cloneTreePure(false);
+            newp = new AstAssignW{flp, lhsp, rhsp};
+        }
 
-        new1p->addNextHere(new2p);
-        nodep->replaceWith(new1p);
+        if (nodep->deldatap() != nullptr) {
+            AstNodeVarRef* lhsp = nodep->deldatap()->varrefp()->cloneTreePure(false);
+            lhsp->access(VAccess::WRITE);
+            AstNodeVarRef* rhsp = nodep->dataevp()->varrefp()->cloneTreePure(false);
+
+            if (newp == nullptr) {
+                newp = new AstAssignW{flp, lhsp, rhsp};
+            } else {
+                newp->addNextHere(new AstAssignW{flp, lhsp, rhsp});
+            }
+        }
+
+        nodep->replaceWith(newp);
     }
 
     void visit(AstStable* nodep) override {

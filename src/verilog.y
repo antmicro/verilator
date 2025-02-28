@@ -5753,12 +5753,12 @@ tableEntry<udpTableLinep>:      // IEEE: combinational_entry + sequential_entry
 // Specify
 
 specify_block<nodep>:           // ==IEEE: specify_block
-                ySPECIFY yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ')' ';' yENDSPECIFY  { printf("=== Parsing yD_SETUPHOLD ===\n"); $$ = new AstSetuphold{$2, $4, $6}; }
-        |       ySPECIFY yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ')' ';' yENDSPECIFY  { printf("=== Parsing yD_SETUPHOLD 2 ===\n"); $$ = new AstSetuphold{$2, $4, $6}; }
-        |       ySPECIFY yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ',' minTypMaxE ')' ';' yENDSPECIFY  { printf("=== Parsing yD_SETUPHOLD 3 ===\n"); $$ = new AstSetuphold{$2, $4, $6}; }
-        |       ySPECIFY yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ',' minTypMaxE ',' minTypMaxE ')' ';' yENDSPECIFY  { printf("=== Parsing yD_SETUPHOLD 4 ===\n"); $$ = new AstSetuphold{$2, $4, $6}; }
-        |       ySPECIFY yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ',' minTypMaxE ',' minTypMaxE ',' senitem ')' ';' yENDSPECIFY  { printf("=== Parsing yD_SETUPHOLD 5 ===\n"); $$ = new AstSetuphold{$2, $4, $6, $18}; }
-        |       ySPECIFY yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ',' minTypMaxE ',' minTypMaxE ',' senitem ',' senitem ')' ';' yENDSPECIFY  { printf("=== Parsing yD_SETUPHOLD 6 ===\n"); $$ = new AstSetuphold{$2, $4, $6, $18, $20}; }
+                ySPECIFY yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ')' ';' yENDSPECIFY  { $$ = nullptr; }
+        |       ySPECIFY yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ')' ';' yENDSPECIFY  { $$ = nullptr; }
+        |       ySPECIFY yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ',' minTypMaxE ')' ';' yENDSPECIFY  { $$ = nullptr; }
+        |       ySPECIFY yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ',' minTypMaxE ',' minTypMaxE ')' ';' yENDSPECIFY  { $$ = nullptr; }
+        |       ySPECIFY yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ',' minTypMaxE ',' minTypMaxE ',' senitemE ')' ';' yENDSPECIFY  { $$ = new AstSetuphold{$2, $4, $6, $18}; }
+        |       ySPECIFY yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ',' minTypMaxE ',' minTypMaxE ',' senitemE ',' senitemE ')' ';' yENDSPECIFY  { $$ = new AstSetuphold{$2, $4, $6, $18, $20}; }
         |       ySPECIFY yENDSPECIFY                    { $$ = nullptr; }
         ;
 
@@ -5766,6 +5766,12 @@ idAnyE<strp>:
                 /*empty*/                               { $$ = nullptr; }
         |       idAny                                   { $$ = $1; }
         ;
+
+senitemE<senItemp>:
+                /*empty*/                               { $$ = nullptr; }
+        |       senitem                                   { $$ = $1; }
+        ;
+
 
 specifyJunkList:
                 specifyJunk                             { } /* ignored */

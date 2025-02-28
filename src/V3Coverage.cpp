@@ -429,6 +429,7 @@ class CoverageVisitor final : public VNVisitor {
         }
 
         auto fakeIf = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
+        fakeIf->cond(true);
         FileLine* newFl = new FileLine{nodep->fileline()};
         auto always = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIf};
 
@@ -440,11 +441,18 @@ class CoverageVisitor final : public VNVisitor {
     void visit(AstIf* nodep) override {
         UINFO(4, " IF: " << nodep << endl);
         char comment_if[100];
-        snprintf(comment_if, 100, "if_%p=", m_modp);
         char comment_else[100];
-        snprintf(comment_else, 100, "else_%p=", m_modp);
         char comment_elsif[100];
-        snprintf(comment_elsif, 100, "elsif_%p=", m_modp);
+
+        if (!nodep->cond()) {
+            snprintf(comment_if, 100, "if_%p=", m_modp);
+            snprintf(comment_else, 100, "else_%p=", m_modp);
+            snprintf(comment_elsif, 100, "elsif_%p=", m_modp);
+        } else {
+            snprintf(comment_if, 100, "condTrue_%p=", m_modp);
+            snprintf(comment_else, 100, "condFalse_%p=", m_modp);
+            snprintf(comment_elsif, 100, "condFalseNested_%p=", m_modp);
+        }
         if (m_state.m_on) {
             // An else-if.  When we iterate the if, use "elsif" marking
             const bool elsif

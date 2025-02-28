@@ -3824,6 +3824,7 @@ class AstIf final : public AstNodeIf {
     bool m_uniquePragma = false;  // unique case
     bool m_unique0Pragma = false;  // unique0 case
     bool m_priorityPragma = false;  // priority case
+    bool m_cond = false;  // is a clone of a cond
 public:
     AstIf(FileLine* fl, AstNodeExpr* condp, AstNode* thensp = nullptr, AstNode* elsesp = nullptr)
         : ASTGEN_SUPER_If(fl, condp, thensp, elsesp) {}
@@ -3834,6 +3835,8 @@ public:
     void unique0Pragma(bool flag) { m_unique0Pragma = flag; }
     bool priorityPragma() const { return m_priorityPragma; }
     void priorityPragma(bool flag) { m_priorityPragma = flag; }
+    bool cond() const { return m_cond; }
+    void cond(bool flag) { m_cond = flag; }
 };
 
 // === AstNodeReadWriteMem ===

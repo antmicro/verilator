@@ -1079,6 +1079,7 @@ class AstCovergroup final : public AstNode {
     // @astgen op1 := eventp : AstNode
     // @astgen op2 := itemsp : List[AstCoverpoint]
     string m_name;
+
 public:
     AstCovergroup(FileLine* fl, const string& name)
         : ASTGEN_SUPER_Covergroup(fl)

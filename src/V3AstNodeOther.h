@@ -1075,6 +1075,27 @@ public:
     bool isPredictOptimizable() const override { return false; }
     bool sameNode(const AstNode* /*samep*/) const override { return true; }
 };
+class AstCovergroup final : public AstNode {
+    // @astgen op1 := eventp : AstNode
+    // @astgen op2 := itemsp : List[AstCoverpoint]
+    string m_name;
+public:
+    AstCovergroup(FileLine* fl, const string& name)
+        : ASTGEN_SUPER_Covergroup(fl)
+        , m_name{name} {}
+    ASTGEN_MEMBERS_AstCovergroup;
+    string verilogKwd() const override { return "covergroup"; }
+};
+class AstCoverpoint final : public AstNode {
+    // @astgen op1 := exprp : AstNodeExpr
+public:
+    AstCoverpoint(FileLine* fl, AstNodeExpr* exprp)
+        : ASTGEN_SUPER_Coverpoint(fl) {
+        this->exprp(exprp);
+    }
+    ASTGEN_MEMBERS_AstCoverpoint;
+    string verilogKwd() const override { return "coverpoint"; }
+};
 class AstDefParam final : public AstNode {
     // A defparam assignment
     // Parents: MODULE

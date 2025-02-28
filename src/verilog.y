@@ -6672,7 +6672,7 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
 covergroup_declarationFront<nodep>:  // IEEE: part of covergroup_declaration
                 yCOVERGROUP idAny
                         { $$ = new AstCovergroup{$<fl>2, *$2};
-                          SYMP->pushNew($<constraintp>$); }
+                          SYMP->pushNew($$); }
         ;
 
 cgexpr<nodeExprp>:  // IEEE-2012: covergroup_expression, before that just expression

@@ -6707,7 +6707,7 @@ coverage_option<nodep>:  // ==IEEE: coverage_option
 cover_point<nodep>:  // ==IEEE: cover_point
         //              // [ [ data_type_or_implicit ] cover_point_identifier ':' ] yCOVERPOINT
                 yCOVERPOINT expr iffE bins_or_empty
-                        { $$ = nullptr; BBCOVERIGN($<fl>1, "Ignoring unsupported: coverpoint"); }
+                        { $$ = new AstCoverpoint{$<fl>1, $2}; }
         //                      // IEEE-2012: class_scope before an ID
         |       id/*cover_point_id*/ ':' yCOVERPOINT expr iffE bins_or_empty
                         { $$ = nullptr; BBCOVERIGN($<fl>3, "Ignoring unsupported: coverpoint"); }

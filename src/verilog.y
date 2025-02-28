@@ -6669,10 +6669,9 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                           GRAMMARP->endLabel($<fl>7, $1, $7); }
         ;
 
-covergroup_declarationFront<constraintp>:  // IEEE: part of covergroup_declaration
+covergroup_declarationFront<nodep>:  // IEEE: part of covergroup_declaration
                 yCOVERGROUP idAny
-                        { $$ = new AstConstraint{$<fl>2, *$2, nullptr};
-                          BBCOVERIGN($<fl>1, "Ignoring unsupported: covergroup");
+                        { $$ = new AstCovergroup{$<fl>2, *$2};
                           SYMP->pushNew($<constraintp>$); }
         ;
 

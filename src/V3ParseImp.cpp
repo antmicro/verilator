@@ -703,6 +703,8 @@ void V3ParseImp::tokenPipelineSym() {
                     token = yaID__aTYPE;
                 } else if (VN_IS(scp, Class)) {
                     token = yaID__aTYPE;
+                } else if (VN_IS(scp, Covergroup)) {
+                    token = yaID__aTYPE;
                 } else if (VN_IS(scp, Package)) {
                     token = yaID__ETC;
                 } else {

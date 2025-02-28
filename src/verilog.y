@@ -6669,10 +6669,10 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                           GRAMMARP->endLabel($<fl>7, $1, $7); }
         ;
 
-covergroup_declarationFront<nodep>:  // IEEE: part of covergroup_declaration
+covergroup_declarationFront<covergroupp>:  // IEEE: part of covergroup_declaration
                 yCOVERGROUP idAny
                         { $$ = new AstCovergroup{$<fl>2, *$2};
-                          SYMP->pushNew($$); }
+                          SYMP->pushNew($<covergroupp>$); }
         ;
 
 cgexpr<nodeExprp>:  // IEEE-2012: covergroup_expression, before that just expression

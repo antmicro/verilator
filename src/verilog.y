@@ -5765,8 +5765,6 @@ specify_itemList<nodep>:            // IEEE: { specify_item }
 specify_item<nodep>:                // ==IEEE: specify_item
                 specparam_declaration                   { $$ = $1; }
         |       system_timing_check                     { $$ = $1; }
-        |       path_declaration
-        // Ignore pulsestyle_declaration, showcancelled_declaration, remaining system_timing_check items
         |       yaTIMINGSPEC junkToSemiList ';'         { $$ = nullptr; }
         ;
 
@@ -5785,41 +5783,6 @@ setuphold_timing_check<nodep>:      // ==IEEE: $setuphold_timing_check
         |       yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ',' minTypMaxE ',' minTypMaxE ')' ';' { $$ = nullptr; }
         |       yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ',' minTypMaxE ',' minTypMaxE ',' senitemE ')' ';' { $$ = new AstSetuphold{$1, $3, $5, $17}; }
         |       yD_SETUPHOLD '(' senitem ',' senitem ',' expr ',' expr ',' idAnyE ',' minTypMaxE ',' minTypMaxE ',' senitemE ',' senitemE ')' ';' { $$ = new AstSetuphold{$1, $3, $5, $17, $19}; }
-        ;
-
-path_declaration<nodep>:            // ==IEEE: path_declaration
-                simple_path_declaration ';'             { $$ = $1; }
-        ;
-
-simple_path_declaration<nodep>:     // ==IEEE: simple_path_declaration
-                parallel_path_description '=' path_delay_valueList  { $$ = nullptr; }
-        |       parallel_path_description '=' '(' path_delay_valueList ')'  { $$ = nullptr; }
-        |       full_path_description '=' path_delay_valueList      { $$ = nullptr; }
-        |       full_path_description '=' '(' path_delay_valueList ')'      { $$ = nullptr; }
-        ;
-
-parallel_path_description<nodep>:   // ==IEEE: parallel_path_description
-                '(' specifyTerminalDescriptor '+' yP_EQGT specifyTerminalDescriptor ')' { $$ = nullptr; }
-        |       '(' specifyTerminalDescriptor '-' yP_EQGT specifyTerminalDescriptor ')' { $$ = nullptr; }
-        |       '(' specifyTerminalDescriptor yP_EQGT specifyTerminalDescriptor ')' { $$ = nullptr; }
-        ;
-
-full_path_description<nodep>:       // ==IEEE: full_path_description
-                // TODO should be list_of_path_inputs
-                '(' specifyTerminalDescriptor '+' yP_ASTGT specifyTerminalDescriptor ')' { $$ = nullptr; }
-        |       '(' specifyTerminalDescriptor '-' yP_ASTGT specifyTerminalDescriptor ')' { $$ = nullptr; }
-        |       '(' specifyTerminalDescriptor yP_ASTGT specifyTerminalDescriptor ')' { $$ = nullptr; }
-        ;
-
-specifyTerminalDescriptor<nodep>:   // ==IEEE: specify_input_terminal_descriptor, specify_output_terminal_descriptor
-                id                                      { $$ = nullptr; }
-        |       id '.' id                               { $$ = nullptr; }
-        ;
-
-path_delay_valueList<nodep>:            // ==IEEE: path_delay_value
-                // TODO should be minTypMax
-                yaINTNUM                               { $$ = nullptr; }
-        |       path_delay_valueList ',' yaINTNUM      { $$ = nullptr; }
         ;
 
 idAnyE<strp>:

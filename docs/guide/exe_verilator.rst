@@ -1593,6 +1593,7 @@ Summary:
 .. option:: --trace-saif
 
    Enable SAIF tracing in the model. This overrides :vlopt:`--trace`.
+   Specification of this format can be found in `Annex I` of https://ieeexplore.ieee.org/document/8686430
 
 .. option:: --trace-structs
 

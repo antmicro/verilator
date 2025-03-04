@@ -1574,10 +1574,6 @@ Summary:
    Enable FST waveform tracing in the model. This overrides
    :vlopt:`--trace`.  See also :vlopt:`--trace-threads` option.
 
-.. option:: --trace-saif
-
-   Enable SAIF tracing in the model. This overrides :vlopt:`--trace`.
-
 .. option:: --trace-max-array <depth>
 
    Rarely needed.  Specify the maximum array depth of a signal that may be
@@ -1593,6 +1589,10 @@ Summary:
 .. option:: --no-trace-params
 
    Disable tracing of parameters.
+
+.. option:: --trace-saif
+
+   Enable SAIF tracing in the model. This overrides :vlopt:`--trace`.
 
 .. option:: --trace-structs
 

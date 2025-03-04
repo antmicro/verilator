@@ -3333,12 +3333,13 @@ class AstSetuphold final : public AstNodeStmt {
     // @astgen op3 := delrefp : Optional[AstSenItem]
     // @astgen op4 := deldatap : Optional[AstSenItem]
 public:
-    AstSetuphold(FileLine* fl, AstSenItem* refevp, AstSenItem* dataevp, AstSenItem* delrefp = nullptr, AstSenItem* deldatap = nullptr)
+    AstSetuphold(FileLine* fl, AstSenItem* refevp, AstSenItem* dataevp,
+                 AstSenItem* delrefp = nullptr, AstSenItem* deldatap = nullptr)
         : ASTGEN_SUPER_Setuphold(fl) {
-				this->refevp(refevp);
-				this->dataevp(dataevp);
-				this->delrefp(delrefp);
-				this->deldatap(deldatap);
+        this->refevp(refevp);
+        this->dataevp(dataevp);
+        this->delrefp(delrefp);
+        this->deldatap(deldatap);
     }
     ASTGEN_MEMBERS_AstSetuphold;
     bool sameNode(const AstNode* /*samep*/) const override { return true; }

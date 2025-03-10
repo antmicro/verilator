@@ -301,7 +301,7 @@ package my_pkg;
 endpackage
 
 module cond(input logic clk, input int cyc);
-   logic a, b, c, d, e;
+   logic a, b, c, d, e, f;
 
    function logic func_side_effect;
       $display("SIDE EFFECT");
@@ -315,4 +315,5 @@ module cond(input logic clk, input int cyc);
       d = (cyc % 3 == 0) ? 1 : 0;
    end
    assign e = (cyc % 3 == 1) ? (clk ? 1 : 0) : 1;
+   assign f = (cyc != 0 ? 1 : 0) ? 1 : 0;
 endmodule

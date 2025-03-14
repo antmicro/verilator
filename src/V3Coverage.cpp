@@ -467,17 +467,11 @@ class CoverageVisitor final : public VNVisitor {
         if (!m_state.m_on || !nodep->condp()->isPure()) {
             // Current method cannot run coverage for impure statements
             m_condBranchOff = true;
-            iterateChildren(nodep);
             lineTrack(nodep);
             return;
         }
 
         if (!m_condBranchOff && VN_IS(m_modp, Module)) {
-            // Do not consider nested ?: expression in condition
-            m_condBranchOff = true;
-            iterate(nodep->condp());
-            m_condBranchOff = false;
-
             AstIf* const fakeIfp = new AstIf{nodep->fileline(), nodep->condp()->cloneTree(false)};
             if (m_fakeIfp) {
                 if (m_fakeThen) {
@@ -503,7 +497,7 @@ class CoverageVisitor final : public VNVisitor {
             m_fakeThen = false;
             iterateNull(nodep->elsep());
         } else {
-            iterateChildren(nodep);
+            lineTrack(nodep);
         }
     }
     // Note not AstNodeIf; other types don't get covered

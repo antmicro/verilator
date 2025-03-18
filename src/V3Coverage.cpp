@@ -477,7 +477,11 @@ class CoverageVisitor final : public VNVisitor {
         VL_RESTORER(m_condBranchOff);
         UINFO(4, " COND: " << nodep << endl);
 
-        if (m_seeking == NONE) coverExprs(nodep->condp());
+        if (m_seeking == NONE) {
+            VL_RESTORER(m_condBranchOff);
+            m_condBranchOff = true;
+            coverExprs(nodep->condp());
+        }
 
         if (!m_state.m_on || !nodep->condp()->isPure()) {
             // Current method cannot run coverage for impure statements

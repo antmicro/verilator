@@ -425,7 +425,7 @@
         endpackage
         
         module cond(input logic clk, input int cyc);
-           logic a, b, c, d, e, f;
+           logic a, b, c, d, e, f, g, h;
         
  000021    function logic func_side_effect;
 +000021  point: comment=block hier=top.t.cond1
@@ -457,5 +457,11 @@
 ~000031    assign f = (cyc != 0 ? 1 : 0) ? 1 : 0;
 +000031  point: comment=cond_then hier=top.t.cond1
 -000000  point: comment=cond_else hier=top.t.cond1
+        
+           for (genvar i = 0; i < 2; i++) begin
+ 000022       assign g = clk ? 1 : 0;
++000020  point: comment=cond_then hier=top.t.cond1
++000022  point: comment=cond_else hier=top.t.cond1
+           end
         endmodule
         

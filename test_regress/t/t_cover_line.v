@@ -320,4 +320,9 @@ module cond(input logic clk, input int cyc);
    for (genvar i = 0; i < 2; i++) begin
       assign g = clk ? 1 : 0;
    end
+
+   always begin
+      if (cyc == 5) h = cyc > 5 ? 1 : 0;
+      else h = 1;
+   end
 endmodule

@@ -463,5 +463,16 @@
 +000020  point: comment=cond_then hier=top.t.cond1
 +000022  point: comment=cond_else hier=top.t.cond1
            end
+        
+ 000011    always begin
++000011  point: comment=block hier=top.t.cond1
+~000010       if (cyc == 5) h = cyc > 5 ? 1 : 0;
+-000000  point: comment=cond_then hier=top.t.cond1
+-000001  point: comment=cond_else hier=top.t.cond1
+-000001  point: comment=if hier=top.t.cond1
++000010  point: comment=else hier=top.t.cond1
+ 000010       else h = 1;
++000010  point: comment=else hier=top.t.cond1
+           end
         endmodule
         

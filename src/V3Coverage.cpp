@@ -495,12 +495,15 @@ class CoverageVisitor final : public VNVisitor {
         }
 
         if (!m_condBranchOff && VN_IS(m_modp, Module)) {
-            AstIf* const fakeIfp
-                = new AstIf{nodep->fileline(), nodep->condp()->cloneTree(false),
-                            newCoverInc(nodep->fileline(), "", "v_branch", "cond_then", "", 0,
-                                        traceNameForLine(nodep, "cond_then")),
-                            newCoverInc(nodep->fileline(), "", "v_branch", "cond_else", "", 1,
-                                        traceNameForLine(nodep, "cond_else"))};
+            const CheckState lastState = m_state;
+            createHandle(nodep);
+            lineTrack(nodep);
+            AstIf* const fakeIfp = new AstIf{
+                nodep->fileline(), nodep->condp()->cloneTree(false),
+                newCoverInc(nodep->fileline(), "", "v_branch", "cond_then",
+                            linesCov(m_state, nodep), 0, traceNameForLine(nodep, "cond_then")),
+                newCoverInc(nodep->fileline(), "", "v_branch", "cond_else", "", 1,
+                            traceNameForLine(nodep, "cond_else"))};
             fakeIfp->user2(true);
             if (m_fakeIfp) {
                 if (m_fakeThen) {
@@ -532,6 +535,7 @@ class CoverageVisitor final : public VNVisitor {
             iterateNull(nodep->thenp());
             m_fakeThen = false;
             iterateNull(nodep->elsep());
+            m_state = lastState;
         } else {
             lineTrack(nodep);
         }

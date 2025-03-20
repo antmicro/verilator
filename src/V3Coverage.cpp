@@ -532,6 +532,8 @@ class CoverageVisitor final : public VNVisitor {
             }
             m_fakeIfp = fakeIfp;
             m_fakeThen = true;
+            VL_RESTORER(m_seeking);
+            m_seeking = ABORTED;
             iterateNull(nodep->thenp());
             m_fakeThen = false;
             iterateNull(nodep->elsep());

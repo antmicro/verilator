@@ -359,8 +359,6 @@
 -000005  point: comment=(t1==1) => 1 hier=top.t
 -000005  point: comment=cond_then hier=top.t
 -000004  point: comment=cond_else hier=top.t
--000005  point: comment=(t2==0) => 0 hier=top.t
--000004  point: comment=(t2==1) => 1 hier=top.t
 -000002  point: comment=cond_then hier=top.t
 -000003  point: comment=cond_else hier=top.t
 -000009  point: comment=block hier=top.t

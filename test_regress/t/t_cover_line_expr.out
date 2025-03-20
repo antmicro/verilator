@@ -120,6 +120,8 @@
 -000003  point: comment=(t2==0 && t3==0) => 0 hier=top.t
 -000004  point: comment=(t2==1) => 1 hier=top.t
 -000004  point: comment=(t3==1) => 1 hier=top.t
+-000006  point: comment=cond_then hier=top.t
+-000003  point: comment=cond_else hier=top.t
 %000009         some_bool <= t1 && t2;
 -000009  point: comment=block hier=top.t
 -000004  point: comment=(t1==0) => 0 hier=top.t
@@ -355,6 +357,12 @@
 %000009         other_int <= t1 ? t2 ? 1 : 2 : 3;
 -000004  point: comment=(t1==0) => 0 hier=top.t
 -000005  point: comment=(t1==1) => 1 hier=top.t
+-000005  point: comment=cond_then hier=top.t
+-000004  point: comment=cond_else hier=top.t
+-000005  point: comment=(t2==0) => 0 hier=top.t
+-000004  point: comment=(t2==1) => 1 hier=top.t
+-000002  point: comment=cond_then hier=top.t
+-000003  point: comment=cond_else hier=top.t
 -000009  point: comment=block hier=top.t
                 // no expression coverage for multi-bit expressions
 %000009         if ((cyc[1:0] & cyc[3:2]) == 2'b11) $write("");
@@ -430,7 +438,9 @@
             sub the_sub_1 (.p(t1), .q(t2));
             sub the_sub_2 (.p(t3), .q(t4));
             // TODO -- non-process expressions
-            sub the_sub_3 (.p(t1 ? t2 : t3), .q(t4));
+%000005     sub the_sub_3 (.p(t1 ? t2 : t3), .q(t4));
+-000005  point: comment=cond_then hier=top.t
+-000005  point: comment=cond_else hier=top.t
         
             // TODO
             // pragma for expr coverage off / on

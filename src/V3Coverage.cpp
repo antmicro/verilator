@@ -125,6 +125,7 @@ class CoverageVisitor final : public VNVisitor {
     bool m_objective = false;  // Expression objective
     bool m_ifCond = false;  // Visiting if condition
     bool m_inToggleOff = false;  // In function/task etc
+    bool m_inGenBlock = false;  // In genblock
     string m_beginHier;  // AstBegin hier name for user coverage points
 
     // STATE - cleared each module
@@ -611,7 +612,9 @@ class CoverageVisitor final : public VNVisitor {
         // covers the code in that line.)
         VL_RESTORER(m_beginHier);
         VL_RESTORER(m_inToggleOff);
-        if (!nodep->generate()) m_inToggleOff = true;
+        VL_RESTORER(m_inGenBlock);
+        if (nodep->generate()) m_inGenBlock = true;
+        else m_inToggleOff = true;
         if (nodep->name() != "") {
             m_beginHier = m_beginHier + (m_beginHier != "" ? "." : "") + nodep->name();
         }

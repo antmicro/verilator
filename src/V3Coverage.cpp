@@ -495,15 +495,7 @@ class CoverageVisitor final : public VNVisitor {
         }
 
         if (!m_condBranchOff && VN_IS(m_modp, Module)) {
-            const CheckState lastState = m_state;
-            createHandle(nodep);
-            lineTrack(nodep);
-            AstIf* const fakeIfp = new AstIf{
-                nodep->fileline(), nodep->condp()->cloneTree(false),
-                newCoverInc(nodep->fileline(), "", "v_branch", "cond_then",
-                            linesCov(m_state, nodep), 0, traceNameForLine(nodep, "cond_then")),
-                newCoverInc(nodep->fileline(), "", "v_branch", "cond_else", "", 1,
-                            traceNameForLine(nodep, "cond_else"))};
+            AstIf* const fakeIfp = new AstIf{nodep->fileline(), nodep->condp()->cloneTree(false)};
             fakeIfp->user2(true);
             if (m_fakeIfp) {
                 if (m_fakeThen) {
@@ -530,13 +522,28 @@ class CoverageVisitor final : public VNVisitor {
                     }
                 }
             }
-            m_fakeIfp = fakeIfp;
-            m_fakeThen = true;
             VL_RESTORER(m_seeking);
+            // Disable expression coverage in sub-expressions, since they were already visited
             m_seeking = ABORTED;
-            iterateNull(nodep->thenp());
+            m_fakeIfp = fakeIfp;
+
+            const CheckState lastState = m_state;
+            createHandle(nodep);
+            m_fakeThen = true;
+            iterate(nodep->thenp());
+            lineTrack(nodep);
+            m_fakeIfp->addThensp(newCoverInc(nodep->fileline(), "", "v_branch", "cond_then",
+                                             linesCov(m_state, nodep), 0,
+                                             traceNameForLine(nodep, "cond_then")));
+
+            m_state = lastState;
+            createHandle(nodep);
             m_fakeThen = false;
-            iterateNull(nodep->elsep());
+            iterate(nodep->elsep());
+            m_fakeIfp->addElsesp(newCoverInc(nodep->fileline(), "", "v_branch", "cond_else",
+                                             linesCov(m_state, nodep), 1,
+                                             traceNameForLine(nodep, "cond_else")));
+
             m_state = lastState;
         } else {
             lineTrack(nodep);

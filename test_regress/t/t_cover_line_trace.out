@@ -102,10 +102,10 @@ $timescale 1ps $end
     $var wire 32 ^ vlCoverageLineTrace_t_cover_line__314_block [31:0] $end
     $var wire 32 _ vlCoverageLineTrace_t_cover_line__315_cond_else [31:0] $end
     $var wire 32 ` vlCoverageLineTrace_t_cover_line__315_cond_then [31:0] $end
-    $var wire 32 3 vlCoverageLineTrace_t_cover_line__317_cond_else [31:0] $end
-    $var wire 32 4 vlCoverageLineTrace_t_cover_line__317_cond_then [31:0] $end
-    $var wire 32 5 vlCoverageLineTrace_t_cover_line__317_cond_else_1 [31:0] $end
-    $var wire 32 6 vlCoverageLineTrace_t_cover_line__317_cond_then_1 [31:0] $end
+    $var wire 32 3 vlCoverageLineTrace_t_cover_line__317_cond_else_1 [31:0] $end
+    $var wire 32 4 vlCoverageLineTrace_t_cover_line__317_cond_then_1 [31:0] $end
+    $var wire 32 5 vlCoverageLineTrace_t_cover_line__317_cond_else [31:0] $end
+    $var wire 32 6 vlCoverageLineTrace_t_cover_line__317_cond_then [31:0] $end
     $var wire 32 7 vlCoverageLineTrace_t_cover_line__318_cond_else [31:0] $end
     $var wire 32 8 vlCoverageLineTrace_t_cover_line__318_cond_then [31:0] $end
     $var wire 32 + vlCoverageLineTrace_t_cover_line__321_cond_else [31:0] $end

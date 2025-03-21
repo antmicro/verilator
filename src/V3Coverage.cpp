@@ -496,7 +496,8 @@ class CoverageVisitor final : public VNVisitor {
         }
 
         if (!m_condBranchOff && VN_IS(m_modp, Module)) {
-            AstIf* const condCovIfp = new AstIf{nodep->fileline(), nodep->condp()->cloneTree(false)};
+            AstIf* const condCovIfp
+                = new AstIf{nodep->fileline(), nodep->condp()->cloneTree(false)};
             condCovIfp->user2(true);
             if (m_condCovIfp) {
                 if (m_condCovThen) {

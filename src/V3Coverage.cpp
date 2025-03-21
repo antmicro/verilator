@@ -610,6 +610,8 @@ class CoverageVisitor final : public VNVisitor {
         // (Currently ignored for line coverage, since any generate iteration
         // covers the code in that line.)
         VL_RESTORER(m_beginHier);
+        VL_RESTORER(m_inToggleOff);
+        if (!nodep->generate()) m_inToggleOff = true;
         if (nodep->name() != "") {
             m_beginHier = m_beginHier + (m_beginHier != "" ? "." : "") + nodep->name();
         }

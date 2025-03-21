@@ -613,8 +613,10 @@ class CoverageVisitor final : public VNVisitor {
         VL_RESTORER(m_beginHier);
         VL_RESTORER(m_inToggleOff);
         VL_RESTORER(m_inGenBlock);
-        if (nodep->generate()) m_inGenBlock = true;
-        else m_inToggleOff = true;
+        if (nodep->generate())
+            m_inGenBlock = true;
+        else
+            m_inToggleOff = true;
         if (nodep->name() != "") {
             m_beginHier = m_beginHier + (m_beginHier != "" ? "." : "") + nodep->name();
         }

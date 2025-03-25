@@ -1365,6 +1365,11 @@ class WidthVisitor final : public VNVisitor {
             }
         }
 
+        if (newp == nullptr) {
+            nodep->unlinkFrBack()->deleteTree();
+            return;
+        }
+
         nodep->replaceWith(newp);
     }
 

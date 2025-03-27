@@ -16,8 +16,7 @@ module t (/*AUTOARG*/
    parameter time timeParam /*verilator public_flat_rd*/ = 0;
    parameter string strParam /*verilator public_flat_rd*/ = "abc";
 
-   logic [31:0] signal_rw /*verilator public_flat_rw*/;
-   logic [31:0] signal_rd /*verilator public_flat_rd*/;
+   logic [31:0] signal /*verilator public_flat_rw*/;
 
    int status;
 

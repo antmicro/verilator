@@ -702,7 +702,6 @@ int _mon_check_delayed() {
     CHECK_RESULT_Z(vpi_chk_error(nullptr));
 
     // test unsupported vpiInertialDelay cases
-    // - should these also throw vpi errors?
     v.format = vpiStringVal;
     v.value.str = nullptr;
     vpi_put_value(vh, &v, &t, vpiInertialDelay);
@@ -713,11 +712,9 @@ int _mon_check_delayed() {
     vpi_put_value(vh, &v, &t, vpiInertialDelay);
     CHECK_RESULT_NZ(vpi_chk_error(nullptr));
 
-    // This format throws an error now
-    Verilated::fatalOnVpiError(false);
     v.format = vpiObjTypeVal;
     vpi_put_value(vh, &v, &t, vpiInertialDelay);
-    Verilated::fatalOnVpiError(true);
+    CHECK_RESULT_NZ(vpi_chk_error(nullptr));
 
     return 0;
 }

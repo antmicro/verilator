@@ -11,6 +11,9 @@ import vltest_bootstrap
 
 test.scenarios('vlt_all')
 
+if test.vltmt and test.getenv_def('TRAVIS_DIST', "None") == "trusty":
+    test.skip("Multithreaded test does not work under CI w/ Ubuntu Trusty")
+
 test.compile(make_top_shell=False,
              make_main=False,
              verilator_flags2=["--exe", test.pli_filename],

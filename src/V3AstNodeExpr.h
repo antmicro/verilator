@@ -1670,7 +1670,7 @@ class AstParseHolder final : public AstNodeExpr {
     // A reference to something soon to replace, used in a select at parse time
     // that needs conversion to pull the upper lvalue later
 public:
-    explicit AstParseHolder(FileLine* fl)
+    AstParseHolder(FileLine* fl)
         : ASTGEN_SUPER_ParseHolder(fl) {}
     ASTGEN_MEMBERS_AstParseHolder;
     string emitVerilog() override { V3ERROR_NA_RETURN(""); }
@@ -4513,7 +4513,7 @@ public:
 // === AstNodeTermop ===
 class AstInferredDisable final : public AstNodeTermop {
 public:
-    explicit AstInferredDisable(FileLine* fl)
+    AstInferredDisable(FileLine* fl)
         : ASTGEN_SUPER_InferredDisable(fl) {
         dtypeSetLogicSized(1, VSigning::UNSIGNED);
     }

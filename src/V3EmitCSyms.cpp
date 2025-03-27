@@ -971,6 +971,7 @@ void EmitCSyms::emitSymImp() {
                 }
             }
 
+
             putns(scopep, protect("__Vscope_" + it->second.m_scopeName));
             putns(varp, ".varInsert(__Vfinal,");
             putsQuoted(protect(it->second.m_varBasePretty));

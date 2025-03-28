@@ -480,7 +480,6 @@ class UnrollVisitor final : public VNVisitor {
         VL_DO_DANGLING(iterateChildren(nodep), nodep);  // May delete nodep.
     }
 
-
     //--------------------
     // Default: Just iterate
     void visit(AstNode* nodep) override {

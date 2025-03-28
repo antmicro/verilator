@@ -21,6 +21,7 @@
 //      Look for "FOR" loops and unroll them if <= 32 loops.
 //      (Eventually, a better way would be to simulate the entire loop; ala V3Table.)
 //      Convert remaining FORs to WHILEs
+//      Convert AstAssignW containing AstExprStmt to AstAlways
 //
 //*************************************************************************
 

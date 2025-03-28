@@ -43,6 +43,7 @@ class UnrollVisitor final : public VNVisitor {
     const AstVarScope* m_forVscp;  // Iterator variable scope (nullptr for generate pass)
     AstConst* m_varValuep;  // Current value of loop
     const AstNode* m_ignoreIncp;  // Increment node to ignore
+    AstAssignW* m_assignwp = nullptr;  // Current wire assignment
     bool m_varModeCheck;  // Just checking RHS assignments
     bool m_varModeReplace;  // Replacing varrefs
     bool m_varAssignHit;  // Assign var hit
@@ -462,6 +463,23 @@ class UnrollVisitor final : public VNVisitor {
             VL_DO_DANGLING(pushDeletep(nodep), nodep);
         }
     }
+    void visit(AstExprStmt* nodep) override {
+        if (m_assignwp) {
+            // Wire assigns must become always statements to deal with insertion
+            // of multiple statements.  Perhaps someday make all wassigns into always's?
+            UINFO(5, "     IM_WireRep  " << m_assignwp << endl);
+            m_assignwp->convertToAlways();
+            VL_DO_CLEAR(pushDeletep(m_assignwp), m_assignwp = nullptr);
+        } else {
+            iterateChildren(nodep);
+        }
+    }
+    void visit(AstAssignW* nodep) override {
+        VL_RESTORER(m_assignwp);
+        m_assignwp = nodep;
+        VL_DO_DANGLING(iterateChildren(nodep), nodep);  // May delete nodep.
+    }
+
 
     //--------------------
     // Default: Just iterate

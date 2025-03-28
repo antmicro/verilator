@@ -107,6 +107,7 @@ class TaskStateVisitor final : public VNVisitor {
     // MEMBERS
     VarToScopeMap m_varToScopeMap;  // Map for Var -> VarScope mappings
     FuncToClassMap m_funcToClassMap;  // Map for ctor func -> class
+    AstAssignW* m_assignwp = nullptr;  // Current assignment
     AstNodeFTask* m_ctorp = nullptr;  // Class constructor
     AstClass* m_classp = nullptr;  // Current class
     V3Graph m_callGraph;  // Task call graph
@@ -185,8 +186,20 @@ private:
         }
         iterateChildren(nodep);
     }
+    void visit(AstAssignW* nodep) override {
+        VL_RESTORER(m_assignwp);
+        m_assignwp = nodep;
+        VL_DO_DANGLING(iterateChildren(nodep), nodep);  // May delete nodep.
+    }
     void visit(AstNodeFTaskRef* nodep) override {
         // Includes handling AstMethodCall, AstNew
+        if (m_assignwp) {
+            // Wire assigns must become always statements to deal with insertion
+            // of multiple statements.  Perhaps someday make all wassigns into always's?
+            UINFO(5, "     IM_WireRep  " << m_assignwp << endl);
+            m_assignwp->convertToAlways();
+            VL_DO_CLEAR(pushDeletep(m_assignwp), m_assignwp = nullptr);
+        }
         // We make multiple edges if a task is called multiple times from another task.
         UASSERT_OBJ(nodep->taskp(), nodep, "Unlinked task");
         TaskFTaskVertex* const taskVtxp = getFTaskVertex(nodep->taskp());

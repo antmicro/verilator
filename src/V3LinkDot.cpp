@@ -2907,6 +2907,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
         UINFO(9, indent() << "visit " << nodep << endl);
         UINFO(9, indent() << m_ds.ascii() << endl);
         if (m_ds.m_unresolvedClass) return;
+        if (m_ds.m_unresolvedCell) return;
         // m_curSymp is symbol table of outer expression
         // m_ds.m_dotSymp is symbol table relative to "."'s above now
         UASSERT_OBJ(m_ds.m_dotSymp, nodep, "nullptr lookup symbol table");

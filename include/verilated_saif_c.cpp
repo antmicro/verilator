@@ -31,6 +31,7 @@
 #include <cerrno>
 #include <fcntl.h>
 #include <string>
+#include <regex>
 
 #if defined(_WIN32) && !defined(__MINGW32__) && !defined(__CYGWIN__)
 # include <io.h>
@@ -411,9 +412,9 @@ bool VerilatedSaif::printActivityStats(VerilatedSaifActivityVar& activity,
         printStr("(");
         printStr(activityName);
         if (activity.width() > 1) {
-            printStr("\\[");
+            printStr("[");
             printStr(std::to_string(i));
-            printStr("\\]");
+            printStr("]");
         }
 
         // We only have two-value logic so TZ, TX and TB will always be 0
@@ -459,6 +460,8 @@ void VerilatedSaif::printIndent() {
 
 void VerilatedSaif::pushPrefix(const std::string& name, VerilatedTracePrefixType type) {
     std::string pname = name;
+    pname = std::regex_replace(pname, std::regex("\\["), "\\[");
+    pname = std::regex_replace(pname, std::regex("\\]"), "\\]");
 
     if (m_prefixStack.back().second == VerilatedTracePrefixType::ROOTIO_MODULE) popPrefix();
     if (pname.empty()) {

@@ -3884,9 +3884,11 @@ class LinkDotResolveVisitor final : public VNVisitor {
         if (m_ds.m_dotPos == DP_SCOPE
             || m_ds.m_dotPos
                    == DP_FIRST) {  // Already under dot, so this is {modulepart} DOT {modulepart}
-            UINFO(9, indent() << "deferring until after a V3Param pass: " << nodep << endl);
+            if (m_statep->forPrimary()) {
+                UINFO(9, indent() << "deferring until after a V3Param pass: " << nodep << endl);
+                m_ds.m_unresolvedCell = true;
+            }
             m_ds.m_dotText += "__BRA__??__KET__";
-            m_ds.m_unresolvedCell = true;
             // And pass up m_ds.m_dotText
         }
         // Pass dot state down to only fromp()

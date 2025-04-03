@@ -263,10 +263,12 @@ void VerilatedSaifActivityAccumulator::declare(uint32_t code, const std::string&
     const size_t bitsIdx = m_activityArena.back().size();
     m_activityArena.back().resize(m_activityArena.back().size() + bits);
 
+    variableName = std::regex_replace(variableName, std::regex("\\\\"), "\\\\");
+
     if (array) {
-        variableName += '[';
+        variableName += "\\[";
         variableName += std::to_string(arraynum);
-        variableName += ']';
+        variableName += "\\]";
     }
     m_scopeToActivities[absoluteScopePath].emplace_back(code, variableName);
     m_activity.emplace(code, VerilatedSaifActivityVar{static_cast<uint32_t>(bits),
@@ -400,6 +402,11 @@ bool VerilatedSaif::printActivityStats(VerilatedSaifActivityVar& activity,
                                        const std::string& activityName, bool anyNetWritten) {
     for (size_t i = 0; i < activity.width(); ++i) {
         VerilatedSaifActivityBit& bit = activity.bit(i);
+
+        if (bit.toggleCount() <= 0) {
+            // Skip bits with no toggles
+            continue;
+        }
 
         bit.aggregateVal(currentTime() - activity.lastUpdateTime(), bit.bitValue());
 

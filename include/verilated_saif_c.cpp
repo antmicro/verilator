@@ -499,14 +499,11 @@ void VerilatedSaif::pushPrefix(const std::string& name, VerilatedTracePrefixType
     m_prefixStack.emplace_back(newPrefix, type);
 }
 
-std::string VerilatedSaif::insertEscapeCharactersToIdentifier(const std::string& name)
-{
+std::string VerilatedSaif::insertEscapeCharactersToIdentifier(const std::string& name) {
     std::string escaped{};
 
     for (auto c : name) {
-        if (c == '\\' || c == '[' || c == ']' || c == '/') {
-            escaped += '\\';
-        }
+        if (c == '\\' || c == '[' || c == ']' || c == '/') { escaped += '\\'; }
         escaped += c;
     }
 

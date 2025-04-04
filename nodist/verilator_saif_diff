@@ -130,7 +130,7 @@ class SAIFParser:
                 continue
             if re.match(r'INSTANCE', token):
                 saif_assert(index < num_of_tokens, EOF_ERROR)
-                instance_name = tokens[index]
+                instance_name = tokens[index].replace('\\', '')
                 index += 1
                 self.token_stack[-1].type = INSTANCE_TYPE
                 self.token_stack[-1].value = instance_name
@@ -146,19 +146,19 @@ class SAIFParser:
                 self.token_stack[-1].type = NET_LIST_TYPE
                 continue
             if re.match(r'T1', token):
-                net_name = self.token_stack[-1].value
+                net_name = self.token_stack[-1].value.replace('\\', '')
                 saif_assert(index < num_of_tokens, EOF_ERROR)
                 self.current_instance.nets[net_name].high_time = tokens[index]
                 index += 1
                 continue
             if re.match(r'T0', token):
-                net_name = self.token_stack[-1].value
+                net_name = self.token_stack[-1].value.replace('\\', '')
                 saif_assert(index < num_of_tokens, EOF_ERROR)
                 self.current_instance.nets[net_name].low_time = tokens[index]
                 index += 1
                 continue
             if re.match(r'TC', token):
-                net_name = self.token_stack[-1].value
+                net_name = self.token_stack[-1].value.replace('\\', '')
                 saif_assert(index < num_of_tokens, EOF_ERROR)
                 self.current_instance.nets[net_name].transitions = tokens[index]
                 index += 1
@@ -168,6 +168,7 @@ class SAIFParser:
                 index += 1
                 continue
             if self.token_stack[-2].type == NET_LIST_TYPE:
+                token = token.replace('\\', '')
                 self.token_stack[-1].type = SIGNAL_TYPE
                 self.token_stack[-1].value = token
                 self.current_instance.nets[token] = SAIFSignalBit(token)

@@ -263,9 +263,9 @@ void VerilatedSaifActivityAccumulator::declare(uint32_t code, const std::string&
     m_activityArena.back().resize(m_activityArena.back().size() + bits);
 
     if (array) {
-        variableName += '[';
+        variableName += "\\[";
         variableName += std::to_string(arraynum);
-        variableName += ']';
+        variableName += "\\]";
     }
     m_scopeToActivities[absoluteScopePath].emplace_back(code, variableName);
     m_activity.emplace(code, VerilatedSaifActivityVar{static_cast<uint32_t>(bits),
@@ -463,7 +463,7 @@ void VerilatedSaif::printIndent() {
 }
 
 void VerilatedSaif::pushPrefix(const std::string& name, VerilatedTracePrefixType type) {
-    std::string pname = name;
+    std::string pname = insertEscapeCharactersToIdentifier(name);
 
     if (m_prefixStack.back().second == VerilatedTracePrefixType::ROOTIO_MODULE) popPrefix();
     if (pname.empty()) {
@@ -499,6 +499,20 @@ void VerilatedSaif::pushPrefix(const std::string& name, VerilatedTracePrefixType
     m_prefixStack.emplace_back(newPrefix, type);
 }
 
+std::string VerilatedSaif::insertEscapeCharactersToIdentifier(const std::string& name)
+{
+    std::string escaped{};
+
+    for (auto c : name) {
+        if (c == '\\' || c == '[' || c == ']' || c == '/') {
+            escaped += '\\';
+        }
+        escaped += c;
+    }
+
+    return escaped;
+}
+
 void VerilatedSaif::popPrefix() {
     if (m_prefixStack.back().second != VerilatedTracePrefixType::ARRAY_UNPACKED
         && m_prefixStack.back().second != VerilatedTracePrefixType::ARRAY_PACKED
@@ -521,7 +535,7 @@ void VerilatedSaif::declare(const uint32_t code, uint32_t fidx, const char* name
 
     if (!Super::declCode(code, hierarchicalName, bits)) return;
 
-    std::string variableName = lastWord(hierarchicalName);
+    std::string variableName = insertEscapeCharactersToIdentifier(lastWord(hierarchicalName));
     m_currentScope->addActivityVar(code, variableName);
 
     accumulator.declare(code, m_currentScope->path(), std::move(variableName), bits, array,

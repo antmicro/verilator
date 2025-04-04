@@ -98,6 +98,8 @@ private:
     void declare(uint32_t code, uint32_t fidx, const char* name, const char* wirep, bool array,
                  int arraynum, bool bussed, int msb, int lsb);
 
+    std::string insertEscapeCharactersToIdentifier(const std::string& name);
+
     // CONSTRUCTORS
     VL_UNCOPYABLE(VerilatedSaif);
 

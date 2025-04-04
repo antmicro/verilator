@@ -191,6 +191,16 @@ private:
         m_assignwp = nodep;
         VL_DO_DANGLING(iterateChildren(nodep), nodep);  // May delete nodep.
     }
+    void visit(AstExprStmt* nodep) override {
+        if (m_assignwp) {
+            // Wire assigns must become always statements to deal with insertion
+            // of multiple statements.  Perhaps someday make all wassigns into always's?
+            UINFO(5, "     IM_WireRep  " << m_assignwp << endl);
+            m_assignwp->convertToAlways();
+            VL_DO_CLEAR(pushDeletep(m_assignwp), m_assignwp = nullptr);
+        }
+        iterateChildren(nodep);
+    }
     void visit(AstNodeFTaskRef* nodep) override {
         // Includes handling AstMethodCall, AstNew
         if (m_assignwp) {

@@ -1451,6 +1451,8 @@ public:
         putns(nodep, "\n???? // "s + nodep->prettyTypeName() + "\n");
         iterateChildrenConst(nodep);
         if (!v3Global.opt.lintOnly()) {  // An internal problem, so suppress
+            V3Stats::statsFinalAll(v3Global.rootp());
+            V3Stats::statsReport();
             nodep->v3fatalSrc("Unknown node type reached emitter: " << nodep->prettyTypeName());
         }
     }  // LCOV_EXCL_STOP

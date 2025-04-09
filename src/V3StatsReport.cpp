@@ -231,8 +231,7 @@ void V3Stats::statsReport() {
     UINFO(2, __FUNCTION__ << ": " << endl);
 
     // Open stats file
-    const string filename
-        = "/verilator_stats.txt";
+    const string filename = "/verilator_stats.txt";
     std::ofstream* ofp{V3File::new_ofstream(filename)};
     if (ofp->fail()) v3fatal("Can't write file: " << filename);
 

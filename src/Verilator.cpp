@@ -372,7 +372,6 @@ static void process() {
 
             // Expand slices of arrays
 
-
             // Push constants across variables and remove redundant assignments
             V3Const::constifyAll(v3Global.rootp());
 

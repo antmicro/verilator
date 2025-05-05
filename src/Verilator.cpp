@@ -371,7 +371,7 @@ static void process() {
             V3Unroll::unrollAll(v3Global.rootp());
 
             // Expand slices of arrays
-            V3Slice::sliceAll(v3Global.rootp());
+
 
             // Push constants across variables and remove redundant assignments
             V3Const::constifyAll(v3Global.rootp());

@@ -1743,10 +1743,16 @@ private:
 // Get number of threads occupied by this mtask
 class DpiThreadsVisitor final : public VNVisitorConst {
     int m_threads = 1;  // Max number of threads used by this mtask
+    string m_modName;  // Name of hierarchical module
 
     // METHODS
     void visit(AstCFunc* nodep) override {
-        m_threads = std::max(m_threads, V3Config::getHierWorkers(nodep->cname()));
+        if (nodep->dpiImportWrapper() && V3Config::getProfileData(nodep->cname()) != 0) {
+            m_threads = std::max(m_threads, V3Config::getHierWorkers(nodep->cname()));
+            // Retrieve module name from hier DPI
+            if (m_modName.empty())
+                m_modName = nodep->cname().substr(0, nodep->cname().find("_protectlib_"));
+        }
         iterateChildrenConst(nodep);
     }
     void visit(AstNodeCCall* nodep) override {
@@ -1759,6 +1765,7 @@ public:
     // CONSTRUCTORS
     explicit DpiThreadsVisitor(AstMTaskBody* nodep) { iterateConst(nodep); }
     int threads() const { return m_threads; }
+    string modName() const { return m_modName; }
     ~DpiThreadsVisitor() override = default;
 
 private:
@@ -2479,8 +2486,11 @@ AstExecGraph* V3Order::createParallel(OrderGraph& orderGraph, const std::string&
 
         // Create the ExecMTask
         ExecMTask* const execMTaskp = new ExecMTask{depGraphp, bodyp};
-        if (!v3Global.opt.hierBlocks().empty())
-            execMTaskp->threads(DpiThreadsVisitor{bodyp}.threads());
+        if (!v3Global.opt.hierBlocks().empty()) {
+            const DpiThreadsVisitor dtv{bodyp};
+            execMTaskp->threads(dtv.threads());
+            execMTaskp->modName(dtv.modName());
+        }
         const bool newEntry = logicMTaskToExecMTask.emplace(mTaskp, execMTaskp).second;
         UASSERT_OBJ(newEntry, mTaskp, "LogicMTasks should be processed in dependencyorder");
         UINFO(3, "Final '" << tag << "' LogicMTask " << mTaskp->id() << " maps to ExecMTask"

@@ -44,6 +44,7 @@ private:
     uint32_t m_cost = 0;
     uint64_t m_predictStart = 0;  // Predicted start time of task
     int m_threads = 1;  // Threads used by this mtask
+    string m_modName;  // Module name of hierarchical task
     VL_UNCOPYABLE(ExecMTask);
 
 public:
@@ -59,6 +60,8 @@ public:
     string name() const override VL_MT_STABLE { return "mt"s + std::to_string(id()); }
     string hashName() const { return m_hashName; }
     void threads(int threads) { m_threads = threads; }
+    void modName(const string& modName) { m_modName = modName; }
+    string modName() const { return m_modName; }
     int threads() const { return m_threads; }
     void dump(std::ostream& str) const;
 

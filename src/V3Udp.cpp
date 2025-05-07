@@ -101,6 +101,7 @@ class UdpVisitor final : public VNVisitor {
     }
     void visit(AstUdpTableLine* nodep) override {
         FileLine* const fl = nodep->fileline();
+
         if (!nodep->udpIsCombo() && !m_oFieldVarp->isBitLogic()) {
             m_oFieldVarp->v3error("For sequential UDP, the output must be of 'reg' data type");
         }
@@ -116,10 +117,12 @@ class UdpVisitor final : public VNVisitor {
         AstLogAnd* logandp = new AstLogAnd{fl, new AstConst{fl, AstConst::BitTrue{}},
                                            new AstConst{fl, AstConst::BitTrue{}}};
 
+        AstVar* first_node{nullptr};
         for (AstVar* itr : m_inputVars) {
             if (!iNodep) break;
             inputvars++;
             if (AstUdpTableLineVal* linevalp = VN_CAST(iNodep, UdpTableLineVal)) {
+                first_node = itr;
                 string valName = linevalp->name();
                 AstVarRef* const referencep = new AstVarRef{fl, itr, VAccess::READ};
                 if (isEdgeTrig(valName)) {
@@ -141,6 +144,13 @@ class UdpVisitor final : public VNVisitor {
             }
             iNodep = iNodep->nextp();
         }
+        if (!edgetrigp) {
+            edgetrigp = new AstSenTree{
+                        fl, new AstSenItem{fl, VEdgeType::ET_BOTHEDGE,
+                                           new AstVarRef{fl, first_node, VAccess::READ}}};
+            m_oFieldVarp->fileline()->warnOff(V3ErrorCode::MULTIDRIVEN, true);
+        }
+
         if (inputvars != m_inputVars.size()) {
             nodep->v3error("Incorrect number of input values, expected " << m_inputVars.size()
                                                                          << ", got " << inputvars);
@@ -165,7 +175,7 @@ class UdpVisitor final : public VNVisitor {
         fl->warnOff(V3ErrorCode::LATCH, true);
         AstIf* const ifp
             = new AstIf{fl, logandp,
-                        new AstAssign{fl, new AstVarRef{fl, m_oFieldVarp, VAccess::WRITE},
+                        new AstAssignDly{fl, new AstVarRef{fl, m_oFieldVarp, VAccess::WRITE},
                                       new AstConst{fl, getOutputNum(nodep, oValName)}}};
         if (nodep->udpIsCombo()) {
             if (!isCombOutputSig(oValName)) {

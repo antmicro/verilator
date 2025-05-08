@@ -1386,26 +1386,28 @@ class WidthVisitor final : public VNVisitor {
 
     void visit(AstSetuphold* nodep) override {
         FileLine* const flp = nodep->fileline();
-        AstAssignW* newp = nullptr;
+
+        AstAlways* alwaysp = nullptr;
         if (nodep->delrefp()) {
-            newp = convertSetupholdToAssign(flp, nodep->refevp(), nodep->delrefp());
+            alwaysp = convertSetupholdToAlways(flp, nodep->refevp(), nodep->delrefp());
         }
         if (nodep->deldatap()) {
-            if (!newp) {
-                newp = convertSetupholdToAssign(flp, nodep->dataevp(), nodep->deldatap());
+            if (!alwaysp) {
+                alwaysp = convertSetupholdToAlways(flp, nodep->dataevp(), nodep->deldatap());
             } else {
-                newp->addNextHere(
-                    convertSetupholdToAssign(flp, nodep->dataevp(), nodep->deldatap()));
+                alwaysp->addNextHere(
+                    convertSetupholdToAlways(flp, nodep->dataevp(), nodep->deldatap()));
             }
         }
-        if (!newp) {
+        if (!alwaysp) {
             pushDeletep(nodep->unlinkFrBack());
             return;
         }
-        nodep->replaceWith(newp);
+
+        nodep->replaceWith(alwaysp);
     }
 
-    AstAssignW* convertSetupholdToAssign(FileLine* const flp, AstNodeExpr* const evp,
+    AstAlways* convertSetupholdToAlways(FileLine* const flp, AstNodeExpr* const evp,
                                          AstNodeExpr* const delp) {
         AstNodeExpr* const lhsp = delp->cloneTreePure(false);
         AstNodeExpr* const rhsp = evp->cloneTreePure(false);
@@ -1421,7 +1423,11 @@ class WidthVisitor final : public VNVisitor {
                 varRefp->access(VAccess::WRITE);
             }
         }
-        return new AstAssignW{flp, lhsp, rhsp};
+
+        AstSenTree* edgetrigp = new AstSenTree{flp, new AstSenItem{flp, VEdgeType::ET_BOTHEDGE, evp}};
+        AstAssignDly* assignp = new AstAssignDly{flp, lhsp, rhsp};
+
+        return new AstAlways{flp, VAlwaysKwd::ALWAYS, edgetrigp, assignp};
     }
 
     void visit(AstStable* nodep) override {

@@ -1410,6 +1410,8 @@ class WidthVisitor final : public VNVisitor {
     AstAlways* convertSetupholdToAlways(FileLine* const flp, AstNodeExpr* const evp,
                                          AstNodeExpr* const delp) {
         AstNodeExpr* const lhsp = delp->cloneTreePure(false);
+        lhsp->fileline()->warnOff(V3ErrorCode::PROCASSWIRE, true);
+
         AstNodeExpr* const rhsp = evp->cloneTreePure(false);
         UASSERT_OBJ(VN_IS(lhsp, NodeVarRef) || VN_IS(lhsp, NodePreSel), lhsp,
                     "Incorrect reference in a timing check");

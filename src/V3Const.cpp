@@ -2077,7 +2077,10 @@ class ConstVisitor final : public VNVisitor {
             }
         } else if (m_doV && VN_IS(nodep->lhsp(), Concat)) {
             bool need_temp = false;
-            if (m_warn && !VN_IS(nodep, AssignDly)) {  // Is same var on LHS and RHS?
+            if (m_warn && !VN_IS(nodep, AssignDly)) {
+                // Is same var on LHS and RHS?
+                // The first time we constify, there may be the same variable on the LHS
+                // and RHS. In that case, we must use temporaries, or {a,b}={b,a} will break.
                 // Note only do this (need user4) when m_warn, which is
                 // done as unique visitor
                 const VNUser4InUse m_inuser4;
@@ -2089,13 +2092,10 @@ class ConstVisitor final : public VNVisitor {
                 });
             }
             if (need_temp) {
-                // The first time we constify, there may be the same variable on the LHS
-                // and RHS.  In that case, we must use temporaries, or {a,b}={b,a} will break.
                 UINFO(4, "  ASSITEMP " << nodep << endl);
-                // ASSIGN(CONCAT(lc1,lc2),rhs) -> ASSIGN(temp1,SEL(rhs,{size})),
-                //                                ASSIGN(temp2,SEL(newrhs,{size}))
-                //                                ASSIGN(lc1,temp1),
-                //                                ASSIGN(lc2,temp2)
+                // ASSIGN(CONCAT(lc1,lc2),rhs) -> ASSIGN(temp,rhs),
+                //                                ASSIGN(lc1,SEL(temp,{size1})),
+                //                                ASSIGN(lc2,SEL(temp,{size2}))
             } else {
                 UINFO(4, "  ASSI " << nodep << endl);
                 // ASSIGN(CONCAT(lc1,lc2),rhs) -> ASSIGN(lc1,SEL(rhs,{size})),

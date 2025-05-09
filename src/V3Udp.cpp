@@ -117,14 +117,26 @@ class UdpVisitor final : public VNVisitor {
         AstLogAnd* logandp = new AstLogAnd{fl, new AstConst{fl, AstConst::BitTrue{}},
                                            new AstConst{fl, AstConst::BitTrue{}}};
 
-        AstVar* first_node{nullptr};
+        AstSenItem* start = nullptr;
+        AstSenItem* last = nullptr;
         for (AstVar* itr : m_inputVars) {
             if (!iNodep) break;
             inputvars++;
+
             if (AstUdpTableLineVal* linevalp = VN_CAST(iNodep, UdpTableLineVal)) {
-                first_node = itr;
                 string valName = linevalp->name();
                 AstVarRef* const referencep = new AstVarRef{fl, itr, VAccess::READ};
+
+                AstSenItem* senitem = new AstSenItem{fl, VEdgeType::ET_BOTHEDGE, referencep->cloneTree(false)};
+                if (!start && valName == "?") {
+                    start = senitem;
+                    last = senitem;
+                } else if (last && valName == "?")
+                {
+                    last->addNext(senitem);
+                    last = senitem;
+                }
+
                 if (isEdgeTrig(valName)) {
                     if (nodep->udpIsCombo()) {
                         linevalp->v3error(
@@ -134,7 +146,7 @@ class UdpVisitor final : public VNVisitor {
                         linevalp->v3error("There can be only one edge tigger signal");
                     }
                     edgetrigp = new AstSenTree{
-                        fl, new AstSenItem{fl, VEdgeType::ET_BOTHEDGE,
+                        fl, new AstSenItem{fl, VEdgeType::ET_CHANGED,
                                            new AstVarRef{fl, itr, VAccess::READ}}};
                 }
                 if (valName == "0" || valName == "f")
@@ -145,9 +157,7 @@ class UdpVisitor final : public VNVisitor {
             iNodep = iNodep->nextp();
         }
         if (!edgetrigp) {
-            edgetrigp = new AstSenTree{
-                        fl, new AstSenItem{fl, VEdgeType::ET_BOTHEDGE,
-                                           new AstVarRef{fl, first_node, VAccess::READ}}};
+            edgetrigp = new AstSenTree{fl, start};
             m_oFieldVarp->fileline()->warnOff(V3ErrorCode::MULTIDRIVEN, true);
         }
 
@@ -173,6 +183,7 @@ class UdpVisitor final : public VNVisitor {
         }
 
         fl->warnOff(V3ErrorCode::LATCH, true);
+        fl->warnOff(V3ErrorCode::COMBDLY, true);
         AstIf* const ifp
             = new AstIf{fl, logandp,
                         new AstAssignDly{fl, new AstVarRef{fl, m_oFieldVarp, VAccess::WRITE},

@@ -1408,7 +1408,7 @@ class WidthVisitor final : public VNVisitor {
     }
 
     AstAlways* convertSetupholdToAlways(FileLine* const flp, AstNodeExpr* const evp,
-                                         AstNodeExpr* const delp) {
+                                        AstNodeExpr* const delp) {
         AstNodeExpr* const lhsp = delp->cloneTreePure(false);
         lhsp->fileline()->warnOff(V3ErrorCode::PROCASSWIRE, true);
 
@@ -1426,7 +1426,8 @@ class WidthVisitor final : public VNVisitor {
             }
         }
 
-        AstSenTree* edgetrigp = new AstSenTree{flp, new AstSenItem{flp, VEdgeType::ET_BOTHEDGE, evp}};
+        AstSenTree* edgetrigp
+            = new AstSenTree{flp, new AstSenItem{flp, VEdgeType::ET_BOTHEDGE, evp}};
         AstAssignDly* assignp = new AstAssignDly{flp, lhsp, rhsp};
 
         return new AstAlways{flp, VAlwaysKwd::ALWAYS, edgetrigp, assignp};

@@ -127,12 +127,12 @@ class UdpVisitor final : public VNVisitor {
                 string valName = linevalp->name();
                 AstVarRef* const referencep = new AstVarRef{fl, itr, VAccess::READ};
 
-                AstSenItem* senitem = new AstSenItem{fl, VEdgeType::ET_BOTHEDGE, referencep->cloneTree(false)};
+                AstSenItem* senitem
+                    = new AstSenItem{fl, VEdgeType::ET_BOTHEDGE, referencep->cloneTree(false)};
                 if (!start && valName == "?") {
                     start = senitem;
                     last = senitem;
-                } else if (last && valName == "?")
-                {
+                } else if (last && valName == "?") {
                     last->addNext(senitem);
                     last = senitem;
                 }
@@ -187,7 +187,7 @@ class UdpVisitor final : public VNVisitor {
         AstIf* const ifp
             = new AstIf{fl, logandp,
                         new AstAssignDly{fl, new AstVarRef{fl, m_oFieldVarp, VAccess::WRITE},
-                                      new AstConst{fl, getOutputNum(nodep, oValName)}}};
+                                         new AstConst{fl, getOutputNum(nodep, oValName)}}};
         if (nodep->udpIsCombo()) {
             if (!isCombOutputSig(oValName)) {
                 oNodep->v3error("Illegal value for combinational UDP line output");

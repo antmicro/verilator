@@ -238,6 +238,7 @@ class SliceVisitor final : public VNVisitor {
             m_okInitArray = true;  // VL_RESTORER in visit(AstNodeAssign)
             return false;
         }
+        if (!nodep->lhsp()->isPure() || !nodep->rhsp()->isPure()) return false;
 
         UINFO(4, "Slice optimizing " << nodep << endl);
         ++m_statAssigns;

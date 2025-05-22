@@ -334,8 +334,10 @@ static void process() {
             // Inst may have made lots of concats; fix them
             V3Const::constifyAll(v3Global.rootp());
 
+            if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "pre-scope");
             // Flatten hierarchy, creating a SCOPE for each module's usage as a cell
             V3Scope::scopeAll(v3Global.rootp());
+            if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "scope");
             V3LinkDot::linkDotScope(v3Global.rootp());
 
             // Relocate classes (after linkDot)

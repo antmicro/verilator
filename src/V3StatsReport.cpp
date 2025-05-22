@@ -217,6 +217,8 @@ void V3Stats::statsStage(const string& name) {
 
     const double memory = VlOs::memUsageBytes() / 1024.0 / 1024.0;
     V3Stats::addStatPerf("Stage, Memory (MB), " + digitName, memory);
+    // FIXME remove
+    V3Stats::statsReport();
 }
 
 void V3Stats::infoHeader(std::ofstream& os, const string& prefix) {

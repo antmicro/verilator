@@ -1055,8 +1055,8 @@ class CoverageVisitor final : public VNVisitor {
     void visit(AstNodeAssign* nodep) override {
         if (AstNodeVar* const varRefp = VN_CAST(nodep->lhsp(), NodeVar)) {
             if (varRefp->user1p()) {
-                AstNodeExpr* const initLhsp = new AstVarRef{varRefp->fileline(), VN_CAST(varRefp->user1p, Var), VAccess::WRITE};
-                
+                AstNodeExpr* const initLhsp = new AstVarRef{
+                    varRefp->fileline(), VN_CAST(varRefp->user1p, Var), VAccess::WRITE};
             }
         }
         iterateChildren(nodep);

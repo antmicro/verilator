@@ -391,6 +391,7 @@ class CoverageVisitor final : public VNVisitor {
                         = "__Vtogcovinit__"s + m_beginHier + nodep->shortName();
                     initVarp = new AstVar{fl_nowarn, VVarType::MODULETEMP, initVarName, nodep};
                     m_modp->addStmtsp(initVarp);
+                    nodep->user1p(initVarp);
                     initVarRefp = new AstVarRef{fl_nowarn, initVarp, VAccess::WRITE};
                 }
 
@@ -1051,6 +1052,17 @@ class CoverageVisitor final : public VNVisitor {
     }
 
     // VISITORS - BOTH
+    void visit(AstNodeAssign* nodep) override {
+        if (AstNodeVar* const varRefp = VN_CAST(nodep->lhsp(), NodeVar)) {
+            if (varRefp->user1p()) {
+                AstNodeExpr* const initLhsp = new AstVarRef{varRefp->fileline(), VN_CAST(varRefp->user1p, Var), VAccess::WRITE};
+                
+            }
+        }
+        iterateChildren(nodep);
+        lineTrack(nodep);
+    }
+
     void visit(AstNode* nodep) override {
         iterateChildren(nodep);
         lineTrack(nodep);

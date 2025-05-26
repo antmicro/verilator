@@ -1059,7 +1059,7 @@ class CoverageVisitor final : public VNVisitor {
                     varRefp->fileline(), VN_AS(varRefp->varp()->user1p(), Var), VAccess::WRITE};
                 AstNodeAssign* initAssignp = nodep->cloneType(
                     initLhsp, new AstConst{nodep->fileline(), AstConst::All1{}});
-                nodep->addNext(initAssignp);
+                nodep->addNextHere(initAssignp);
             }
         }
         iterateChildren(nodep);

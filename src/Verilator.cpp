@@ -87,6 +87,7 @@
 #include "V3Sched.h"
 #include "V3Scope.h"
 #include "V3Scoreboard.h"
+#include "V3SelOpt.h"
 #include "V3Slice.h"
 #include "V3Split.h"
 #include "V3SplitAs.h"
@@ -447,7 +448,9 @@ static void process() {
             // Remove SAMPLED
             if (v3Global.hasSampled()) V3Sampled::sampledAll(v3Global.rootp());
 
-            if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "PreOrder");
+            if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "pre-selopt");
+            V3SelOpt::optimize(v3Global.rootp());
+            if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "selopt");
 
             // Schedule the logic
             V3Sched::schedule(v3Global.rootp());
@@ -522,10 +525,14 @@ static void process() {
             V3Premit::premitAll(v3Global.rootp());
         }
 
+        if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "pre-selopt");
+        V3SelOpt::optimize(v3Global.rootp());
+        if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "selopt");
         // Expand macros and wide operators into C++ primitives
         if (!v3Global.opt.lintOnly() && !v3Global.opt.serializeOnly() && v3Global.opt.fExpand()) {
             V3Expand::expandAll(v3Global.rootp());
         }
+        if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "expand");
 
         // Propagate constants across WORDSEL arrayed temporaries
         if (!v3Global.opt.serializeOnly() && v3Global.opt.fSubst()) {

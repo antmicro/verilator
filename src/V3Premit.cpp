@@ -306,6 +306,10 @@ class PremitVisitor final : public VNVisitor {
         }
         checkNode(nodep);
     }
+    void visit(AstSelNumber* nodep) override {
+        iterateAndNextNull(nodep->fromp());
+        checkNode(nodep);
+    }
     void visit(AstArraySel* nodep) override {
         iterateAndNextNull(nodep->fromp());
         {  // Only the 'from' is part of the assignment LHS

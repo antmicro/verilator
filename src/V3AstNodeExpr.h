@@ -4708,6 +4708,7 @@ public:
             dtypeSetLogicSized(VN_AS(widthp, Const)->toUInt(), VSigning::UNSIGNED);
         }
     }
+    // TODO replace calls with AstSelNumber
     AstSel(FileLine* fl, AstNodeExpr* fromp, int lsb, int bitwidth)
         : ASTGEN_SUPER_Sel(fl, fromp, new AstConst(fl, lsb),  // Need () constructor
                            new AstConst(fl, bitwidth))  // Need () constructor
@@ -5428,6 +5429,58 @@ public:
     bool cleanLhs() const override { return true; }
     bool sizeMattersLhs() const override { return false; }
     int instrCount() const override { return 0; }
+};
+class AstSelNumber final : public AstNodeUniop {
+    // Multiple bit range extraction
+    // @astgen alias op1 := fromp
+    VNumRange m_declRange;  // Range of the 'from' array if isRanged() is set, else invalid
+    int m_declElWidth;  // If a packed array, the number of bits per element
+    const int m_lsb;
+    const int m_width;
+
+public:
+    AstSelNumber(FileLine* fl, AstNodeExpr* fromp, int lsb, int width)
+        : ASTGEN_SUPER_SelNumber(fl, fromp)
+        , m_declElWidth{1}
+        , m_lsb{lsb}
+        , m_width{width} {
+        dtypeSetLogicSized(width, VSigning::UNSIGNED);
+    }
+    AstSelNumber(FileLine* fl, AstNodeExpr* fromp)
+        : ASTGEN_SUPER_SelNumber(fl, fromp)
+        , m_declElWidth{1}
+        , m_lsb{0}
+        , m_width{1} {
+        V3ERROR_NA;
+    }
+    ASTGEN_MEMBERS_AstSelNumber;
+    void dump(std::ostream& str) const override;
+    void dumpJson(std::ostream& str) const override;
+    void numberOperate(V3Number& out, const V3Number& from) override {
+        out.opSel(from, m_lsb + m_width - 1, m_lsb);
+    }
+    string emitVerilog() override { V3ERROR_NA_RETURN(""); }
+    string emitC() override {
+        return m_width == 1 ? "VL_BITSEL_%nq%lq(%lw, %P, %li, " + std::to_string(m_lsb) + ')'
+               : isWide()   ? "VL_SEL_%nq%lq(%nw,%lw, %P, %li, " + std::to_string(m_lsb) + ", "
+                                + std::to_string(m_width) + ')'
+                          : "VL_SEL_%nq%lq(%lw, %P, %li, " + std::to_string(m_lsb) + ", "
+                                + std::to_string(m_width) + ')';
+    }
+    string emitSMT() const override { return "((_ extract %t %r) %l)"; }
+    bool cleanOut() const override { return false; }
+    bool cleanLhs() const override { return true; }
+    bool sizeMattersLhs() const override { return false; }
+    bool sameNode(const AstNode*) const override { return true; }
+    int instrCount() const override { return widthInstrs() * (m_lsb ? 3 : 10); }
+    int widthConst() const { return m_width; }
+    int lsbConst() const { return m_lsb; }
+    int msbConst() const { return lsbConst() + widthConst() - 1; }
+    VNumRange& declRange() VL_MT_STABLE { return m_declRange; }
+    const VNumRange& declRange() const VL_MT_STABLE { return m_declRange; }
+    void declRange(const VNumRange& flag) { m_declRange = flag; }
+    int declElWidth() const { return m_declElWidth; }
+    void declElWidth(int flag) { m_declElWidth = flag; }
 };
 class AstSigned final : public AstNodeUniop {
     // $signed(lhs)

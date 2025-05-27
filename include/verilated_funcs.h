@@ -2220,6 +2220,90 @@ static inline WDataOutP VL_SEL_WWII(int obits, int lbits, WDataOutP owp, WDataIn
     return owp;
 }
 
+// FIXME deduplicate code
+#define VL_BITSEL_II(lbits, lhs, rhs) ((lhs) >> (rhs))
+#define VL_BITSEL_QI(lbits, lhs, rhs) ((lhs) >> (rhs))
+#define VL_BITSEL_QQ(lbits, lhs, rhs) ((lhs) >> (rhs))
+#define VL_BITSEL_IQ(lbits, lhs, rhs) (static_cast<IData>((lhs) >> (rhs)))
+
+static inline IData VL_BITSEL_IW(int lbits, WDataInP const lwp, IData rd) VL_MT_SAFE {
+    const int word = VL_BITWORD_E(rd);
+    if (VL_UNLIKELY(rd > static_cast<IData>(lbits))) {
+        return ~0;  // Spec says you can go outside the range of a array.  Don't coredump if so.
+        // We return all 1's as that's more likely to find bugs (?) than 0's.
+    } else {
+        return (lwp[word] >> VL_BITBIT_E(rd));
+    }
+}
+
+// EMIT_RULE: VL_RANGE:  oclean=lclean;  out=dirty
+// <msb> & <lsb> MUST BE CLEAN (currently constant)
+#define VL_SEL_II(lbits, lhs, lsb, width) ((lhs) >> (lsb))
+#define VL_SEL_QQ(lbits, lhs, lsb, width) ((lhs) >> (lsb))
+#define VL_SEL_IQ(lbits, lhs, lsb, width) (static_cast<IData>((lhs) >> (lsb)))
+
+static inline IData VL_SEL_IW(int lbits, WDataInP const lwp, IData lsb, IData width) VL_MT_SAFE {
+    const int msb = lsb + width - 1;
+    if (VL_UNLIKELY(msb >= lbits)) {
+        return ~0;  // Spec says you can go outside the range of a array.  Don't coredump if so.
+    } else if (VL_BITWORD_E(msb) == VL_BITWORD_E(static_cast<int>(lsb))) {
+        return VL_BITRSHIFT_W(lwp, lsb);
+    } else {
+        // 32 bit extraction may span two words
+        const int nbitsfromlow = VL_EDATASIZE - VL_BITBIT_E(lsb);  // bits that come from low word
+        return ((lwp[VL_BITWORD_E(msb)] << nbitsfromlow) | VL_BITRSHIFT_W(lwp, lsb));
+    }
+}
+
+static inline QData VL_SEL_QW(int lbits, WDataInP const lwp, IData lsb, IData width) VL_MT_SAFE {
+    const int msb = lsb + width - 1;
+    if (VL_UNLIKELY(msb > lbits)) {
+        return ~0;  // Spec says you can go outside the range of a array.  Don't coredump if so.
+    } else if (VL_BITWORD_E(msb) == VL_BITWORD_E(static_cast<int>(lsb))) {
+        return VL_BITRSHIFT_W(lwp, lsb);
+    } else if (VL_BITWORD_E(msb) == 1 + VL_BITWORD_E(static_cast<int>(lsb))) {
+        const int nbitsfromlow = VL_EDATASIZE - VL_BITBIT_E(lsb);
+        const QData hi = (lwp[VL_BITWORD_E(msb)]);
+        const QData lo = VL_BITRSHIFT_W(lwp, lsb);
+        return (hi << nbitsfromlow) | lo;
+    } else {
+        // 64 bit extraction may span three words
+        const int nbitsfromlow = VL_EDATASIZE - VL_BITBIT_E(lsb);
+        const QData hi = (lwp[VL_BITWORD_E(msb)]);
+        const QData mid = (lwp[VL_BITWORD_E(lsb) + 1]);
+        const QData lo = VL_BITRSHIFT_W(lwp, lsb);
+        return (hi << (nbitsfromlow + VL_EDATASIZE)) | (mid << nbitsfromlow) | lo;
+    }
+}
+
+static inline WDataOutP VL_SEL_WW(int obits, int lbits, WDataOutP owp, WDataInP const lwp,
+                                  IData lsb, IData width) VL_MT_SAFE {
+    const int msb = lsb + width - 1;
+    const int word_shift = VL_BITWORD_E(lsb);
+    if (VL_UNLIKELY(msb > lbits)) {  // Outside bounds,
+        for (int i = 0; i < VL_WORDS_I(obits) - 1; ++i) owp[i] = ~0;
+        owp[VL_WORDS_I(obits) - 1] = VL_MASK_E(obits);
+    } else if (VL_BITBIT_E(lsb) == 0) {
+        // Just a word extract
+        for (int i = 0; i < VL_WORDS_I(obits); ++i) owp[i] = lwp[i + word_shift];
+    } else {
+        // Not a _vl_insert because the bits come from any bit number and goto bit 0
+        const int loffset = lsb & VL_SIZEBITS_E;
+        const int nbitsfromlow = VL_EDATASIZE - loffset;  // bits that end up in lword (know
+                                                          // loffset!=0) Middle words
+        const int words = VL_WORDS_I(msb - lsb + 1);
+        for (int i = 0; i < words; ++i) {
+            owp[i] = lwp[i + word_shift] >> loffset;
+            const int upperword = i + word_shift + 1;
+            if (upperword <= static_cast<int>(VL_BITWORD_E(msb))) {
+                owp[i] |= lwp[upperword] << nbitsfromlow;
+            }
+        }
+        for (int i = words; i < VL_WORDS_I(obits); ++i) owp[i] = 0;
+    }
+    return owp;
+}
+
 //======================================================================
 // Expressions needing insert/select
 

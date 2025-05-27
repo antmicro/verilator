@@ -446,6 +446,31 @@ public:
                 iterateAndNextConstNull(selp->fromp());
                 puts(", ");
             }
+        }
+        if (AstSelNumber* const selp = VN_CAST(nodep->lhsp(), SelNumber)) {
+            if (selp->widthMin() == 1) {
+                putnbs(nodep, "VL_ASSIGNBIT_");
+                emitIQW(selp->fromp());
+                if (nodep->rhsp()->isAllOnesV()) {
+                    puts("O(");
+                    rhs = false;
+                } else {
+                    puts("I(");
+                }
+                puts(std::to_string(selp->lsbConst()) + ", ");
+                iterateAndNextConstNull(selp->fromp());
+                if (rhs) puts(", ");
+            } else {
+                putnbs(nodep, "VL_ASSIGNSEL_");
+                emitIQW(selp->fromp());
+                emitIQW(nodep->rhsp());
+                puts("(");
+                putns(selp->fromp(), cvtToStr(selp->fromp()->widthMin()) + ",");
+                puts(cvtToStr(nodep->widthMin()) + ",");
+                puts(std::to_string(selp->lsbConst()) + ", ");
+                iterateAndNextConstNull(selp->fromp());
+                puts(", ");
+            }
         } else if (const AstGetcRefN* const selp = VN_CAST(nodep->lhsp(), GetcRefN)) {
             iterateAndNextConstNull(selp->lhsp());
             puts(" = ");
@@ -1261,6 +1286,10 @@ public:
     void visit(AstSel* nodep) override {
         // Note ASSIGN checks for this on a LHS
         emitOpName(nodep, nodep->emitC(), nodep->fromp(), nodep->lsbp(), nodep->widthp());
+    }
+    void visit(AstSelNumber* nodep) override {
+        // Note ASSIGN checks for this on a LHS
+        emitOpName(nodep, nodep->emitC(), nodep->fromp(), nullptr, nullptr);
     }
     void visit(AstReplicate* nodep) override {
         if (nodep->srcp()->widthMin() == 1 && !nodep->isWide()) {

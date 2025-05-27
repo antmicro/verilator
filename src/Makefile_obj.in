@@ -299,6 +299,7 @@ RAW_OBJS_PCH_ASTNOMT = \
 	V3SchedVirtIface.o \
 	V3Scope.o \
 	V3Scoreboard.o \
+	V3SelOpt.o \
 	V3Slice.o \
 	V3Split.o \
 	V3SplitAs.o \

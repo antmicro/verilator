@@ -2371,6 +2371,20 @@ void AstSel::dumpJson(std::ostream& str) const {
     }
     dumpJsonGen(str);
 }
+void AstSelNumber::dump(std::ostream& str) const {
+    this->AstNodeUniop::dump(str);
+    if (declRange().ranged()) {
+        str << " decl" << declRange() << "]";
+        if (declElWidth() != 1) str << "/" << declElWidth();
+    }
+}
+void AstSelNumber::dumpJson(std::ostream& str) const {
+    if (declRange().ranged()) {
+        dumpJsonStr(str, "declRange", cvtToStr(declRange()));
+        dumpJsonNumFunc(str, declElWidth);
+    }
+    dumpJsonGen(str);
+}
 void AstSliceSel::dump(std::ostream& str) const {
     this->AstNodeTriop::dump(str);
     if (declRange().ranged()) str << " decl" << declRange();

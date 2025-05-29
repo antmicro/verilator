@@ -122,6 +122,7 @@ class LocalizeVisitor final : public VNVisitor {
                     refp->varp(newVarp);
                 }
             }
+            pushDeletep(oldVarp->unlinkFrBack());
         }
         m_varScopeps.clear();
     }

@@ -3286,6 +3286,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
                         }
                         AstVarRef* const refp = new AstVarRef{
                             nodep->fileline(), varp, VAccess::READ};  // lvalue'ness computed later
+                        UINFO(0, "CLASSORPACKAGEP: " << foundp->classOrPackagep() << " " << refp
+                                                     << " " << varp);
                         refp->classOrPackagep(foundp->classOrPackagep());
                         newp = refp;
                     }

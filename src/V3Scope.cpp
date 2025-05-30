@@ -63,10 +63,16 @@ class ScopeVisitor final : public VNVisitor {
         for (const auto& itr : m_varRefScopes) {
             AstVarRef* const nodep = itr.first;
             AstScope* scopep = itr.second;
+            UINFO(0, "CLASSORPACKAGEP: " << nodep->classOrPackagep() << " " << nodep << " "
+                                         << scopep);
             if (nodep->classOrPackagep()) {
                 const auto it2 = m_packageScopes.find(nodep->classOrPackagep());
                 UASSERT_OBJ(it2 != m_packageScopes.end(), nodep, "Can't locate package scope");
                 scopep = it2->second;
+            }
+            for (auto a : m_varScopes) {
+                UINFO(0, a.first.first << endl << a.first.second << endl << a.second);
+                UINFO(0, endl << endl);
             }
             const auto it3 = m_varScopes.find(std::make_pair(nodep->varp(), scopep));
             UASSERT_OBJ(it3 != m_varScopes.end(), nodep, "Can't locate varref scope");

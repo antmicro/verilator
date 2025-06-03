@@ -117,15 +117,17 @@ class ClockVisitor final : public VNVisitor {
         AstNodeStmt* incBodyp;
         AstIf* initIfp = nullptr;
         if (nodep->initp()) {
-            if (AstVarRef* const writeRefp = VN_CAST(nodep->initp(), VarRef)) {
-                AstVarRef* const readRefp = writeRefp->cloneTree(false);
+            if (AstVarRef* const refp = VN_CAST(nodep->initp(), VarRef)) {
+                AstVarRef* const readRefp = refp->cloneTree(false);
                 readRefp->access(VAccess::READ);
-                AstAssign* const initAssignp
-                    = new AstAssign{fl, writeRefp->unlinkFrBack(), new AstConst{fl, 2}};
+                AstVarRef* const writeRefp = refp->cloneTree(false);
+                writeRefp->access(VAccess::WRITE);
+                AstAssign* const initAssignp = new AstAssign{fl, writeRefp, new AstConst{fl, 2}};
                 initIfp = new AstIf{fl, new AstEq{fl, readRefp, new AstConst{fl, 1}}, initAssignp};
                 incBodyp
                     = new AstIf{fl, new AstEq{fl, readRefp->cloneTree(false), new AstConst{fl, 2}},
                                 incp, initIfp->cloneTree(false)};
+                pushDeletep(refp->unlinkFrBack());
             } else {
                 nodep->initp()->v3fatalSrc("Initp is not a var ref");
                 incBodyp = nullptr;

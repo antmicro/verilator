@@ -403,11 +403,10 @@ class CoverageVisitor final : public VNVisitor {
                         = new AstVar{fl_nowarn, VVarType::MODULETEMP, initVarName, initDtypep};
                     m_modp->addStmtsp(initVarp);
                     nodep->user1p(initVarp);
-                    initVarRefp = new AstVarRef{fl_nowarn, initVarp, VAccess::READWRITE};
-                    AstVarRef* const initVarWriteRefp = initVarRefp->cloneTree(false);
-                    initVarWriteRefp->access(VAccess::WRITE);
-                    AstAssign* const initAssignp = new AstAssign{
-                        fl_nowarn, initVarWriteRefp, new AstConst{fl_nowarn, AstConst::All0{}}};
+                    initVarRefp = new AstVarRef{fl_nowarn, initVarp, VAccess::WRITE};
+                    AstAssign* const initAssignp
+                        = new AstAssign{fl_nowarn, initVarRefp->cloneTree(false),
+                                        new AstConst{fl_nowarn, AstConst::All0{}}};
                     m_modp->addStmtsp(new AstInitialStatic{fl_nowarn, initAssignp});
                 }
 

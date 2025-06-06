@@ -390,7 +390,8 @@ class CoverageVisitor final : public VNVisitor {
                 AstVar* initVarp = nullptr;
                 AstVarRef* initWriteRefp = nullptr;
                 // primaryIO is not set yet
-                const bool isTopModuleInput = (v3Global.rootp()->topModulep() == m_modp) && nodep->isInput();
+                const bool isTopModuleInput
+                    = (v3Global.rootp()->topModulep() == m_modp) && nodep->isInput();
                 const AstBasicDType* const basicDTypep
                     = VN_CAST(nodep->dtypep()->skipRefp(), BasicDType);
                 if (basicDTypep && basicDTypep->isFourstate() && basicDTypep->isBitLogic()

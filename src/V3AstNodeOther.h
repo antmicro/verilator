@@ -2158,7 +2158,7 @@ public:
         return ((isIO() || isSignal())
                 && (isIO() || isBitLogic())
                 // Wrapper would otherwise duplicate wrapped module's coverage
-                && !isSc() && !isPrimaryIO() && !isConst() && !isDouble() && !isString());
+                && !isSc() && !isConst() && !isDouble() && !isString());
     }
     bool isClassMember() const { return varType() == VVarType::MEMBER; }
     bool isStatementTemp() const { return varType() == VVarType::STMTTEMP; }

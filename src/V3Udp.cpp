@@ -93,7 +93,18 @@ class UdpVisitor final : public VNVisitor {
         }
         m_oFieldVarp = m_outputVars[0];
 
-        m_alwaysBlockp = new AstAlways{fl, VAlwaysKwd::ALWAYS, nullptr, nullptr};
+        AstSenItem* itemsp = nullptr;
+        for (AstVar* itr : m_inputVars) {
+            if (!itemsp) {
+                itemsp = new AstSenItem{fl, VEdgeType::ET_BOTHEDGE,
+                                        new AstVarRef{fl, itr, VAccess::READ}};
+            } else {
+                itemsp->addNext(new AstSenItem{fl, VEdgeType::ET_BOTHEDGE,
+                                               new AstVarRef{fl, itr, VAccess::READ}});
+            }
+        }
+        m_alwaysBlockp
+            = new AstAlways{fl, VAlwaysKwd::ALWAYS, new AstSenTree{fl, itemsp}, nullptr};
         fl->warnOff(V3ErrorCode::LATCH, true);
         iterateChildren(nodep);
 
@@ -127,12 +138,6 @@ class UdpVisitor final : public VNVisitor {
                         linevalp->v3error(
                             "There should not be a edge trigger for combinational UDP table line");
                     }
-                    if (edgetrigp) {
-                        linevalp->v3error("There can be only one edge tigger signal");
-                    }
-                    edgetrigp = new AstSenTree{
-                        fl, new AstSenItem{fl, VEdgeType::ET_BOTHEDGE,
-                                           new AstVarRef{fl, itr, VAccess::READ}}};
                 }
                 if (valName == "0" || valName == "f")
                     logandp = new AstLogAnd{fl, logandp, new AstLogNot{fl, referencep}};
@@ -163,10 +168,12 @@ class UdpVisitor final : public VNVisitor {
         }
 
         fl->warnOff(V3ErrorCode::LATCH, true);
-        AstIf* const ifp
-            = new AstIf{fl, logandp,
-                        new AstAssign{fl, new AstVarRef{fl, m_oFieldVarp, VAccess::WRITE},
-                                      new AstConst{fl, getOutputNum(nodep, oValName)}}};
+        AstIf* const ifp = new AstIf{
+            fl,
+            logandp,
+            new AstAssign{fl, new AstVarRef{fl, m_oFieldVarp, VAccess::WRITE},
+                          new AstConst{fl, getOutputNum(nodep, oValName)}},
+        };
         if (nodep->udpIsCombo()) {
             if (!isCombOutputSig(oValName)) {
                 oNodep->v3error("Illegal value for combinational UDP line output");
@@ -174,10 +181,10 @@ class UdpVisitor final : public VNVisitor {
             m_alwaysBlockp->addStmtsp(ifp);
             return;
         }
+        m_alwaysBlockp->addStmtsp(ifp);
         if (!isSequentOutputSig(oValName)) {
             oNodep->nextp()->v3error("Illegal value for sequential UDP line output");
         }
-        m_alwaysBlockp->addNext(new AstAlways{fl, VAlwaysKwd::ALWAYS, edgetrigp, ifp});
     }
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
     void visit(AstLogAnd* nodep) override { iterateChildren(nodep); }

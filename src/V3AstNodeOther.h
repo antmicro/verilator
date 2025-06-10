@@ -2900,6 +2900,7 @@ public:
 };
 class AstCoverDecl final : public AstNodeStmt {
     // Coverage analysis point declaration
+    // @astgen op1 := toggleExprp : Optional[AstNodeExpr]
     //
     // [After V3CoverageJoin] Duplicate declaration to get data from instead
     // @astgen ptr := m_dataDeclp : Optional[AstCoverDecl]

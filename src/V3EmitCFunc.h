@@ -1034,9 +1034,9 @@ public:
         // So we use an immediate-evaluation lambda and comma operator
         putnbs(nodep, "([&]() {\n");
         iterateAndNextConstNull(nodep->stmtsp());
-        puts("}(), ");
+        puts("return ");
         iterateAndNextConstNull(nodep->resultp());
-        puts(")");
+        puts(";}())");
     }
     void visit(AstStop* nodep) override {
         putns(nodep, "VL_STOP_MT(");

@@ -153,6 +153,7 @@ protected:
     bool m_instantiatesOwnProcess = false;
     const AstClassPackage* m_classOrPackage = nullptr;  // Pointer to current class or package
     string m_classOrPackageHash;  // Hash of class or package name
+    bool m_inMemberInitList = false;
 
     bool constructorNeedsProcess(const AstClass* const classp) {
         const AstNode* const newp = m_memberMap.findMember(classp, "new");
@@ -311,10 +312,12 @@ public:
         emitCFuncHeader(nodep, m_modp, /* withScope: */ true);
 
         if (nodep->isConstructor()) {
+            VL_RESTORER(m_inMemberInitList);
             const AstClass* const classp = VN_CAST(nodep->scopep()->modp(), Class);
             if (nodep->isConstructor() && classp && classp->extendsp()) {
                 puts("\n    : ");
                 std::set<AstClass*> doneClasses;
+                m_inMemberInitList = true;
                 putConstructorSubinit(classp, nodep, true, doneClasses /*ref*/);
             }
         }
@@ -1034,9 +1037,15 @@ public:
         // So we use an immediate-evaluation lambda and comma operator
         putnbs(nodep, "([&]() {\n");
         iterateAndNextConstNull(nodep->stmtsp());
-        puts("return ");
-        iterateAndNextConstNull(nodep->resultp());
-        puts(";}())");
+        if (m_inMemberInitList) {
+            puts("return ");
+            iterateAndNextConstNull(nodep->resultp());
+            puts(";}())");
+        } else {
+            puts("}(), ");
+            iterateAndNextConstNull(nodep->resultp());
+            puts(")");
+        }
     }
     void visit(AstStop* nodep) override {
         putns(nodep, "VL_STOP_MT(");

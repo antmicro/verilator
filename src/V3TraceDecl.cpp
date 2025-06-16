@@ -262,7 +262,7 @@ class TraceDeclVisitor final : public VNVisitor {
 
             // Pick up the last path element. The prefixes have already been pushed
             // when building the initialization functions
-            const size_t pos = path.rfind('.');
+            const size_t pos = path.rfind('\\');
             const std::string name = path.substr(pos == string::npos ? 0 : pos + 1);
 
             // Compute the type of the scope being fixed up
@@ -301,7 +301,7 @@ class TraceDeclVisitor final : public VNVisitor {
             const AstScope* const parentp = std::get<0>(item);
             const AstCell* const cellp = std::get<1>(item);
             AstNodeStmt* const placeholderp = std::get<2>(item);
-            const std::string path = AstNode::prettyName(parentp->name() + "." + cellp->name());
+            const std::string path = AstNode::prettyName(parentp->name() + "\\" + cellp->name());
             fixupPlaceholder(path, placeholderp);
         }
 

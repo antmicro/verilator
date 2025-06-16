@@ -229,6 +229,7 @@ public:
     bool forParamed() const { return m_step == LDS_PARAMED; }
     bool forPrearray() const { return m_step == LDS_PARAMED || m_step == LDS_PRIMARY; }
     bool forScopeCreation() const { return m_step == LDS_SCOPED; }
+    bool forArrayed() const { return m_step == LDS_ARRAYED; }
 
     // METHODS
     static string nodeTextType(AstNode* nodep) {
@@ -1288,6 +1289,25 @@ class LinkDotFindVisitor final : public VNVisitor {
             m_ftaskp = nodep;
             iterateChildren(nodep);
         }
+    }
+    void visit(AstMethodCall* nodep) override {
+        if (m_statep->forArrayed()) {
+            UASSERT_OBJ(nodep->taskp(), nodep, "Unlinked method call");
+            for (AstVarRef* refp : nodep->taskp()->impliciteScopeAccessRefs()) {
+                AstArg *argp = new AstArg{nodep->fileline(), refp->name(), refp->cloneTree(false)};
+                nodep->addPinsp(argp);
+            
+                AstVar *varp = refp->varp()->cloneTree(false);
+                varp->direction(VDirection::INPUT);
+                varp->lifetime(VLifetime::AUTOMATIC);
+                varp->funcLocal(true);
+                varp->varType(VVarType::MEMBER);
+                nodep->taskp()->stmtsp()->nextp()->addHereThisAsNext(varp);
+                refp->varp(varp);
+            }
+            nodep->taskp()->clearImpliciteScopeAccessRefs();
+        }
+        iterateChildren(nodep);
     }
     void visit(AstClocking* nodep) override {  // FindVisitor::
         VL_RESTORER(m_clockingp);
@@ -3287,6 +3307,11 @@ class LinkDotResolveVisitor final : public VNVisitor {
                             nodep->fileline(), varp, VAccess::READ};  // lvalue'ness computed later
                         refp->classOrPackagep(foundp->classOrPackagep());
                         newp = refp;
+                        if (VN_IS(m_modp, Class) && m_ftaskp) {
+                            if (m_curSymp->crossesBoundry(nodep->name(), m_modSymp)) { 
+                                m_ftaskp->addImpliciteScopeAccessRef(refp);
+                            }
+                        }
                     }
                     UINFO(9, indent() << "new " << newp);
                     nodep->replaceWith(newp);
@@ -3924,6 +3949,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 }
                 nodep->taskp(taskp);
                 nodep->classOrPackagep(foundp->classOrPackagep());
+
                 UINFO(7, indent() << "Resolved " << nodep);  // Also prints taskp
             } else if (m_insideClassExtParam) {
                 // The reference may point to a method declared in a super class, which is proved

@@ -89,6 +89,7 @@ class AstNodeFTask VL_NOT_FINAL : public AstNode {
     VBaseOverride m_baseOverride;  // BaseOverride (inital/final/extends)
     VLifetime m_lifetime;  // Default lifetime of local vars
     VIsCached m_purity;  // Pure state
+    std::vector<AstVarRef*> m_impliciteScopeAccessRefs; // Refs that implicitly accesses outer scope, e.g. from task that is inside class declared in module
 
 protected:
     AstNodeFTask(VNType t, FileLine* fl, const string& name, AstNode* stmtsp)
@@ -184,6 +185,15 @@ public:
     VBaseOverride baseOverride() const { return m_baseOverride; }
     void lifetime(const VLifetime& flag) { m_lifetime = flag; }
     VLifetime lifetime() const { return m_lifetime; }
+    void addImpliciteScopeAccessRef(AstVarRef* ref) {
+        m_impliciteScopeAccessRefs.push_back(ref);
+    }
+    const std::vector<AstVarRef*>& impliciteScopeAccessRefs() const {
+        return m_impliciteScopeAccessRefs;
+    }
+    void clearImpliciteScopeAccessRefs() {
+        m_impliciteScopeAccessRefs.clear();
+    }
     bool isFirstInMyListOfStatements(AstNode* n) const override { return n == stmtsp(); }
     bool isPure() override;
     const char* broken() const override;

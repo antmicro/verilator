@@ -39,9 +39,19 @@ version_match = re.search(r'version ([0-9.]+)', nout, re.IGNORECASE)
 if not version_match:
     test.skip("lcov or genhtml not installed")
 
-if float(version_match.group(1)) < 1.14:
-    test.skip("lcov or genhtml too old (version " + version_match.group(1) +
-              ", need version >= 1.14")
+required_version = "1.14"
+installed_version = version_match.group(1)
+
+required_version_arr = required_version.split('.')
+installed_version_arr = installed_version.split('.')
+
+for i in range(len(installed_version_arr)):
+    if int(installed_version_arr[i]) > int(required_version_arr[i]):
+        break
+    elif int(installed_version_arr[i]) == int(required_version_arr[i]):
+        continue
+    test.skip("lcov or genhtml too old (version " + installed_version +
+              ", need version >= " + required_version)
 
 test.run(cmd=[
     "genhtml", test.obj_dir + "/coverage.info", "--branch-coverage", "--output-directory " +

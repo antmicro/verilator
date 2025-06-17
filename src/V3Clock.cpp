@@ -95,6 +95,19 @@ class ClockVisitor final : public VNVisitor {
         m_lastSenp = nullptr;
         m_lastIfp = nullptr;
     }
+    AstVar* getVarp(const AstNodeExpr* const nodep) {
+        if (const AstVarRef* const refp = VN_CAST(nodep, VarRef)) {
+            return refp->varp();
+        } else if (const AstNodeSel* const selp = VN_CAST(nodep, NodeSel)) {
+            return getVarp(selp->fromp());
+        } else if (const AstStructSel* const selp = VN_CAST(nodep, StructSel)) {
+            return getVarp(selp->fromp());
+        } else if (const AstSel* const selp = VN_CAST(nodep, Sel)) {
+            return getVarp(selp->fromp());
+        } else {
+            nodep->v3fatalSrc("Unexpected type");
+        }
+    }
     // VISITORS
     void visit(AstCoverToggle* nodep) override {
         // if (debug()) nodep->dumpTree("-  ct: ");

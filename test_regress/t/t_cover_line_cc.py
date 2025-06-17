@@ -50,8 +50,8 @@ for i in range(len(installed_version_arr)):
         break
     elif int(installed_version_arr[i]) == int(required_version_arr[i]):
         continue
-    test.skip("lcov or genhtml too old (version " + installed_version +
-              ", need version >= " + required_version)
+    test.skip("lcov or genhtml too old (version " + installed_version + ", need version >= " +
+              required_version)
 
 test.run(cmd=[
     "genhtml", test.obj_dir + "/coverage.info", "--branch-coverage", "--output-directory " +

@@ -3289,11 +3289,11 @@ class LinkDotResolveVisitor final : public VNVisitor {
                         newp = refp;
                         if (m_ftaskp && m_ftaskp->classMethod()) {
                             AstNode* cross = m_curSymp->crossesBoundry(nodep->name(), m_modSymp);
-                            if (VN_IS(cross, Cell)) { 
+                            if (VN_IS(cross, Cell)) {
                                 auto it = m_ftaskp->addedArgs.find(refp->name());
                                 if (it == m_ftaskp->addedArgs.end()) {
                                     m_ftaskp->addImpliciteScopeAccessRef(refp->cloneTree(false));
-                                    AstVar *varcp = varp->cloneTree(false);
+                                    AstVar* varcp = varp->cloneTree(false);
                                     if (refp->access().isReadOnly()) {
                                         varcp->direction(VDirection::INPUT);
                                     } else if (refp->access().isWriteOnly()) {
@@ -3306,7 +3306,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
                                     varcp->varType(VVarType::MEMBER);
                                     m_ftaskp->stmtsp()->nextp()->addHereThisAsNext(varcp);
                                     refp->varp(varcp);
-                                    m_ftaskp->addedArgs.insert(std::make_pair(refp->name(), varcp));
+                                    m_ftaskp->addedArgs.insert(
+                                        std::make_pair(refp->name(), varcp));
                                 } else {
                                     refp->varp(m_ftaskp->addedArgs[refp->name()]);
                                 }

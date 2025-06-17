@@ -1735,7 +1735,7 @@ V3TaskConnects V3Task::taskConnects(AstNodeFTaskRef* nodep, AstNode* taskStmtsp,
         for (AstVarRef* refp : nodep->taskp()->impliciteScopeAccessRefs()) {
             const auto it = nameToIndex.find(refp->name());
             AstVarRef* refcp = refp->cloneTree(false);
-            AstArg *argp = new AstArg{nodep->fileline(), refp->name(), refcp};
+            AstArg* argp = new AstArg{nodep->fileline(), refp->name(), refcp};
             nodep->addPinsp(argp);
             tconnects[it->second].second = argp;
         }

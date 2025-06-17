@@ -163,7 +163,8 @@ public:
     }
     AstNode* crossesBoundry(const string& name, VSymEnt* boundry, bool result = false) const {
         if (findIdFlat(name)) return result ? m_nodep : nullptr;
-        if (m_fallbackp) return m_fallbackp->crossesBoundry(name, boundry, result | (this == boundry));
+        if (m_fallbackp)
+            return m_fallbackp->crossesBoundry(name, boundry, result | (this == boundry));
         return nullptr;
     }
     void candidateIdFlat(VSpellCheck* spellerp, const VNodeMatcher* matcherp) const {

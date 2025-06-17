@@ -129,7 +129,11 @@ class ClockVisitor final : public VNVisitor {
         // We could add another IF to detect posedges, and only increment if so.
         // It's another whole branch though versus a potential memory miss.
         // We'll go with the miss.
-        newp->addThensp(new AstAssign{nodep->fileline(), changeWrp, origp->cloneTree(false)});
+        AstVar* const changeVarp = getVarp(changeWrp);
+        if (!changeVarp->user1()) {
+            changeVarp->user1(true);
+            const AstVar* const orgVarp = getVarp(origp);
+        }
         nodep->replaceWith(newp);
         VL_DO_DANGLING(nodep->deleteTree(), nodep);
     }

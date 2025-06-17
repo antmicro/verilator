@@ -252,6 +252,7 @@ protected:
     }
 
 public:
+    bool impliciteArgsAdded = false;
     const char* broken() const override;
     void dump(std::ostream& str = std::cout) const override;
     void dumpJson(std::ostream& str = std::cout) const override;

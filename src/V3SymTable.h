@@ -161,12 +161,10 @@ public:
         if (m_fallbackp) return m_fallbackp->findIdFallback(name);
         return nullptr;
     }
-    bool crossesBoundry(const string& name, VSymEnt* boundry, bool result = false) const {
-        std::cout << boundry << "  " << this << "  " << findIdFlat(name) << "  "
-              << result << "  " << name << '\n';
-        if (findIdFlat(name)) return result;
-        if (m_fallbackp) return m_fallbackp->crossesBoundry(name, boundry, result | this == boundry);
-        return false;
+    AstNode* crossesBoundry(const string& name, VSymEnt* boundry, bool result = false) const {
+        if (findIdFlat(name)) return result ? m_nodep : nullptr;
+        if (m_fallbackp) return m_fallbackp->crossesBoundry(name, boundry, result | (this == boundry));
+        return nullptr;
     }
     void candidateIdFlat(VSpellCheck* spellerp, const VNodeMatcher* matcherp) const {
         // Suggest alternative symbol candidates without looking upward through symbol hierarchy

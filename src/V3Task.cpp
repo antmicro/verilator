@@ -1729,6 +1729,18 @@ V3TaskConnects V3Task::taskConnects(AstNodeFTaskRef* nodep, AstNode* taskStmtsp,
 
     if (!makeChanges) return tconnects;
 
+    if (!nodep->impliciteArgsAdded) {
+        // If we haven't added the implicit scope access refs yet, do so now
+        nodep->impliciteArgsAdded = true;
+        for (AstVarRef* refp : nodep->taskp()->impliciteScopeAccessRefs()) {
+            const auto it = nameToIndex.find(refp->name());
+            AstVarRef* refcp = refp->cloneTree(false);
+            AstArg *argp = new AstArg{nodep->fileline(), refp->name(), refcp};
+            nodep->addPinsp(argp);
+            tconnects[it->second].second = argp;
+        }
+    }
+
     // Connect missing ones
     std::set<const AstVar*> argWrap;  // Which ports are defaulted, forcing arg wrapper creation
     for (int i = 0; i < tpinnum; ++i) {

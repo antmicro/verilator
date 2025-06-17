@@ -121,6 +121,7 @@ protected:
     }
 
 public:
+    std::map<std::string, AstVar*> addedArgs;
     ASTGEN_MEMBERS_AstNodeFTask;
     virtual AstNodeFTask* cloneType(const string& name) = 0;
     void dump(std::ostream& str = std::cout) const override;

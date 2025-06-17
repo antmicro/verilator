@@ -229,7 +229,6 @@ public:
     bool forParamed() const { return m_step == LDS_PARAMED; }
     bool forPrearray() const { return m_step == LDS_PARAMED || m_step == LDS_PRIMARY; }
     bool forScopeCreation() const { return m_step == LDS_SCOPED; }
-    bool forArrayed() const { return m_step == LDS_ARRAYED; }
 
     // METHODS
     static string nodeTextType(AstNode* nodep) {
@@ -1289,25 +1288,6 @@ class LinkDotFindVisitor final : public VNVisitor {
             m_ftaskp = nodep;
             iterateChildren(nodep);
         }
-    }
-    void visit(AstMethodCall* nodep) override {
-        if (m_statep->forArrayed()) {
-            UASSERT_OBJ(nodep->taskp(), nodep, "Unlinked method call");
-            for (AstVarRef* refp : nodep->taskp()->impliciteScopeAccessRefs()) {
-                AstArg *argp = new AstArg{nodep->fileline(), refp->name(), refp->cloneTree(false)};
-                nodep->addPinsp(argp);
-            
-                AstVar *varp = refp->varp()->cloneTree(false);
-                varp->direction(VDirection::INPUT);
-                varp->lifetime(VLifetime::AUTOMATIC);
-                varp->funcLocal(true);
-                varp->varType(VVarType::MEMBER);
-                nodep->taskp()->stmtsp()->nextp()->addHereThisAsNext(varp);
-                refp->varp(varp);
-            }
-            nodep->taskp()->clearImpliciteScopeAccessRefs();
-        }
-        iterateChildren(nodep);
     }
     void visit(AstClocking* nodep) override {  // FindVisitor::
         VL_RESTORER(m_clockingp);
@@ -3307,9 +3287,29 @@ class LinkDotResolveVisitor final : public VNVisitor {
                             nodep->fileline(), varp, VAccess::READ};  // lvalue'ness computed later
                         refp->classOrPackagep(foundp->classOrPackagep());
                         newp = refp;
-                        if (VN_IS(m_modp, Class) && m_ftaskp) {
-                            if (m_curSymp->crossesBoundry(nodep->name(), m_modSymp)) { 
-                                m_ftaskp->addImpliciteScopeAccessRef(refp);
+                        if (m_ftaskp && m_ftaskp->classMethod()) {
+                            AstNode* cross = m_curSymp->crossesBoundry(nodep->name(), m_modSymp);
+                            if (VN_IS(cross, Cell)) { 
+                                auto it = m_ftaskp->addedArgs.find(refp->name());
+                                if (it == m_ftaskp->addedArgs.end()) {
+                                    m_ftaskp->addImpliciteScopeAccessRef(refp->cloneTree(false));
+                                    AstVar *varcp = varp->cloneTree(false);
+                                    if (refp->access().isReadOnly()) {
+                                        varcp->direction(VDirection::INPUT);
+                                    } else if (refp->access().isWriteOnly()) {
+                                        varcp->direction(VDirection::OUTPUT);
+                                    } else {
+                                        varcp->direction(VDirection::INOUT);
+                                    }
+                                    varcp->lifetime(VLifetime::AUTOMATIC);
+                                    varcp->funcLocal(true);
+                                    varcp->varType(VVarType::MEMBER);
+                                    m_ftaskp->stmtsp()->nextp()->addHereThisAsNext(varcp);
+                                    refp->varp(varcp);
+                                    m_ftaskp->addedArgs.insert(std::make_pair(refp->name(), varcp));
+                                } else {
+                                    refp->varp(m_ftaskp->addedArgs[refp->name()]);
+                                }
                             }
                         }
                     }

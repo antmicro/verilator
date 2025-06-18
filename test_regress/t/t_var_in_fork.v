@@ -47,6 +47,11 @@ module t();
     $display("Static variable: %d", static_var);
     if (static_var != 1)
       $stop;
+    fork
+      begin
+          automatic bit [48-1:0] my_auto_var;
+      end
+    join_none
     $write("*-* All Finished *-*\n");
     $finish;
   end

@@ -682,7 +682,7 @@ public:
         // aggregate counts.  This is because Verilator combines all
         // hierarchies itself, and if verilator_cov also did it, you'd end up
         // with (number-of-instant) times too many counts in this bin.
-        puts(", first");  // Enable, passed from __Vconfigure parameter
+        puts(", true");  // Enable, passed from __Vconfigure parameter
         puts(", ");
         putsQuoted(protect(nodep->fileline()->filename()));
         puts(", ");

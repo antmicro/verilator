@@ -1979,8 +1979,7 @@ class LinkDotParamVisitor final : public VNVisitor {
     }
     void visit(AstAssignAlias* nodep) override {  // ParamVisitor::
         // tran gates need implicit creation
-        // As VarRefs don't exist in forPrimary, sanity check
-        UASSERT_OBJ(!m_statep->forPrimary(), nodep, "Assign aliases unexpected pre-dot");
+        if (m_statep->forPrimary()) return; // VarRefs don't exist in forPrimary
         if (AstVarRef* const forrefp = VN_CAST(nodep->lhsp(), VarRef)) {
             pinImplicitExprRecurse(forrefp);
         }
@@ -2139,10 +2138,12 @@ class LinkDotScopeVisitor final : public VNVisitor {
         // Track aliases created by V3Inline; if we get a VARXREF(aliased_from)
         // we'll need to replace it with a VARXREF(aliased_to)
         if (debug() >= 9) nodep->dumpTree("-    alias: ");
-        AstVarScope* const fromVscp = VN_AS(nodep->lhsp(), VarRef)->varScopep();
-        AstVarScope* const toVscp = VN_AS(nodep->rhsp(), VarRef)->varScopep();
-        UASSERT_OBJ(fromVscp && toVscp, nodep, "Bad alias scopes");
-        fromVscp->user2p(toVscp);
+        if (VN_IS(nodep->lhsp(), VarRef) && VN_IS(nodep->rhsp(), VarRef)) {
+            AstVarScope* const fromVscp = VN_AS(nodep->lhsp(), VarRef)->varScopep();
+            AstVarScope* const toVscp = VN_AS(nodep->rhsp(), VarRef)->varScopep();
+            UASSERT_OBJ(fromVscp && toVscp, nodep, "Bad alias scopes");
+            fromVscp->user2p(toVscp);
+        }
         iterateChildren(nodep);
     }
     void visit(AstAssignVarScope* nodep) override {  // ScopeVisitor::

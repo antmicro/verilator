@@ -3054,6 +3054,9 @@ class ConstVisitor final : public VNVisitor {
         if (m_doNConst && replaceNodeAssign(nodep)) return;
     }
     void visit(AstAssignAlias* nodep) override {
+        iterateChildren(nodep);
+        if (nodep->timingControlp()) m_hasJumpDelay = true;
+        if (m_doNConst && replaceNodeAssign(nodep)) return;
         // Don't perform any optimizations, keep the alias around
     }
     void visit(AstAssignVarScope* nodep) override {

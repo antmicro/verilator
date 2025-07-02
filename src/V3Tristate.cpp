@@ -1362,25 +1362,31 @@ class TristateVisitor final : public TristateBaseVisitor {
     }
     void visit(AstAssignW* nodep) override { visitAssign(nodep); }
     void visit(AstAssign* nodep) override { visitAssign(nodep); }
-    void visit(AstAssignAlias* nodep) override { 
+    void visit(AstAssignAlias* nodep) override {
         AstNode* const lhsp = nodep->lhsp();
         AstNode* const rhsp = nodep->rhsp();
         // TODO: change names
-        AstVar* const lhspTmpVarp = new AstVar{lhsp->fileline(), VVarType::MODULETEMP, "tmp1", VFlagChildDType{}, lhsp->dtypep()->cloneTree(false)};
-        AstVar* const rhspTmpVarp = new AstVar{rhsp->fileline(), VVarType::MODULETEMP, "tmp2", VFlagChildDType{}, rhsp->dtypep()->cloneTree(false)};
+        AstVar* const lhspTmpVarp
+            = new AstVar{lhsp->fileline(), VVarType::MODULETEMP, "tmp1", VFlagChildDType{},
+                         lhsp->dtypep()->cloneTree(false)};
+        AstVar* const rhspTmpVarp
+            = new AstVar{rhsp->fileline(), VVarType::MODULETEMP, "tmp2", VFlagChildDType{},
+                         rhsp->dtypep()->cloneTree(false)};
         nodep->addHereThisAsNext(lhspTmpVarp);
         nodep->addHereThisAsNext(rhspTmpVarp);
         AstAssignW* const assignTmpWp = new AstAssignW{
             nodep->fileline(), new AstVarRef{rhsp->fileline(), rhspTmpVarp, VAccess::WRITE},
             new AstVarRef{lhsp->fileline(), lhspTmpVarp, VAccess::READ}};
         nodep->replaceWith(assignTmpWp);
-        //AstVarRef* const lhspTmpVarRefp = new AstVarRef{lhsp->fileline(), lhspTmpVarp, VAccess::WRITE};
+        //AstVarRef* const lhspTmpVarRefp = new AstVarRef{lhsp->fileline(), lhspTmpVarp,
+        //VAccess::WRITE};
 
         //AstAssignW* const assignlhspWp = new AstAssignW{
         //    lhsp->fileline(), lhspTmpVarRefp, rhs};
 
-        //AstVarRef* const rhspTmpVarRefp = new AstVarRef{rhsp->fileline(), rhspTmpVarp, VAccess::WRITE};
-        //std::cout << "lhsp dtypep: " << lhsp->dtypep() << ", rhsp dtypep: " << rhsp->dtypep()
+        //AstVarRef* const rhspTmpVarRefp = new AstVarRef{rhsp->fileline(), rhspTmpVarp,
+        //VAccess::WRITE}; std::cout << "lhsp dtypep: " << lhsp->dtypep() << ", rhsp dtypep: " <<
+        //rhsp->dtypep()
         //      << std::endl;
         //if (lhsp->dtypep() != rhsp->dtypep()) {
         //    nodep->v3warn(E_UNSUPPORTED, "Unsupported: Assign alias with different data types: "

@@ -1979,7 +1979,7 @@ class LinkDotParamVisitor final : public VNVisitor {
     }
     void visit(AstAssignAlias* nodep) override {  // ParamVisitor::
         // tran gates need implicit creation
-        if (m_statep->forPrimary()) return; // VarRefs don't exist in forPrimary
+        if (m_statep->forPrimary()) return;  // VarRefs don't exist in forPrimary
         if (AstVarRef* const forrefp = VN_CAST(nodep->lhsp(), VarRef)) {
             pinImplicitExprRecurse(forrefp);
         }

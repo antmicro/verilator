@@ -338,11 +338,18 @@ class LinkJumpVisitor final : public VNVisitor {
     void visit(AstDisable* nodep) override {
         UINFO(8, "   DISABLE " << nodep);
         AstNode* const targetp = nodep->targetp();
+        FileLine* const fl = nodep->fileline();
         UASSERT_OBJ(targetp, nodep, "Unlinked disable statement");
         if (VN_IS(targetp, Task)) {
             nodep->v3warn(E_UNSUPPORTED, "Unsupported: disabling task by name");
         } else if (VN_IS(targetp, Fork)) {
-            nodep->v3warn(E_UNSUPPORTED, "Unsupported: disabling fork by name");
+            AstPackage* const topPkgp = v3Global.rootp()->dollarUnitPkgAddp();
+            AstVar* const processQueuep = new AstVar{
+                fl, VVarType::MODULETEMP, "fork_X_processes", VFlagChildDType{},
+                new AstQueueDType{fl, VFlagChildDType{},
+                                  new AstBasicDType{fl, VBasicDTypeKwd::PROCESS_REFERENCE},
+                                  nullptr}};
+            topPkgp->addStmtsp(processQueuep);
         } else if (AstBegin* const beginp = VN_CAST(targetp, Begin)) {
             const std::string targetName = beginp->name();
             bool aboveBlock = false;

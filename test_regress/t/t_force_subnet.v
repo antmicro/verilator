@@ -41,7 +41,7 @@ module t(/*AUTOARG*/
          `checkh(subnet, 8'h11);
       end
       //
-      else if (cyc == 99) begin
+      else if (cyc == 14) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

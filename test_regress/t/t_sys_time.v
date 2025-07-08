@@ -26,7 +26,7 @@ module t (/*AUTOARG*/
          time64 = $time;
          if ($stime != time64[31:0]) $stop;
       end
-      else if (cyc==99) begin
+      else if (cyc==90) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

@@ -46,10 +46,10 @@ module t (/*AUTOARG*/
          dly0 <= #(dly_s.dly) 32'h55;
          //dly0 <= # dly_s.dly 32'h55;  // Unsupported, issue #2410
       end
-      else if (cyc == 99) begin
+      else if (cyc == 34) begin
          if (dly3 !== 32'h57) $stop;
          $write("*-* All Finished *-*\n");
-         #100 $finish;
+         #35 $finish;
       end
    end
 

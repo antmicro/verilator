@@ -58,8 +58,6 @@ module t (/*AUTOARG*/
       else if (cyc == 17) begin
          if (i != 0) $stop;
          if (en != SIXTEEN) $stop;
-      end
-      else if (cyc == 99) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

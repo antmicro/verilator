@@ -94,7 +94,7 @@ module t (/*AUTOARG*/
          `checkh(v64, 64'h48acb7d4e5400000);
          `checkh(v96, 96'h000002a348acb7d4e5400000);
       end
-      else if (cyc == 99) begin
+      else if (cyc == 32) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

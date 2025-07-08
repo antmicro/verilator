@@ -60,7 +60,7 @@ module t(/*AUTOARG*/
          if (sstr.len() != 2) $stop;
          if (sstr != "BA") $stop;
       end
-      else if (cyc == 99) begin
+      else if (cyc == 34) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

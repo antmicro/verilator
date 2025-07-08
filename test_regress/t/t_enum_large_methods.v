@@ -36,19 +36,19 @@ module t (/*AUTOARG*/
          `checkh(e.next, ELARGE);
          e <= ELARGE;
       end
-      else if (cyc==3) begin
+      else if (cyc==2) begin
          `checks(e.name, "ELARGE");
          `checkh(e.next, E01);
          `checkh(e.prev, E01);
          e <= E01;
       end
-      else if (cyc==20) begin
+      else if (cyc==3) begin
          e <= my_t'('h11); // Unknown
       end
-      else if (cyc==21) begin
+      else if (cyc==4) begin
          `checks(e.name, ""); // Unknown
       end
-      else if (cyc==99) begin
+      else if (cyc==5) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

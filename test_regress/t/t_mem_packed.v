@@ -49,7 +49,7 @@ module t (/*AUTOARG*/
 
          sum_w <= sum_w + arr_w[cyc-10];
       end
-      else if (cyc==99) begin
+      else if (cyc==14) begin
          $write("[%0t] cyc==%0d sum=%x\n", $time, cyc, sum);
          if (sum != 8'h55) $stop;
          if (sum != sum_w) $stop;

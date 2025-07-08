@@ -135,7 +135,7 @@ module t (/*AUTOARG*/
          //
          if ((!(r-50.0)) != (!((cyc-50) != 0))) $stop;
       end
-      else if (cyc==99) begin
+      else if (cyc==90) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

@@ -26,7 +26,7 @@
       |                  ^
 %Warning-STMTDLY: t/t_delay.v:52:10: Ignoring delay on this statement due to --no-timing
                                    : ... note: In instance 't'
-   52 |          #100 $finish;
+   52 |          #35 $finish;
       |          ^
                   ... For warning description see https://verilator.org/warn/STMTDLY?v=latest
                   ... Use "/* verilator lint_off STMTDLY */" and lint_on around source to disable this message.

@@ -295,7 +295,7 @@ module t (/*AUTOARG*/
          else if (cyc==63) begin a <= -67'h2; b <=  67'h2; end
          else if (cyc==64) begin a <= -67'h2; b <=  67'h3; end
 
-         else if (cyc==99) begin
+         else if (cyc==66) begin
             $write("*-* All Finished *-*\n");
             $finish;
          end

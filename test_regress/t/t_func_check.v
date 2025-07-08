@@ -24,9 +24,7 @@ module t (
       if (cyc==0) begin
          crc <= 64'h5aef0c8d_d70a4497;
       end
-      else if (cyc<90) begin
-      end
-      else if (cyc==99) begin
+      else if (cyc==1) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

@@ -115,10 +115,10 @@ module t (/*AUTOARG*/
          `checkh(s <= "a", 1'b1);
       end
       // String character references
-      else if (cyc==10) begin
+      else if (cyc==5) begin
          s2 = "astring";
       end
-      else if (cyc==11) begin
+      else if (cyc==6) begin
          `checks(s2, "astring");
          `checkh(s2.len(), 7);
          `checkh(s2[1], "s");
@@ -127,7 +127,7 @@ module t (/*AUTOARG*/
          `checks(s2, "0st3ing");
       end
       //
-      else if (cyc==99) begin
+      else if (cyc==7) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

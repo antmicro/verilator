@@ -152,7 +152,7 @@ module t (/*AUTOARG*/
       else if (cyc==18) begin
          `checks(s, "1.23");
       end
-      else if (cyc==99) begin
+      else if (cyc==19) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

@@ -85,7 +85,7 @@ module t (/*AUTOARG*/
          if (reg2d[1] !== 11) $stop;
          if (reg2d[6] !== 12) $stop;
       end
-      else if (cyc==99) begin
+      else if (cyc==15) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

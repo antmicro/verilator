@@ -67,7 +67,7 @@ module secret_other
 
    always @ (posedge clk) begin
       secret_cyc <= secret_cyc + 1;
-      if (secret_cyc==99) begin
+      if (secret_cyc==91) begin
          $finish;
       end
    end

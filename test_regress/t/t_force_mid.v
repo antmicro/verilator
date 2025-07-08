@@ -51,7 +51,7 @@ module t(/*AUTOARG*/
 
 
       //
-      else if (cyc == 99) begin
+      else if (cyc == 7) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

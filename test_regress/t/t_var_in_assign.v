@@ -39,9 +39,7 @@ module t (/*AUTOARG*/
          if (cyc==12 && oz!==1'b1)  $stop;
          if (cyc==12 && oa!==1'b1)  $stop;
       end
-      else if (cyc<90) begin
-      end
-      else if (cyc==99) begin
+      else if (cyc==10) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

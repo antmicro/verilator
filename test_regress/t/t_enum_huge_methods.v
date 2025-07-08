@@ -68,8 +68,6 @@ module t (/*AUTOARG*/
       end
       else if (cyc == 21) begin
          `checks(e.name, ""); // Unknown
-      end
-      else if (cyc == 99) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

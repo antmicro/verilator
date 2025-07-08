@@ -31,9 +31,7 @@ module t (/*AUTOARG*/
          // Setup
          w0 = 32'h1234;
       end
-      else if (cyc<90) begin
-      end
-      else if (cyc==99) begin
+      else if (cyc==5) begin
 `define EXPECTED_SUM 32'h1239
 `ifdef TEST_VERBOSE
          $write("[%0t] cyc==%0d  sum=%x\n", $time, cyc, w[CNT]);

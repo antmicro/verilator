@@ -34,22 +34,22 @@ module t(/*AUTOARG*/
       if (cyc == 0) begin
          in <= 4'b0101;
       end
-      else if (cyc == 10) begin
+      else if (cyc == 1) begin
          $display("10");
       end
-      else if (cyc == 11) begin
+      else if (cyc == 2) begin
          $display("11");
       end
       //
       // bus
-      else if (cyc == 10) begin  // Should warn
+      else if (cyc == 3) begin  // Should warn
          $display("10b");
       end
-      else if (cyc == 11) begin  // Should warn
+      else if (cyc == 4) begin  // Should warn
          $display("11b");
       end
       //
-      else if (cyc == 99) begin
+      else if (cyc == 5) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

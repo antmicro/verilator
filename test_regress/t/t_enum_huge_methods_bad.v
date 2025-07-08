@@ -30,7 +30,7 @@ module t (/*AUTOARG*/
          $display(e.name);
          e <= ELARGE;
       end
-      else if (cyc==99) begin
+      else if (cyc==2) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

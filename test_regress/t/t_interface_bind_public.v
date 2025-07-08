@@ -48,16 +48,16 @@ module t
 
    always @ (posedge clk) begin
       cyc = cyc + 1;
-      if (cyc<10) begin
+      if (cyc<3) begin
          reset <= '0;
       end
-      else if (cyc<20) begin
+      else if (cyc<6) begin
          reset <= '1;
       end
-      else if (cyc<30) begin
+      else if (cyc<9) begin
          reset <= '0;
       end
-      else if (cyc==99) begin
+      else if (cyc==9) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

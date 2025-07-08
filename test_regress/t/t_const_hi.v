@@ -42,7 +42,7 @@ module t(/*AUTOARG*/
          if (reg_o != {64'hffff0000ffff0000, 986'd0}) $stop;
          reg_i <= 2'b10;
       end
-      else if (cyc == 99) begin
+      else if (cyc == 3) begin
          if (reg_o != {986'd0, 64'hffff0000ffff0000}) $stop;
          if (pad0 != '1) $stop;
          if (spad1 != '1) $stop;

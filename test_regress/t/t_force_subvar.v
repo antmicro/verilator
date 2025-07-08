@@ -21,29 +21,29 @@ module t(/*AUTOARG*/
    always @ (posedge clk) begin
       cyc <= cyc + 1;
       // procedural var sub.subvar
-      if (cyc == 50) begin
+      if (cyc == 0) begin
          `checkh(sub.subvar, 32'h666);
          force sub.subvar = 32'hffff;
       end
-      else if (cyc == 51) begin
+      else if (cyc == 1) begin
          `checkh(sub.subvar, 32'hffff);
          sub.subvar = 32'h543;  // Ignored as still forced
       end
-      else if (cyc == 52) begin
+      else if (cyc == 2) begin
          `checkh(sub.subvar, 32'hffff);
       end
-      else if (cyc == 53) begin
+      else if (cyc == 3) begin
          release sub.subvar;
       end
-      else if (cyc == 54) begin
+      else if (cyc == 4) begin
          `checkh(sub.subvar, 32'hffff);  // Retains value until next procedural change
          sub.subvar = 32'h544;
       end
-      else if (cyc == 56) begin
+      else if (cyc == 5) begin
          `checkh(sub.subvar, 32'h544);
       end
       //
-      else if (cyc == 99) begin
+      else if (cyc == 6) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

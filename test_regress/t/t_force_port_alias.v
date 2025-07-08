@@ -52,7 +52,7 @@ module t(/*AUTOARG*/
          `checkh(sub1.out, 4'h3);
       end
       //
-      else if (cyc == 99) begin
+      else if (cyc == 4) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

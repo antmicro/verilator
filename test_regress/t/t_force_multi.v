@@ -33,7 +33,7 @@ module t(/*AUTOARG*/
          `checkh(busb, 4'b1101);
       end
       //
-      else if (cyc == 99) begin
+      else if (cyc == 3) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

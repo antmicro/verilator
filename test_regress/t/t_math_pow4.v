@@ -35,8 +35,6 @@ module t (/*AUTOARG*/
       end
       else if (cyc==2) begin
          if (y != 32'h010000ff) $stop;
-      end
-      else if (cyc==99) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

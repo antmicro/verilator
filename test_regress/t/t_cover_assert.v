@@ -29,7 +29,7 @@ module t(/*AUTOARG*/
          a <= '0;
          b <= '1;
       end
-      else if (cyc == 99) begin
+      else if (cyc == 12) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

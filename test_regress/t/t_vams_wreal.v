@@ -83,7 +83,7 @@ module t (/*autoarg*/
       else if (cyc==6) begin
          if (out != 0) $stop;
       end
-      else if (cyc==99) begin
+      else if (cyc==7) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

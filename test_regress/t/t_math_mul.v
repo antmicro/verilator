@@ -35,14 +35,6 @@ module t (/*AUTOARG*/
          if (sum !== 64'he396068aba3898a2) $stop;
       end
       else if (cyc==91) begin
-      end
-      else if (cyc==92) begin
-      end
-      else if (cyc==93) begin
-      end
-      else if (cyc==94) begin
-      end
-      else if (cyc==99) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

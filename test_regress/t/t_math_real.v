@@ -249,7 +249,7 @@ module t (/*AUTOARG*/
          r = real'(cis96);
          `checkr(r, -4951760157141521099596496896.0);
       end
-      else if (cyc==90) begin
+      else if (cyc==80) begin
          ci32 <= '0;
          cis32 <= '0;
          ci48 <= '0;
@@ -259,7 +259,7 @@ module t (/*AUTOARG*/
          ci96 <= '0;
          cis96 <= '0;
       end
-      else if (cyc==91) begin
+      else if (cyc==81) begin
          `checkr(real'(ci32), 0.0);
          `checkr(real'(cis32), 0.0);
          `checkr(real'(ci48), 0.0);
@@ -269,7 +269,7 @@ module t (/*AUTOARG*/
          `checkr(real'(ci96), 0.0);
          `checkr(real'(cis96), 0.0);
       end
-      else if (cyc==92) begin
+      else if (cyc==82) begin
          ci32 <= 32'b1;
          cis32 <= 32'b1;
          ci48 <= 48'b1;
@@ -279,7 +279,7 @@ module t (/*AUTOARG*/
          ci96 <= 96'b1;
          cis96 <= 96'b1;
       end
-      else if (cyc==93) begin
+      else if (cyc==83) begin
          `checkr(real'(ci32), 1.0);
          `checkr(real'(cis32), 1.0);
          `checkr(real'(ci48), 1.0);
@@ -289,7 +289,7 @@ module t (/*AUTOARG*/
          `checkr(real'(ci96), 1.0);
          `checkr(real'(cis96), 1.0);
       end
-      else if (cyc==94) begin
+      else if (cyc==84) begin
          ci32 <= ~ '0;
          cis32 <= ~ '0;
          ci48 <= ~ '0;
@@ -299,7 +299,7 @@ module t (/*AUTOARG*/
          ci96 <= ~ '0;
          cis96 <= ~ '0;
       end
-      else if (cyc==95) begin
+      else if (cyc==85) begin
          `checkr(real'(ci32), 4294967295.0);
          `checkr(real'(cis32), -1.0);
          `checkr(real'(ci48), 281474976710655.0);
@@ -308,8 +308,6 @@ module t (/*AUTOARG*/
          `checkr(real'(cis64), -1.0);
          `checkr(real'(ci96), 79228162514264337593543950336.0);
          `checkr(real'(cis96), -1.0);
-      end
-      else if (cyc==99) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

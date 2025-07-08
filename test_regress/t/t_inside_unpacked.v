@@ -23,7 +23,7 @@ module t(/*AUTOARG*/
          array[1] = 20;
          array[9] = 90;
       end
-      else if (cyc < 99) begin
+      else if (cyc == 1) begin
          l = (10 inside {array});
          if (l != 1) $stop;
          l = (20 inside {array});
@@ -33,7 +33,7 @@ module t(/*AUTOARG*/
          l = (99 inside {array});
          if (l != 0) $stop;
       end
-      else if (cyc == 99) begin
+      else if (cyc == 2) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

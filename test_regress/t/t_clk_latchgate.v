@@ -78,7 +78,7 @@ module t (/*AUTOARG*/
       if (cyc<3) begin
          crc <= 64'h5aef0c8d_d70a4497;
       end
-      else if (cyc==99) begin
+      else if (cyc==6) begin
          $write("[%0t] cyc==%0d crc=%x\n", $time, cyc, crc);
          if (ffq_clk_active == 0) begin
            $display ("----");

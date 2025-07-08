@@ -48,7 +48,7 @@ module t (/*AUTOARG*/
 
    always @(posedge clk) begin
       cyc <= cyc + 1;
-      if (cyc==99) begin
+      if (cyc==5) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

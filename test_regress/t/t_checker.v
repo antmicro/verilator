@@ -30,7 +30,7 @@ module t(/*AUTOARG*/
       else if (cyc < 90) begin
          if (failure !== !$onehot0(cyc)) $stop;
       end
-      else if (cyc == 99) begin
+      else if (cyc == 90) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

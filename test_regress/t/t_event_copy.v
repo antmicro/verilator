@@ -133,7 +133,7 @@ module t(/*AUTOARG*/
          if (last_event != 0) $stop;
          last_event = 0;
       end
-      else if (cyc == 99) begin
+      else if (cyc == 33) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

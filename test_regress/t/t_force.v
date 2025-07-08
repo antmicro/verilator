@@ -50,74 +50,74 @@ module t(/*AUTOARG*/
       end
       //
       // Check release with no force
-      else if (cyc == 10) begin
+      else if (cyc == 3) begin
          never_forced <= 5432;
       end
-      else if (cyc == 11) begin
+      else if (cyc == 4) begin
          `checkh(never_forced, 5432);
       end
-      else if (cyc == 12) begin
+      else if (cyc == 5) begin
          release never_forced;  // no-op
       end
-      else if (cyc == 13) begin
+      else if (cyc == 6) begin
          `checkh(never_forced, 5432);
       end
       //
       // bus
-      else if (cyc == 20) begin
+      else if (cyc == 7) begin
          `checkh(bus, 4'b0101);
          force bus = 4'b0111;
       end
-      else if (cyc == 21) begin
+      else if (cyc == 8) begin
          `checkh(bus, 4'b0111);
          force bus = 4'b1111;
       end
-      else if (cyc == 22) begin
+      else if (cyc == 9) begin
          `checkh(bus, 4'b1111);
          release bus;
       end
-      else if (cyc == 23) begin
+      else if (cyc == 10) begin
          `checkh(bus, 4'b0101);
       end
       //
-      else if (cyc == 30) begin
+      else if (cyc == 11) begin
          force_bus();
       end
-      else if (cyc == 31) begin
+      else if (cyc == 12) begin
          `checkh(bus, 4'b0110);
       end
-      else if (cyc == 32) begin
+      else if (cyc == 13) begin
          release bus[0];
       end
-      else if (cyc == 33) begin
+      else if (cyc == 14) begin
          `checkh(bus, 4'b0111);
          release_bus();
       end
-      else if (cyc == 34) begin
+      else if (cyc == 15) begin
          `checkh(in, 4'b0101);
          `checkh(bus, 4'b0101);
       end
       //
-      else if (cyc == 40) begin
+      else if (cyc == 16) begin
          r <= 1.25;
       end
-      else if (cyc == 41) begin
+      else if (cyc == 17) begin
          `checkr(r, 1.25);
       end
-      else if (cyc == 42) begin
+      else if (cyc == 18) begin
          force r = 2.5;
       end
-      else if (cyc == 43) begin
+      else if (cyc == 19) begin
          `checkr(r, 2.5);
       end
-      else if (cyc == 44) begin
+      else if (cyc == 20) begin
          release r;
       end
-      else if (cyc == 45) begin
+      else if (cyc == 21) begin
          `checkr(r, 2.5);
       end
       //
-      else if (cyc == 99) begin
+      else if (cyc == 22) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

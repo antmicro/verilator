@@ -64,7 +64,7 @@ module dmod (input clk, input [31:0] n);
          if (csub.clocal !== n) $stop;
          if (dlocal !== n) $stop;
       end
-      if (cyc==99) begin
+      if (cyc==13) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

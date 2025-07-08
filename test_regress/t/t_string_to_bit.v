@@ -98,7 +98,7 @@ module t (/*AUTOARG*/
          `checks(wdata[2], "ongtruncate");
       end
       //
-      else if (cyc==99) begin
+      else if (cyc==4) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

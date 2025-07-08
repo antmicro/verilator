@@ -81,7 +81,7 @@ module t (/*AUTOARG*/
          if (--w95 != {95{1'b1}}) $stop;
          if (w95 != {95{1'b1}}) $stop;
       end
-      else if (cyc==99) begin
+      else if (cyc==2) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

@@ -48,12 +48,6 @@ module t (/*AUTOARG*/
          if (outData != 64'h24cbc77bb9b3784e) $stop;
       end
       else if (cyc==92) begin
-      end
-      else if (cyc==93) begin
-      end
-      else if (cyc==94) begin
-      end
-      else if (cyc==99) begin
          $write("*-* All Finished *-*\n");
          $finish;
       end

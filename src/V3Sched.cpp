@@ -960,7 +960,7 @@ AstNode* createInputCombLoop(AstNetlist* netlistp, AstCFunc* const initFuncp,
 
     // Create and Order the body function
     AstCFunc* const icoFuncp
-        = V3Order::order(netlistp, {&logic}, trigToSen, "ico", false, false,
+        = V3Order::order(netlistp, {&logic}, trigToSen, "ico", v3Global.opt.mtasks(), false,
                          [=](const AstVarScope* vscp, std::vector<AstSenTree*>& out) {
                              AstVar* const varp = vscp->varp();
                              if (varp->isPrimaryInish() || varp->isSigUserRWPublic()) {

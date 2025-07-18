@@ -111,10 +111,20 @@ public:
     //=========================================================================
     // External interface to client code
 
+    std::map<std::string, bool*> m_customVarsBit;  // custom vars to trace
     // CONSTRUCTOR
     explicit VerilatedVcd(VerilatedVcdFile* filep = nullptr);
     ~VerilatedVcd();
 
+    void registerCustomVars(IData offset) {
+        pushPrefix("custom_variables", VerilatedTracePrefixType::SCOPE_MODULE);
+        for (const auto& [name, _] : m_customVarsBit) {
+            offset++;
+            declBit(offset, 0, name.c_str(), -1, VerilatedTraceSigDirection::INPUT,
+                    VerilatedTraceSigKind::WIRE, VerilatedTraceSigType::LOGIC, false, -1);
+        }
+        popPrefix();
+    }
     // ACCESSORS
     // Set size in bytes after which new file should be created.
     void rolloverSize(uint64_t size) VL_MT_SAFE { m_rolloverSize = size; }

@@ -199,6 +199,20 @@ public:
 //=============================================================================
 // VerilatedTrace
 
+template <typename T_Buffer>
+struct VerilatedTraceBufferExternalVariable {
+    using Buffer = T_Buffer;
+
+    virtual std::string name() const = 0;
+
+    virtual int bits() const = 0;
+    virtual void decl(IData offset) = 0;
+    virtual void chg(Buffer* bufferp, uint32_t* oldp) = 0;
+    virtual void full(Buffer* bufferp, uint32_t* oldp) = 0;
+
+    virtual ~VerilatedTraceBufferExternalVariable(){};
+};
+
 // T_Trace is the format-specific subclass of VerilatedTrace.
 // T_Buffer is the format-specific base class of VerilatedTraceBuffer.
 template <typename T_Trace, typename T_Buffer>
@@ -297,6 +311,8 @@ private:
     bool m_didSomeDump = false;  // Did at least one dump (i.e.: m_timeLastDump is valid)
     VerilatedContext* m_contextp = nullptr;  // The context used by the traced models
     std::set<const VerilatedModel*> m_models;  // The collection of models being traced
+    std::unordered_set<VerilatedTraceBufferExternalVariable<Buffer>*>
+        m_externalSignals;  // custom vars to trace
 
     void addCallbackRecord(std::vector<CallbackRecord>& cbVec, CallbackRecord&& cbRec)
         VL_MT_SAFE_EXCLUDES(m_mutex);
@@ -434,6 +450,23 @@ public:
     void addChgCb(dumpCb_t cb, uint32_t fidx, void* userp) VL_MT_SAFE;
     void addChgCb(dumpOffloadCb_t cb, uint32_t fidx, void* userp) VL_MT_SAFE;
     void addCleanupCb(cleanupCb_t cb, void* userp) VL_MT_SAFE;
+
+    void addTraceVar(VerilatedTraceBufferExternalVariable<Buffer>* varp) {
+        m_externalSignals.insert(varp);
+    }
+    void declExternal(IData offset) {
+        for (auto* sig : m_externalSignals) sig->decl(offset++);
+    }
+    bool externalSignalsPresent() const { return !m_externalSignals.empty(); }
+    void chgExternal(Buffer* bufferp, uint32_t* oldp) {
+        for (auto* sig : m_externalSignals) sig->chg(bufferp, oldp++);
+    }
+    void fullExternal(Buffer* bufferp, uint32_t* oldp) {
+        for (auto* sig : m_externalSignals) sig->full(bufferp, oldp++);
+    }
+    uint32_t* sigsOldVal() { return m_sigs_oldvalp; }
+    EData* sigsEnabled() { return m_sigs_enabledp; }
+    virtual void registerCustomVars(IData offset) {}
 };
 
 //=============================================================================
@@ -490,6 +523,7 @@ public:
     void fullDouble(uint32_t* oldp, double newval);
     void fullEvent(uint32_t* oldp, const VlEventBase* newvalp);
     void fullEventTriggered(uint32_t* oldp);
+    void fullExternal(uint32_t* oldp);
 
     // In non-offload mode, these are called directly by the trace callbacks,
     // and are called chg*. In offload mode, they are called by the worker
@@ -535,6 +569,7 @@ public:
         std::memcpy(&old, oldp, sizeof(old));
         if (VL_UNLIKELY(old != newval)) fullDouble(oldp, newval);
     }
+    void chgExternal(uint32_t* oldp);
 };
 
 //=============================================================================

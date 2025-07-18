@@ -616,7 +616,6 @@ void VerilatedVcdBuffer::emitEvent(uint32_t code) {
     finishLine(code, wp);
 }
 
-VL_ATTR_ALWINLINE
 void VerilatedVcdBuffer::emitBit(uint32_t code, CData newval) {
     // Don't prefetch suffix as it's a bit too late;
     char* wp = m_writep;
@@ -624,7 +623,6 @@ void VerilatedVcdBuffer::emitBit(uint32_t code, CData newval) {
     finishLine(code, wp);
 }
 
-VL_ATTR_ALWINLINE
 void VerilatedVcdBuffer::emitCData(uint32_t code, CData newval, int bits) {
     char* wp = m_writep;
     *wp++ = 'b';

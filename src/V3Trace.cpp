@@ -175,6 +175,7 @@ class TraceVisitor final : public VNVisitor {
     AstScope* const m_topScopep = v3Global.rootp()->topScopep()->scopep();  // The top AstScope
     AstCFunc* m_cfuncp = nullptr;  // C function adding to graph
     AstCFunc* m_regFuncp = nullptr;  // Trace registration function
+    AstCFunc* m_initFuncp = nullptr;  // Initialization function
     AstCFunc* m_actAllFuncp = nullptr;  // Set all activity function
     AstTraceDecl* m_tracep = nullptr;  // Trace function adding to graph
     AstVarScope* m_activityVscp = nullptr;  // Activity variable
@@ -660,7 +661,21 @@ class TraceVisitor final : public VNVisitor {
                 if (!topFulFuncp) {
                     ++topFuncNum;
                     topFulFuncp = newCFunc(VTraceType::FULL, nullptr, topFuncNum);
+                    topFulFuncp->addStmtsp(
+                        new AstCStmt{topFulFuncp->fileline(),
+                                     "bufp->fullExternal(bufp->oldp(vlSymsp->__Vm_baseCode + "
+                                         + std::to_string(m_code) + "));\n"});
                     topChgFuncp = newCFunc(VTraceType::CHANGE, nullptr, topFuncNum);
+                    topChgFuncp->addStmtsp(
+                        new AstCStmt{topChgFuncp->fileline(),
+                                     "bufp->chgExternal(bufp->oldp(vlSymsp->__Vm_baseCode + "
+                                         + std::to_string(m_code) + "));\n"});
+                    // FIXME
+                    UASSERT(m_initFuncp, "Should have found initialization function");
+                    m_initFuncp->addStmtsp(
+                        new AstCStmt{m_initFuncp->fileline(),
+                                     "tracep->registerCustomVars(vlSymsp->__Vm_baseCode + "
+                                         + std::to_string(m_code) + ");\n"});
                 }
 
                 // Create new sub function if required
@@ -883,6 +898,7 @@ class TraceVisitor final : public VNVisitor {
                 new V3GraphEdge{&m_graph, activityVtxp, funcVtxp, 1};
             }
         }
+        if (nodep->name() == "trace_init_top") m_initFuncp = nodep;
         VL_RESTORER(m_cfuncp);
         m_cfuncp = nodep;
         iterateChildren(nodep);

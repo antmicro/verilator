@@ -114,6 +114,7 @@ SUBDIRS = docs src test_regress \
   examples/make_hello_sc \
   examples/make_tracing_c \
   examples/make_tracing_sc \
+  examples/make_tracing_custom_vars_sc \
   examples/make_protect_lib \
   examples/json_py \
 
@@ -363,6 +364,7 @@ uninstall:
 	-rmdir $(DESTDIR)$(pkgdatadir)/examples/make_hello_sc
 	-rmdir $(DESTDIR)$(pkgdatadir)/examples/make_tracing_c
 	-rmdir $(DESTDIR)$(pkgdatadir)/examples/make_tracing_sc
+	-rmdir $(DESTDIR)$(pkgdatadir)/examples/make_tracing_custom_vars_sc
 	-rmdir $(DESTDIR)$(pkgdatadir)/examples/make_protect_lib
 	-rmdir $(DESTDIR)$(pkgdatadir)/examples/cmake_hello_c
 	-rmdir $(DESTDIR)$(pkgdatadir)/examples/cmake_hello_sc

@@ -1406,6 +1406,16 @@ public:
 //######################################################################
 // Pass entry point
 
+void abort_if_alias(AstNode* nodep) {
+    if (!nodep) return;
+    if (VN_IS(nodep, AssignAlias)) std::abort();
+    abort_if_alias(nodep->op1p());
+    abort_if_alias(nodep->op2p());
+    abort_if_alias(nodep->op3p());
+    abort_if_alias(nodep->op4p());
+    abort_if_alias(nodep->nextp());
+}
+
 void V3Gate::gateAll(AstNetlist* netlistp) {
     UINFO(2, __FUNCTION__ << ":");
 
@@ -1447,5 +1457,6 @@ void V3Gate::gateAll(AstNetlist* netlistp) {
         if (dumpGraphLevel() >= 3) graphp->dumpDotFilePrefixed("gate_final");
     }
 
+    abort_if_alias(netlistp);
     V3Global::dumpCheckGlobalTree("gate", 0, dumpTreeEitherLevel() >= 3);
 }

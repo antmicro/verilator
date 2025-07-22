@@ -679,6 +679,25 @@ class ConstraintExprVisitor final : public VNVisitor {
             initTaskp->addStmtsp(methodp->makeStmt());
         }
     }
+    void visit(AstCountOnes* nodep) override {
+        // Convert it to
+        // for (int i = 0; i < $bits(x); ++i) result += (x & (1 << i)) >> i;
+        FileLine* const fl = nodep->fileline();
+        AstVar* const resultVarp
+            = new AstVar{fl, VVarType::BLOCKTEMP, "__VcountOnes", nodep->findSigned32DType()};
+        AstBegin* const beginp = new AstBegin{fl, "", resultVarp};
+        AstVar* const iteratorVarp
+            = new AstVar{fl, VVarType::BLOCKTEMP, "__Viterator", nodep->findSigned32DType()};
+        beginp->addStmtsp(iteratorVarp);
+        beginp->addStmtsp(new AstAssign{fl, new AstVarRef{fl, iteratorVarp, VAccess::WRITE},
+                                        new AstConst{fl, AstConst::Signed32{}, 0}});
+        AstLtS* const condp
+            = new AstLtS{fl, new AstVarRef{fl, iteratorVarp, VAccess::READ},
+                         new AstConst{fl, AstConst::Signed32{}, nodep->lhsp()->width()}};
+        AstWhile* const whilep = new AstWhile{fl, condp, nullptr};
+        beginp->addStmtsp(whilep);
+        m_inlineInitTaskp->addStmtsp(beginp);
+    }
     void visit(AstNodeBiop* nodep) override {
         if (editFormat(nodep)) return;
         editSMT(nodep, nodep->lhsp(), nodep->rhsp());

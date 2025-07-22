@@ -565,6 +565,7 @@ static void process() {
             // Add C casts when longs need to become long-long and vice-versa
             // Note depth may insert something needing a cast, so this must be last.
             V3Cast::castAll(v3Global.rootp());
+            V3Const::constifyCpp(v3Global.rootp());
         }
 
         V3Error::abortIfErrors();

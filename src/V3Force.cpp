@@ -405,7 +405,6 @@ class ForceReplaceVisitor final : public VNVisitor {
             AstNodeCCall* const callp = VN_CAST(getNodeAbovep(nodep), NodeCCall);
             UASSERT_OBJ(callp, nodep,
                         "READWRITE reference to forced variable which is not function argument");
-            nodep->v3error("Unsupported: Signals used via read-write reference cannot be forced");
             break;
         }
         default: nodep->v3fatalSrc("Unhandled access type");

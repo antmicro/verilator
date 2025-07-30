@@ -31,14 +31,14 @@
 //      - <lhs>__VforceVal = <rhs>
 //      - <lhs>__VforceRd = <rhs>
 //
-//  Replace each AstRelease with 1 or 2 assignments:
-//      - <lhs>__VforceEn = 0
-//      - <lhs>__VforceRd = <lhs> // iff lhs is a net
+//  Replace each AstRelease(x) with 1 or 2 assignments:
+//      - <x>__VforceEn = 0
+//      - <x>__VforceRd = <x> // iff x is a net
 //
-//  After each WRITE of forced LHS
+//  After each WRITE to a variable referenced on the LHS of force assignment
 //      reevaluate <lhs>__VforceRd to support immediate force/release
 //
-//  After each WRITE of forced RHS
+//  After each WRITE to a variable referenced on the RHS of force assignment (force lhs = rhs)
 //      reevaluate <lhs>__VforceVal to support VarRef rollback after release
 //*************************************************************************
 
@@ -375,7 +375,8 @@ class ForceReplaceVisitor final : public VNVisitor {
         }
         case VAccess::WRITE: {
             if (!m_inLogic) return;
-            // Emit rdVscp update after each write to any VarRef on forced LHS.
+            // Emit rdVscp update after a write to variable if it is referenced on the LHS of any
+            // force assignment.
             if (ForceState::ForceComponentsVarScope* const fcp
                 = m_state.tryGetForceComponents(nodep)) {
                 FileLine* const flp = nodep->fileline();
@@ -383,7 +384,8 @@ class ForceReplaceVisitor final : public VNVisitor {
                 AstNodeExpr* const rhsp = fcp->forcedUpdate(nodep->varScopep());
                 m_stmtp->addNextHere(new AstAssign{flp, lhsp, rhsp});
             }
-            // Emit valVscp update after each write to any VarRef on forced RHS.
+            // Emit valVscp update a write to variable if it is referenced on the RHS of any
+            // force assignment.
             if (AstVarScope* const valVscp = ForceState::getValVscp(nodep)) {
                 FileLine* const flp = nodep->fileline();
                 AstVarRef* const valp = new AstVarRef{flp, valVscp, VAccess::WRITE};
@@ -399,6 +401,8 @@ class ForceReplaceVisitor final : public VNVisitor {
             break;
         }
         case VAccess::READWRITE: {
+            // The only possible case when there is READWRITE reference to forced variable is when
+            // that reference is a function argument.
             AstNodeCCall* const callp = VN_CAST(getNodeAbovep(nodep), NodeCCall);
             UASSERT_OBJ(callp, nodep,
                         "READWRITE reference to forced variable which is not function argument");

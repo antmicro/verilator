@@ -344,6 +344,10 @@ class ForceReplaceVisitor final : public VNVisitor {
         m_inLogic = true;
         iterateChildren(logicp);
     }
+    AstNode* getNodeAbovep(AstNode* nodep) {
+        while (nodep->backp()->nextp() == nodep) nodep = nodep->backp();
+        return nodep->backp();
+    }
 
     // VISITORS
     void visit(AstNodeStmt* nodep) override {
@@ -397,9 +401,14 @@ class ForceReplaceVisitor final : public VNVisitor {
             }
             break;
         }
-        default:
+        case VAccess::READWRITE: {
+            AstNodeCCall* const callp = VN_CAST(getNodeAbovep(nodep), NodeCCall);
+            UASSERT_OBJ(callp, nodep,
+                        "READWRITE reference to forced variable which is not function argument");
             nodep->v3error("Unsupported: Signals used via read-write reference cannot be forced");
             break;
+        }
+        default: nodep->v3fatalSrc("Unhandled access type");
         }
     }
     void visit(AstNode* nodep) override { iterateChildren(nodep); }

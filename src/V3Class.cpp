@@ -73,31 +73,6 @@ class ClassVisitor final : public VNVisitor {
 
     // VISITORS
 
-    static void addFactoryFunction(AstClass* const classp, AstScope* classScopep) {
-        AstFunc* constructorp = nullptr;
-        for (AstNode* blockp = classScopep->blocksp(); blockp; blockp = blockp->nextp()) {
-            if (AstFunc* funcp = VN_CAST(blockp, Func)) {
-                if (funcp->name() == "new") {
-                    constructorp = funcp;
-                }
-            }
-        }
-        UASSERT_OBJ(constructorp, classp, "No constructor in class");
-
-        // AstClassRefDType* classRefDTypep = new AstClassRefDType(classp->fileline(), classp, nullptr);
-        // v3Global.rootp()->typeTablep()->addTypesp(classRefDTypep);
-        // AstVar* const fvarp = new AstVar(classp->fileline(), VVarType::MEMBER, "__Vreturn", classRefDTypep);
-        // fvarp->lifetime(VLifetime::AUTOMATIC);
-        // fvarp->funcLocal(true);
-        // fvarp->funcReturn(true);
-        // fvarp->direction(VDirection::OUTPUT);
-        AstFunc* const factoryp = new AstFunc(classp->fileline(), "__Vcreate", nullptr, nullptr);
-        factoryp->dtypep(classp->findVoidDType());
-        factoryp->classMethod(true);
-        factoryp->isStatic(true);
-        classScopep->addBlocksp(factoryp);
-    }
-
     void visit(AstClass* nodep) override {
         if (nodep->user1SetOnce()) return;
         // Move this class
@@ -127,13 +102,11 @@ class ClassVisitor final : public VNVisitor {
         v3Global.rootp()->topModulep()->addStmtsp(cellp);
         // Find class's scope
         // Alternative would be to move this and related to V3Scope
-        AstScope* classScopep = nullptr;
+        const AstScope* classScopep = nullptr;
         for (AstNode* itp = nodep->stmtsp(); itp; itp = itp->nextp()) {
             if ((classScopep = VN_CAST(itp, Scope))) break;
         }
         UASSERT_OBJ(classScopep, nodep, "No scope under class");
-
-        addFactoryFunction(nodep, classScopep);
 
         // Add scope
         AstScope* const scopep

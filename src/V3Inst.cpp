@@ -110,6 +110,35 @@ class InstVisitor final : public VNVisitor {
         VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
     }
 
+    void visit(AstClass* nodep) override {
+        AstFunc* constructorp = nullptr;
+        for (AstNode* stmtp = nodep->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+            if (AstFunc* funcp = VN_CAST(stmtp, Func)) {
+                if (funcp->name() == "new") {
+                    constructorp = funcp;
+                }
+            }
+        }
+        UASSERT_OBJ(constructorp, nodep, "No constructor in class");
+
+        AstClassRefDType* classRefDTypep = new AstClassRefDType(nodep->fileline(), nodep, nullptr);
+        v3Global.rootp()->typeTablep()->addTypesp(classRefDTypep);
+        AstVar* const fvarp = new AstVar(nodep->fileline(), VVarType::MEMBER, "__Vreturn", classRefDTypep);
+        fvarp->lifetime(VLifetime::AUTOMATIC);
+        fvarp->funcLocal(true);
+        fvarp->funcReturn(true);
+        fvarp->direction(VDirection::OUTPUT);
+        AstFunc* const factoryp = new AstFunc(nodep->fileline(), "__Vcreate", nullptr, fvarp);
+        factoryp->dtypep(nodep->findVoidDType());
+        factoryp->classMethod(true);
+        factoryp->isStatic(true);
+        if (AstNode* const stmtsp = constructorp->stmtsp()) {
+            factoryp->addStmtsp(stmtsp->cloneTree(true));
+        }
+        nodep->addStmtsp(factoryp);
+        iterateChildren(nodep);
+    }
+
     // Save some time
     void visit(AstNodeExpr*) override {}
     void visit(AstNodeAssign*) override {}

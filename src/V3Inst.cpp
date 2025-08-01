@@ -131,7 +131,6 @@ class InstVisitor final : public VNVisitor {
         helper->addMembersp(newp);
         for (AstNode* stmtsp = constructorp->stmtsp(); stmtsp; stmtsp = stmtsp->nextp()) {
             if (AstVar* const varp = VN_CAST(stmtsp, Var)) {
-                if (!varp->isFuncLocal()) continue;
                 AstVar* newMemberp = varp->cloneTree(false);
                 newMemberp->direction(VDirection::NONE);
                 newMemberp->funcLocal(false);
@@ -154,7 +153,7 @@ class InstVisitor final : public VNVisitor {
         factoryp->isStatic(true);
         // factoryp->isConstructor(true);
         if (AstNode* const stmtsp = constructorp->stmtsp()) {
-            factoryp->addStmtsp(stmtsp->cloneTree(true));
+            factoryp->addStmtsp(stmtsp->unlinkFrBackWithNext());
         }
         nodep->addMembersp(factoryp);
         iterateChildren(nodep);

@@ -110,55 +110,6 @@ class InstVisitor final : public VNVisitor {
         VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
     }
 
-    void visit(AstClass* nodep) override {
-        AstFunc* constructorp = nullptr;
-        for (AstNode* stmtp = nodep->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
-            if (AstFunc* funcp = VN_CAST(stmtp, Func)) {
-                if (funcp->name() == "new") {
-                    constructorp = funcp;
-                }
-            }
-        }
-        UASSERT_OBJ(constructorp, nodep, "No constructor in class");
-        // constructorp->isConstructor(false);
-
-        if (nodep->name().find("__VHelper_") == 0) return;
-        AstClass* helper = new AstClass(nodep->fileline(), "__VHelper_" + nodep->name(), "abc");
-        AstFunc* const newp = new AstFunc{nodep->fileline(), "new", nullptr, nullptr};
-        newp->dtypep(newp->findVoidDType());
-        newp->isConstructor(true);
-        newp->classMethod(true);
-        helper->addMembersp(newp);
-        for (AstNode* stmtsp = constructorp->stmtsp(); stmtsp; stmtsp = stmtsp->nextp()) {
-            if (AstVar* const varp = VN_CAST(stmtsp, Var)) {
-                AstVar* newMemberp = varp->cloneTree(false);
-                newMemberp->direction(VDirection::NONE);
-                newMemberp->funcLocal(false);
-                helper->addMembersp(newMemberp);
-            }
-        }
-        nodep->addNext(helper);
-
-        AstClassRefDType* classRefDTypep = new AstClassRefDType(nodep->fileline(), nodep, nullptr);
-        v3Global.rootp()->typeTablep()->addTypesp(classRefDTypep);
-        AstVar* const fvarp = new AstVar(nodep->fileline(), VVarType::MEMBER, "__Vreturn", classRefDTypep);
-        fvarp->lifetime(VLifetime::AUTOMATIC);
-        fvarp->funcLocal(true);
-        fvarp->funcReturn(true);
-        fvarp->direction(VDirection::OUTPUT);
-        // pushDeletep(constructorp->fvarp()->unlinkFrBack());
-        AstFunc* const factoryp = new AstFunc(nodep->fileline(), "__Vfactory", nullptr, fvarp);
-        factoryp->dtypep(nodep->findVoidDType());
-        factoryp->classMethod(true);
-        factoryp->isStatic(true);
-        // factoryp->isConstructor(true);
-        if (AstNode* const stmtsp = constructorp->stmtsp()) {
-            factoryp->addStmtsp(stmtsp->unlinkFrBackWithNext());
-        }
-        nodep->addMembersp(factoryp);
-        iterateChildren(nodep);
-    }
-
     // Save some time
     void visit(AstNodeExpr*) override {}
     void visit(AstNodeAssign*) override {}

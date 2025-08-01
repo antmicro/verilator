@@ -52,7 +52,7 @@ class EmitCHeader final : public EmitCConstInit {
             }
         }
     }
-    void emitDesignVarDecls(const AstNodeModule* modp) {
+    void emitDesignVarDecls(const AstNode* nodep) {
         bool first = true;
         std::vector<const AstVar*> varList;
         bool lastAnon = false;  // initial value is not important, but is used
@@ -107,7 +107,7 @@ class EmitCHeader final : public EmitCConstInit {
         };
 
         // Emit variables in consecutive anon and non-anon batches
-        for (const AstNode* nodep = modp->stmtsp(); nodep; nodep = nodep->nextp()) {
+        for (; nodep; nodep = nodep->nextp()) {
             if (const AstVar* const varp = VN_CAST(nodep, Var)) {
                 if (varp->isIO() || varp->isSignal() || varp->isClassMember() || varp->isTemp()
                     || varp->isGenVar()) {
@@ -542,12 +542,14 @@ class EmitCHeader final : public EmitCConstInit {
     }
     void emitAll(const AstNodeModule* modp) {
         // Include files required by this AstNodeModule
+        bool isClass = false;
         if (const AstClass* const classp = VN_CAST(modp, Class)) {
             for (const AstClassExtends* extp = classp->extendsp(); extp;
                  extp = VN_AS(extp->nextp(), ClassExtends)) {
                 putns(extp, "#include \"" + prefixNameProtect(extp->classp()->classOrPackagep())
                                 + ".h\"\n");
             }
+            isClass = true;
         }
 
         // Forward declarations required by this AstNodeModule
@@ -585,11 +587,26 @@ class EmitCHeader final : public EmitCConstInit {
         puts(" {\n");
         ofp()->resetPrivate();
         ofp()->putsPrivate(false);  // public:
+        if (isClass) {
+            const AstCFunc* constructorp = nullptr;
+            for (AstNode* nodep = modp->stmtsp(); nodep; nodep = nodep->nextp()) {
+                if (AstCFunc* const cfuncp = VN_CAST(nodep, CFunc)) {
+                    if (cfuncp->name() == "new") {
+                        constructorp = cfuncp;
+                        break;
+                    }
+                }
+            }
+            UASSERT_OBJ(constructorp, modp, "Class has to have a constructor");
+            puts("struct constructor_helper {\n");
+            emitDesignVarDecls(constructorp->stmtsp());  // TODO: Emit actaul variables for helper
+            puts("};\n");
+        }
 
         // Emit all class body contents
         emitCellDecls(modp);
         emitEnums(modp);
-        emitDesignVarDecls(modp);
+        emitDesignVarDecls(modp->stmtsp());
         emitInternalVarDecls(modp);
         emitParamDecls(modp);
         emitCtorDtorDecls(modp);

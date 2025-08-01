@@ -1903,7 +1903,8 @@ public:
     VlClassRef(VlDeleter& deleter, T_Args&&... args)
         // () required here to avoid narrowing conversion warnings,
         // when a new() has an e.g. CData type and passed a 1U.
-        : m_objp{new T_Class(std::forward<T_Args>(args)...)} {
+        : m_objp{
+            new T_Class(typename T_Class::constructor_helper{}, std::forward<T_Args>(args)...)} {
         // refCountInc was moved to the constructor of T_Class
         // to fix self references in constructor.
         m_objp->m_deleterp = &deleter;

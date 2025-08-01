@@ -4137,32 +4137,6 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 }
             }
         }
-
-        // Substitute constructors with factory functions
-        if (m_statep->forScopeCreation()) {
-            if (AstNew* newp = VN_CAST(nodep, New)) {
-                AstClass* constructedClassp = nullptr;
-                if (AstClass* const classp = VN_CAST(m_modp, Class)) {
-                    if (AstNode::computeCastable(newp->findVoidDType(), newp->dtypep(), nullptr)
-                        == VCastable::SAMEISH) {
-                        for (auto i = classp->extendsp(); i; i = VN_AS(i->nextp(), ClassExtends)) {
-                            if (i->isImplements()) continue;
-                            constructedClassp = i->classp();
-                            break;
-                        }
-                        UASSERT_OBJ(constructedClassp, nodep,
-                                    "Class that uses super has to extend another class");
-                    }
-                }
-                if (!constructedClassp) {
-                    constructedClassp = VN_AS(newp->dtypep(), ClassRefDType)->classp();
-                }
-                const VSymEnt* const sym = m_statep->getNodeSym(constructedClassp);
-                VSymEnt* const factorySymp = sym->findIdFlat("__Vfactory");
-                AstFunc* const factoryp = VN_AS(factorySymp->nodep(), Func);
-                newp->taskp(factoryp);
-            }
-        }
     }
     void visit(AstSelBit* nodep) override {
         if (nodep->user3SetOnce()) return;

@@ -591,7 +591,7 @@ class EmitCHeader final : public EmitCConstInit {
             const AstCFunc* constructorp = nullptr;
             for (AstNode* nodep = modp->stmtsp(); nodep; nodep = nodep->nextp()) {
                 if (AstCFunc* const cfuncp = VN_CAST(nodep, CFunc)) {
-                    if (cfuncp->name() == "new") {
+                    if (cfuncp->isConstructor()) {
                         constructorp = cfuncp;
                         break;
                     }
@@ -599,7 +599,8 @@ class EmitCHeader final : public EmitCConstInit {
             }
             UASSERT_OBJ(constructorp, modp, "Class has to have a constructor");
             puts("struct constructor_helper {\n");
-            emitDesignVarDecls(constructorp->stmtsp());  // TODO: Emit actaul variables for helper
+            emitDesignVarDecls(constructorp->initsp());
+            emitDesignVarDecls(constructorp->stmtsp());
             puts("};\n");
         }
 

@@ -1284,7 +1284,7 @@ class TaskVisitor final : public VNVisitor {
 
         if (!nodep->dpiImport() && !nodep->taskPublic()) {
             // Need symbol table
-            if (cfuncp->name() == "new") {
+            if (cfuncp->isConstructor()) {
                 const string stmt = VIdProtect::protect("_ctor_var_reset") + "(vlSymsp);\n";
                 cfuncp->addInitsp(new AstCStmt{nodep->fileline(), stmt});
                 cfuncp->argTypes("constructor_helper&& helper, " + EmitCBase::symClassVar());

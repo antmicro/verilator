@@ -541,6 +541,9 @@ class EmitCModel final : public EmitCFunc {
         putns(modp, "\nvoid " + topModNameProtected + "__" + protect("trace_init_top") + "("
                         + topModNameProtected + "* vlSelf, " + v3Global.opt.traceClassBase()
                         + "* tracep);\n");
+        putns(modp, "\nvoid " + topModNameProtected + "__" + protect("trace_init_external") + "("
+                        + topModNameProtected + "* vlSelf, " + v3Global.opt.traceClassBase()
+                        + "* tracep);\n");
 
         // Static helper function
         puts("\n");
@@ -555,10 +558,12 @@ class EmitCModel final : public EmitCFunc {
              "0.\");\n");
         puts("}\n");
         puts("vlSymsp->__Vm_baseCode = code;\n");
-        puts("tracep->pushPrefix(std::string{vlSymsp->name()}, "
+        puts("const int levels = tracep->pushPrefixUnrolled(std::string{vlSymsp->name()}, "
              "VerilatedTracePrefixType::SCOPE_MODULE);\n");
         puts(topModNameProtected + "__" + protect("trace_decl_types") + "(tracep);\n");
         puts(topModNameProtected + "__" + protect("trace_init_top") + "(vlSelf, tracep);\n");
+        puts("for (int i = 0; i < levels - 1; ++i) tracep->popPrefix();\n");
+        puts(topModNameProtected + "__" + protect("trace_init_external") + "(vlSelf, tracep);\n");
         puts("tracep->popPrefix();\n");
         puts("}\n");
 

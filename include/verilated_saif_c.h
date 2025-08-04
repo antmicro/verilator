@@ -144,6 +144,7 @@ public:
     // Internal interface to Verilator generated code
 
     void pushPrefix(const std::string&, VerilatedTracePrefixType);
+    int pushPrefixUnrolled(const std::string&, VerilatedTracePrefixType);
     void popPrefix();
 
     void declEvent(uint32_t code, uint32_t fidx, const char* name, int dtypenum,
@@ -204,6 +205,7 @@ class VerilatedSaifBuffer VL_NOT_FINAL {
         , m_fidx{fidx} {}
     virtual ~VerilatedSaifBuffer() = default;
 
+public:
     //=========================================================================
     // Implementation of VerilatedTraceBuffer interface
     // Implementations of duck-typed methods for VerilatedTraceBuffer. These are

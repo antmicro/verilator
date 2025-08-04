@@ -893,6 +893,68 @@ void VerilatedTraceBuffer<VL_BUF_T>::fullDouble(uint32_t* oldp, double newval) {
     emitDouble(code, newval);
 }
 
+template <>
+void VerilatedTraceBuffer<VL_BUF_T>::fullExternal(uint32_t* oldp) {
+    m_owner.fullExternal(this, oldp);
+}
+template <>
+void VerilatedTraceBuffer<VL_BUF_T>::chgExternal(uint32_t* oldp) {
+    m_owner.chgExternal(this, oldp);
+}
+
+template <>
+void VerilatedTraceBufferExternalSignal<VerilatedTraceBuffer<VL_BUF_T>>::emitBit(Buffer* bufferp,
+                                                                                 uint32_t code,
+                                                                                 CData newval) {
+    bufferp->emitBit(code, newval);
+}
+
+template <>
+void VerilatedTraceBufferExternalSignal<VerilatedTraceBuffer<VL_BUF_T>>::emitCData(Buffer* bufferp,
+                                                                                   uint32_t code,
+                                                                                   CData newval,
+                                                                                   int bits) {
+    bufferp->emitCData(code, newval, bits);
+}
+
+template <>
+void VerilatedTraceBufferExternalSignal<VerilatedTraceBuffer<VL_BUF_T>>::emitSData(Buffer* bufferp,
+                                                                                   uint32_t code,
+                                                                                   SData newval,
+                                                                                   int bits) {
+    bufferp->emitSData(code, newval, bits);
+}
+
+template <>
+void VerilatedTraceBufferExternalSignal<VerilatedTraceBuffer<VL_BUF_T>>::emitIData(Buffer* bufferp,
+                                                                                   uint32_t code,
+                                                                                   IData newval,
+                                                                                   int bits) {
+    bufferp->emitIData(code, newval, bits);
+}
+
+template <>
+void VerilatedTraceBufferExternalSignal<VerilatedTraceBuffer<VL_BUF_T>>::emitQData(Buffer* bufferp,
+                                                                                   uint32_t code,
+                                                                                   QData newval,
+                                                                                   int bits) {
+    bufferp->emitQData(code, newval, bits);
+}
+
+template <>
+void VerilatedTraceBufferExternalSignal<VerilatedTraceBuffer<VL_BUF_T>>::emitDouble(
+    Buffer* bufferp, uint32_t code, double newval) {
+    bufferp->emitDouble(code, newval);
+}
+
+template <>
+void VerilatedTraceBufferExternalSignal<VerilatedTraceBuffer<VL_BUF_T>>::emitWData(Buffer* bufferp,
+                                                                                   uint32_t code,
+                                                                                   WDataInP newval,
+                                                                                   int bits) {
+    bufferp->emitWData(code, newval, bits);
+}
+
 //=========================================================================
 // VerilatedTraceOffloadBuffer
 

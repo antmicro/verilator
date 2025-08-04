@@ -178,6 +178,27 @@ void VerilatedFst::pushPrefix(const std::string& name, VerilatedTracePrefixType 
     }
 }
 
+int VerilatedFst::pushPrefixUnrolled(const std::string& scope, VerilatedTracePrefixType type) {
+    const auto firstDotPos = scope.find_first_of('.');
+    int levels = 1;
+    if (externalSignalsPresent() && firstDotPos != std::string::npos) {
+        const std::string prefix = scope.substr(0, firstDotPos);
+        pushPrefix(prefix, type);
+        size_t pos = 0;
+        std::string suffix = scope.substr(firstDotPos + 1);
+        while ((pos = suffix.find_first_of('.')) != std::string::npos) {
+            const std::string scope = suffix.substr(0, pos);
+            pushPrefix(scope, type);
+            suffix = suffix.substr(pos + 1);
+            ++levels;
+        }
+        pushPrefix(suffix, type);
+    } else {
+        pushPrefix(scope, type);
+    }
+    return levels;
+}
+
 void VerilatedFst::popPrefix() {
     assert(!m_prefixStack.empty());
     const bool properScope = toFstScopeType(m_prefixStack.back().second).first;

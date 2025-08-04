@@ -39,7 +39,7 @@ class VerilatedVcd VL_NOT_FINAL : public VerilatedTrace<VerilatedVcd, VerilatedV
 public:
     using Super = VerilatedTrace<VerilatedVcd, VerilatedVcdBuffer>;
 
-private:
+public:
     friend VerilatedVcdBuffer;  // Give the buffer access to the private bits
 
     //=========================================================================
@@ -135,6 +135,7 @@ public:
     // Internal interface to Verilator generated code
 
     void pushPrefix(const std::string&, VerilatedTracePrefixType);
+    int pushPrefixUnrolled(const std::string&, VerilatedTracePrefixType);
     void popPrefix();
 
     void declEvent(uint32_t code, uint32_t fidx, const char* name, int dtypenum,
@@ -212,6 +213,7 @@ class VerilatedVcdBuffer VL_NOT_FINAL {
         : m_owner{owner} {}
     virtual ~VerilatedVcdBuffer() = default;
 
+public:
     //=========================================================================
     // Implementation of VerilatedTraceBuffer interface
     // Implementations of duck-typed methods for VerilatedTraceBuffer. These are

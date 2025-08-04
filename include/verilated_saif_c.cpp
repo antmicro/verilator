@@ -516,6 +516,27 @@ void VerilatedSaif::pushPrefix(const std::string& name, VerilatedTracePrefixType
     m_prefixStack.emplace_back(newPrefix + (properScope ? " " : ""), type);
 }
 
+int VerilatedSaif::pushPrefixUnrolled(const std::string& scope, VerilatedTracePrefixType type) {
+    const auto firstDotPos = scope.find_first_of('.');
+    int levels = 1;
+    if (externalSignalsPresent() && firstDotPos != std::string::npos) {
+        const std::string prefix = scope.substr(0, firstDotPos);
+        pushPrefix(prefix, type);
+        size_t pos = 0;
+        std::string suffix = scope.substr(firstDotPos + 1);
+        while ((pos = suffix.find_first_of('.')) != std::string::npos) {
+            const std::string scope = suffix.substr(0, pos);
+            pushPrefix(scope, type);
+            suffix = suffix.substr(pos + 1);
+            ++levels;
+        }
+        pushPrefix(suffix, type);
+    } else {
+        pushPrefix(scope, type);
+    }
+    return levels;
+}
+
 void VerilatedSaif::popPrefix() {
     if (m_prefixStack.back().second != VerilatedTracePrefixType::ARRAY_UNPACKED
         && m_prefixStack.back().second != VerilatedTracePrefixType::ARRAY_PACKED

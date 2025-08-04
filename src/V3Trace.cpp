@@ -660,7 +660,19 @@ class TraceVisitor final : public VNVisitor {
                 if (!topFulFuncp) {
                     ++topFuncNum;
                     topFulFuncp = newCFunc(VTraceType::FULL, nullptr, topFuncNum);
+                    if (!v3Global.opt.hierChild()) {
+                        topFulFuncp->addStmtsp(
+                            new AstCStmt{topFulFuncp->fileline(),
+                                         "bufp->fullExternal(bufp->oldp(vlSymsp->__Vm_baseCode + "
+                                             + std::to_string(m_code) + "));\n"});
+                    }
                     topChgFuncp = newCFunc(VTraceType::CHANGE, nullptr, topFuncNum);
+                    if (!v3Global.opt.hierChild()) {
+                        topChgFuncp->addStmtsp(
+                            new AstCStmt{topChgFuncp->fileline(),
+                                         "bufp->chgExternal(bufp->oldp(vlSymsp->__Vm_baseCode + "
+                                             + std::to_string(m_code) + "));\n"});
+                    }
                 }
 
                 // Create new sub function if required
@@ -719,6 +731,25 @@ class TraceVisitor final : public VNVisitor {
                 // Track partitioning
                 nCodes += declp->codeInc();
             }
+        }
+    }
+
+    void createInitExternalFunction() {
+        FileLine* const fl = m_topScopep->fileline();
+        AstCFunc* const funcp = new AstCFunc{fl, "trace_init_external", m_topScopep};
+        funcp->argTypes(v3Global.opt.traceClassBase() + "* tracep");
+        funcp->isTrace(true);
+        funcp->slow(true);
+        funcp->isStatic(false);
+        funcp->isLoose(true);
+        m_topScopep->addBlocksp(funcp);
+        if (!v3Global.opt.hierChild()) {
+            const auto putToFunc = [funcp](const string& line) {
+                funcp->addStmtsp(new AstCStmt{funcp->fileline(), line});
+            };
+            putToFunc("if (tracep->externalSignalsPresent()) ");
+            putToFunc("tracep->declExternal(vlSymsp->__Vm_baseCode + " + std::to_string(m_code)
+                      + ");\n");
         }
     }
 
@@ -793,6 +824,9 @@ class TraceVisitor final : public VNVisitor {
 
         // Create the full and incremental dump functions
         createNonConstTraceFunctions(traces, nNonConstCodes, m_parallelism);
+
+        // Create init external signals function
+        createInitExternalFunction();
 
         // Remove refs to traced values from TraceDecl nodes, these have now moved under
         // TraceInc

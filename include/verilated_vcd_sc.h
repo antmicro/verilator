@@ -24,6 +24,7 @@
 #include "verilatedos.h"
 
 #include "verilated_sc_trace.h"
+#include "verilated_sc_trace_ext.h"
 #include "verilated_vcd_c.h"
 
 //=============================================================================
@@ -52,6 +53,13 @@ public:
     // METHODS - for SC kernel
     // Called from SystemC kernel
     void cycle() override { VerilatedVcdC::dump(sc_core::sc_time_stamp().to_double()); }
+
+    template <typename T_Signal>
+    void addTraceVar(const T_Signal& signal) {
+        using SpTraceType = std::remove_reference<decltype(*spTrace())>::type;
+        spTrace()->addTraceVar(
+            std::make_unique<ScSignalExternalVariable<T_Signal, SpTraceType>>(signal, spTrace()));
+    }
 };
 
 #endif  // Guard

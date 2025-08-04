@@ -54,6 +54,7 @@ class LinkResolveVisitor final : public VNVisitor {
     int m_senitemCvtNum = 0;  // Temporary signal counter
     bool m_underGenFor = false;  // Under GenFor
     bool m_underGenerate = false;  // Under GenFor/GenIf
+    bool m_underClass = false;  // If we are directly under class
 
     // VISITORS
     // TODO: Most of these visitors are here for historical reasons.
@@ -71,7 +72,9 @@ class LinkResolveVisitor final : public VNVisitor {
     }
     void visit(AstClass* nodep) override {
         VL_RESTORER(m_classp);
+        VL_RESTORER(m_underClass);
         m_classp = nodep;
+        m_underClass = true;
         iterateChildren(nodep);
     }
     void visit(AstConstraint* nodep) override {
@@ -127,7 +130,7 @@ class LinkResolveVisitor final : public VNVisitor {
     }
     void visit(AstVar* nodep) override {
         iterateChildren(nodep);
-        if (m_classp && !nodep->isParam()) nodep->varType(VVarType::MEMBER);
+        if (m_underClass && !nodep->isParam()) nodep->varType(VVarType::MEMBER);
         if (m_ftaskp) nodep->funcLocal(true);
         if (nodep->isSigModPublic()) {
             nodep->sigModPublic(false);  // We're done with this attribute
@@ -164,6 +167,8 @@ class LinkResolveVisitor final : public VNVisitor {
         if (m_underGenerate) nodep->underGenerate(true);
         // Remember the existing symbol table scope
         if (m_classp) nodep->classMethod(true);
+        VL_RESTORER(m_underClass);
+        m_underClass = false;
         // V3LinkDot moved the isExternDef into the class, the extern proto was
         // checked to exist, and now isn't needed
         nodep->isExternDef(false);

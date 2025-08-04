@@ -156,7 +156,14 @@ void EmitCBaseVisitorConst::emitCFuncHeader(const AstCFunc* funcp, const AstNode
         }
     }
     putns(funcp, funcNameProtect(funcp, modp));
-    puts("(" + cFuncArgs(funcp) + ")");
+    puts("(");
+    string args = cFuncArgs(funcp);
+    if (funcp->isConstructor()) {
+        puts("constructor_helper&& helper");
+        if (!args.empty()) puts(", ");
+    }
+    puts(args);
+    puts(")");
     if (funcp->isConst().trueKnown() && funcp->isProperMethod()) puts(" const");
 }
 

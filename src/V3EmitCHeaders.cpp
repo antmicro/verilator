@@ -601,7 +601,8 @@ class EmitCHeader final : public EmitCConstInit {
             puts("struct constructor_helper {\n");
             emitDesignVarDecls(constructorp->initsp());
             emitDesignVarDecls(constructorp->stmtsp());
-            puts("};\n");
+            emitDesignVarDecls(constructorp->finalsp());
+            puts("constructor_helper();\n};");
         }
 
         // Emit all class body contents
@@ -653,6 +654,7 @@ class EmitCHeader final : public EmitCConstInit {
         if (v3Global.opt.coverage()) puts("#include \"verilated_cov.h\"\n");
         if (v3Global.usesTiming()) puts("#include \"verilated_timing.h\"\n");
         if (v3Global.useRandomizeMethods()) puts("#include \"verilated_random.h\"\n");
+        puts("#include \"" + prefixNameProtect(v3Global.rootp()) + "_fwd.h\"\n");
 
         std::set<string> cuse_set;
         auto add_to_cuse_set = [&](string s) { cuse_set.insert(s); };
@@ -684,11 +686,50 @@ public:
     static void main(const AstNodeModule* modp) { EmitCHeader emitCHeader{modp}; }
 };
 
+class EmitCClassFwd final : public EmitCBaseVisitorConst {
+    std::vector<string> m_classes;  // Defined classes to get fwd
+
+protected:
+    void visit(AstClass* classp) override {
+        if (classp->user1SetOnce()) return;
+        m_classes.push_back(prefixNameProtect(classp));
+    }
+
+    void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }
+
+public:
+    explicit EmitCClassFwd(AstNode* const nodep) {
+        const string filename = v3Global.opt.makeDir() + "/" + prefixNameProtect(nodep) + "_fwd.h";
+        AstCFile* const cfilep = newCFile(filename, /* slow: */ false, /* source: */ false);
+        V3OutCFile* const ofilep
+            = v3Global.opt.systemC() ? new V3OutScFile{filename} : new V3OutCFile{filename};
+
+        setOutputFile(ofilep, cfilep);
+        ofp()->putsGuard();
+
+        iterateConst(nodep);
+
+        puts("\n");
+
+        for (const string& className : m_classes) {
+            puts("class ");
+            puts(className);
+            puts(";\n");
+        }
+
+        ofp()->putsEndGuard();
+        closeOutputFile();
+    }
+    ~EmitCClassFwd() override = default;
+};
+
 //######################################################################
 // EmitC class functions
 
 void V3EmitC::emitcHeaders() {
     UINFO(2, __FUNCTION__ << ":");
+
+    EmitCClassFwd{v3Global.rootp()};
 
     // Process each module in turn
     for (const AstNode* nodep = v3Global.rootp()->modulesp(); nodep; nodep = nodep->nextp()) {

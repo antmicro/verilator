@@ -1873,6 +1873,19 @@ inline bool operator==(const void* ptr, VlNull) { return !ptr; }
 // There are no multithreaded locks on this; the base variable must
 // be protected by other means
 
+template <typename T_Class, typename... T_Args>
+struct ClassFactory {
+    inline static T_Class* newInst(T_Args&&... args) {
+        return new T_Class(typename T_Class::constructor_helper{}, std::forward<T_Args>(args)...);
+    }
+};
+
+template <typename T_Class>
+struct ClassFactory<T_Class,
+                    std::enable_if_t<std::is_copy_constructible<T_Class>::value, T_Class&>> {
+    inline static T_Class* newInst(const T_Class& arg) { return new T_Class(arg); }
+};
+
 template <typename T_Class>
 class VlClassRef final {
 private:
@@ -1899,12 +1912,12 @@ public:
     // Init with nullptr
     // cppcheck-suppress noExplicitConstructor
     VlClassRef(VlNull){};
+
     template <typename... T_Args>
     VlClassRef(VlDeleter& deleter, T_Args&&... args)
         // () required here to avoid narrowing conversion warnings,
         // when a new() has an e.g. CData type and passed a 1U.
-        : m_objp{
-            new T_Class(typename T_Class::constructor_helper{}, std::forward<T_Args>(args)...)} {
+        : m_objp{ClassFactory<T_Class, T_Args...>::newInst(std::forward<T_Args>(args)...)} {
         // refCountInc was moved to the constructor of T_Class
         // to fix self references in constructor.
         m_objp->m_deleterp = &deleter;

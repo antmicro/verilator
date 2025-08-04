@@ -154,6 +154,7 @@ protected:
     bool m_instantiatesOwnProcess = false;
     const AstClassPackage* m_classOrPackage = nullptr;  // Pointer to current class or package
     string m_classOrPackageHash;  // Hash of class or package name
+    bool m_isDirectlyInConstructor = false;
 
     bool constructorNeedsProcess(const AstClass* const classp) {
         const AstNode* const newp = m_memberMap.findMember(classp, "new");
@@ -272,11 +273,15 @@ public:
             if (doneClasses.count(vbase)) continue;
             puts(doneClasses.empty() ? "" : "\n    , ");
             doneClasses.emplace(vbase);
-            puts(prefixNameProtect(vbase));
+            string prefixNameProt = prefixNameProtect(vbase);
+            puts(prefixNameProt);
+            puts("(typename ");
+            puts(prefixNameProt);
+            puts("::constructor_helper{}, ");
             if (constructorNeedsProcess(vbase)) {
-                puts("(vlProcess, vlSymsp)");
+                puts("vlProcess, vlSymsp)");
             } else {
-                puts("(vlSymsp)");
+                puts("vlSymsp)");
             }
         }
         const AstCNew* const superNewCallp = getSuperNewCallRecursep(cfuncp->stmtsp());
@@ -287,11 +292,15 @@ public:
             if (doneClasses.count(extp->classp())) continue;
             puts(doneClasses.empty() ? "" : "\n    , ");
             doneClasses.emplace(extp->classp());
-            puts(prefixNameProtect(extp->classp()));
+            string prefixNameProt = prefixNameProtect(extp->classp());
+            puts(prefixNameProt);
+            puts("(typename ");
+            puts(prefixNameProt);
+            puts("::constructor_helper{}, ");
             if (constructorNeedsProcess(extp->classp())) {
-                puts("(vlProcess, vlSymsp");
+                puts("vlProcess, vlSymsp");
             } else {
-                puts("(vlSymsp");
+                puts("vlSymsp");
             }
             // Handle super.new() args for the concrete parent
             if (!extp->classp()->isInterfaceClass() && superNewCallp) {
@@ -320,13 +329,35 @@ public:
     // VISITORS
     using EmitCConstInit::visit;
     void visit(AstCFunc* nodep) override {
+
+        if (nodep->isConstructor()) {
+            VL_RESTORER(m_instantiatesOwnProcess);
+            VL_RESTORER(m_isDirectlyInConstructor);
+            m_instantiatesOwnProcess = false;
+            m_isDirectlyInConstructor = false;
+            puts("\n");
+            putns(nodep, prefixNameProtect(m_modp) + "::");
+            puts("constructor_helper::constructor_helper() {\n");
+            auto visitCRest = [this](AstNode* nodep) {
+                for (; nodep; nodep = nodep->nextp()) {
+                    if (AstCReset* cresetp = VN_CAST(nodep, CReset)) visit(cresetp);
+                }
+            };
+            visitCRest(nodep->initsp());
+            visitCRest(nodep->stmtsp());
+            visitCRest(nodep->finalsp());
+            puts("}\n");
+        }
+
         if (nodep->emptyBody() && !nodep->isLoose()) return;
         VL_RESTORER(m_useSelfForThis);
         VL_RESTORER(m_cfuncp);
         VL_RESTORER(m_instantiatesOwnProcess);
         VL_RESTORER(m_createdScopeHash);
+        VL_RESTORER(m_isDirectlyInConstructor);
         m_cfuncp = nodep;
         m_instantiatesOwnProcess = false;
+        m_isDirectlyInConstructor = false;
         m_labelNumbers.clear();  // No need to save/restore, all Jumps must be within the function
 
         splitSizeInc(nodep);
@@ -338,6 +369,7 @@ public:
         emitCFuncHeader(nodep, m_modp, /* withScope: */ true);
 
         if (nodep->isConstructor()) {
+            m_isDirectlyInConstructor = true;
             const AstClass* const classp = VN_CAST(nodep->scopep()->modp(), Class);
             if (nodep->isConstructor() && classp && classp->extendsp()) {
                 puts("\n    : ");
@@ -423,6 +455,7 @@ public:
 
     void visit(AstVar* nodep) override {
         UASSERT_OBJ(m_cfuncp, nodep, "Cannot emit non-local variable");
+        if (m_isDirectlyInConstructor) return;
         emitVarDecl(nodep);
     }
 
@@ -1431,6 +1464,10 @@ public:
             return;
         } else if (!nodep->selfPointer().isEmpty()) {
             emitDereference(nodep, nodep->selfPointerProtect(m_useSelfForThis));
+        } else if (m_isDirectlyInConstructor && varp->varType() != VVarType::MEMBER
+                   && varp->varType() != VVarType::LPARAM && varp->varType() != VVarType::GPARAM
+                   && !varp->isInput()) {
+            puts("helper.");
         }
         putns(nodep, nodep->varp()->nameProtect());
     }
@@ -1554,6 +1591,7 @@ public:
         }
     }
     void visit(AstCReset* nodep) override {
+        if (m_isDirectlyInConstructor) return;
         AstVar* const varp = nodep->varrefp()->varp();
         emitVarReset(varp, nodep->constructing());
     }

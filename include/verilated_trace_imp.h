@@ -893,6 +893,15 @@ void VerilatedTraceBuffer<VL_BUF_T>::fullDouble(uint32_t* oldp, double newval) {
     emitDouble(code, newval);
 }
 
+template <>
+void VerilatedTraceBuffer<VL_BUF_T>::fullExternal(uint32_t* oldp) {
+    m_owner.fullExternal(this, oldp);
+}
+template <>
+void VerilatedTraceBuffer<VL_BUF_T>::chgExternal(uint32_t* oldp) {
+    m_owner.chgExternal(this, oldp);
+}
+
 //=========================================================================
 // VerilatedTraceOffloadBuffer
 

@@ -1464,8 +1464,7 @@ public:
             return;
         } else if (!nodep->selfPointer().isEmpty()) {
             emitDereference(nodep, nodep->selfPointerProtect(m_useSelfForThis));
-        } else if (m_isDirectlyInConstructor && varp->varType() != VVarType::MEMBER
-                   && varp->varType() != VVarType::LPARAM && varp->varType() != VVarType::GPARAM
+        } else if (m_isDirectlyInConstructor && !varp->isClassAttribute() && !varp->isParam()
                    && !varp->isInput()) {
             puts("helper.");
         }

@@ -650,6 +650,8 @@ class AstCFunc final : public AstNode {
     bool m_dpiImportWrapper : 1;  // Wrapper for invoking DPI import prototype from generated code
     bool m_needProcess : 1;  // Needs access to VlProcess of the caller
     bool m_recursive : 1;  // Recursive or part of recursion
+    bool m_constructionHelperHasConstructor : 1;  // If constructor helper has contructor - if is
+                                                  // constructor only
     int m_cost;  // Function call cost
 public:
     AstCFunc(FileLine* fl, const string& name, AstScope* scopep, const string& rtnType = "")
@@ -680,6 +682,7 @@ public:
         m_dpiImportPrototype = false;
         m_dpiImportWrapper = false;
         m_recursive = false;
+        m_constructionHelperHasConstructor = false;
         m_cost = v3Global.opt.instrCountDpi();  // As proxy for unknown general DPI cost
     }
     ASTGEN_MEMBERS_AstCFunc;
@@ -756,6 +759,8 @@ public:
     bool isCoroutine() const { return m_rtnType == "VlCoroutine"; }
     void recursive(bool flag) { m_recursive = flag; }
     bool recursive() const { return m_recursive; }
+    bool constructionHelperHasConstructor() const { return m_constructionHelperHasConstructor; }
+    void constructionHelperHasConstructor(bool flag) { m_constructionHelperHasConstructor = flag; }
     void cost(int cost) { m_cost = cost; }
     // Special methods
     bool emptyBody() const {

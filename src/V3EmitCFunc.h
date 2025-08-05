@@ -329,12 +329,11 @@ public:
     // VISITORS
     using EmitCConstInit::visit;
     void visit(AstCFunc* nodep) override {
+        if (nodep->emptyBody() && !nodep->isLoose()) return;
+        VL_RESTORER(m_isDirectlyInConstructor);
+        m_isDirectlyInConstructor = false;
 
-        if (nodep->isConstructor()) {
-            VL_RESTORER(m_instantiatesOwnProcess);
-            VL_RESTORER(m_isDirectlyInConstructor);
-            m_instantiatesOwnProcess = false;
-            m_isDirectlyInConstructor = false;
+        if (nodep->constructionHelperHasConstructor()) {
             puts("\n");
             putns(nodep, prefixNameProtect(m_modp) + "::");
             puts("ConstructorHelper::ConstructorHelper() {\n");
@@ -349,15 +348,12 @@ public:
             puts("}\n");
         }
 
-        if (nodep->emptyBody() && !nodep->isLoose()) return;
         VL_RESTORER(m_useSelfForThis);
         VL_RESTORER(m_cfuncp);
         VL_RESTORER(m_instantiatesOwnProcess);
         VL_RESTORER(m_createdScopeHash);
-        VL_RESTORER(m_isDirectlyInConstructor);
         m_cfuncp = nodep;
         m_instantiatesOwnProcess = false;
-        m_isDirectlyInConstructor = false;
         m_labelNumbers.clear();  // No need to save/restore, all Jumps must be within the function
 
         splitSizeInc(nodep);

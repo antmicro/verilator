@@ -598,11 +598,11 @@ class EmitCHeader final : public EmitCConstInit {
                 }
             }
             UASSERT_OBJ(constructorp, modp, "Class has to have a constructor");
-            puts("struct constructor_helper {\n");
+            puts("struct ConstructorHelper {\n");
             emitDesignVarDecls(constructorp->initsp());
             emitDesignVarDecls(constructorp->stmtsp());
             emitDesignVarDecls(constructorp->finalsp());
-            puts("constructor_helper();\n};");
+            puts("ConstructorHelper();\n};");
         }
 
         // Emit all class body contents

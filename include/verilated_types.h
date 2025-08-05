@@ -1876,7 +1876,7 @@ inline bool operator==(const void* ptr, VlNull) { return !ptr; }
 template <typename T_Class, typename... T_Args>
 struct ClassFactory {
     inline static T_Class* newInst(T_Args&&... args) {
-        return new T_Class(typename T_Class::constructor_helper{}, std::forward<T_Args>(args)...);
+        return new T_Class(typename T_Class::ConstructorHelper{}, std::forward<T_Args>(args)...);
     }
 };
 
@@ -1912,7 +1912,6 @@ public:
     // Init with nullptr
     // cppcheck-suppress noExplicitConstructor
     VlClassRef(VlNull){};
-
     template <typename... T_Args>
     VlClassRef(VlDeleter& deleter, T_Args&&... args)
         // () required here to avoid narrowing conversion warnings,

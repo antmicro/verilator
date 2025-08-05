@@ -2006,7 +2006,7 @@ class AstVar final : public AstNode {
     bool m_ignorePostRead : 1;  // Ignore reads in 'Post' blocks during ordering
     bool m_ignorePostWrite : 1;  // Ignore writes in 'Post' blocks during ordering
     bool m_ignoreSchedWrite : 1;  // Ignore writes in scheduling (for special optimizations)
-    bool m_isClassAttribute : 1;  // If it is a class member (attribute)
+    bool m_isClassAttribute : 1;  // If it is a class attribute
 
     void init() {
         m_ansi = false;

@@ -277,7 +277,7 @@ public:
             puts(prefixNameProt);
             puts("(typename ");
             puts(prefixNameProt);
-            puts("::constructor_helper{}, ");
+            puts("::ConstructorHelper{}, ");
             if (constructorNeedsProcess(vbase)) {
                 puts("vlProcess, vlSymsp)");
             } else {
@@ -296,7 +296,7 @@ public:
             puts(prefixNameProt);
             puts("(typename ");
             puts(prefixNameProt);
-            puts("::constructor_helper{}, ");
+            puts("::ConstructorHelper{}, ");
             if (constructorNeedsProcess(extp->classp())) {
                 puts("vlProcess, vlSymsp");
             } else {
@@ -337,7 +337,7 @@ public:
             m_isDirectlyInConstructor = false;
             puts("\n");
             putns(nodep, prefixNameProtect(m_modp) + "::");
-            puts("constructor_helper::constructor_helper() {\n");
+            puts("ConstructorHelper::ConstructorHelper() {\n");
             auto visitCRest = [this](AstNode* nodep) {
                 for (; nodep; nodep = nodep->nextp()) {
                     if (AstCReset* cresetp = VN_CAST(nodep, CReset)) visit(cresetp);
@@ -1466,7 +1466,7 @@ public:
             emitDereference(nodep, nodep->selfPointerProtect(m_useSelfForThis));
         } else if (m_isDirectlyInConstructor && !varp->isClassAttribute() && !varp->isParam()
                    && !varp->isInput()) {
-            puts("helper.");
+            puts("constructor_helper.");
         }
         putns(nodep, nodep->varp()->nameProtect());
     }

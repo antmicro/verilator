@@ -66,6 +66,7 @@ private:
     // Prefixes to add to signal names/scope types
     std::vector<std::pair<std::string, VerilatedTracePrefixType>> m_prefixStack{
         {"", VerilatedTracePrefixType::SCOPE_MODULE}};
+
     // Vector of free trace buffers as (pointer, size) pairs.
     std::vector<std::pair<char*, size_t>> m_freeBuffers;
     size_t m_numBuffers = 0;  // Number of trace buffers allocated
@@ -133,7 +134,7 @@ public:
     //=========================================================================
     // Internal interface to Verilator generated code
 
-    void registerCustomVars(IData offset) override {
+    void registerExternalSignals(IData offset) override {
         if (externalSignalsPresent()) {
             pushPrefix("custom_variables", VerilatedTracePrefixType::SCOPE_MODULE);
             declExternal(offset);
@@ -224,8 +225,8 @@ public:
     // Implementations of duck-typed methods for VerilatedTraceBuffer. These are
     // called from only one place (the full* methods), so always inline them.
     VL_ATTR_ALWINLINE void emitEvent(uint32_t code);
-    void emitBit(uint32_t code, CData newval);
-    void emitCData(uint32_t code, CData newval, int bits);
+    VL_ATTR_ALWINLINE void emitBit(uint32_t code, CData newval);
+    VL_ATTR_ALWINLINE void emitCData(uint32_t code, CData newval, int bits);
     VL_ATTR_ALWINLINE void emitSData(uint32_t code, SData newval, int bits);
     VL_ATTR_ALWINLINE void emitIData(uint32_t code, IData newval, int bits);
     VL_ATTR_ALWINLINE void emitQData(uint32_t code, QData newval, int bits);
@@ -267,8 +268,6 @@ class VerilatedVcdC VL_NOT_FINAL : public VerilatedTraceBaseC {
     VL_UNCOPYABLE(VerilatedVcdC);
 
 public:
-    using Buffer = VerilatedVcd::Buffer;
-
     /// Construct the dump. Optional argument is a preconstructed file.
     explicit VerilatedVcdC(VerilatedVcdFile* filep = nullptr)
         : m_sptrace{filep} {}

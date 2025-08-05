@@ -176,6 +176,7 @@ class VerilatedFstBuffer VL_NOT_FINAL {
         : m_owner{owner} {}
     virtual ~VerilatedFstBuffer() = default;
 
+public:
     //=========================================================================
     // Implementation of VerilatedTraceBuffer interface
 

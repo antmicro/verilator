@@ -670,11 +670,10 @@ class TraceVisitor final : public VNVisitor {
                         new AstCStmt{topChgFuncp->fileline(),
                                      "bufp->chgExternal(bufp->oldp(vlSymsp->__Vm_baseCode + "
                                          + std::to_string(m_code) + "));\n"});
-                    // TODO
                     UASSERT(m_initFuncp, "Should have found initialization function");
                     m_initFuncp->addStmtsp(
                         new AstCStmt{m_initFuncp->fileline(),
-                                     "tracep->registerCustomVars(vlSymsp->__Vm_baseCode + "
+                                     "tracep->registerExternalSignals(vlSymsp->__Vm_baseCode + "
                                          + std::to_string(m_code) + ");\n"});
                 }
 

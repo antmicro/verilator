@@ -1,16 +1,14 @@
 // DESCRIPTION: Verilator: Verilog example module
 //
 // This file ONLY is placed under the Creative Commons Public Domain, for
-// any use, without warranty, 2003 by Wilson Snyder.
+// any use, without warranty, 2025 by Antmicro.
 // SPDX-License-Identifier: CC0-1.0
 // ======================================================================
-
-// This is intended to be a complex example of several features, please also
-// see the simpler examples/make_hello_c.
 
 module top (
     input wire clk
 );
+  // Signal to trace driven from Verilog
   logic [31:0] cyc;
   initial cyc = 0;
 

@@ -204,6 +204,7 @@ class VerilatedSaifBuffer VL_NOT_FINAL {
         , m_fidx{fidx} {}
     virtual ~VerilatedSaifBuffer() = default;
 
+public:
     //=========================================================================
     // Implementation of VerilatedTraceBuffer interface
     // Implementations of duck-typed methods for VerilatedTraceBuffer. These are

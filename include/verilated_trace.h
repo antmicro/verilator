@@ -200,14 +200,24 @@ public:
 // VerilatedTrace
 
 template <typename T_Buffer>
-struct VerilatedTraceBufferExternalVariable VL_NOT_FINAL {
+struct VerilatedTraceBufferExternalSignal VL_NOT_FINAL {
     using Buffer = T_Buffer;
 
-    virtual void decl(IData offset) = 0;
-    virtual void chg(Buffer* bufferp, uint32_t* oldp) = 0;
-    virtual void full(Buffer* bufferp, uint32_t* oldp) = 0;
+    virtual int decl(IData offset) = 0;
+    virtual int chg(Buffer* bufferp, uint32_t* oldp) = 0;
+    virtual int full(Buffer* bufferp, uint32_t* oldp) = 0;
 
-    virtual ~VerilatedTraceBufferExternalVariable() = default;
+    // To keep original definitions inline, implement those wrappers in respective buffer
+    // implementation files.
+    void emitBit(Buffer* bufferp, uint32_t code, CData newval);
+    void emitCData(Buffer* bufferp, uint32_t code, CData newval, int bits);
+    void emitSData(Buffer* bufferp, uint32_t code, SData newval, int bits);
+    void emitIData(Buffer* bufferp, uint32_t code, IData newval, int bits);
+    void emitQData(Buffer* bufferp, uint32_t code, QData newval, int bits);
+    void emitDouble(Buffer* bufferp, uint32_t code, double newval);
+    void emitWData(Buffer* bufferp, uint32_t code, WDataInP newval, int bits);
+
+    virtual ~VerilatedTraceBufferExternalSignal() = default;
 };
 
 // T_Trace is the format-specific subclass of VerilatedTrace.
@@ -308,8 +318,8 @@ private:
     bool m_didSomeDump = false;  // Did at least one dump (i.e.: m_timeLastDump is valid)
     VerilatedContext* m_contextp = nullptr;  // The context used by the traced models
     std::set<const VerilatedModel*> m_models;  // The collection of models being traced
-    std::vector<std::unique_ptr<VerilatedTraceBufferExternalVariable<Buffer>>>
-        m_externalSignals;  // custom vars to trace
+    std::vector<std::unique_ptr<VerilatedTraceBufferExternalSignal<Buffer>>>
+        m_externalSignals;  // External signals to trace
 
     void addCallbackRecord(std::vector<CallbackRecord>& cbVec, CallbackRecord&& cbRec)
         VL_MT_SAFE_EXCLUDES(m_mutex);
@@ -448,22 +458,22 @@ public:
     void addChgCb(dumpOffloadCb_t cb, uint32_t fidx, void* userp) VL_MT_SAFE;
     void addCleanupCb(cleanupCb_t cb, void* userp) VL_MT_SAFE;
 
-    void addTraceVar(std::unique_ptr<VerilatedTraceBufferExternalVariable<Buffer>>&& varp) {
+    void addTraceVar(std::unique_ptr<VerilatedTraceBufferExternalSignal<Buffer>>&& varp) {
         m_externalSignals.emplace_back(std::move(varp));
     }
     void declExternal(IData offset) {
-        for (auto& sig : m_externalSignals) sig->decl(offset++);
+        for (auto& sig : m_externalSignals) offset += sig->decl(offset);
     }
     bool externalSignalsPresent() const { return !m_externalSignals.empty(); }
     void chgExternal(Buffer* bufferp, uint32_t* oldp) {
-        for (auto& sig : m_externalSignals) sig->chg(bufferp, oldp++);
+        for (auto& sig : m_externalSignals) oldp += sig->chg(bufferp, oldp);
     }
     void fullExternal(Buffer* bufferp, uint32_t* oldp) {
-        for (auto& sig : m_externalSignals) sig->full(bufferp, oldp++);
+        for (auto& sig : m_externalSignals) oldp += sig->full(bufferp, oldp);
     }
     uint32_t* sigsOldVal() { return m_sigs_oldvalp; }
     EData* sigsEnabled() { return m_sigs_enabledp; }
-    virtual void registerCustomVars(IData offset) {}
+    virtual void registerExternalSignals(IData offset) {}
 };
 
 //=============================================================================

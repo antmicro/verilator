@@ -650,8 +650,8 @@ class AstCFunc final : public AstNode {
     bool m_dpiImportWrapper : 1;  // Wrapper for invoking DPI import prototype from generated code
     bool m_needProcess : 1;  // Needs access to VlProcess of the caller
     bool m_recursive : 1;  // Recursive or part of recursion
-    bool m_constructionHelperHasConstructor : 1;  // If constructor helper has contructor - if is
-                                                  // constructor only
+    bool m_constructionHelperHasConstructor : 1;  // If constructor helper has contructor - it is
+                                                  // only relevant for constructor AstCFunc's
     int m_cost;  // Function call cost
 public:
     AstCFunc(FileLine* fl, const string& name, AstScope* scopep, const string& rtnType = "")

@@ -333,7 +333,7 @@ public:
         VL_RESTORER(m_isDirectlyInConstructor);
         m_isDirectlyInConstructor = false;
 
-        if (nodep->constructionHelperHasConstructor()) {
+        if (nodep->constructorHelperHasConstructor()) {
             puts("\n");
             putns(nodep, prefixNameProtect(m_modp) + "::");
             puts("ConstructorHelper::ConstructorHelper() {\n");

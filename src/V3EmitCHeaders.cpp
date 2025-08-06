@@ -607,7 +607,7 @@ class EmitCHeader final : public EmitCConstInit {
             nonEmpty |= emitDesignVarDecls(constructorp->finalsp());
             if (nonEmpty) {
                 puts("ConstructorHelper();\n");
-                constructorp->constructionHelperHasConstructor(true);
+                constructorp->constructorHelperHasConstructor(true);
             }
             puts("};");
         }

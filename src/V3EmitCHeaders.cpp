@@ -609,7 +609,7 @@ class EmitCHeader final : public EmitCConstInit {
                 puts("ConstructorHelper();\n");
                 constructorp->constructorHelperHasConstructor(true);
             }
-            puts("};");
+            puts("};\n");
         }
 
         // Emit all class body contents

@@ -651,7 +651,9 @@ class AstCFunc final : public AstNode {
     bool m_needProcess : 1;  // Needs access to VlProcess of the caller
     bool m_recursive : 1;  // Recursive or part of recursion
     bool m_constructorHelperHasConstructor : 1;  // If constructor helper has contructor - it is
-                                                 // only relevant for constructor AstCFunc's
+                                                 // only relevant for AstCFuncs which are
+                                                 // constructors. For the rest of the AstCFuncs
+                                                 // this filed is meaningless
     int m_cost;  // Function call cost
 public:
     AstCFunc(FileLine* fl, const string& name, AstScope* scopep, const string& rtnType = "")

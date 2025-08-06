@@ -697,10 +697,7 @@ class EmitCClassFwd final : public EmitCBaseVisitorConst {
     std::vector<string> m_classes;  // Defined classes to get fwd
 
 protected:
-    void visit(AstClass* classp) override {
-        if (classp->user1SetOnce()) return;
-        m_classes.push_back(prefixNameProtect(classp));
-    }
+    void visit(AstClass* classp) override { m_classes.push_back(prefixNameProtect(classp)); }
 
     void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }
 

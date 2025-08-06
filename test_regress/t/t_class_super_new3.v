@@ -5,7 +5,13 @@
 // SPDX-License-Identifier: CC0-1.0
 
 class Base;
+  int j;
   function new(int x);
+    j = x;
+    $write("j = %d\nx = %d\n", j, x);
+  endfunction
+  function int get();
+    return j;
   endfunction
 endclass
 class Derived extends Base;
@@ -18,7 +24,10 @@ endclass
 module t;
   initial begin
     Derived d = new;
-    $write("*-* All Finished *-*\n");
-    $finish;
+    if (d.get() != 1) $stop;
+    else begin
+      $write("*-* All Finished *-*\n");
+      $finish;
+    end
   end
 endmodule

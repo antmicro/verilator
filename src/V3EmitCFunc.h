@@ -264,7 +264,7 @@ public:
         if (const AstCNew* const cnewp = getSuperNewCallRecursep(nodep->nextp())) return cnewp;
         return nullptr;
     }
-    void putConstructorSubinit(const AstClass* classp, AstCFunc* cfuncp) {
+    bool putConstructorSubinit(const AstClass* classp, AstCFunc* cfuncp) {
         // Virtual bases in depth-first left-to-right order
         std::vector<AstClass*> virtualBases;
         std::unordered_set<AstClass*> doneClasses;
@@ -285,6 +285,7 @@ public:
             }
         }
         const AstCNew* const superNewCallp = getSuperNewCallRecursep(cfuncp->stmtsp());
+        bool someStmtsEmitted = false;
         // Direct non-virtual bases in declaration order
         for (const AstClassExtends* extp = classp->extendsp(); extp;
              extp = VN_AS(extp->nextp(), ClassExtends)) {
@@ -294,9 +295,35 @@ public:
             doneClasses.emplace(extp->classp());
             string prefixNameProt = prefixNameProtect(extp->classp());
             puts(prefixNameProt);
-            puts("(typename ");
-            puts(prefixNameProt);
-            puts("::ConstructorHelper{}, ");
+            size_t stmtsCount = 0;
+            bool hasSuperNew = false;
+            bool isNonCommentBeforeSuper = false;
+            for (AstNode* nodep = cfuncp->stmtsp(); nodep; nodep = nodep->nextp()) {
+                if (const AstStmtExpr* const stmtexprp = VN_CAST(nodep, StmtExpr)) {
+                    if (VN_IS(stmtexprp->exprp(), CNew)) {
+                        hasSuperNew = true;
+                        break;
+                    }
+                }
+                if (!VN_IS(nodep, Comment)) isNonCommentBeforeSuper = true;
+                ++stmtsCount;
+            }
+            if (hasSuperNew && isNonCommentBeforeSuper && stmtsCount) {
+                someStmtsEmitted = true;
+                puts("(([&]() {\n");
+                putsDecoration(cfuncp, "// Pre-super body\n");
+                for (AstNode* nodep = cfuncp->stmtsp(); stmtsCount;
+                     nodep = nodep->nextp(), --stmtsCount) {
+                    iterateConst(nodep);
+                }
+                puts("}(), typename ");
+                puts(prefixNameProt);
+                puts("::ConstructorHelper{}), ");
+            } else {
+                puts("(typename ");
+                puts(prefixNameProt);
+                puts("::ConstructorHelper{}, ");
+            }
             if (constructorNeedsProcess(extp->classp())) {
                 puts("vlProcess, vlSymsp");
             } else {
@@ -308,6 +335,7 @@ public:
             }
             puts(")");
         }
+        return someStmtsEmitted;
     }
     void collectVirtualBasesRecursep(const AstClass* classp,
                                      std::vector<AstClass*>& virtualBases) {
@@ -364,12 +392,13 @@ public:
         if (nodep->isInline()) putns(nodep, "VL_INLINE_OPT ");
         emitCFuncHeader(nodep, m_modp, /* withScope: */ true);
 
+        bool someStmtsEmitted = false;
         if (nodep->isConstructor()) {
             m_isDirectlyInConstructor = true;
             const AstClass* const classp = VN_CAST(nodep->scopep()->modp(), Class);
             if (nodep->isConstructor() && classp && classp->extendsp()) {
                 puts("\n    : ");
-                putConstructorSubinit(classp, nodep);
+                someStmtsEmitted = putConstructorSubinit(classp, nodep);
             }
         }
         puts(" {\n");
@@ -432,10 +461,18 @@ public:
             putsDecoration(nodep, "// Init\n");
             iterateAndNextConstNull(nodep->initsp());
         }
-
-        if (nodep->stmtsp()) {
+        AstNode* stmtp = nodep->stmtsp();
+        if (someStmtsEmitted) {
+            for (AstNode* iter = nodep->stmtsp(); iter; iter = iter->nextp()) {
+                if (const AstStmtExpr* const stmtexprp = VN_CAST(iter, StmtExpr)) {
+                    if (VN_IS(stmtexprp->exprp(), CNew)) break;
+                }
+                if (!VN_IS(iter, Comment)) stmtp = iter->nextp();
+            }
+        }
+        if (stmtp) {
             putsDecoration(nodep, "// Body\n");
-            iterateAndNextConstNull(nodep->stmtsp());
+            iterateAndNextConstNull(stmtp);
         }
 
         if (nodep->finalsp()) {

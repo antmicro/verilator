@@ -270,18 +270,32 @@ private:
             iterateChildren(nodep);
         }
         UASSERT_OBJ(m_ctorp, nodep, "class constructor missing");  // LinkDot always makes it
-        for (AstInitialAutomatic* initialp : m_initialps) {
-            if (AstNode* const newp = initialp->stmtsp()) {
-                newp->unlinkFrBackWithNext();
-                if (!m_ctorp->stmtsp()) {
-                    m_ctorp->addStmtsp(newp);
-                } else {
-                    m_ctorp->stmtsp()->addHereThisAsNext(newp);
+        if (!m_initialps.empty()) {
+            AstNode* insertSpot = nullptr;
+            // Find super constructor (if there is one) to insert initialization after it
+            for (AstNode* nodep; nodep; nodep = nodep->nextp()) {
+                if (AstStmtExpr* stmtexprp = VN_CAST(nodep, StmtExpr)) {
+                    if (VN_IS(stmtexprp->exprp(), New)) {
+                        insertSpot = nodep;
+                        break;
+                    }
                 }
             }
-            VL_DO_DANGLING(pushDeletep(initialp->unlinkFrBack()), initialp);
+            if (!insertSpot) insertSpot = m_ctorp->stmtsp();
+            for (AstInitialAutomatic* initialp : m_initialps) {
+                if (AstNode* const newp = initialp->stmtsp()) {
+                    newp->unlinkFrBackWithNext();
+                    if (!insertSpot) {
+                        m_ctorp->addStmtsp(newp);
+                        insertSpot = m_ctorp->stmtsp();
+                    } else {
+                        insertSpot->addNextHere(newp);
+                    }
+                }
+                VL_DO_DANGLING(pushDeletep(initialp->unlinkFrBack()), initialp);
+            }
+            m_initialps.clear();
         }
-        m_initialps.clear();
     }
     void visit(AstInitialAutomatic* nodep) override {
         m_initialps.push_back(nodep);

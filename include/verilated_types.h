@@ -1874,8 +1874,8 @@ inline bool operator==(const void* ptr, VlNull) { return !ptr; }
 // be protected by other means
 
 template <typename T_Class, typename... T_Args>
-struct ClassFactory {
-    inline static T_Class* newInst(T_Args&&... args) {
+struct ClassFactory final {
+    static T_Class* newInst(T_Args&&... args) {
         return new T_Class(typename T_Class::ConstructorHelper{}, std::forward<T_Args>(args)...);
     }
 };
@@ -1883,7 +1883,7 @@ struct ClassFactory {
 template <typename T_Class>
 struct ClassFactory<T_Class,
                     std::enable_if_t<std::is_copy_constructible<T_Class>::value, T_Class&>> {
-    inline static T_Class* newInst(const T_Class& arg) { return new T_Class(arg); }
+    static T_Class* newInst(const T_Class& arg) { return new T_Class(arg); }
 };
 
 template <typename T_Class>

@@ -692,10 +692,12 @@ public:
 };
 
 class EmitCClassFwd final : public EmitCBaseVisitorConst {
-    std::vector<string> m_classes;  // Defined classes to get fwd
-
 protected:
-    void visit(AstClass* classp) override { m_classes.push_back(prefixNameProtect(classp)); }
+    void visit(AstClass* classp) override {
+        puts("class ");
+        puts(prefixNameProtect(classp));
+        puts(";\n");
+    }
 
     void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }
 
@@ -709,15 +711,9 @@ public:
         setOutputFile(ofilep, cfilep);
         ofp()->putsGuard();
 
-        iterateConst(nodep);
-
         puts("\n");
 
-        for (const string& className : m_classes) {
-            puts("class ");
-            puts(className);
-            puts(";\n");
-        }
+        iterateConst(nodep);
 
         ofp()->putsEndGuard();
         closeOutputFile();

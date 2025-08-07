@@ -282,7 +282,8 @@ private:
                 }
             }
             if (!insertSpot) insertSpot = m_ctorp->stmtsp();
-            for (AstInitialAutomatic* initialp : m_initialps) {
+            for (auto iter = m_initialps.rbegin(); iter != m_initialps.rend(); ++iter) {
+                AstInitialAutomatic* initialp = *iter;
                 if (AstNode* const newp = initialp->stmtsp()) {
                     newp->unlinkFrBackWithNext();
                     if (!insertSpot) {

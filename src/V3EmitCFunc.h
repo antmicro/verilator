@@ -327,7 +327,8 @@ public:
         }
     }
 
-    void emitContractorHelperContractor(AstCFunc* nodep) {
+    bool emitContractorHelperContractor(AstCFunc* nodep) {
+        bool preSuperEmitted = false;
         m_skipVarDecls = true;
         puts("\n");
         putns(nodep, prefixNameProtect(m_modp) + "::");
@@ -346,12 +347,14 @@ public:
             ++stmtsCount;
         }
         if (hasSuperNew && isNonCommentBeforeSuper && stmtsCount) {
+            preSuperEmitted = true;
             putsDecoration(nodep, "// Pre-super body\n");
             for (AstNode* iter = nodep->stmtsp(); stmtsCount; iter = iter->nextp(), --stmtsCount) {
                 iterateConst(iter);
             }
         }
         puts("}\n");
+        return preSuperEmitted;
     }
 
     // VISITORS
@@ -369,7 +372,8 @@ public:
 
         m_labelNumbers.clear();  // No need to save/restore, all Jumps must be within the function
 
-        if (nodep->constructorHelperHasConstructor()) emitContractorHelperContractor(nodep);
+        const bool preSuperEmitted
+            = nodep->constructorHelperHasConstructor() && emitContractorHelperContractor(nodep);
 
         splitSizeInc(nodep);
 
@@ -449,7 +453,7 @@ public:
             iterateAndNextConstNull(nodep->initsp());
         }
         AstNode* stmtp = nodep->stmtsp();
-        if (nodep->constructorHelperHasConstructor()) {
+        if (preSuperEmitted) {
             for (AstNode* iter = nodep->stmtsp(); iter; iter = iter->nextp()) {
                 if (const AstStmtExpr* const stmtexprp = VN_CAST(iter, StmtExpr)) {
                     if (VN_IS(stmtexprp->exprp(), CNew)) break;

@@ -275,7 +275,7 @@ public:
             doneClasses.emplace(vbase);
             string prefixNameProt = prefixNameProtect(vbase);
             puts(prefixNameProt);
-            puts("(typename ");
+            puts("(");
             puts(prefixNameProt);
             puts("::__VConstructorHelper{}, ");
             if (constructorNeedsProcess(vbase)) {
@@ -294,7 +294,7 @@ public:
             doneClasses.emplace(extp->classp());
             string prefixNameProt = prefixNameProtect(extp->classp());
             puts(prefixNameProt);
-            puts("(typename ");
+            puts("(");
             puts(prefixNameProt);
             puts("::__VConstructorHelper{}, ");
             if (constructorNeedsProcess(extp->classp())) {

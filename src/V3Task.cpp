@@ -273,10 +273,10 @@ private:
         if (!m_initialps.empty()) {
             AstNode* insertSpot = nullptr;
             // Find super constructor (if there is one) to insert initialization after it
-            for (AstNode* iter = nodep->stmtsp(); iter; iter = iter->nextp()) {
-                if (AstStmtExpr* stmtexprp = VN_CAST(iter, StmtExpr)) {
+            for (AstNode* stmtp = m_ctorp->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+                if (AstStmtExpr* const stmtexprp = VN_CAST(stmtp, StmtExpr)) {
                     if (VN_IS(stmtexprp->exprp(), New)) {
-                        insertSpot = iter;
+                        insertSpot = stmtp;
                         break;
                     }
                 }

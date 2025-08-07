@@ -159,7 +159,7 @@ void EmitCBaseVisitorConst::emitCFuncHeader(const AstCFunc* funcp, const AstNode
     puts("(");
     string args = cFuncArgs(funcp);
     if (funcp->isConstructor()) {
-        puts("ConstructorHelper&& constructor_helper");
+        puts("__VConstructorHelper&& __Vconstructor_helper");
         if (!args.empty()) puts(", ");
     }
     puts(args);

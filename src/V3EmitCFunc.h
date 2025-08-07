@@ -154,7 +154,6 @@ protected:
     bool m_instantiatesOwnProcess = false;
     const AstClassPackage* m_classOrPackage = nullptr;  // Pointer to current class or package
     string m_classOrPackageHash;  // Hash of class or package name
-    bool m_isDirectlyInConstructor = false;  // If is directly in contractor
     bool m_skipVarDecls = false;  // If true Vars won't be declared
 
     bool constructorNeedsProcess(const AstClass* const classp) {
@@ -278,7 +277,7 @@ public:
             puts(prefixNameProt);
             puts("(typename ");
             puts(prefixNameProt);
-            puts("::ConstructorHelper{}, ");
+            puts("::__VConstructorHelper{}, ");
             if (constructorNeedsProcess(vbase)) {
                 puts("vlProcess, vlSymsp)");
             } else {
@@ -297,7 +296,7 @@ public:
             puts(prefixNameProt);
             puts("(typename ");
             puts(prefixNameProt);
-            puts("::ConstructorHelper{}, ");
+            puts("::__VConstructorHelper{}, ");
             if (constructorNeedsProcess(extp->classp())) {
                 puts("vlProcess, vlSymsp");
             } else {
@@ -328,40 +327,59 @@ public:
     }
 
     bool emitContractorHelperContractor(AstCFunc* nodep) {
-        bool preSuperEmitted = false;
-        m_skipVarDecls = true;
         puts("\n");
         putns(nodep, prefixNameProtect(m_modp) + "::");
-        puts("ConstructorHelper::ConstructorHelper() {\n");
-        size_t stmtsCount = 0;
-        bool hasSuperNew = false;
-        bool isNonCommentBeforeSuper = false;
-        for (AstNode* iter = nodep->stmtsp(); iter; iter = iter->nextp()) {
-            if (const AstStmtExpr* const stmtexprp = VN_CAST(iter, StmtExpr)) {
+        puts("__VConstructorHelper::__VConstructorHelper() {\n");
+
+        std::vector<AstVar*> varsp;
+        for (AstNode* initp = nodep->initsp(); initp; initp = initp->nextp()) {
+            if (AstVar* const varp = VN_CAST(initp, Var)) {
+                varsp.push_back(varp);
+            } else if (AstCReset* const cResetp = VN_CAST(initp, CReset)) {
+                iterateConst(cResetp);
+            }
+        }
+        std::vector<AstComment*> commentsp;
+        bool postSuper = false;
+        std::vector<AstNode*> toIter;
+        for (AstNode* stmtp = nodep->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+            if (const AstStmtExpr* const stmtexprp = VN_CAST(stmtp, StmtExpr)) {
                 if (VN_IS(stmtexprp->exprp(), CNew)) {
-                    hasSuperNew = true;
-                    break;
+                    postSuper = true;
+                    continue;
                 }
+            } else if (AstComment* const commentp = VN_CAST(stmtp, Comment)) {
+                commentsp.push_back(commentp);
+                continue;
+            } else if (AstVar* const varp = VN_CAST(stmtp, Var)) {
+                varsp.push_back(varp);
+                continue;
             }
-            if (!VN_IS(iter, Comment)) isNonCommentBeforeSuper = true;
-            ++stmtsCount;
-        }
-        if (hasSuperNew && isNonCommentBeforeSuper && stmtsCount) {
-            preSuperEmitted = true;
-            putsDecoration(nodep, "// Pre-super body\n");
-            for (AstNode* iter = nodep->stmtsp(); stmtsCount; iter = iter->nextp(), --stmtsCount) {
-                iterateConst(iter);
+            if (!postSuper) {
+                for (AstComment* const commentp : commentsp) toIter.push_back(commentp);
+                commentsp.clear();
+                toIter.push_back(stmtp);
             }
         }
+        if (postSuper) {
+            for (AstNode* const nodep : toIter) iterateConst(nodep);
+        }
+        for (AstNode* finalp = nodep->finalsp(); finalp; finalp = finalp->nextp()) {
+            if (AstVar* const varp = VN_CAST(finalp, Var)) {
+                varsp.push_back(varp);
+            } else if (AstCReset* const cResetp = VN_CAST(finalp, CReset)) {
+                iterateConst(cResetp);
+            }
+        }
+        for (AstVar* varp : varsp) varp->name("__Vconstructor_helper." + varp->name());
         puts("}\n");
-        return preSuperEmitted;
+        return postSuper;
     }
 
     // VISITORS
     using EmitCConstInit::visit;
     void visit(AstCFunc* nodep) override {
         if (nodep->emptyBody() && !nodep->isLoose()) return;
-        VL_RESTORER(m_isDirectlyInConstructor);
         VL_RESTORER(m_cfuncp);
         VL_RESTORER(m_useSelfForThis);
         VL_RESTORER(m_instantiatesOwnProcess);
@@ -372,7 +390,7 @@ public:
 
         m_labelNumbers.clear();  // No need to save/restore, all Jumps must be within the function
 
-        const bool preSuperEmitted
+        const bool partOfBodyEmitted
             = nodep->constructorHelperHasConstructor() && emitContractorHelperContractor(nodep);
 
         splitSizeInc(nodep);
@@ -384,8 +402,7 @@ public:
         emitCFuncHeader(nodep, m_modp, /* withScope: */ true);
 
         if (nodep->isConstructor()) {
-            m_isDirectlyInConstructor = false;
-            m_isDirectlyInConstructor = true;
+            m_skipVarDecls = true;
             const AstClass* const classp = VN_CAST(nodep->scopep()->modp(), Class);
             if (nodep->isConstructor() && classp && classp->extendsp()) {
                 puts("\n    : ");
@@ -453,7 +470,7 @@ public:
             iterateAndNextConstNull(nodep->initsp());
         }
         AstNode* stmtp = nodep->stmtsp();
-        if (preSuperEmitted) {
+        if (partOfBodyEmitted) {
             for (AstNode* iter = nodep->stmtsp(); iter; iter = iter->nextp()) {
                 if (const AstStmtExpr* const stmtexprp = VN_CAST(iter, StmtExpr)) {
                     if (VN_IS(stmtexprp->exprp(), CNew)) break;
@@ -1488,9 +1505,6 @@ public:
             return;
         } else if (!nodep->selfPointer().isEmpty()) {
             emitDereference(nodep, nodep->selfPointerProtect(m_useSelfForThis));
-        } else if (m_isDirectlyInConstructor && !varp->isClassAttribute() && !varp->isParam()
-                   && !varp->isInput()) {
-            puts("constructor_helper.");
         }
         putns(nodep, nodep->varp()->nameProtect());
     }
@@ -1614,7 +1628,7 @@ public:
         }
     }
     void visit(AstCReset* nodep) override {
-        if (m_isDirectlyInConstructor) return;
+        if (m_skipVarDecls) return;
         AstVar* const varp = nodep->varrefp()->varp();
         emitVarReset(varp, nodep->constructing());
     }

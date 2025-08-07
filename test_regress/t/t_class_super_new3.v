@@ -8,7 +8,6 @@ class Base;
   int j;
   function new(int x);
     j = x;
-    $write("j = %d\nx = %d\n", j, x);
   endfunction
   function int get();
     return j;

@@ -53,7 +53,7 @@ class EmitCHeader final : public EmitCConstInit {
         }
     }
     // Returns whether any Var has been emitted
-    bool emitDesignVarDecls(const AstNode* nodep) {
+    bool emitVarsDecls(const AstNode* nodep, bool designVarsOnly = true) {
         bool first = true;
         std::vector<const AstVar*> varList;
         bool lastAnon = false;  // initial value is not important, but is used
@@ -110,8 +110,8 @@ class EmitCHeader final : public EmitCConstInit {
         // Emit variables in consecutive anon and non-anon batches
         for (; nodep; nodep = nodep->nextp()) {
             if (const AstVar* const varp = VN_CAST(nodep, Var)) {
-                if (varp->isIO() || varp->isSignal() || varp->isClassMember() || varp->isTemp()
-                    || varp->isGenVar()) {
+                if (!designVarsOnly || varp->isIO() || varp->isSignal() || varp->isClassMember()
+                    || varp->isTemp() || varp->isGenVar()) {
                     const bool anon = isAnonOk(varp);
                     if (anon != lastAnon) emitCurrentList();
                     lastAnon = anon;
@@ -600,13 +600,13 @@ class EmitCHeader final : public EmitCConstInit {
                 }
             }
             UASSERT_OBJ(constructorp, modp, "Class has to have a constructor");
-            puts("struct ConstructorHelper {\n");
+            puts("struct __VConstructorHelper {\n");
             bool nonEmpty = false;
-            nonEmpty |= emitDesignVarDecls(constructorp->initsp());
-            nonEmpty |= emitDesignVarDecls(constructorp->stmtsp());
-            nonEmpty |= emitDesignVarDecls(constructorp->finalsp());
+            nonEmpty |= emitVarsDecls(constructorp->initsp(), false);
+            nonEmpty |= emitVarsDecls(constructorp->stmtsp(), false);
+            nonEmpty |= emitVarsDecls(constructorp->finalsp(), false);
             if (nonEmpty) {
-                puts("ConstructorHelper();\n");
+                puts("__VConstructorHelper();\n");
                 constructorp->constructorHelperHasConstructor(true);
             }
             puts("};\n");
@@ -615,7 +615,7 @@ class EmitCHeader final : public EmitCConstInit {
         // Emit all class body contents
         emitCellDecls(modp);
         emitEnums(modp);
-        std::ignore = emitDesignVarDecls(modp->stmtsp());
+        std::ignore = emitVarsDecls(modp->stmtsp());
         emitInternalVarDecls(modp);
         emitParamDecls(modp);
         emitCtorDtorDecls(modp);

@@ -278,11 +278,8 @@ public:
             puts("(");
             puts(prefixNameProt);
             puts("::__VConstructorHelper{}, ");
-            if (constructorNeedsProcess(vbase)) {
-                puts("vlProcess, vlSymsp)");
-            } else {
-                puts("vlSymsp)");
-            }
+            if (constructorNeedsProcess(vbase)) puts("vlProcess, ");
+            puts("vlSymsp)");
         }
         const AstCNew* const superNewCallp = getSuperNewCallRecursep(cfuncp->stmtsp());
         // Direct non-virtual bases in declaration order
@@ -297,11 +294,8 @@ public:
             puts("(");
             puts(prefixNameProt);
             puts("::__VConstructorHelper{}, ");
-            if (constructorNeedsProcess(extp->classp())) {
-                puts("vlProcess, vlSymsp");
-            } else {
-                puts("vlSymsp");
-            }
+            if (constructorNeedsProcess(extp->classp())) puts("vlProcess, ");
+            puts("vlSymsp");
             // Handle super.new() args for the concrete parent
             if (!extp->classp()->isInterfaceClass() && superNewCallp) {
                 putCommaIterateNext(superNewCallp->argsp(), true);
@@ -371,7 +365,7 @@ public:
                 iterateConst(cResetp);
             }
         }
-        for (AstVar* varp : varsp) varp->name("__Vconstructor_helper." + varp->name());
+        for (AstVar* varp : varsp) varp->isInsideConstractionHelper(true);
         puts("}\n");
         return postSuper;
     }

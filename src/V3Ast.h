@@ -2241,7 +2241,7 @@ public:
     virtual uint32_t declTokenNum() const { return 0; }
     virtual void declTokenNumSetMin(uint32_t tokenNum) {}
     virtual string verilogKwd() const { return ""; }
-    string nameProtect() const VL_MT_STABLE;  // Name with --protect-id applied
+    virtual string nameProtect() const VL_MT_STABLE;  // Name with --protect-id applied
     string origNameProtect() const;  // origName with --protect-id applied
     string shortName() const;  // Name with __PVT__ removed for concatenating scopes
     static string dedotName(const string& namein);  // Name with dots removed

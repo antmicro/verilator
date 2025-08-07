@@ -544,14 +544,12 @@ class EmitCHeader final : public EmitCConstInit {
     }
     void emitAll(const AstNodeModule* modp) {
         // Include files required by this AstNodeModule
-        bool isClass = false;
         if (const AstClass* const classp = VN_CAST(modp, Class)) {
             for (const AstClassExtends* extp = classp->extendsp(); extp;
                  extp = VN_AS(extp->nextp(), ClassExtends)) {
                 putns(extp, "#include \"" + prefixNameProtect(extp->classp()->classOrPackagep())
                                 + ".h\"\n");
             }
-            isClass = true;
         }
 
         // Forward declarations required by this AstNodeModule
@@ -589,7 +587,7 @@ class EmitCHeader final : public EmitCConstInit {
         puts(" {\n");
         ofp()->resetPrivate();
         ofp()->putsPrivate(false);  // public:
-        if (isClass) {
+        if (VN_IS(modp, Class)) {
             AstCFunc* constructorp = nullptr;
             for (AstNode* nodep = modp->stmtsp(); nodep; nodep = nodep->nextp()) {
                 if (AstCFunc* const cfuncp = VN_CAST(nodep, CFunc)) {

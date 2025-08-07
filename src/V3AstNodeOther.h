@@ -2014,6 +2014,8 @@ class AstVar final : public AstNode {
     bool m_ignorePostWrite : 1;  // Ignore writes in 'Post' blocks during ordering
     bool m_ignoreSchedWrite : 1;  // Ignore writes in scheduling (for special optimizations)
     bool m_isClassAttribute : 1;  // If it is a class attribute
+    bool m_isInsideConstractionHelper : 1;  // If variable is inside variable helper - relevant
+                                            // only when is local variable inside constractor
 
     void init() {
         m_ansi = false;
@@ -2063,6 +2065,7 @@ class AstVar final : public AstNode {
         m_ignoreSchedWrite = false;
         m_attrClocker = VVarAttrClocker::CLOCKER_UNKNOWN;
         m_isClassAttribute = false;
+        m_isInsideConstractionHelper = false;
     }
 
 public:
@@ -2225,6 +2228,13 @@ public:
     void setIgnoreSchedWrite() { m_ignoreSchedWrite = true; }
     bool isClassAttribute() const { return m_isClassAttribute; }
     void isClassAttribute(bool flag) { m_isClassAttribute = flag; }
+    bool isInsideConstractionHelper() const { return m_isInsideConstractionHelper; }
+    void isInsideConstractionHelper(bool flag) { m_isInsideConstractionHelper = flag; }
+    string nameProtect() const override {
+        string result = AstNode::nameProtect();
+        if (isInsideConstractionHelper()) result = "__Vconstructor_helper." + result;
+        return result;
+    }
 
     // METHODS
     void name(const string& name) override { m_name = name; }

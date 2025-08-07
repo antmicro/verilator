@@ -32,6 +32,14 @@ struct ScSignalTypeExposer;
 template <typename T_ScSignal>
 struct ScSignalTypeExposer<
     T_ScSignal, typename std::enable_if<
+                    std::is_base_of<typename sc_core::sc_port_base, T_ScSignal>::value>::type>
+    final : private T_ScSignal {
+    using Type = typename T_ScSignal::data_type;
+};
+
+template <typename T_ScSignal>
+struct ScSignalTypeExposer<
+    T_ScSignal, typename std::enable_if<
                     std::is_base_of<typename sc_core::sc_signal_channel, T_ScSignal>::value>::type>
     final : private T_ScSignal {
     using Type = typename T_ScSignal::value_type;
@@ -47,6 +55,7 @@ struct make_void final {
 
 template <typename... Ts>
 using void_t = typename make_void<Ts...>::type;
+
 template <typename T>
 struct ScSignalHasLengthSfinae<T, void_t<decltype(int(std::declval<T&>().read().length()))>> final
     : std::true_type {};

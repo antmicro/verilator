@@ -39,6 +39,8 @@ struct ExtModule final : public sc_module {
     sc_signal<sc_bv<3>> SC_NAMED(bv_signal, 2);
     sc_signal<sc_uint<3>> SC_NAMED(uint_signal, 3);
     sc_signal<sc_uint<62>> SC_NAMED(wide_uint_signal, std::pow(2, 62) - 1);
+    sc_in<sc_uint<2>> SC_NAMED(uint_in);
+    sc_out<sc_bv<512>> SC_NAMED(bv_out);
 
     SC_CTOR(ExtModule) { SC_THREAD(tick); }
     void tick() {
@@ -92,6 +94,11 @@ int sc_main(int argc, char* argv[]) {
     std::unique_ptr<VerilatedVcdSc> tfp = std::make_unique<VerilatedVcdSc>();
     ExtModule extModule("extModule");
 
+    sc_signal<decltype(extModule.uint_in)::data_type> SC_NAMED(uint_port, 123);
+    sc_signal<decltype(extModule.bv_out)::data_type> SC_NAMED(bv_port, 321);
+    extModule.uint_in(uint_port);
+    extModule.bv_out(bv_port);
+
     // Add desired signals to trace
     tfp->addTraceVar(extModule.bit_signal);
     tfp->addTraceVar(extModule.bit_signal2);
@@ -105,6 +112,10 @@ int sc_main(int argc, char* argv[]) {
     tfp->addTraceVar(extModule.uint_signal);
     tfp->addTraceVar(extModule.wide_uint_signal);
 
+    // Add desired ports to trace
+    tfp->addTraceVar(extModule.uint_in);
+    tfp->addTraceVar(extModule.bv_out);
+
     // You must do one evaluation before enabling waves, in order to allow
     // SystemC to interconnect everything for testing.
     sc_start(SC_ZERO_TIME);
@@ -115,7 +126,14 @@ int sc_main(int argc, char* argv[]) {
     tfp->open("logs/vlt_dump.vcd");
 
     // Simulate until $finish
-    while (!Verilated::gotFinish()) sc_start(1, sc_time_units);
+    while (!Verilated::gotFinish()) {
+        using UintSigType = decltype(uint_port)::value_type;
+        uint_port = UintSigType(uint_port.read().to_uint() + 1);
+        using BvSigType = decltype(bv_port)::value_type;
+        bv_port = BvSigType(bv_port.read().to_uint64() + 1);
+
+        sc_start(1, sc_time_units);
+    }
 
     // Final model cleanup
     top->final();

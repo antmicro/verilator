@@ -154,7 +154,8 @@ protected:
     bool m_instantiatesOwnProcess = false;
     const AstClassPackage* m_classOrPackage = nullptr;  // Pointer to current class or package
     string m_classOrPackageHash;  // Hash of class or package name
-    bool m_isDirectlyInConstructor = false;
+    bool m_isDirectlyInConstructor = false;  // If is directly in contractor
+    bool m_skipVarDecls = false;  // If true Vars won't be declared
 
     bool constructorNeedsProcess(const AstClass* const classp) {
         const AstNode* const newp = m_memberMap.findMember(classp, "new");
@@ -264,7 +265,7 @@ public:
         if (const AstCNew* const cnewp = getSuperNewCallRecursep(nodep->nextp())) return cnewp;
         return nullptr;
     }
-    bool putConstructorSubinit(const AstClass* classp, AstCFunc* cfuncp) {
+    void putConstructorSubinit(const AstClass* classp, AstCFunc* cfuncp) {
         // Virtual bases in depth-first left-to-right order
         std::vector<AstClass*> virtualBases;
         std::unordered_set<AstClass*> doneClasses;
@@ -285,7 +286,6 @@ public:
             }
         }
         const AstCNew* const superNewCallp = getSuperNewCallRecursep(cfuncp->stmtsp());
-        bool someStmtsEmitted = false;
         // Direct non-virtual bases in declaration order
         for (const AstClassExtends* extp = classp->extendsp(); extp;
              extp = VN_AS(extp->nextp(), ClassExtends)) {
@@ -295,35 +295,9 @@ public:
             doneClasses.emplace(extp->classp());
             string prefixNameProt = prefixNameProtect(extp->classp());
             puts(prefixNameProt);
-            size_t stmtsCount = 0;
-            bool hasSuperNew = false;
-            bool isNonCommentBeforeSuper = false;
-            for (AstNode* nodep = cfuncp->stmtsp(); nodep; nodep = nodep->nextp()) {
-                if (const AstStmtExpr* const stmtexprp = VN_CAST(nodep, StmtExpr)) {
-                    if (VN_IS(stmtexprp->exprp(), CNew)) {
-                        hasSuperNew = true;
-                        break;
-                    }
-                }
-                if (!VN_IS(nodep, Comment)) isNonCommentBeforeSuper = true;
-                ++stmtsCount;
-            }
-            if (hasSuperNew && isNonCommentBeforeSuper && stmtsCount) {
-                someStmtsEmitted = true;
-                puts("(([&]() {\n");
-                putsDecoration(cfuncp, "// Pre-super body\n");
-                for (AstNode* nodep = cfuncp->stmtsp(); stmtsCount;
-                     nodep = nodep->nextp(), --stmtsCount) {
-                    iterateConst(nodep);
-                }
-                puts("}(), typename ");
-                puts(prefixNameProt);
-                puts("::ConstructorHelper{}), ");
-            } else {
-                puts("(typename ");
-                puts(prefixNameProt);
-                puts("::ConstructorHelper{}, ");
-            }
+            puts("(typename ");
+            puts(prefixNameProt);
+            puts("::ConstructorHelper{}, ");
             if (constructorNeedsProcess(extp->classp())) {
                 puts("vlProcess, vlSymsp");
             } else {
@@ -335,7 +309,6 @@ public:
             }
             puts(")");
         }
-        return someStmtsEmitted;
     }
     void collectVirtualBasesRecursep(const AstClass* classp,
                                      std::vector<AstClass*>& virtualBases) {
@@ -354,35 +327,49 @@ public:
         }
     }
 
+    void emitContractorHelperContractor(AstCFunc* nodep) {
+        m_skipVarDecls = true;
+        puts("\n");
+        putns(nodep, prefixNameProtect(m_modp) + "::");
+        puts("ConstructorHelper::ConstructorHelper() {\n");
+        size_t stmtsCount = 0;
+        bool hasSuperNew = false;
+        bool isNonCommentBeforeSuper = false;
+        for (AstNode* iter = nodep->stmtsp(); iter; iter = iter->nextp()) {
+            if (const AstStmtExpr* const stmtexprp = VN_CAST(iter, StmtExpr)) {
+                if (VN_IS(stmtexprp->exprp(), CNew)) {
+                    hasSuperNew = true;
+                    break;
+                }
+            }
+            if (!VN_IS(iter, Comment)) isNonCommentBeforeSuper = true;
+            ++stmtsCount;
+        }
+        if (hasSuperNew && isNonCommentBeforeSuper && stmtsCount) {
+            putsDecoration(nodep, "// Pre-super body\n");
+            for (AstNode* iter = nodep->stmtsp(); stmtsCount; iter = iter->nextp(), --stmtsCount) {
+                iterateConst(iter);
+            }
+        }
+        puts("}\n");
+    }
+
     // VISITORS
     using EmitCConstInit::visit;
     void visit(AstCFunc* nodep) override {
         if (nodep->emptyBody() && !nodep->isLoose()) return;
         VL_RESTORER(m_isDirectlyInConstructor);
-        m_isDirectlyInConstructor = false;
-
-        if (nodep->constructorHelperHasConstructor()) {
-            puts("\n");
-            putns(nodep, prefixNameProtect(m_modp) + "::");
-            puts("ConstructorHelper::ConstructorHelper() {\n");
-            auto visitCRest = [this](AstNode* nodep) {
-                for (; nodep; nodep = nodep->nextp()) {
-                    if (AstCReset* cresetp = VN_CAST(nodep, CReset)) visit(cresetp);
-                }
-            };
-            visitCRest(nodep->initsp());
-            visitCRest(nodep->stmtsp());
-            visitCRest(nodep->finalsp());
-            puts("}\n");
-        }
-
-        VL_RESTORER(m_useSelfForThis);
         VL_RESTORER(m_cfuncp);
+        VL_RESTORER(m_useSelfForThis);
         VL_RESTORER(m_instantiatesOwnProcess);
         VL_RESTORER(m_createdScopeHash);
+        VL_RESTORER(m_skipVarDecls);
         m_cfuncp = nodep;
         m_instantiatesOwnProcess = false;
+
         m_labelNumbers.clear();  // No need to save/restore, all Jumps must be within the function
+
+        if (nodep->constructorHelperHasConstructor()) emitContractorHelperContractor(nodep);
 
         splitSizeInc(nodep);
 
@@ -392,13 +379,13 @@ public:
         if (nodep->isInline()) putns(nodep, "VL_INLINE_OPT ");
         emitCFuncHeader(nodep, m_modp, /* withScope: */ true);
 
-        bool someStmtsEmitted = false;
         if (nodep->isConstructor()) {
+            m_isDirectlyInConstructor = false;
             m_isDirectlyInConstructor = true;
             const AstClass* const classp = VN_CAST(nodep->scopep()->modp(), Class);
             if (nodep->isConstructor() && classp && classp->extendsp()) {
                 puts("\n    : ");
-                someStmtsEmitted = putConstructorSubinit(classp, nodep);
+                putConstructorSubinit(classp, nodep);
             }
         }
         puts(" {\n");
@@ -462,7 +449,7 @@ public:
             iterateAndNextConstNull(nodep->initsp());
         }
         AstNode* stmtp = nodep->stmtsp();
-        if (someStmtsEmitted) {
+        if (nodep->constructorHelperHasConstructor()) {
             for (AstNode* iter = nodep->stmtsp(); iter; iter = iter->nextp()) {
                 if (const AstStmtExpr* const stmtexprp = VN_CAST(iter, StmtExpr)) {
                     if (VN_IS(stmtexprp->exprp(), CNew)) break;
@@ -488,7 +475,7 @@ public:
 
     void visit(AstVar* nodep) override {
         UASSERT_OBJ(m_cfuncp, nodep, "Cannot emit non-local variable");
-        if (m_isDirectlyInConstructor) return;
+        if (m_skipVarDecls) return;
         emitVarDecl(nodep);
     }
 

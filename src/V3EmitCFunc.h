@@ -320,7 +320,7 @@ public:
         }
     }
 
-    bool emitContractorHelperContractor(AstCFunc* nodep) {
+    bool emitConstructorHelperConstructor(AstCFunc* nodep) {
         puts("\n");
         putns(nodep, prefixNameProtect(m_modp) + "::");
         puts("__VConstructorHelper::__VConstructorHelper() {\n");
@@ -385,7 +385,7 @@ public:
         m_labelNumbers.clear();  // No need to save/restore, all Jumps must be within the function
 
         const bool partOfBodyEmitted
-            = nodep->constructorHelperHasConstructor() && emitContractorHelperContractor(nodep);
+            = nodep->constructorHelperHasConstructor() && emitConstructorHelperConstructor(nodep);
 
         splitSizeInc(nodep);
 

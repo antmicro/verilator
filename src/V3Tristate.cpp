@@ -1365,41 +1365,45 @@ class TristateVisitor final : public TristateBaseVisitor {
     void visit(AstAssignAlias* nodep) override {
         AstNode* const lhsp = nodep->lhsp();
         AstNode* const rhsp = nodep->rhsp();
-        
+
         // wire [31:0] a_prime;
-        AstVar* const lhspTmpVarp = new AstVar{lhsp->fileline(), VVarType::MODULETEMP, "lhs_prime", lhsp->dtypep()};
+        AstVar* const lhspTmpVarp
+            = new AstVar{lhsp->fileline(), VVarType::MODULETEMP, "lhs_prime", lhsp->dtypep()};
 
         // wire [31:0] b_prime;
-        AstVar* const rhspTmpVarp = new AstVar{rhsp->fileline(), VVarType::MODULETEMP, "rhs_prime", rhsp->dtypep()};
+        AstVar* const rhspTmpVarp
+            = new AstVar{rhsp->fileline(), VVarType::MODULETEMP, "rhs_prime", rhsp->dtypep()};
 
         nodep->addHereThisAsNext(lhspTmpVarp);
         nodep->addHereThisAsNext(rhspTmpVarp);
 
         // assign b_prime = {a[7:0],a[15:8],a[23:16],a[31:24]};
         AstAssignW* const assignTmpWp = new AstAssignW{
-            nodep->fileline(),
-            new AstVarRef{rhsp->fileline(), rhspTmpVarp, VAccess::WRITE},
+            nodep->fileline(), new AstVarRef{rhsp->fileline(), rhspTmpVarp, VAccess::WRITE},
             nodep->lhsp()};
-        
+
         nodep->addHereThisAsNext(assignTmpWp);
 
         // assign {a_prime[7:0],a_prime[15:8],a_prime[23:16],a_prime[31:24]} = b;
         AstAssignW* const assignTmpWp2 = new AstAssignW{
-            nodep->fileline(),
-            new AstVarRef{lhsp->fileline(), lhspTmpVarp, VAccess::WRITE},
+            nodep->fileline(), new AstVarRef{lhsp->fileline(), lhspTmpVarp, VAccess::WRITE},
             nodep->rhsp()};
-        
+
         nodep->addHereThisAsNext(assignTmpWp2);
 
         // assign b = b_prime;
-        AstVarRef* const rhspTmpVarRefp = new AstVarRef{rhsp->fileline(), rhspTmpVarp, VAccess::READ};
-        AstAssignW* const assignrhspWp = new AstAssignW{rhsp->fileline(), nodep->rhsp(), rhspTmpVarRefp};
+        AstVarRef* const rhspTmpVarRefp
+            = new AstVarRef{rhsp->fileline(), rhspTmpVarp, VAccess::READ};
+        AstAssignW* const assignrhspWp
+            = new AstAssignW{rhsp->fileline(), nodep->rhsp(), rhspTmpVarRefp};
 
         nodep->addHereThisAsNext(assignrhspWp);
 
         // assign a = a_prime;
-        AstVarRef* const lhspTmpVarRefp = new AstVarRef{lhsp->fileline(), lhspTmpVarp, VAccess::READ};
-        AstAssignW* const assignlhspWp = new AstAssignW{lhsp->fileline(), nodep->lhsp(), lhspTmpVarRefp};
+        AstVarRef* const lhspTmpVarRefp
+            = new AstVarRef{lhsp->fileline(), lhspTmpVarp, VAccess::READ};
+        AstAssignW* const assignlhspWp
+            = new AstAssignW{lhsp->fileline(), nodep->lhsp(), lhspTmpVarRefp};
 
         visitAssign(assignlhspWp);
         nodep->replaceWith(assignlhspWp);
@@ -1408,14 +1412,13 @@ class TristateVisitor final : public TristateBaseVisitor {
         assignlhspWp->abovep()->dumpTree();
         printf("\n");
 
-        // std::cout << "lhsp dtypep: " << lhsp->dtypep() << ", rhsp dtypep: " << rhsp->dtypep() << std::endl;
-        // if (lhsp->dtypep() != rhsp->dtypep()) {
+        // std::cout << "lhsp dtypep: " << lhsp->dtypep() << ", rhsp dtypep: " << rhsp->dtypep() <<
+        // std::endl; if (lhsp->dtypep() != rhsp->dtypep()) {
         //    nodep->v3warn(E_UNSUPPORTED, "Unsupported: Assign alias with different data types: "
         //                             << lhsp->prettyTypeName() << " vs. "
         //                             << rhsp->prettyTypeName());
         //    return;
         // }
-
     }
 
     void visitCaseEq(AstNodeBiop* nodep, bool neq) {

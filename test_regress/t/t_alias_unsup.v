@@ -29,7 +29,7 @@ module t (/*AUTOARG*/
       $write ("x_bwd = %x, y_bwd = %x\n", x_bwd, y_bwd);
 `endif
       if (y_fwd != 32'hefbeadde) $stop;
-      if (x_bwd == 32'hcefaedfe) $stop;
+      if (x_bwd != 32'hcefaedfe) $stop;
       $write("*-* All Finished *-*\n");
       $finish;
    end

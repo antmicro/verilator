@@ -4,7 +4,8 @@
 // any use, without warranty, 2025 by Antmicro.
 // SPDX-License-Identifier: CC0-1.0
 
-`define checkh(gotv,expv) do if ((gotv) !== (expv)) begin $write("%%Error: %s:%0d:  got='h%x exp='h%x\n", `__FILE__,`__LINE__, (gotv), (expv)); end while(0)
+`define stop $stop
+`define checkh(gotv,expv) do if ((gotv) !== (expv)) begin $write("%%Error: %s:%0d:  got='h%x exp='h%x\n", `__FILE__,`__LINE__, (gotv), (expv)); `stop; end while(0)
 
 module t;
   reg [1:0] a;
@@ -23,7 +24,6 @@ module t;
     #1;
     `checkh(a, 1);
     `checkh(b, 1);
-    // TODO implement inter-dependency resolution between force statements
     `checkh(c, 1);
 
     a = 2;
@@ -39,11 +39,11 @@ module t;
     `checkh(b, 3);
     `checkh(c, 3);
 
-    release b;
+    release b; // b should immediately get value 1 after release, because c is forced to b, c should also be 1
     release c;
     `checkh(a, 3);
     `checkh(b, 1);
-    `checkh(c, 3);
+    `checkh(c, 1);
 
     #1 $finish;
   end

@@ -6,27 +6,26 @@
 
 class Base;
   int j;
-  function new(int x);
-    j = x;
+  function new(int x, int y);
+    j = x + y;
   endfunction
   function int get();
     return j;
   endfunction
 endclass
 class Derived extends Base;
-  function new;
+  function new(int y);
     int x = 1;
-    super.new(x);
+    int z = y;
+    super.new(x, z);
   endfunction
 endclass
 
 module t;
   initial begin
-    Derived d = new;
-    if (d.get() != 1) $stop;
-    else begin
-      $write("*-* All Finished *-*\n");
-      $finish;
-    end
+    Derived d = new(7);
+    if (d.get() != 8) $stop;
+    $write("*-* All Finished *-*\n");
+    $finish;
   end
 endmodule

@@ -141,7 +141,7 @@ public:
     static string funcNameProtect(const AstCFunc* nodep, const AstNodeModule* modp = nullptr);
     static AstCFile* newCFile(const string& filename, bool slow, bool source);
     static AstCFile* createCFile(const string& filename, bool slow, bool source) VL_MT_SAFE;
-    string cFuncArgs(const AstCFunc* nodep);
+    string cFuncArgs(const AstCFunc* nodep, const string& suffix = "");
     void emitCFuncHeader(const AstCFunc* funcp, const AstNodeModule* modp, bool withScope);
     void emitCFuncDecl(const AstCFunc* funcp, const AstNodeModule* modp, bool cLinkage = false);
     void emitVarDecl(const AstVar* nodep, bool asRef = false);

@@ -107,21 +107,24 @@ AstCFile* EmitCBaseVisitorConst::createCFile(const string& filename, bool slow,
     return cfilep;
 }
 
-string EmitCBaseVisitorConst::cFuncArgs(const AstCFunc* nodep) {
+string EmitCBaseVisitorConst::cFuncArgs(const AstCFunc* nodep, const string& suffix) {
     // Return argument list for given C function
     string args;
     if (nodep->isLoose() && !nodep->isStatic()) {
         if (nodep->isConst().trueKnown()) args += "const ";
         args += prefixNameProtect(EmitCParentModule::get(nodep));
         args += "* vlSelf";
+        args += suffix;
     }
     if (nodep->needProcess()) {
         if (!args.empty()) args += ", ";
         args += "VlProcessRef vlProcess";
+        args += suffix;
     }
     if (!nodep->argTypes().empty()) {
         if (!args.empty()) args += ", ";
         args += nodep->argTypes();
+        args += suffix;
     }
     // Might be a user function with argument list.
     for (const AstNode* stmtp = nodep->argsp(); stmtp; stmtp = stmtp->nextp()) {
@@ -130,10 +133,13 @@ string EmitCBaseVisitorConst::cFuncArgs(const AstCFunc* nodep) {
                 if (args != "") args += ", ";
                 if (nodep->dpiImportPrototype() || nodep->dpiExportDispatcher()) {
                     args += portp->dpiArgType(true, false);
+                    args += suffix;
                 } else if (nodep->funcPublic()) {
                     args += portp->cPubArgType(true, false);
+                    args += suffix;
                 } else {
                     args += portp->vlArgType(true, false, true);
+                    args += suffix;
                 }
             }
         }
@@ -157,12 +163,11 @@ void EmitCBaseVisitorConst::emitCFuncHeader(const AstCFunc* funcp, const AstNode
     }
     putns(funcp, funcNameProtect(funcp, modp));
     puts("(");
-    string args = cFuncArgs(funcp);
     if (funcp->isConstructor()) {
         puts("__VConstructorHelper&& __Vconstructor_helper");
-        if (!args.empty()) puts(", ");
+    } else {
+        puts(cFuncArgs(funcp));
     }
-    puts(args);
     puts(")");
     if (funcp->isConst().trueKnown() && funcp->isProperMethod()) puts(" const");
 }

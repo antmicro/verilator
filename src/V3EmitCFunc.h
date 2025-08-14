@@ -277,9 +277,9 @@ public:
             puts(prefixNameProt);
             puts("(");
             puts(prefixNameProt);
-            puts("::__VConstructorHelper{}, ");
-            if (constructorNeedsProcess(vbase)) puts("vlProcess, ");
-            puts("vlSymsp)");
+            puts("::__VConstructorHelper{");
+            if (constructorNeedsProcess(vbase)) puts("__Vconstructor_helper.vlProcess, ");
+            puts("__Vconstructor_helper.vlSymsp})");
         }
         const AstCNew* const superNewCallp = getSuperNewCallRecursep(cfuncp->stmtsp());
         // Direct non-virtual bases in declaration order
@@ -293,14 +293,14 @@ public:
             puts(prefixNameProt);
             puts("(");
             puts(prefixNameProt);
-            puts("::__VConstructorHelper{}, ");
-            if (constructorNeedsProcess(extp->classp())) puts("vlProcess, ");
-            puts("vlSymsp");
+            puts("::__VConstructorHelper{");
+            if (constructorNeedsProcess(extp->classp())) puts("__Vconstructor_helper.vlProcess, ");
+            puts("__Vconstructor_helper.vlSymsp");
             // Handle super.new() args for the concrete parent
             if (!extp->classp()->isInterfaceClass() && superNewCallp) {
                 putCommaIterateNext(superNewCallp->argsp(), true);
             }
-            puts(")");
+            puts("})");
         }
     }
     void collectVirtualBasesRecursep(const AstClass* classp,
@@ -323,9 +323,23 @@ public:
     bool emitConstructorHelperConstructor(AstCFunc* nodep) {
         puts("\n");
         putns(nodep, prefixNameProtect(m_modp) + "::");
-        puts("__VConstructorHelper::__VConstructorHelper() {\n");
+        puts("__VConstructorHelper::__VConstructorHelper(");
+        puts(cFuncArgs(nodep, "_"));
+        puts(") {\n");
 
         std::vector<AstVar*> varsp;
+        puts("vlSymsp = vlSymsp_;\n");
+        if (nodep->needProcess()) puts("vlProcess = vlProcess_;\n");
+        for (AstNode* argp = nodep->argsp(); argp; argp = argp->nextp()) {
+            if (AstVar* const varp = VN_CAST(argp, Var)) {
+                const string varpName = varp->nameProtect();
+                puts(varpName);
+                puts(" = ");
+                puts(varpName);
+                puts("_;\n");
+                varsp.push_back(varp);
+            }
+        }
         for (AstNode* initp = nodep->initsp(); initp; initp = initp->nextp()) {
             if (AstVar* const varp = VN_CAST(initp, Var)) {
                 varsp.push_back(varp);
@@ -402,8 +416,15 @@ public:
                 puts("\n    : ");
                 putConstructorSubinit(classp, nodep);
             }
+            puts(" {\n");
+            puts(symClassName());
+            puts("* __restrict vlSymsp = __Vconstructor_helper.vlSymsp;\n");
+            if (nodep->needProcess()) {
+                puts("VlProcessRef vlProcess = __Vconstructor_helper.vlProcess;\n");
+            }
+        } else {
+            puts(" {\n");
         }
-        puts(" {\n");
 
         // "+" in the debug indicates a print from the model
         puts("VL_DEBUG_IF(VL_DBG_MSGF(\"+  ");

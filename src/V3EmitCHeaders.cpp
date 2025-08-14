@@ -53,7 +53,7 @@ class EmitCHeader final : public EmitCConstInit {
         }
     }
     // Returns whether any Var has been emitted
-    bool emitVarsDecls(const AstNode* nodep, bool designVarsOnly = true) {
+    void emitVarsDecls(const AstNode* nodep, bool designVarsOnly = true) {
         bool first = true;
         std::vector<const AstVar*> varList;
         bool lastAnon = false;  // initial value is not important, but is used
@@ -122,7 +122,6 @@ class EmitCHeader final : public EmitCConstInit {
 
         // Emit final batch
         emitCurrentList();
-        return !first;
     }
     void emitInternalVarDecls(const AstNodeModule* modp) {
         if (const AstClass* const classp = VN_CAST(modp, Class)) {
@@ -599,21 +598,24 @@ class EmitCHeader final : public EmitCConstInit {
             }
             UASSERT_OBJ(constructorp, modp, "Class has to have a constructor");
             puts("struct __VConstructorHelper {\n");
-            bool nonEmpty = false;
-            nonEmpty |= emitVarsDecls(constructorp->initsp(), false);
-            nonEmpty |= emitVarsDecls(constructorp->stmtsp(), false);
-            nonEmpty |= emitVarsDecls(constructorp->finalsp(), false);
-            if (nonEmpty) {
-                puts("__VConstructorHelper();\n");
-                constructorp->constructorHelperHasConstructor(true);
-            }
+            puts(symClassName());
+            puts(" *__restrict vlSymsp;\n");
+            if (constructorp->needProcess()) puts("VlProcessRef vlProcess;\n");
+            emitVarsDecls(constructorp->argsp(), false);
+            emitVarsDecls(constructorp->initsp(), false);
+            emitVarsDecls(constructorp->stmtsp(), false);
+            emitVarsDecls(constructorp->finalsp(), false);
+            puts("\n__VConstructorHelper(");
+            puts(cFuncArgs(constructorp));
+            puts(");\n");
+            constructorp->constructorHelperHasConstructor(true);
             puts("};\n");
         }
 
         // Emit all class body contents
         emitCellDecls(modp);
         emitEnums(modp);
-        std::ignore = emitVarsDecls(modp->stmtsp());
+        emitVarsDecls(modp->stmtsp());
         emitInternalVarDecls(modp);
         emitParamDecls(modp);
         emitCtorDtorDecls(modp);

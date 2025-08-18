@@ -1392,21 +1392,18 @@ class TristateVisitor final : public TristateBaseVisitor {
         nodep->addHereThisAsNext(assignTmpWp2);
 
         // assign b = b_prime;
-        AstVarRef* const rhspTmpVarRefp = new AstVarRef{rhsp->fileline(), rhspTmpVarp, VAccess::READ};
-        AstAssignW* const assignrhspWp = new AstAssignW{rhsp->fileline(), nodep->rhsp(), rhspTmpVarRefp};
-
-        nodep->addHereThisAsNext(assignrhspWp);
-
-        // assign a = a_prime;
+        // AstVarRef* const rhspTmpVarRefp = new AstVarRef{rhsp->fileline(), rhspTmpVarp, VAccess::READ};
+        // AstAssignW* const assignrhspWp = new AstAssignW{rhsp->fileline(), temp, rhspTmpVarRefp};
+        
+        // nodep->addHereThisAsNext(assignrhspWp);
+        
+        // // assign a = a_prime;
         AstVarRef* const lhspTmpVarRefp = new AstVarRef{lhsp->fileline(), lhspTmpVarp, VAccess::READ};
-        AstAssignW* const assignlhspWp = new AstAssignW{lhsp->fileline(), nodep->lhsp(), lhspTmpVarRefp};
+        AstNodeExpr* const temp = nodep->lhsp()->cloneTreePure(false);
+        AstAssignW* const assignlhspWp = new AstAssignW{lhsp->fileline(), temp, lhspTmpVarRefp};
 
-        visitAssign(assignlhspWp);
+        // visitAssign(assignlhspWp);
         nodep->replaceWith(assignlhspWp);
-
-        printf("\n");
-        assignlhspWp->abovep()->dumpTree();
-        printf("\n");
 
         // std::cout << "lhsp dtypep: " << lhsp->dtypep() << ", rhsp dtypep: " << rhsp->dtypep() << std::endl;
         // if (lhsp->dtypep() != rhsp->dtypep()) {

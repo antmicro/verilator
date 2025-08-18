@@ -1365,6 +1365,14 @@ class TristateVisitor final : public TristateBaseVisitor {
     void visit(AstAssignAlias* nodep) override {
         AstNode* const lhsp = nodep->lhsp();
         AstNode* const rhsp = nodep->rhsp();
+
+        std::cout << "lhsp dtypep: " << lhsp->dtypep() << ", rhsp dtypep: " << rhsp->dtypep() << std::endl;
+        if (lhsp->dtypep() != rhsp->dtypep()) {
+           nodep->v3warn(E_UNSUPPORTED, "Unsupported: Assign alias with different data types: "
+                                    << lhsp->prettyTypeName() << " vs. "
+                                    << rhsp->prettyTypeName());
+           return;
+        }
         
         // wire [31:0] a_prime;
         AstVar* const lhspTmpVarp = new AstVar{lhsp->fileline(), VVarType::MODULETEMP, "lhs_prime", lhsp->dtypep()};
@@ -1405,15 +1413,6 @@ class TristateVisitor final : public TristateBaseVisitor {
         AstAssignW* const assignlhspWp = new AstAssignW{lhsp->fileline(), lhspRef, lhspTmpVarRefp};
 
         nodep->replaceWith(assignlhspWp);
-
-        // std::cout << "lhsp dtypep: " << lhsp->dtypep() << ", rhsp dtypep: " << rhsp->dtypep() << std::endl;
-        // if (lhsp->dtypep() != rhsp->dtypep()) {
-        //    nodep->v3warn(E_UNSUPPORTED, "Unsupported: Assign alias with different data types: "
-        //                             << lhsp->prettyTypeName() << " vs. "
-        //                             << rhsp->prettyTypeName());
-        //    return;
-        // }
-
     }
 
     void visitCaseEq(AstNodeBiop* nodep, bool neq) {

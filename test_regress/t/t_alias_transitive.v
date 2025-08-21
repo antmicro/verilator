@@ -1,6 +1,6 @@
 // DESCRIPTION: Verilator: Verilog Test module for SystemVerilog 'alias'
 //
-// Simple bi-directional alias test.
+// Simple bi-directional transitive alias test.
 //
 // This file ONLY is placed under the Creative Commons Public Domain, for
 // any use, without warranty, 2013 by Jeremy Bennett.

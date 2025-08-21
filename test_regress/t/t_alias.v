@@ -12,47 +12,31 @@ module t (/*AUTOARG*/
    );
    input clk;
 
-   // Values to swap and locations for the swapped values.
-   wire [31:0] x_fwd = 32'hdeadbeef;
-   wire [31:0] y_fwd;
-   wire [31:0] x_bwd;
-   wire [31:0] y_bwd = 32'hfeedface;
+   wire [31:0] a = 32'hdeadbeef;
+   wire [31:0] b;
+   wire [31:0] c;
 
-   swap swap_fwd_i (.a (x_fwd),
-                    .b (y_fwd));
-   swap swap_bwd_i (.a (x_bwd),
-                    .b (y_bwd));
+   transfer transfer_i (.a (a),
+                        .b (b),
+                        .c (c));
 
    always @ (posedge clk) begin
 `ifdef TEST_VERBOSE
-      $write ("x_fwd = %x, y_fwd = %x\n", x_fwd, y_fwd);
-      $write ("x_bwd = %x, y_bwd = %x\n", x_bwd, y_bwd);
+      $write ("a = %x, b = %x, c = %x\n", a, b, c);
 `endif
-      if (y_fwd != 32'hefbeadde) $stop;
-      if (x_bwd != 32'hcefaedfe) $stop;
+      if (c != 32'hdeadbeef) $stop;
       $write("*-* All Finished *-*\n");
       $finish;
    end
 
 endmodule
 
+module transfer (
+   inout wire [31:0] a,
+   inout wire [31:0] b,
+   inout wire [31:0] c
+   );
 
-// Swap the byte order of two args.
-module swap (
-             inout wire [31:0] a,
-             inout wire [31:0] b
-             );
-
-   alias {a[7:0],a[15:8],a[23:16],a[31:24]} = b;
-
-   // Equivalent to
-
-   // wire [31:0] a_prime;
-   // wire [31:0] b_prime;
-
-   // assign b_prime = {a[7:0],a[15:8],a[23:16],a[31:24]};
-   // assign {a_prime[7:0],a_prime[15:8],a_prime[23:16],a_prime[31:24]} = b;
-   // assign b = b_prime;
-   // assign a = a_prime;
+   alias a = b = c;
 
 endmodule

@@ -2818,7 +2818,7 @@ continuous_assign<nodep>:       // IEEE: continuous_assign
         ;
 
 net_alias<nodep>:               // IEEE: net_alias
-                yALIAS variable_lvalue aliasEqList ';' { $$ = new AstAssignAlias{$1, $2, $3}; }
+                yALIAS variable_lvalue aliasEqList ';' { $$ = new AstAlias{$1, $2, VN_AS($3, NodeExpr)}; }
         ;
 
 initial_construct<nodep>:       // IEEE: initial_construct
@@ -2849,7 +2849,7 @@ defaultDisable<nodep>:  // IEEE: part of module_/checker_or_generate_item_declar
 
 aliasEqList<nodep>:                    // IEEE: part of net_alias
                 '=' variable_lvalue                     { $$ = $2; }
-        |       aliasEqList '=' variable_lvalue         { $$ = $1->addNext(new AstAssignAlias{$2, $1, $3}); }
+        |       aliasEqList '=' variable_lvalue         { $$ = $1->addNext($3); }
         ;
 
 bind_directive<nodep>:          // ==IEEE: bind_directive + bind_target_scope

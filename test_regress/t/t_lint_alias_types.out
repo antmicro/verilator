@@ -1,0 +1,5 @@
+%Error: Internal Error: t/t_lint_alias_types.v:18:4: ../V3Width.cpp:#: Incompatible types of nets used in alias
+                                                   : ... note: In instance 't'
+   18 |    alias a = b;
+      |    ^~~~~
+                        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.

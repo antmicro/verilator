@@ -1185,12 +1185,12 @@ class WidthVisitor final : public VNVisitor {
         }
 
         AstNodeExpr* lhs = nodep->lhs();
-        int lhs_width = lhs->width();
+        AstNodeDType* lhs_type = lhs->dtypep();
         AstNodeExpr* next_item = nodep->itemsp();
         while (next_item) {
-            int item_width = next_item->width();
-            if (lhs_width != item_width) {
-                nodep->v3fatalSrc("Incompatible widths of wires used in alias");
+            AstNodeDType* item_type = next_item->dtypep(); 
+            if (!lhs_type->similarDType(item_type)) {
+                nodep->v3fatalSrc("Incompatible types of nets used in alias");
             }
             next_item = VN_AS(next_item->nextp(), NodeExpr);
         }

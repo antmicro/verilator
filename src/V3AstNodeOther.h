@@ -456,6 +456,18 @@ public:
     inline bool hasClocked() const;
     inline bool hasCombo() const;
 };
+class AstAlias final : public AstNode {
+    // @astgen op1 := lhs : AstNodeExpr // Logic
+    // @astgen op2 := itemsp : List[AstNodeExpr] // Logic
+public:
+    AstAlias(FileLine* fl, AstNodeExpr* lhs, AstNodeExpr* itemsp)
+        : ASTGEN_SUPER_Alias(fl) {
+        this->lhs(lhs);
+        addItemsp(itemsp);
+    }
+
+    ASTGEN_MEMBERS_AstAlias;
+};
 class AstBind final : public AstNode {
     // Parents: MODULE
     // Children: CELL

@@ -1168,6 +1168,24 @@ class WidthVisitor final : public VNVisitor {
         }
     }
 
+    void visit(AstAlias* nodep) override {
+        if (!nodep->didWidthAndSet()) {
+            userIterateAndNext(nodep->lhs(), WidthVP{SELF, BOTH}.p());
+            userIterateAndNext(nodep->itemsp(), WidthVP{SELF, BOTH}.p());
+        }
+
+        AstNodeExpr* lhs = nodep->lhs();
+        int lhs_width = lhs->width();
+        AstNodeExpr* next_item = nodep->itemsp();
+        while (next_item) {
+            int item_width = next_item->width();
+            if (lhs_width != item_width) {
+                nodep->v3fatalSrc("Incompatible widths of wires used in alias");
+            }
+            next_item = VN_AS(next_item->nextp(), NodeExpr);
+        }
+    }
+
     void visit(AstWildcardSel* nodep) override {
         // Signed/Real: Output type based on array-declared type; binary operator
         if (m_vup->prelim()) {

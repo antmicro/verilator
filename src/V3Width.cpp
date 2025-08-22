@@ -1176,27 +1176,23 @@ class WidthVisitor final : public VNVisitor {
 
     void visit(AstAlias* nodep) override {
         if (!nodep->didWidthAndSet()) {
-            userIterateAndNext(nodep->lhs(), WidthVP{SELF, BOTH}.p());
             userIterateAndNext(nodep->itemsp(), WidthVP{SELF, BOTH}.p());
         }
 
-        auto callback = [this] (AstNode* node) {
+        auto netTypeCheckingCallback = [this] (AstNode* node) {
             checkIfAliasElementIsNet(node);
         };
 
-        AstNodeExpr* lhs = nodep->lhs();
-        lhs->foreach(callback);
-
-        AstNodeDType* lhs_type = lhs->dtypep();
+        AstNodeDType* previous_type = nullptr;
         AstNodeExpr* next_item = nodep->itemsp();
         while (next_item) {
             AstNodeDType* item_type = next_item->dtypep(); 
-            if (!lhs_type->similarDType(item_type)) {
+            if (previous_type && !previous_type->similarDType(item_type)) {
                 nodep->v3fatalSrc("Incompatible types of nets used for net alias");
             }
+            next_item->foreach(netTypeCheckingCallback);
 
-            next_item->foreach(callback);
-
+            previous_type = item_type;
             next_item = VN_AS(next_item->nextp(), NodeExpr);
         }
     }

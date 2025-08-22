@@ -592,13 +592,11 @@ public:
     inline bool hasCombo() const;
 };
 class AstAlias final : public AstNode {
-    // @astgen op1 := lhs : AstNodeExpr // Logic
-    // @astgen op2 := itemsp : List[AstNodeExpr] // Logic
+    // @astgen op1 := itemsp : List[AstNodeExpr] // Logic
 public:
-    AstAlias(FileLine* fl, AstNodeExpr* lhs, AstNodeExpr* itemsp)
+    AstAlias(FileLine* fl, AstNodeExpr* items)
         : ASTGEN_SUPER_Alias(fl) {
-        this->lhs(lhs);
-        addItemsp(itemsp);
+        addItemsp(items);
     }
 
     ASTGEN_MEMBERS_AstAlias;

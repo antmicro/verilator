@@ -2858,7 +2858,7 @@ continuous_assign<nodep>:       // IEEE: continuous_assign
         ;
 
 net_alias<nodep>:               // IEEE: net_alias
-                yALIAS variable_lvalue aliasEqList ';' { $$ = new AstAlias{$1, $2, VN_AS($3, NodeExpr)}; }
+                yALIAS variable_lvalue aliasEqList ';' { $2->addNext(VN_AS($3, NodeExpr)); $$ = new AstAlias{$1, $2}; }
         ;
 
 initial_construct<nodep>:       // IEEE: initial_construct

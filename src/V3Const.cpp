@@ -3138,7 +3138,6 @@ class ConstVisitor final : public VNVisitor {
     }
     void visit(AstAlias* nodep) override {
         // Don't perform any optimizations, keep the alias around
-        nodep->dumpTree();
     }
     void visit(AstAssignVarScope* nodep) override {
         // Don't perform any optimizations, the node won't be linked yet

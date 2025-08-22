@@ -12,25 +12,29 @@ module t (/*AUTOARG*/
    );
    input clk;
 
-   reg [31:0] out = 32'h0;
+   reg [15:0] out = 16'h0;
 
    sub sub_i (.clk (clk), .out (out));
 
-   wire [31:0] a;
+   wire [15:0] a;
 
-   alias a = sub_i.out;
+   alias a = sub_i.btw;
 
 endmodule
 
-module sub (input clk, output wire [31:0] out);
+module sub (input clk, output wire [15:0] out);
 
-   reg [31:0] temp = 32'h0;
+   reg [31:0] counter = 32'h0;
 
-   assign out = temp;
+   wire [15:0] btw;
+
+   assign btw = {counter[15:0]};
+
+   assign out = btw;
 
    always @ (posedge clk) begin
 
-      temp += 1;
+      counter += 1;
 
    end
 

@@ -1178,9 +1178,13 @@ class WidthVisitor final : public VNVisitor {
         }
     }
 
-    void checkIfAliasElementIsNet(AstNode* node) {
+    void checkIfAliasElementHasValidType(AstNode* node) {
         if (AstNodeVarRef* node_var_ref = VN_CAST(node, NodeVarRef); node_var_ref && node_var_ref->varp()->varType().isProcAssignable()) {
             node->v3fatalSrc("Variables used for net alias");
+        }
+
+        if (VN_IS(node, VarXRef)) {
+            node->v3fatalSrc("Hierarchical references used for net alias");
         }
     }
 
@@ -1189,8 +1193,8 @@ class WidthVisitor final : public VNVisitor {
             userIterateAndNext(nodep->itemsp(), WidthVP{SELF, BOTH}.p());
         }
 
-        auto netTypeCheckingCallback = [this] (AstNode* node) {
-            checkIfAliasElementIsNet(node);
+        auto typeCheckingCallback = [this] (AstNode* node) {
+            checkIfAliasElementHasValidType(node);
         };
 
         AstNodeDType* previous_type = nullptr;
@@ -1200,7 +1204,7 @@ class WidthVisitor final : public VNVisitor {
             if (previous_type && !previous_type->similarDType(item_type)) {
                 nodep->v3fatalSrc("Incompatible types of nets used for net alias");
             }
-            next_item->foreach(netTypeCheckingCallback);
+            next_item->foreach(typeCheckingCallback);
 
             previous_type = item_type;
             next_item = VN_AS(next_item->nextp(), NodeExpr);

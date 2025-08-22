@@ -1,5 +1,4 @@
-%Error-UNSUPPORTED: t/t_alias2_unsup.v:39:4: Unsupported: alias statements
+%Error: Internal Error: t/t_alias2_unsup.v:39:10: ../V3Localize.cpp:#: AstVarRef not under function
    39 |    alias b = {a[3:0],a[7:4]};
-      |    ^~~~~
-                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
-%Error: Exiting due to
+      |          ^
+                        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.

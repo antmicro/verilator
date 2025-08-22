@@ -1178,7 +1178,7 @@ class WidthVisitor final : public VNVisitor {
         AstNodeDType* lhs_type = lhs->dtypep();
         AstNodeExpr* next_item = nodep->itemsp();
         while (next_item) {
-            AstNodeDType* item_type = next_item->dtypep(); 
+            AstNodeDType* item_type = next_item->dtypep();
             if (!lhs_type->similarDType(item_type)) {
                 nodep->v3fatalSrc("Incompatible types of nets used in alias");
             }

@@ -332,7 +332,6 @@ class InlineRelinkVisitor final : public VNVisitor {
                     nodeVarRefp->access(VAccess::READ);
                     m_modp->addStmtsp(new AstAssignW{flp, exprvarrefp, nodeVarRefp});
                 } else {
-                    m_modp->addStmtsp(new AstAssignW{flp, nodeVarRefp, exprvarrefp});
                 }
                 FileLine* const flbp = exprvarrefp->varp()->fileline();
                 flp->modifyStateInherit(flbp);

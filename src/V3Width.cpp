@@ -258,7 +258,7 @@ class WidthVisitor final : public VNVisitor {
         }
     }
 
-    void checkIfAliasElementHasValidType(const AstNodeExpr* const nodep) const {
+    static void checkIfAliasElementHasValidType(const AstNodeExpr* const nodep) {
         if (VN_IS(nodep, VarXRef)) {
             nodep->v3error("Hierarchical references used for net alias");
         }

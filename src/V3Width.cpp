@@ -1186,11 +1186,19 @@ class WidthVisitor final : public VNVisitor {
 
         AstNodeExpr* lhs = nodep->lhs();
         AstNodeDType* lhs_type = lhs->dtypep();
+        if (AstNodeVarRef* lhs_var_ref = VN_CAST(lhs, NodeVarRef); lhs_var_ref && lhs_var_ref->varp()->varType().isProcAssignable()) {
+            nodep->v3fatalSrc("Variables used for net alias");
+        }
+
+        if (AstConcat* lhs_concat_ref = VN_CAST(lhs, Concat)) {
+            nodep->v3fatalSrc("Concat used for net alias");
+        }
+
         AstNodeExpr* next_item = nodep->itemsp();
         while (next_item) {
             AstNodeDType* item_type = next_item->dtypep(); 
             if (!lhs_type->similarDType(item_type)) {
-                nodep->v3fatalSrc("Incompatible types of nets used in alias");
+                nodep->v3fatalSrc("Incompatible types of nets used for net alias");
             }
             next_item = VN_AS(next_item->nextp(), NodeExpr);
         }

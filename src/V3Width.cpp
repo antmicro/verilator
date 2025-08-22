@@ -1178,14 +1178,14 @@ class WidthVisitor final : public VNVisitor {
         }
     }
 
-    void checkIfAliasElementHasValidType(AstNode* node) {
-        if (AstNodeVarRef* node_var_ref = VN_CAST(node, NodeVarRef);
-            node_var_ref && node_var_ref->varp()->varType().isProcAssignable()) {
-            node->v3fatalSrc("Variables used for net alias");
+    void checkIfAliasElementHasValidType(const AstNodeExpr* const nodep) const {
+        if (VN_IS(nodep, VarXRef)) {
+            nodep->v3error("Hierarchical references used for net alias");
         }
-
-        if (VN_IS(node, VarXRef)) {
-            node->v3fatalSrc("Hierarchical references used for net alias");
+        if (const AstNodeVarRef* const varRefp = VN_CAST(nodep, NodeVarRef)) {
+            if (varRefp->varp()->varType().isProcAssignable()) {
+                nodep->v3error("Variables used for net alias");
+            }
         }
     }
 
@@ -1195,14 +1195,14 @@ class WidthVisitor final : public VNVisitor {
         }
 
         auto typeCheckingCallback
-            = [this](AstNode* node) { checkIfAliasElementHasValidType(node); };
+            = [this](AstNode* nodep) { checkIfAliasElementHasValidType(VN_AS(nodep, NodeExpr)); };
 
         AstNodeDType* previous_type = nullptr;
         AstNodeExpr* next_item = nodep->itemsp();
         while (next_item) {
             AstNodeDType* item_type = next_item->dtypep();
             if (previous_type && !previous_type->similarDType(item_type)) {
-                nodep->v3fatalSrc("Incompatible types of nets used for net alias");
+                nodep->v3error("Incompatible types of nets used for net alias");
             }
             next_item->foreach(typeCheckingCallback);
 

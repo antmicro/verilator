@@ -18,6 +18,7 @@
 
 #include "V3Active.h"
 #include "V3ActiveTop.h"
+#include "V3Alias.h"
 #include "V3Assert.h"
 #include "V3AssertPre.h"
 #include "V3Ast.h"
@@ -225,6 +226,7 @@ static void process() {
         //    Before we do dead code elimination and inlining, or we'll lose it.
         if (v3Global.opt.coverage()) V3Coverage::coverage(v3Global.rootp());
 
+        V3Alias::alias(v3Global.rootp());
         // Add randomize() class methods if they are used by the design
         if (v3Global.useRandomizeMethods()) V3Randomize::randomizeNetlist(v3Global.rootp());
 

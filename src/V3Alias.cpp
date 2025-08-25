@@ -25,21 +25,52 @@
 VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
-// AliasVisitor
 
-class AliasVisitor final : public VNVisitor {
+class AliasFindVisitor final : public VNVisitor {
     // NODE STATE
-
-    // STATE - across all visitors
-
-    // METHODS
+    //  AstVar::user1p()        -> AstVar*.  Variable with which the node to be replaced
 
     // VISITORS
+    void visit(AstAlias* nodep) override {
+        AstVar* targetVarp = nullptr;
+        for (AstNode* itemp = nodep->itemsp()->nextp(); itemp; itemp = itemp->nextp()) {
+            if (AstVarRef* const refp = VN_CAST(itemp, VarRef)) {
+                if (!targetVarp) {
+                    targetVarp = refp->varp();
+                } else {
+                    refp->varp()->user1p(targetVarp);
+                }
+            } else {
+                itemp->v3warn(
+                    E_UNSUPPORTED,
+                    "Unsupported: Aliased expressions not being simple variable references");
+                break;
+            }
+        }
+        pushDeletep(nodep->unlinkFrBack());
+    }
+
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
 public:
     // CONSTRUCTORS
-    explicit AliasVisitor(AstNetlist* nodep) { iterate(nodep); }
+    explicit AliasFindVisitor(AstNetlist* nodep) { iterate(nodep); }
+};
+
+class AliasResolveVisitor final : public VNVisitor {
+    // NODE STATE
+    //  AstVar::user1p()        -> AstVar*.  Variable with which the node to be replaced
+
+    // VISITORS
+    void visit(AstVarRef* nodep) override {
+        if (nodep->varp()->user1p()) nodep->varp(VN_AS(nodep->varp()->user1p(), Var));
+    }
+
+    void visit(AstNode* nodep) override { iterateChildren(nodep); }
+
+public:
+    // CONSTRUCTORS
+    explicit AliasResolveVisitor(AstNetlist* nodep) { iterate(nodep); }
 };
 
 //######################################################################
@@ -47,6 +78,10 @@ public:
 
 void V3Alias::alias(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ":");
-    { AliasVisitor{nodep}; }  // Destruct before checking
+    {
+        // Destruct before checking
+        AliasFindVisitor{nodep};
+        AliasResolveVisitor{nodep};
+    }
     V3Global::dumpCheckGlobalTree("alias", 0, dumpTreeEitherLevel() >= 6);
 }

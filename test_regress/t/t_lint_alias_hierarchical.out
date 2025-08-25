@@ -1,5 +1,6 @@
-%Error: Internal Error: t/t_lint_alias_hierarchical.v:21:20: ../V3Width.cpp:#: Hierarchical references used for net alias
-                                                           : ... note: In instance 't'
+%Error: t/t_lint_alias_hierarchical.v:21:20: Hierarchical references used for net alias
+                                           : ... note: In instance 't'
    21 |    alias a = sub_i.btw;
       |                    ^~~
-                        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: Exiting due to

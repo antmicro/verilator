@@ -103,5 +103,5 @@ void V3Alias::alias(AstNetlist* nodep) {
         AliasFindVisitor{nodep};
         AliasResolveVisitor{nodep};
     }
-    V3Global::dumpCheckGlobalTree("alias", 0, dumpTreeEitherLevel() >= 6);
+    V3Global::dumpCheckGlobalTree("alias", 0, dumpTreeEitherLevel() >= 3);
 }

@@ -67,6 +67,10 @@ class AliasResolveVisitor final : public VNVisitor {
         if (nodep->varp()->user1p()) nodep->varp(VN_AS(nodep->varp()->user1p(), Var));
     }
 
+    void visit(AstPin* nodep) override {
+        if (nodep->modVarp()->user1p()) nodep->modVarp(VN_AS(nodep->modVarp()->user1p(), Var));
+    }
+
     void visit(AstAssignW* nodep) override {
         // Don't replace variables in assignments added in this stage
         if (!nodep->user1()) iterateChildren(nodep);

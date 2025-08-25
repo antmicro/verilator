@@ -60,10 +60,26 @@ public:
 class AliasResolveVisitor final : public VNVisitor {
     // NODE STATE
     //  AstVar::user1p()        -> AstVar*.  Variable with which the node to be replaced
+    //  AstAssignW::user1()    -> bool.  True if the assignment was added to handle alias
 
     // VISITORS
     void visit(AstVarRef* nodep) override {
         if (nodep->varp()->user1p()) nodep->varp(VN_AS(nodep->varp()->user1p(), Var));
+    }
+
+    void visit(AstAssignW* nodep) override {
+        // Don't replace variables in assignments added in this stage
+        if (!nodep->user1()) iterateChildren(nodep);
+    }
+
+    void visit(AstVar* nodep) override {
+        if (AstVar* const aliasp = VN_CAST(nodep->user1p(), Var)) {
+            AstAssignW* const assignp = new AstAssignW{
+                nodep->fileline(), new AstVarRef{nodep->fileline(), nodep, VAccess::WRITE},
+                new AstVarRef{nodep->fileline(), aliasp, VAccess::READ}};
+            assignp->user1(true);
+            nodep->addNextHere(assignp);
+        }
     }
 
     void visit(AstNode* nodep) override { iterateChildren(nodep); }

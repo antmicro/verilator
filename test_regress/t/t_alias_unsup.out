@@ -1,4 +1,6 @@
-%Error: Internal Error: t/t_alias_unsup.v:46:11: ../V3Localize.cpp:#: AstVarRef not under function
+%Error-UNSUPPORTED: t/t_alias_unsup.v:46:34: Unsupported: Aliased expressions not being simple variable references
+                                           : ... note: In instance 't.swap_bwd_i'
    46 |    alias {a[7:0],a[15:8],a[23:16],a[31:24]} = b;
-      |           ^
-                        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+      |                                  ^
+                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
+%Error: Exiting due to

@@ -63,7 +63,7 @@ class AliasResolveVisitor final : public VNVisitor {
     //  AstAssignW::user1()    -> bool.  True if the assignment was added to handle alias
 
     // VISITORS
-    void visit(AstVarRef* nodep) override {
+    void visit(AstNodeVarRef* nodep) override {
         if (nodep->varp()->user1p()) nodep->varp(VN_AS(nodep->varp()->user1p(), Var));
     }
 

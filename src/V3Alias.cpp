@@ -33,7 +33,7 @@ class AliasFindVisitor final : public VNVisitor {
     // VISITORS
     void visit(AstAlias* nodep) override {
         AstVar* targetVarp = nullptr;
-        for (AstNode* itemp = nodep->itemsp()->nextp(); itemp; itemp = itemp->nextp()) {
+        for (AstNode* itemp = nodep->itemsp(); itemp; itemp = itemp->nextp()) {
             if (AstVarRef* const refp = VN_CAST(itemp, VarRef)) {
                 if (!targetVarp) {
                     targetVarp = refp->varp();

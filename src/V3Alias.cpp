@@ -33,10 +33,16 @@ class AliasFindVisitor final : public VNVisitor {
         AstVar* targetVarp = nullptr;
         for (AstNode* itemp = nodep->itemsp(); itemp; itemp = itemp->nextp()) {
             if (AstVarRef* const refp = VN_CAST(itemp, VarRef)) {
+                AstVar* const varp = refp->varp();
+                if (varp->isIO()) {
+                    itemp->v3warn(E_UNSUPPORTED,
+                                  "Unsupported: Aliased expression referencing port");
+                    break;
+                }
                 if (!targetVarp) {
-                    targetVarp = refp->varp();
+                    targetVarp = varp;
                 } else {
-                    refp->varp()->user1p(targetVarp);
+                    varp->user1p(targetVarp);
                 }
             } else {
                 itemp->v3warn(

@@ -257,16 +257,6 @@ class WidthVisitor final : public VNVisitor {
                 nodep->findLogicDType(unpackBits, unpackMinBits, VSigning::UNSIGNED)});
         }
     }
-
-    static void checkIfAliasElementHasValidType(const AstNodeExpr* const nodep) {
-        if (VN_IS(nodep, VarXRef)) nodep->v3error("Hierarchical reference used for net alias");
-
-        if (const AstVarRef* const varRefp = VN_CAST(nodep, VarRef)) {
-            if (!varRefp->varp()->isNet()) {
-                nodep->v3error("Only nets are allowed in alias");
-            }
-        }
-    }
     // VISITORS
     //   Naming:  width_O{outputtype}_L{lhstype}_R{rhstype}_W{widthing}_S{signing}
     //          Where type:
@@ -1193,13 +1183,23 @@ class WidthVisitor final : public VNVisitor {
             userIterateAndNext(nodep->itemsp(), WidthVP{SELF, BOTH}.p());
         }
 
-        checkIfAliasElementHasValidType(nodep->itemsp());
+        const auto checkIfExprLegal = [](const AstNodeExpr* const exprp) {
+            if (VN_IS(exprp, VarXRef)) exprp->v3error("Hierarchical reference used for net alias");
+
+            if (const AstVarRef* const varRefp = VN_CAST(exprp, VarRef)) {
+                if (!varRefp->varp()->isNet()) {
+                    exprp->v3error("Only nets are allowed in alias");
+                }
+            }
+        };
+
+        nodep->itemsp()->foreach(checkIfExprLegal);
         const AstNodeDType* const firstDtypep = nodep->itemsp()->dtypep();
         for (const AstNode* itemp = nodep->itemsp()->nextp(); itemp; itemp = itemp->nextp()) {
-            checkIfAliasElementHasValidType(VN_AS(itemp, NodeExpr));
             if (!firstDtypep->similarDType(itemp->dtypep())) {
                 nodep->v3error("Incompatible types of nets used for net alias");
             }
+            itemp->foreach(checkIfExprLegal);
         }
     }
 

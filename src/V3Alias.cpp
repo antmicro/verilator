@@ -43,7 +43,7 @@ class AliasFindVisitor final : public VNVisitor {
             } else {
                 itemp->v3warn(
                     E_UNSUPPORTED,
-                    "Unsupported: Aliased expressions not being simple variable references");
+                    "Unsupported: Aliased expression is not a simple variable reference");
                 break;
             }
         }

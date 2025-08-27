@@ -261,7 +261,7 @@ class WidthVisitor final : public VNVisitor {
     static void checkIfAliasElementHasValidType(const AstNodeExpr* const nodep) {
         if (VN_IS(nodep, VarXRef)) nodep->v3error("Hierarchical reference used for net alias");
 
-        if (const AstNodeVarRef* const varRefp = VN_CAST(nodep, NodeVarRef)) {
+        if (const AstVarRef* const varRefp = VN_CAST(nodep, VarRef)) {
             if (!varRefp->varp()->isNet()) {
                 nodep->v3error("Only nets are allowed in alias");
             }

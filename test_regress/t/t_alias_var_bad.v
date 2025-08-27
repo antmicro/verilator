@@ -12,8 +12,9 @@ module t (/*AUTOARG*/
    );
    input clk;
 
-   int a, b;
+   logic [31:0] a;
+   logic [32:0] b;
 
-   alias a = b;
+   alias a = b[31:0];
 
 endmodule

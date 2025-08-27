@@ -18,8 +18,6 @@
 
 #include "V3Alias.h"
 
-#include "V3AstUserAllocator.h"
-
 #include <vector>
 
 VL_DEFINE_DEBUG_FUNCTIONS;

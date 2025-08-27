@@ -1,4 +1,4 @@
-%Error-UNSUPPORTED: t/t_alias2_unsup.v:39:21: Unsupported: Aliased expressions not being simple variable references
+%Error-UNSUPPORTED: t/t_alias2_unsup.v:39:21: Unsupported: Aliased expression is not a simple variable reference
                                             : ... note: In instance 't.testi_i'
    39 |    alias b = {a[3:0],a[7:4]};
       |                     ^

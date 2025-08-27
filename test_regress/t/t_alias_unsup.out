@@ -1,4 +1,4 @@
-%Error-UNSUPPORTED: t/t_alias_unsup.v:46:34: Unsupported: Aliased expressions not being simple variable references
+%Error-UNSUPPORTED: t/t_alias_unsup.v:46:34: Unsupported: Aliased expression is not a simple variable reference
                                            : ... note: In instance 't.swap_bwd_i'
    46 |    alias {a[7:0],a[15:8],a[23:16],a[31:24]} = b;
       |                                  ^

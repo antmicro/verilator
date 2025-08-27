@@ -1,4 +1,4 @@
-%Error: t/t_lint_alias_hierarchical.v:21:20: Hierarchical references used for net alias
+%Error: t/t_lint_alias_hierarchical.v:21:20: Hierarchical reference used for net alias
                                            : ... note: In instance 't'
    21 |    alias a = sub_i.btw;
       |                    ^~~

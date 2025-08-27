@@ -11,8 +11,6 @@ import vltest_bootstrap
 
 test.scenarios('vlt')
 
-test.top_filename = "t/t_alias_reorder.v"
-
-test.lint()
+test.lint(fails=True, expect_filename=test.golden_filename)
 
 test.passes()

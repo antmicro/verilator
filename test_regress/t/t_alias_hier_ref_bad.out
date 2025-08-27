@@ -1,5 +1,5 @@
-%Error: t/t_lint_alias_hierarchical.v:21:20: Hierarchical reference used for net alias
-                                           : ... note: In instance 't'
+%Error: t/t_alias_hier_ref_bad.v:21:20: Hierarchical reference used for net alias
+                                      : ... note: In instance 't'
    21 |    alias a = sub_i.btw;
       |                    ^~~
         ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.

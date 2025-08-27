@@ -1,0 +1,10 @@
+%Error: t/t_alias_var_bad.v:17:10: Variable used for net alias
+                                 : ... note: In instance 't'
+   17 |    alias a = b;
+      |          ^
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: t/t_alias_var_bad.v:17:14: Variable used for net alias
+                                 : ... note: In instance 't'
+   17 |    alias a = b;
+      |              ^
+%Error: Exiting due to

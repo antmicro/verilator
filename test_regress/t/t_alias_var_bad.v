@@ -12,9 +12,8 @@ module t (/*AUTOARG*/
    );
    input clk;
 
-   wire [31:0] a;
-   int b;
+   int a, b;
 
-   alias {a[7:0],a[15:8],a[23:16],a[31:24]} = {b[7:0],b[15:8],b[23:16],b[31:24]};
+   alias a = b;
 
 endmodule

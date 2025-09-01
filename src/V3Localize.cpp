@@ -27,6 +27,7 @@
 #include "V3Localize.h"
 
 #include "V3AstUserAllocator.h"
+#include "V3Control.h"
 #include "V3Stats.h"
 
 #include <vector>
@@ -163,7 +164,14 @@ class LocalizeVisitor final : public VNVisitor {
     }
 
     void visit(AstCCall* nodep) override {
-        m_cfuncp->user1(true);  // Mark caller as not a leaf function
+        for (AstNode* argp = nodep->argsp(); argp; argp = argp->nextp()) {
+            if (const AstVarRef* const refp = VN_CAST(argp, VarRef)) {
+                if (refp->access().isWriteOrRW()) refp->varScopep()->user2(true);
+            }
+        }
+        // Hierarchical DPI calls are called sequentially from a task, so no risk of incorrectly
+        // localizing their parameters
+        if (!V3Control::isHierDpi(nodep->funcp()->cname())) m_cfuncp->user1(true);
         iterateChildrenConst(nodep);
     }
 

@@ -65,6 +65,7 @@ public:
 
     static bool containsMTaskProfileData();
 
+    static bool isHierDpi(const string& hierDpi);
     static bool waive(const FileLine* filelinep, V3ErrorCode code, const string& message);
 };
 

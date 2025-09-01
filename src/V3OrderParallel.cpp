@@ -1722,7 +1722,7 @@ class DpiImportCallVisitor final : public VNVisitor {
                                  : !v3Global.opt.threadsDpiUnpure()) {
                 // If hierarchical DPI wrapper cost is not found or is of a 0 cost,
                 // we have a normal DPI which induces DPI hazard by default.
-                m_hasDpiHazard = V3Control::getProfileData(nodep->cname()) == 0;
+                m_hasDpiHazard = !V3Control::isHierDpi(nodep->cname());
                 UINFO(9, "DPI wrapper '" << nodep->cname()
                                          << "' has dpi hazard = " << m_hasDpiHazard);
             }

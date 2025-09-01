@@ -797,6 +797,10 @@ bool V3Control::containsMTaskProfileData() {
     return V3ControlResolver::s().containsMTaskProfileData();
 }
 
+bool V3Control::isHierDpi(const string& hierDpi) {
+    return V3Control::getProfileData(hierDpi) != 0;
+}
+
 bool V3Control::waive(const FileLine* filelinep, V3ErrorCode code, const string& message) {
     V3ControlFile* const filep = V3ControlResolver::s().files().resolve(filelinep->filename());
     if (!filep) return false;

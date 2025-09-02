@@ -1185,7 +1185,10 @@ class WidthVisitor final : public VNVisitor {
         }
 
         const auto checkIfExprOk = [](const AstNodeExpr* const exprp) {
-            if (VN_IS(exprp, VarXRef)) exprp->v3error("Hierarchical reference used for net alias");
+            if (VN_IS(exprp, VarXRef)) {
+                exprp->v3error("Hierarchical reference used for net alias");
+                return;
+            }
 
             if (const AstVarRef* const varRefp = VN_CAST(exprp, VarRef)) {
                 if (!varRefp->varp()->isNet()) {

@@ -98,8 +98,8 @@ class LinkLValueVisitor final : public VNVisitor {
         VL_RESTORER(m_setStrengthSpecified);
         {
             m_setRefLvalue = VAccess::WRITE;
-            m_setContinuously = VN_IS(nodep, AssignW) || VN_IS(nodep, AssignAlias);
             if (const AstAssignW* const assignwp = VN_CAST(nodep, AssignW)) {
+                m_setContinuously = true;
                 if (assignwp->strengthSpecp()) m_setStrengthSpecified = true;
             }
             {
@@ -136,6 +136,13 @@ class LinkLValueVisitor final : public VNVisitor {
                 }
             }
         }
+    }
+    void visit(AstAssignAlias* nodep) override {
+        VL_RESTORER(m_setRefLvalue);
+        VL_RESTORER(m_setContinuously);
+        m_setRefLvalue = VAccess::READWRITE;
+        m_setContinuously = true;
+        iterateChildren(nodep);
     }
     void visit(AstInitialStatic* nodep) override {
         VL_RESTORER(m_inInitialStatic);

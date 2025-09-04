@@ -227,8 +227,6 @@ class CoverageVisitor final : public VNVisitor {
         if (!nodep->dpiImport()) iterateProcedure(nodep);
     }
     void iterateProcedure(AstNode* nodep) {
-        char comment[100];
-        snprintf(comment, 100, "block_%pZ", m_modp);
         VL_RESTORER(m_state);
         VL_RESTORER(m_inToggleOff);
         m_inToggleOff = true;
@@ -237,7 +235,7 @@ class CoverageVisitor final : public VNVisitor {
         if (m_state.lineCoverageOn(nodep)) {
             lineTrack(nodep);
             AstNode* const newp
-                = newCoverInc(nodep->fileline(), "", "v_line", comment, linesCov(m_state, nodep),
+                = newCoverInc(nodep->fileline(), "", "v_line", "block", linesCov(m_state, nodep),
                               0, traceNameForLine(nodep, "block"));
             if (AstNodeProcedure* const itemp = VN_CAST(nodep, NodeProcedure)) {
                 itemp->addStmtsp(newp);
@@ -293,11 +291,9 @@ class CoverageVisitor final : public VNVisitor {
     }
 
     void toggleVarBottom(const ToggleEnt& above, const AstVar* varp) {
-        char comment[100];
-        snprintf(comment, 100, "toggle_%pZ_", m_modp);
         AstCoverToggle* const newp = new AstCoverToggle{
             varp->fileline(),
-            newCoverInc(varp->fileline(), "", "v_toggle", string(comment) + varp->name() + above.m_comment, "", 0,
+            newCoverInc(varp->fileline(), "", "v_toggle", varp->name() + above.m_comment, "", 0,
                         ""),
             above.m_varRefp->cloneTree(true), above.m_chgRefp->cloneTree(true)};
         m_modp->addStmtsp(newp);
@@ -406,25 +402,6 @@ class CoverageVisitor final : public VNVisitor {
     }
 
     // VISITORS - LINE COVERAGE
-    void visit(AstNodeCond* nodep) override {
-        UINFO(4, " COND: " << nodep << endl);
-
-        iterateChildren(nodep);
-
-        if (!m_state.m_on || !nodep->condp()->isPure()) {
-            // Current method cannot run coverage for impure statements
-            lineTrack(nodep);
-            return;
-        }
-
-        auto fakeIf = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
-        FileLine* newFl = new FileLine{nodep->fileline()};
-        auto always = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIf};
-
-        // Disable coverage for this fake always block
-        newFl->coverageOn(false);
-        m_modp->addStmtsp(always);
-    }
     // Note not AstNodeIf; other types don't get covered
     void visit(AstIf* nodep) override {
         UINFO(4, " IF: " << nodep << endl);
@@ -512,11 +489,8 @@ class CoverageVisitor final : public VNVisitor {
             createHandle(nodep);
             iterateAndNextNull(nodep->stmtsp());
             if (m_state.lineCoverageOn(nodep)) {  // if the case body didn't disable it
-                UINFO(4, "   COVER: " << nodep << endl);
-                nodep->addStmtsp(newCoverInc(nodep->fileline(), "", "v_branch", "case",
-                                             linesCov(m_state, nodep), 1,
-                                             traceNameForLine(nodep, "case")));
                 lineTrack(nodep);
+                UINFO(4, "   COVER: " << nodep << endl);
                 nodep->addStmtsp(newCoverInc(nodep->fileline(), "", "v_line", "case",
                                              linesCov(m_state, nodep), 0,
                                              traceNameForLine(nodep, "case")));
@@ -525,8 +499,6 @@ class CoverageVisitor final : public VNVisitor {
     }
     void visit(AstCover* nodep) override {
         UINFO(4, " COVER: " << nodep << endl);
-        char comment[100];
-        snprintf(comment, 100, "cover_%pZ", m_modp);
         VL_RESTORER(m_state);
         m_state.m_on = true;  // Always do cover blocks, even if there's a $stop
         createHandle(nodep);
@@ -534,7 +506,7 @@ class CoverageVisitor final : public VNVisitor {
         if (!nodep->coverincsp() && v3Global.opt.coverageUser()) {
             // Note the name may be overridden by V3Assert processing
             lineTrack(nodep);
-            nodep->addCoverincsp(newCoverInc(nodep->fileline(), m_beginHier, "v_user", comment,
+            nodep->addCoverincsp(newCoverInc(nodep->fileline(), m_beginHier, "v_user", "cover",
                                              linesCov(m_state, nodep), 0,
                                              m_beginHier + "_vlCoverageUserTrace"));
         }

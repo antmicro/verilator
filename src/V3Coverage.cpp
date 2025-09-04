@@ -334,8 +334,6 @@ class CoverageVisitor final : public VNVisitor {
         }
     }
     void iterateProcedure(AstNode* nodep) {
-        char comment[100];
-        snprintf(comment, 100, "block_%pZ", m_modp);
         VL_RESTORER(m_state);
         VL_RESTORER(m_exprStmtsp);
         VL_RESTORER(m_inToggleOff);
@@ -347,7 +345,7 @@ class CoverageVisitor final : public VNVisitor {
             lineTrack(nodep);
             AstCoverOtherDecl* const declp
                 = new AstCoverOtherDecl{nodep->fileline(), "v_line/" + m_modp->prettyName(),
-                                        comment, linesCov(m_state, nodep), 0};
+                                        "block", linesCov(m_state, nodep), 0};
             m_modp->addStmtsp(declp);
             AstNode* const newp
                 = newCoverInc(nodep->fileline(), declp, traceNameForLine(nodep, "block"));
@@ -397,13 +395,11 @@ class CoverageVisitor final : public VNVisitor {
     }
 
     void toggleVarBottom(const ToggleEnt& above, const AstVar* varp, const VNumRange& range) {
-        char comment[100];
-        snprintf(comment, 100, "toggle_%pZ_", m_modp);
         const std::string hierPrefix
             = (m_beginHier != "") ? AstNode::prettyName(m_beginHier) + "." : "";
-        AstCoverToggleDecl* const declp = new AstCoverToggleDecl{
-            varp->fileline(), "v_toggle/" + m_modp->prettyName(),
-            hierPrefix + string(comment) + varp->name() + above.m_comment, range};
+        AstCoverToggleDecl* const declp
+            = new AstCoverToggleDecl{varp->fileline(), "v_toggle/" + m_modp->prettyName(),
+                                     hierPrefix + varp->name() + above.m_comment, range};
         m_modp->addStmtsp(declp);
         AstCoverToggle* const newp = new AstCoverToggle{
             varp->fileline(), newCoverInc(varp->fileline(), declp, ""),
@@ -552,22 +548,6 @@ class CoverageVisitor final : public VNVisitor {
         } else {
             lineTrack(nodep);
         }
-
-        iterateChildren(nodep);
-
-        if (!m_state.m_on || !nodep->condp()->isPure()) {
-            // Current method cannot run coverage for impure statements
-            lineTrack(nodep);
-            return;
-        }
-
-        auto fakeIf = new AstIf(nodep->fileline(), nodep->condp()->cloneTree(true));
-        FileLine* newFl = new FileLine{nodep->fileline()};
-        auto always = new AstAlways{newFl, VAlwaysKwd::ALWAYS, nullptr, fakeIf};
-
-        // Disable coverage for this fake always block
-        newFl->coverageOn(false);
-        m_modp->addStmtsp(always);
     }
     // Note not AstNodeIf; other types don't get covered
     void visit(AstIf* nodep) override {
@@ -694,19 +674,11 @@ class CoverageVisitor final : public VNVisitor {
                 m_modp->addStmtsp(declp);
                 nodep->addStmtsp(
                     newCoverInc(nodep->fileline(), declp, traceNameForLine(nodep, "case")));
-                AstCoverOtherDecl* const declBranchp
-                    = new AstCoverOtherDecl{nodep->fileline(), "v_branch/" + m_modp->prettyName(),
-                                            "case", linesCov(m_state, nodep), 1};
-                m_modp->addStmtsp(declBranchp);
-                nodep->addStmtsp(
-                    newCoverInc(nodep->fileline(), declBranchp, traceNameForLine(nodep, "case")));
             }
         }
     }
     void visit(AstCover* nodep) override {
         UINFO(4, " COVER: " << nodep);
-        char comment[100];
-        snprintf(comment, 100, "cover_%pZ", m_modp);
         VL_RESTORER(m_state);
         m_state.m_on = true;  // Always do cover blocks, even if there's a $stop
         createHandle(nodep);
@@ -716,7 +688,7 @@ class CoverageVisitor final : public VNVisitor {
             lineTrack(nodep);
             AstCoverOtherDecl* const declp
                 = new AstCoverOtherDecl{nodep->fileline(), "v_user/" + m_modp->prettyName(),
-                                        comment, linesCov(m_state, nodep), 0};
+                                        "cover", linesCov(m_state, nodep), 0};
             declp->hier(m_beginHier);
             m_modp->addStmtsp(declp);
             nodep->addCoverincsp(

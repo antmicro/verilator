@@ -2395,7 +2395,8 @@ class LinkDotIfaceVisitor final : public VNVisitor {
         } else if (AstClocking* const clockingp = VN_CAST(symp->nodep(), Clocking)) {
             nodep->clockingp(clockingp);
         } else {
-            nodep->v3error("Modport item doesn't reference a clocking block: " << nodep->prettyNameQ());
+            nodep->v3error(
+                "Modport item doesn't reference a clocking block: " << nodep->prettyNameQ());
         }
     }
     void visit(AstNode* nodep) override { iterateChildren(nodep); }  // IfaceVisitor::

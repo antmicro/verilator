@@ -1437,7 +1437,7 @@ package_import_itemList<nodep>:
 
 package_import_item<nodep>:     // ==IEEE: package_import_item
                 idCC/*package_identifier*/ yP_COLONCOLON package_import_itemObj
-                        { $$ = new AstPackageImport{$<fl>1, *$<strp>1, *$3}; }
+                        { $$ = new AstPackageImport{$<fl>3, *$<strp>1, *$3}; }
         ;
 
 package_import_itemObj<strp>:   // IEEE: part of package_import_item

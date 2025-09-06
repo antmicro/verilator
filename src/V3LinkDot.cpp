@@ -1694,7 +1694,7 @@ class LinkDotFindVisitor final : public VNVisitor {
             }
         } else {
             VSymEnt* const impp = srcp->findIdFlat(nodep->name());
-            if (!impp) nodep->v3error("Import object not found: " << nodep->prettyPkgNameQ());
+            if (!impp) nodep->v3error("Imported item not found: " << nodep->prettyNameQ());
         }
         m_curSymp->importFromPackage(m_statep->symsp(), srcp, nodep->name());
         UINFO(9, "    Link Done: " << nodep);

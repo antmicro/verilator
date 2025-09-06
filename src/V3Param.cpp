@@ -1576,10 +1576,7 @@ public:
             for (AstNodeModule* const modp : modps) netlistp->addModulesp(modp);
 
             for (AstClass* const classp : m_paramClasses) {
-                if (!classp->user3p()) {
-                    // The default value isn't referenced, so it can be removed
-                    VL_DO_DANGLING(pushDeletep(classp->unlinkFrBack()), classp);
-                } else {
+                if (classp->user3p()) {
                     // Referenced. classp became a specialized class with the default
                     // values of parameters and is not a parameterized class anymore
                     classp->hasGParam(false);

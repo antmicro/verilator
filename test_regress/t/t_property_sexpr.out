@@ -1,0 +1,32 @@
+[4] single delay with const stmt, fileline:         83
+[6] single delay with const stmt, fileline:         83
+[8] single delay with const stmt, fileline:         83
+[12] single delay with var stmt, fileline:         86
+[14] single delay with var else, fileline:         87
+[16] single delay with var stmt, fileline:         86
+[18] single delay with var else, fileline:         87
+[20] single delay with var stmt, fileline:         86
+[26] single multi-cycle delay with var else, fileline:         91
+[28] single multi-cycle delay with var stmt, fileline:         90
+[30] single multi-cycle delay with var else, fileline:         91
+[34] single delay with var brackets 1 else, fileline:         95
+[36] single delay with var brackets 1 stmt, fileline:         94
+[38] single delay with var brackets 1 else, fileline:         95
+[40] single delay with var brackets 1 stmt, fileline:         94
+[44] single delay with var brackets 2 stmt, fileline:         98
+[46] single delay with var brackets 2 else, fileline:         99
+[48] single delay with var brackets 2 stmt, fileline:         98
+[50] single delay with var brackets 2 else, fileline:         99
+[54] single delay with negated var else, fileline:        103
+[56] single delay with negated var stmt, fileline:        102
+[58] single delay with negated var else, fileline:        103
+[60] single delay with negated var else, fileline:        103
+[64] single delay with negated var else, fileline:        107
+[66] single delay with negated var stmt, fileline:        106
+[68] single delay with negated var else, fileline:        107
+[70] single delay with negated var stmt, fileline:        106
+[74] single delay with negated var brackets stmt, fileline:        110
+[76] single delay with negated var brackets else, fileline:        111
+[78] single delay with negated var brackets stmt, fileline:        110
+[80] single delay with negated var brackets else, fileline:        111
+*-* All Finished *-*

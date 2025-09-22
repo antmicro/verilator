@@ -2267,8 +2267,12 @@ class LinkDotScopeVisitor final : public VNVisitor {
         // Track aliases created by V3Inline; if we get a VARXREF(aliased_from)
         // we'll need to replace it with a VARXREF(aliased_to)
         UINFOTREE(9, nodep, "", "alias");
-        AstVarScope* const fromVscp = VN_AS(nodep->lhsp(), VarRef)->varScopep();
-        AstVarScope* const toVscp = VN_AS(nodep->rhsp(), VarRef)->varScopep();
+        AstVarRef* const lhsRefp = VN_AS(nodep->lhsp(), VarRef);
+        AstVarRef* const rhsRefp = VN_AS(nodep->rhsp(), VarRef);
+        lhsRefp->access(VAccess::WRITE);
+        rhsRefp->access(VAccess::READ);
+        AstVarScope* const fromVscp = lhsRefp->varScopep();
+        AstVarScope* const toVscp = rhsRefp->varScopep();
         UASSERT_OBJ(fromVscp && toVscp, nodep, "Bad alias scopes");
         fromVscp->user2p(toVscp);
         iterateChildren(nodep);

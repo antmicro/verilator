@@ -2273,7 +2273,8 @@ class LinkDotScopeVisitor final : public VNVisitor {
         AstVarScope* const toVscp = VN_AS(nodep->rhsp(), VarRef)->varScopep();
         UASSERT_OBJ(fromVscp && toVscp, nodep, "Bad alias scopes");
         fromVscp->user2p(toVscp);
-        AstAssignW* assignWp = new AstAssignW{nodep->fileline(), nodep->lhsp()->unlinkFrBack(), nodep->rhsp()->unlinkFrBack()};
+        AstAssignW* assignWp = new AstAssignW{nodep->fileline(), nodep->lhsp()->unlinkFrBack(),
+                                              nodep->rhsp()->unlinkFrBack()};
         assignWp->user2(1);
         nodep->replaceWith(assignWp);
     }
@@ -4067,7 +4068,9 @@ class LinkDotResolveVisitor final : public VNVisitor {
                                    << nodep->warnContextPrimary()
                                    << okSymp->cellErrorScopes(nodep));
                 } else {
-                    while (vscp->user2p() && !m_dontReplaceVars) {  // If V3Inline aliased it, pick up the new signal
+                    while (
+                        vscp->user2p()
+                        && !m_dontReplaceVars) {  // If V3Inline aliased it, pick up the new signal
                         UINFO(7, indent() << "Resolved pre-alias " << vscp);  // Also prints taskp
                         vscp = VN_AS(vscp->user2p(), VarScope);
                     }

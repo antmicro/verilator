@@ -2276,6 +2276,7 @@ class LinkDotScopeVisitor final : public VNVisitor {
         UASSERT_OBJ(fromVscp && toVscp, nodep, "Bad alias scopes");
         fromVscp->user2p(toVscp);
         iterateChildren(nodep);
+        pushDeletep(nodep->unlinkFrBack());
     }
     void visit(AstAssignVarScope* nodep) override {  // ScopeVisitor::
         UINFO(5, "ASSIGNVARSCOPE  " << nodep);
@@ -2501,7 +2502,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
     AstNode* m_lastDeferredp = nullptr;  // Last node which requested a revisit of its module
     AstNodeDType* m_packedArrayDtp = nullptr;  // Datatype reference for packed array
     bool m_inPackedArray = false;  // Currently traversing a packed array tree
-    bool m_inAssignAlias = false;  // Currently traversing AstAssignAlias tree
+    bool m_replaceWithAlias
+        = true;  // Replace VarScope with an alias. Used in the handling of AstAliasAssign
 
     struct DotStates final {
         DotPosition m_dotPos;  // Scope part of dotted resolution
@@ -3952,7 +3954,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
             }
         }
         AstVarScope* vscp = nodep->varScopep();
-        if (vscp && vscp->user2p() && !m_inAssignAlias) {
+        if (vscp && vscp->user2p() && m_replaceWithAlias) {
             while (vscp->user2p()) {
                 UINFO(7, indent() << "Resolved pre-alias " << vscp);  // Also prints taskp
                 vscp = VN_AS(vscp->user2p(), VarScope);
@@ -4078,7 +4080,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
                                    << nodep->warnContextPrimary()
                                    << okSymp->cellErrorScopes(nodep));
                 } else {
-                    while (vscp->user2p()) {  // If V3Inline aliased it, pick up the new signal
+                    while (vscp->user2p() && m_replaceWithAlias) {
+                        // If V3Inline aliased it, pick up the new signal
                         UINFO(7, indent() << "Resolved pre-alias " << vscp);  // Also prints taskp
                         vscp = VN_AS(vscp->user2p(), VarScope);
                     }
@@ -4162,6 +4165,19 @@ class LinkDotResolveVisitor final : public VNVisitor {
         if (m_statep->forPrimary() && nodep->isIO() && !m_ftaskp && !nodep->user4()) {
             nodep->v3error(
                 "Input/output/inout does not appear in port list: " << nodep->prettyNameQ());
+        }
+    }
+    void visit(AstVarScope* nodep) override {
+        LINKDOT_VISIT_START();
+        checkNoDot(nodep);
+        iterateChildren(nodep);
+        AstVarScope* aliasp = VN_CAST(nodep->user2p(), VarScope);
+        if (aliasp && aliasp != nodep) {
+            AstAssignW* const assignp = new AstAssignW{
+                nodep->fileline(), new AstVarRef{nodep->fileline(), nodep, VAccess::WRITE},
+                new AstVarRef{nodep->fileline(), aliasp, VAccess::READ}};
+            assignp->user2(true);
+            nodep->addNextHere(assignp);
         }
     }
     void visit(AstNodeFTaskRef* nodep) override {
@@ -5015,14 +5031,14 @@ class LinkDotResolveVisitor final : public VNVisitor {
 
     void visit(AstNode* nodep) override {
         VL_RESTORER(m_inPackedArray);
-        VL_RESTORER(m_inAssignAlias);
+        VL_RESTORER(m_replaceWithAlias);
         if (VN_IS(nodep, PackArrayDType)) {
             m_inPackedArray = true;
         } else if (!m_inPackedArray) {
             LINKDOT_VISIT_START();
             checkNoDot(nodep);
         }
-        if (VN_IS(nodep, AssignAlias)) m_inAssignAlias = true;
+        if (VN_IS(nodep, AssignW) && nodep->user2()) m_replaceWithAlias = false;
         iterateChildren(nodep);
     }
 

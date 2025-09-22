@@ -2264,8 +2264,8 @@ class LinkDotScopeVisitor final : public VNVisitor {
         // No recursion, we don't want to pick up variables
     }
     void visit(AstAssignAlias* nodep) override {  // ScopeVisitor::
-        // Track aliases created by V3Inline; if we get a VARXREF(aliased_from)
-        // we'll need to replace it with a VARXREF(aliased_to)
+        // Track aliases created by V3Inline; if we get a NODEVARREF(aliased_from)
+        // we'll need to replace it with a NODEVARREF(aliased_to)
         UINFOTREE(9, nodep, "", "alias");
         AstVarRef* const lhsRefp = VN_AS(nodep->lhsp(), VarRef);
         AstVarRef* const rhsRefp = VN_AS(nodep->rhsp(), VarRef);

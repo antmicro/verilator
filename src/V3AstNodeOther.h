@@ -2093,7 +2093,7 @@ public:
     void scSensitive(bool flag) { m_scSensitive = flag; }
     void primaryIO(bool flag) { m_primaryIO = flag; }
     void isConst(bool flag) { m_isConst = flag; }
-    void isContinuously(bool flag) { m_isContinuously = flag; }
+    void isContinuously(bool flag) { m_isContinuously = false; }
     void isStatic(bool flag) { m_isStatic = flag; }
     void isIfaceParent(bool flag) { m_isIfaceParent = flag; }
     void isInternal(bool flag) { m_isInternal = flag; }

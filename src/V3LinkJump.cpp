@@ -44,10 +44,17 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 //######################################################################
 
 class LinkJumpVisitor final : public VNVisitor {
+    // TYPES
+    enum ContainsOrInsideFork : uint8_t {
+        CIF_CONTAINS = 0x1,
+        CIF_INSIDE = 0x2,
+        CIF_BOTH = 0x3
+    };
+
     // NODE STATE
     //  AstNode::user1()       -> AstJumpBlock*, for body of this loop
     //  AstNode::user2()       -> AstJumpBlock*, for this block
-    //  AstNodeBlock::user3()  -> bool, true if contains a fork
+    //  AstNodeBlock::user3()  -> ContainsOrInsideFork
     const VNUser1InUse m_user1InUse;
     const VNUser2InUse m_user2InUse;
     const VNUser3InUse m_user3InUse;
@@ -257,11 +264,11 @@ class LinkJumpVisitor final : public VNVisitor {
                 // Mark all upper blocks also, can stop once see
                 // one set to avoid O(n^2)
                 for (auto itr : vlstd::reverse_view(m_blockStack)) {
-                    if (itr->user3()) break;
-                    itr->user3(true);
+                    if (itr->user3() & CIF_CONTAINS) break;
+                    itr->user3(itr->user3() | CIF_CONTAINS);
                 }
             }
-            nodep->user3(m_inFork);
+            nodep->user3(CIF_INSIDE);
             iterateChildren(nodep);
         }
         m_blockStack.pop_back();
@@ -417,9 +424,12 @@ class LinkJumpVisitor final : public VNVisitor {
             } else {
                 const std::string targetName = beginp->name();
                 if (existsBlockAbove(targetName)) {
-                    if (beginp->user3()) {
+                    if (beginp->user3() & CIF_CONTAINS) {
                         nodep->v3warn(E_UNSUPPORTED,
                                       "Unsupported: disabling block that contains a fork");
+                    } else if (beginp->user3() & CIF_INSIDE) {
+                        nodep->v3warn(E_UNSUPPORTED,
+                                      "Unsupported: disabling block inside a fork");
                     } else {
                         // Jump to the end of the named block
                         AstJumpBlock* const blockp = getJumpBlock(beginp, false);

@@ -3063,7 +3063,7 @@ class WidthVisitor final : public VNVisitor {
 
         AstNodeExpr* exprp;
         AstExprStmt* exprStmtp = nullptr;
-        if (!m_constraintp && !m_withp && !nodep->exprp()->isPure()) {
+        if (!m_constraintp && !nodep->exprp()->isPure()) {
             FileLine* const fileline = nodep->exprp()->fileline();
             AstVar* const varp
                 = new AstVar{fileline, VVarType::XTEMP, "__VInsideTmp_" + m_tempNames.get(nodep),

@@ -45,11 +45,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 class LinkJumpVisitor final : public VNVisitor {
     // TYPES
-    enum ContainsOrInsideFork : uint8_t {
-        CIF_CONTAINS = 0x1,
-        CIF_INSIDE = 0x2,
-        CIF_BOTH = 0x3
-    };
+    enum ContainsOrInsideFork : uint8_t { CIF_CONTAINS = 0x1, CIF_INSIDE = 0x2, CIF_BOTH = 0x3 };
 
     // NODE STATE
     //  AstNode::user1()       -> AstJumpBlock*, for body of this loop
@@ -425,9 +421,9 @@ class LinkJumpVisitor final : public VNVisitor {
                 const std::string targetName = beginp->name();
                 if (existsBlockAbove(targetName)) {
                     if (beginp->user3() & CIF_INSIDE) {
-                        nodep->v3warn(E_UNSUPPORTED,
-                                      "Unsupported: disabling block inside a fork");
-                    } if (beginp->user3() & CIF_CONTAINS) {
+                        nodep->v3warn(E_UNSUPPORTED, "Unsupported: disabling block inside a fork");
+                    }
+                    if (beginp->user3() & CIF_CONTAINS) {
                         nodep->v3warn(E_UNSUPPORTED,
                                       "Unsupported: disabling block that contains a fork");
                     } else {

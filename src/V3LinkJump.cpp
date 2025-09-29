@@ -176,7 +176,8 @@ class LinkJumpVisitor final : public VNVisitor {
         return new AstStmtExpr{
             fl, new AstMethodCall{fl, queueRefp, "push_back", new AstArg{fl, "", processSelfp}}};
     }
-    void handleDisableOnFork(AstDisable* const nodep, const std::vector<AstBegin*>& forks) {
+    void handleDisableOnFork(AstDisable* const nodep, const std::vector<AstBegin*>& forks,
+                             const std::string& methodName) {
         // The support utilizes the process::kill()` method. For each `disable` a queue of
         // processes is declared. At the beginning of each fork that can be disabled, its process
         // handle is pushed to the queue. `disable` statement is replaced with calling `kill()`
@@ -216,7 +217,7 @@ class LinkJumpVisitor final : public VNVisitor {
         }
         AstVarRef* const queueRefp = new AstVarRef{fl, topPkgp, processQueuep, VAccess::READWRITE};
         AstTaskRef* const killQueueCall
-            = new AstTaskRef{fl, VN_AS(getMemberp(processClassp, "killQueue"), Task),
+            = new AstTaskRef{fl, VN_AS(getMemberp(processClassp, methodName), Task),
                              new AstArg{fl, "", queueRefp}};
         killQueueCall->classOrPackagep(processClassp);
         AstStmtExpr* const killStmtp = new AstStmtExpr{fl, killQueueCall};
@@ -412,11 +413,11 @@ class LinkJumpVisitor final : public VNVisitor {
                 }
                 forks.push_back(beginp);
             }
-            handleDisableOnFork(nodep, forks);
+            handleDisableOnFork(nodep, forks, "killQueue");
         } else if (AstBegin* const beginp = VN_CAST(targetp, Begin)) {
             if (directlyUnderFork(beginp)) {
                 std::vector<AstBegin*> forks{beginp};
-                handleDisableOnFork(nodep, forks);
+                handleDisableOnFork(nodep, forks, "killQueue");
             } else {
                 const std::string targetName = beginp->name();
                 if (existsBlockAbove(targetName)) {
@@ -424,6 +425,8 @@ class LinkJumpVisitor final : public VNVisitor {
                         nodep->v3warn(E_UNSUPPORTED, "Unsupported: disabling block inside a fork");
                     }
                     if (beginp->user3() & CIF_CONTAINS) {
+                        std::vector<AstBegin*> blocks{beginp};
+                        handleDisableOnFork(nodep, blocks, "disableForkQueue");
                         if (m_ftaskp) {
                             nodep->v3warn(E_UNSUPPORTED,
                                           "Unsupported: disabling block that is inside task / "

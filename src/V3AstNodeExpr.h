@@ -2319,7 +2319,7 @@ class AstUCFunc final : public AstNodeExpr {
 public:
     AstUCFunc(FileLine* fl, AstNode* exprsp, bool pure = false)
         : ASTGEN_SUPER_UCFunc(fl)
-        , m_purity(pure) {
+        , m_purity{pure} {
         addExprsp(exprsp);
     }
     ASTGEN_MEMBERS_AstUCFunc;

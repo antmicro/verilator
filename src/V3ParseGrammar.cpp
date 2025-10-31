@@ -292,3 +292,4 @@ string V3ParseGrammar::unquoteString(FileLine* fileline, const std::string& text
 }
 
 int V3ParseGrammar::s_typeImpNum = 0;
+uint64_t V3ParseGrammar::s_forkParentUniq = 0;

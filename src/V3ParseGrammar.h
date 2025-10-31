@@ -55,6 +55,7 @@ public:
     std::stack<int> m_pinStack;  // Queue of pin numbers being parsed
 
     static int s_typeImpNum;  // Implicit type number, incremented each module
+    static uint64_t s_forkParentUniq;  // Unique suffix for __VforkParent vars
 
     // CONSTRUCTORS
     V3ParseGrammar() {}
@@ -339,5 +340,43 @@ public:
             resp = AstNode::addNext(resp, beginp);
         }
         return resp;
+    }
+
+    // Wrap fork statements - applies parent process tracking for fork..join_none.
+    // Returns the AstFork itself, or an AstBegin wrapping the fork
+    static AstNodeStmt* wrapFork(V3ParseImp* parsep, AstFork* forkp, AstNodeStmt* stmtsp) {
+        if (forkp->joinType() == VJoinType::JOIN_NONE && stmtsp) {
+            FileLine* const fl = forkp->fileline();
+            if (v3Global.opt.protectIds())
+                fl->v3warn(E_UNSUPPORTED, "Unsupported: fork..join_none with --protect-ids");
+
+            parsep->importIfInStd(fl, "process", true);
+
+            // process __VforkParent = process::self()
+            const std::string parentName = "__VforkParent" + cvtToStr(++s_forkParentUniq);
+            AstRefDType* const dtypep = new AstRefDType{fl, "process"};
+            AstVar* const parentVar
+                = new AstVar{fl, VVarType::BLOCKTEMP, parentName, VFlagChildDType{}, dtypep};
+            parentVar->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
+            AstParseRef* const lhsp = new AstParseRef{fl, parentName, nullptr, nullptr};
+            AstClassOrPackageRef* const processRefp
+                = new AstClassOrPackageRef{fl, "process", nullptr, nullptr};
+            AstParseRef* const selfRefp = new AstParseRef{fl, "self", nullptr, nullptr};
+            AstDot* const processSelfp = new AstDot{fl, true, processRefp, selfRefp};
+            AstMethodCall* const callp = new AstMethodCall{fl, processSelfp, "self", nullptr};
+            AstAssign* const initp = new AstAssign{fl, lhsp, callp};
+
+            forkp->addForksp(wrapInBegin(stmtsp));
+
+            parentVar->addNextHere(initp);
+            initp->addNextHere(forkp);
+            return new AstBegin{forkp->fileline(),
+                                forkp->name() == "" ? "" : forkp->name() + "__VgetForkParent",
+                                parentVar, true};
+        } else {
+            // Normal wrapping
+            forkp->addForksp(wrapInBegin(stmtsp));
+            return forkp;
+        }
     }
 };

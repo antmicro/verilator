@@ -1,0 +1,5 @@
+%Error-UNSUPPORTED: t/t_timing_fork_join.v:54:7: Unsupported: fork..join_none with --protect-ids
+   54 |       fork
+      |       ^~~~
+                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
+%Error: Exiting due to

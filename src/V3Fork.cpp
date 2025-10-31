@@ -466,6 +466,13 @@ class DynScopeVisitor final : public VNVisitor {
             visit(static_cast<AstNodeStmt*>(nodep));
         }
     }
+    void visit(AstWait* nodep) override {
+        if (nodep->exists(
+                [](AstVarRef* refp) { return refp->name().rfind("__VforkParent", 0) == 0; }))
+            return;
+        if (nodep->isTimingControl()) m_afterTimingControl = true;
+        iterateChildren(nodep);
+    }
     void visit(AstNode* nodep) override {
         if (nodep->isTimingControl()) m_afterTimingControl = true;
         iterateChildren(nodep);
@@ -577,6 +584,13 @@ class ForkVisitor final : public VNVisitor {
         return true;
     }
 
+    static AstNode* getMemberp(const AstNodeModule* const nodep, const std::string& name) {
+        for (AstNode* itemp = nodep->stmtsp(); itemp; itemp = itemp->nextp()) {
+            if (itemp->name() == name) return itemp;
+        }
+        return nullptr;
+    }
+
     // VISITORS
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
@@ -594,6 +608,45 @@ class ForkVisitor final : public VNVisitor {
         if (nodep->joinType().join()) {
             iterateChildren(nodep);
             return;
+        }
+
+        // IEEE 1800-2023 9.3.2: In all cases, processes spawned by a fork-join block shall not
+        // start executing until the parent process is blocked or terminates.
+        // Because join and join_any block the parent process, it is only needed when join_none
+        // is used.
+        if (nodep->joinType().joinNone()) {
+            FileLine* fl = nodep->fileline();
+            UINFO(9, "Visiting fork..join_none " << nodep);
+
+            AstNode* nextp = nodep->backp();
+            for (; nextp; nextp = nextp->backp()) {
+                if (VN_IS(nextp, Var)) break;
+            }
+            //TODO: Not true, forks inserted in V3Fork
+            UASSERT_OBJ(VN_IS(nextp, Var), nodep,
+                        "Fork..join_none must have a forkParentp at this point");
+            AstVar* forkParentp = VN_AS(nextp, Var);
+            if (VString::startsWith(forkParentp->name(), "__VforkParent")) {
+                AstClass* const processClassp
+                    = VN_AS(getMemberp(v3Global.rootp()->stdPackagep(), "process"), Class);
+                AstFunc* const statusMethodp = VN_AS(getMemberp(processClassp, "status"), Func);
+                for (AstBegin *itemp = nodep->forksp(), *nextp; itemp; itemp = nextp) {
+                    nextp = VN_AS(itemp->nextp(), Begin);
+                    if (!itemp->stmtsp()) continue;
+                    AstVarRef* const pRefp = new AstVarRef{fl, forkParentp, VAccess::READ};
+                    AstMethodCall* const statusCallp
+                        = new AstMethodCall{fl, pRefp, "status", nullptr};
+                    statusCallp->taskp(statusMethodp);
+                    statusCallp->classOrPackagep(processClassp);
+                    statusCallp->dtypep(statusMethodp->dtypep());
+                    AstNeq* const condp
+                        = new AstNeq{fl, statusCallp,
+                                     new AstConst{fl, AstConst::WidthedValue{},
+                                                  statusMethodp->dtypep()->width(), 1}};
+                    AstWait* const waitStmt = new AstWait{fl, condp, nullptr};
+                    itemp->stmtsp()->addHereThisAsNext(waitStmt);
+                }
+            }
         }
 
         iterateAndNextNull(nodep->declsp());

@@ -10,7 +10,7 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.top_filename = "t/t_timing_fork_join.v"  # Contains all relevant constructs
+test.top_filename = "t/t_timing_fork_join_any.v"  # Contains all relevant constructs
 
 if not test.have_coroutines:
     test.skip("No coroutine support")

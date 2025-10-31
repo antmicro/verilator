@@ -10,14 +10,11 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.top_filename = "t/t_timing_fork_comb.v"
+test.top_filename = "t/t_timing_fork_join.v"
 
-# Should convert the first always into combo and detect cycle
-test.lint(fails=True, verilator_flags2=["--timing"])
+if not test.have_coroutines:
+    test.skip("No coroutine support")
 
-test.file_grep(
-    test.compile_log_filename,
-    r'%Warning-UNOPTFLAT: t/t_timing_fork_comb.v:\d+:\d+: Signal unoptimizable: Circular combinational logic:'
-)
+test.compile(fails=True, verilator_flags2=["--binary --protect-ids", "--protect-key SECRET_KEY"])
 
 test.passes()

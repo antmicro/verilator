@@ -457,6 +457,7 @@ public:
     V3Options();
     ~V3Options();
     void setDebugMode(int level);
+    void timing(bool flag) { m_timing.setTrueOrFalse(flag); }
     unsigned debugLevel(const string& tag) const VL_MT_SAFE;
     unsigned debugSrcLevel(const string& srcfile_path) const VL_MT_SAFE;
     unsigned dumpLevel(const string& tag) const VL_MT_SAFE;

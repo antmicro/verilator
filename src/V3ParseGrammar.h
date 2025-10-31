@@ -55,6 +55,7 @@ public:
     std::stack<int> m_pinStack;  // Queue of pin numbers being parsed
 
     static int s_typeImpNum;  // Implicit type number, incremented each module
+    static uint64_t s_forkParentUniq;  // Unique suffix for __VforkParent vars
 
     // CONSTRUCTORS
     V3ParseGrammar() {}
@@ -339,5 +340,76 @@ public:
             resp = AstNode::addNext(resp, beginp);
         }
         return resp;
+    }
+
+    // Wrap fork statements - applies parent process tracking for fork..join_none.
+    // Returns the AstFork itself, or an AstBegin wrapping the fork
+    static AstNodeStmt* wrapFork(V3ParseImp* parsep, AstFork* forkp, AstNodeStmt* stmtsp) {
+        if (forkp->joinType() == VJoinType::JOIN_NONE && stmtsp) {
+            if (v3Global.opt.protectIds())
+                forkp->v3warn(E_UNSUPPORTED, "Unsupported: fork..join_none with --protect-ids");
+            // IEEE 1800-2023 9.3.2: In all cases, processes spawned by a fork-join block shall not
+            // start executing until the parent process is blocked or terminates.
+            // Because join and join_any block the parent process, it is only needed when join_none
+            // is used. If timing controls are used inside the fork, this is not necessary.
+            FileLine* const fl = forkp->fileline();
+            parsep->importIfInStd(fl, "process", true);
+
+            // process __VforkParent = process::self()
+            const std::string parentName = "__VforkParent" + cvtToStr(++s_forkParentUniq);
+            AstRefDType* const dtypep = new AstRefDType{fl, "process"};
+            AstVar* const parentVar
+                = new AstVar{fl, VVarType::BLOCKTEMP, parentName, VFlagChildDType{}, dtypep};
+            parentVar->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
+            v3Global.opt.timing(true);
+            AstParseRef* const lhsp = new AstParseRef{fl, parentName, nullptr, nullptr};
+            AstClassOrPackageRef* const processRefp
+                = new AstClassOrPackageRef{fl, "process", nullptr, nullptr};
+            AstParseRef* const selfRefp = new AstParseRef{fl, "self", nullptr, nullptr};
+            AstDot* const processSelfp = new AstDot{fl, true, processRefp, selfRefp};
+            AstMethodCall* const callp = new AstMethodCall{fl, processSelfp, "self", nullptr};
+            AstAssign* const initp = new AstAssign{fl, lhsp, callp};
+
+            // Wrap each statement with parent process wait
+            AstBegin* wrappedStmtsp = nullptr;
+            for (AstNodeStmt *nodep = stmtsp, *nextp; nodep; nodep = nextp) {
+                nextp = VN_AS(nodep->nextp(), NodeStmt);
+                if (nextp) nextp->unlinkFrBackWithNext();
+
+                // wait(__VforkParent.status != process::RUNNING)
+                AstParseRef* const pRefp = new AstParseRef{fl, parentName, nullptr, nullptr};
+                AstMethodCall* const statusCallp = new AstMethodCall{fl, pRefp, "status", nullptr};
+                AstClassOrPackageRef* const processRefp2
+                    = new AstClassOrPackageRef{fl, "process", nullptr, nullptr};
+                AstParseRef* const runningRefp = new AstParseRef{fl, "RUNNING", nullptr, nullptr};
+                AstDot* const runningExprp = new AstDot{fl, true, processRefp2, runningRefp};
+                AstNeq* const condp = new AstNeq{fl, statusCallp, runningExprp};
+                AstWait* const waitStmt = new AstWait{fl, condp, nullptr};
+
+                AstBegin* beginp = VN_CAST(nodep, Begin);
+                if (beginp) {
+                    if (beginp->stmtsp())
+                        beginp->stmtsp()->addHereThisAsNext(waitStmt);
+                    else
+                        waitStmt->deleteTree();  // clean up so this doesn't leak
+                } else {
+                    AstNode::addNext<AstNode, AstNode>(waitStmt, nodep);
+                    beginp = new AstBegin{fl, "", waitStmt, false};
+                }
+                wrappedStmtsp = AstNode::addNext(wrappedStmtsp, beginp);
+            }
+
+            forkp->addForksp(wrappedStmtsp);
+
+            parentVar->addNextHere(initp);
+            initp->addNextHere(forkp);
+            return new AstBegin{forkp->fileline(),
+                                forkp->name() == "" ? "" : forkp->name() + "__VgetForkParent",
+                                parentVar, true};
+        } else {
+            // Normal wrapping
+            forkp->addForksp(wrapInBegin(stmtsp));
+            return forkp;
+        }
     }
 };

@@ -466,6 +466,13 @@ class DynScopeVisitor final : public VNVisitor {
             visit(static_cast<AstNodeStmt*>(nodep));
         }
     }
+    void visit(AstWait* nodep) override {
+        if (nodep->exists(
+                [](AstVarRef* refp) { return refp->name().rfind("__VforkParent", 0) == 0; }))
+            return;
+        if (nodep->isTimingControl()) m_afterTimingControl = true;
+        iterateChildren(nodep);
+    }
     void visit(AstNode* nodep) override {
         if (nodep->isTimingControl()) m_afterTimingControl = true;
         iterateChildren(nodep);

@@ -408,7 +408,7 @@ static void process() {
             if (v3Global.opt.trace()) {
                 V3TraceDecl::traceDeclAll(v3Global.rootp());
                 // Remove duplicate trace declarations
-                V3Combine::combineAll(v3Global.rootp());
+                V3Combine::combineTrace(v3Global.rootp());
             }
 
             // Convert forceable signals, process force/release statements.

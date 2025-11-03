@@ -484,8 +484,11 @@ static void process() {
             // Note past this point, we presume traced variables won't move between CFuncs
             // (It's OK if untraced temporaries move around, or vars
             // "effectively" activate the same way.)
-            if (v3Global.opt.trace()) V3Trace::traceAll(v3Global.rootp());
-
+            if (v3Global.opt.trace()) {
+                V3Trace::traceAll(v3Global.rootp());
+                // Remove duplicate trace declarations
+                V3Combine::combineTrace(v3Global.rootp());
+            }
             if (v3Global.opt.stats()) V3Stats::statsStageAll(v3Global.rootp(), "Scoped");
         }
 

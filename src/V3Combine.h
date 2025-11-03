@@ -27,6 +27,7 @@ class AstNetlist;
 class V3Combine final {
 public:
     static void combineAll(AstNetlist* nodep) VL_MT_DISABLED;
+    static void combineTrace(AstNetlist* nodep) VL_MT_DISABLED;
 };
 
 #endif  // Guard

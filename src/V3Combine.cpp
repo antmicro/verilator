@@ -54,6 +54,7 @@ class CombineVisitor final : VNVisitor {
     AstNodeModule* m_modp = nullptr;  // Current module
     const V3Hasher m_hasher;  // For hashing
     VDouble0 m_cfuncsCombined;  // Statistic tracking
+    const bool m_doTrace;
 
     // METHODS
 
@@ -195,7 +196,7 @@ class CombineVisitor final : VNVisitor {
     }
     void visit(AstCFunc* nodep) override {
         iterateChildrenConst(nodep);
-        if (nodep->dontCombine()) return;
+        if (nodep->dontCombine() || (m_doTrace && !nodep->isTrace())) return;
         auto& coll = nodep->slow() ? m_cfuncs(m_modp).m_slow : m_cfuncs(m_modp).m_fast;
         coll.emplace_back(nodep);
     }
@@ -221,17 +222,28 @@ class CombineVisitor final : VNVisitor {
     void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }
 
     // CONSTRUCTORS
-    explicit CombineVisitor(AstNetlist* nodep) { iterate(nodep); }
+    explicit CombineVisitor(AstNetlist* nodep, bool doTrace)
+        : m_doTrace{doTrace} {
+        iterate(nodep);
+    }
     ~CombineVisitor() override {
         V3Stats::addStat("Optimizations, Combined CFuncs", m_cfuncsCombined);
     }
 
 public:
-    static void apply(AstNetlist* netlistp) { CombineVisitor{netlistp}; }
+    static void apply(AstNetlist* netlistp, bool doTrace = false) {
+        CombineVisitor{netlistp, doTrace};
+    }
 };
 
 //######################################################################
 // Combine class functions
+
+void V3Combine::combineTrace(AstNetlist* nodep) {
+    UINFO(2, __FUNCTION__ << ":");
+    CombineVisitor::apply(nodep, true);
+    V3Global::dumpCheckGlobalTree("combine-trace", 0, dumpTreeEitherLevel() >= 3);
+}
 
 void V3Combine::combineAll(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ":");

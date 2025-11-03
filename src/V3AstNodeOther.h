@@ -552,7 +552,7 @@ public:
     void scopep(AstScope* nodep) { m_scopep = nodep; }
     string rtnTypeVoid() const { return ((m_rtnType == "") ? "void" : m_rtnType); }
     void rtnType(const string& rtnType) { m_rtnType = rtnType; }
-    bool dontCombine() const { return m_dontCombine || isTrace() || entryPoint(); }
+    bool dontCombine() const { return m_dontCombine || entryPoint(); }
     void dontCombine(bool flag) { m_dontCombine = flag; }
     bool declPrivate() const { return m_declPrivate; }
     void declPrivate(bool flag) { m_declPrivate = flag; }

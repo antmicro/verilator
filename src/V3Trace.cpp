@@ -733,10 +733,11 @@ class TraceVisitor final : public VNVisitor {
         AstCFunc* const cleanupFuncp = new AstCFunc{fl, "trace_cleanup", m_topScopep};
         cleanupFuncp->argTypes("void* voidSelf, " + v3Global.opt.traceClassBase()
                                + "* /*unused*/");
+        cleanupFuncp->dontCombine(true);
+        cleanupFuncp->isLoose(true);
+        cleanupFuncp->isStatic(true);
         cleanupFuncp->isTrace(true);
         cleanupFuncp->slow(false);
-        cleanupFuncp->isStatic(true);
-        cleanupFuncp->isLoose(true);
         m_topScopep->addBlocksp(cleanupFuncp);
         cleanupFuncp->addStmtsp(new AstCStmt{fl, EmitCUtil::voidSelfAssign(m_topModp)});
         cleanupFuncp->addStmtsp(new AstCStmt{fl, EmitCUtil::symClassAssign()});
@@ -792,10 +793,11 @@ class TraceVisitor final : public VNVisitor {
         // Create the trace registration function
         m_regFuncp = new AstCFunc{m_topScopep->fileline(), "trace_register", m_topScopep};
         m_regFuncp->argTypes(v3Global.opt.traceClassBase() + "* tracep");
+        m_regFuncp->dontCombine(true);
+        m_regFuncp->isLoose(true);
+        m_regFuncp->isStatic(false);
         m_regFuncp->isTrace(true);
         m_regFuncp->slow(true);
-        m_regFuncp->isStatic(false);
-        m_regFuncp->isLoose(true);
         m_topScopep->addBlocksp(m_regFuncp);
 
         // Create the const dump functions. Also allocates trace codes.

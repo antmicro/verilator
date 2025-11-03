@@ -405,7 +405,11 @@ static void process() {
             V3SplitAs::splitAsAll(v3Global.rootp());
 
             // Create tracing sample points, before we start eliminating signals
-            if (v3Global.opt.trace()) V3TraceDecl::traceDeclAll(v3Global.rootp());
+            if (v3Global.opt.trace()) {
+                V3TraceDecl::traceDeclAll(v3Global.rootp());
+                // Remove duplicate trace declarations
+                V3Combine::combineAll(v3Global.rootp());
+            }
 
             // Convert forceable signals, process force/release statements.
             // After V3TraceDecl so we don't trace additional signals inserted to implement

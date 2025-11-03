@@ -1227,7 +1227,13 @@ public:
     string name() const override VL_MT_STABLE { return m_showname; }
     bool maybePointedTo() const override VL_MT_SAFE { return true; }
     bool hasDType() const override VL_MT_SAFE { return true; }
-    bool sameNode(const AstNode* samep) const override { return false; }
+    bool sameNode(const AstNode* samep) const override {
+        const AstTraceDecl* otherp = VN_CAST(samep, TraceDecl);
+        return otherp && valuep() == otherp->valuep() && m_code == otherp->m_code
+               && m_fidx == otherp->m_fidx && m_showname == otherp->m_showname
+               && m_bitRange == otherp->m_bitRange && m_arrayRange == otherp->m_arrayRange
+               && m_varType == otherp->m_varType && m_declDirection == otherp->m_declDirection;
+    }
     string showname() const { return m_showname; }  // * = Var name
     // Details on what we're tracing
     uint32_t code() const { return m_code; }
@@ -1284,7 +1290,7 @@ public:
     explicit AstTracePopPrefix(FileLine* fl)
         : ASTGEN_SUPER_TracePopPrefix(fl) {}
     ASTGEN_MEMBERS_AstTracePopPrefix;
-    bool sameNode(const AstNode* samep) const override { return false; }
+    bool sameNode(const AstNode* samep) const override { return VN_IS(samep, TracePopPrefix); }
 };
 class AstTracePushPrefix final : public AstNodeStmt {
     const string m_prefix;  // Prefix to add to signal names
@@ -1295,7 +1301,10 @@ public:
         , m_prefix{prefix}
         , m_prefixType{prefixType} {}
     ASTGEN_MEMBERS_AstTracePushPrefix;
-    bool sameNode(const AstNode* samep) const override { return false; }
+    bool sameNode(const AstNode* samep) const override {
+        const AstTracePushPrefix* const otherp = VN_CAST(samep, TracePushPrefix);
+        return otherp && m_prefix == otherp->m_prefix && m_prefixType == otherp->m_prefixType;
+    }
     string prefix() const { return m_prefix; }
     VTracePrefixType prefixType() const { return m_prefixType; }
 };

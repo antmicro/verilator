@@ -157,7 +157,7 @@ public:
                         AstAssign* const currIncrp
                             = new AstAssign{flp, new AstVarRef{flp, loopVarScopep, VAccess::WRITE},
                                             new AstAdd{flp, readRefp->cloneTree(false),
-                                                       new AstConst{flp, AstConst::OneStep{}}}};
+                                                       new AstConst{flp, AstConst::Unsized64{}, 1}}};
                         currWhilep->addStmtsp(currIncrp);
                         if (whilep) {
                             whilep->addStmtsp(currInitp);

@@ -53,10 +53,13 @@ public:
     struct ForceInfo final {
         AstNodeExpr* m_rhsExprp;  // RHS expression for this force assignment
         AstVarScope* m_enVscp;  // Force enabled signal scope for this ID (__VforceEnID)
+        AstVarScope* m_rhsArrayVscp = nullptr;  // RHS storage array scope (__VforceRHS[ID])
+        size_t m_forceId = 0;  // Force index for this signal
 
-        ForceInfo(AstNodeExpr* rhsExprp, AstVarScope* enVscp)
+        ForceInfo(AstNodeExpr* rhsExprp, AstVarScope* enVscp, size_t forceId)
             : m_rhsExprp{rhsExprp}
-            , m_enVscp{enVscp} {}
+            , m_enVscp{enVscp}
+            , m_forceId{forceId} {}
     };
 
     void addExternalForce(AstVarScope* scopep, AstVar* varp) {
@@ -188,6 +191,7 @@ private:
     const VNUser1InUse m_user1InUse;
     std::unordered_map<AstVar*, std::unordered_map<AstAssignForce*, ForceInfo>>
         m_forceInfo;  // Map force statements to their ForceInfo
+    std::unordered_map<AstVar*, AstScope*> m_varScopes;  // Scope owning each forced var
 
 public:
     // CONSTRUCTORS
@@ -217,9 +221,13 @@ public:
 
     void addForceAssignment(AstVar* varp, AstVarScope* vscp, AstNodeExpr* rhsExprp,
                             AstAssignForce* forceStmtp) {
+        auto& forceMap = m_forceInfo[varp];
+        const size_t forceId = forceMap.size();
+        auto scopeInsert = m_varScopes.emplace(varp, vscp->scopep());
+        UASSERT_OBJ(scopeInsert.second || scopeInsert.first->second == vscp->scopep(), varp,
+                    "Force assignments for same var must share scope");
         AstVar* const enVarp = new AstVar{
-            varp->fileline(), VVarType::VAR,
-            varp->name() + "__VforceEn" + std::to_string(m_forceInfo[varp].size()),
+            varp->fileline(), VVarType::VAR, varp->name() + "__VforceEn" + std::to_string(forceId),
             (ForceState::isRangedDType(varp) ? varp->dtypep() : varp->findBitDType())};
         varp->addNextHere(enVarp);
         AstScope* const scopep = vscp->scopep();
@@ -237,7 +245,7 @@ public:
         activep->addStmtsp(new AstInitial{flp, assignp});
         scopep->addBlocksp(activep);
 
-        m_forceInfo[varp].emplace(forceStmtp, ForceInfo{rhsExprp, enVscp});
+        forceMap.emplace(forceStmtp, ForceInfo{rhsExprp, enVscp, forceId});
     }
 
     ForceInfo getForceInfo(AstAssignForce* forceStmtp) const {
@@ -254,6 +262,45 @@ public:
         auto it = m_forceInfo.find(varp);
         if (it == m_forceInfo.end()) { return std::unordered_map<AstAssignForce*, ForceInfo>{}; }
         return it->second;
+    }
+
+    void createRhsStorage() {
+        for (auto& varEntry : m_forceInfo) {
+            AstVar* const varp = varEntry.first;
+            auto& forces = varEntry.second;
+            if (forces.empty()) continue;
+            AstScope* const scopep = m_varScopes.at(varp);
+            const size_t numForces = forces.size();
+            FileLine* const flp = varp->fileline();
+            AstRange* const range = new AstRange{flp, static_cast<int>(numForces - 1), 0};
+            AstUnpackArrayDType* const rhsArrayDTypep
+                = new AstUnpackArrayDType{flp, varp->dtypep(), range};
+            v3Global.rootp()->typeTablep()->addTypesp(rhsArrayDTypep);
+            AstVar* const rhsVarp
+                = new AstVar{flp, VVarType::WIRE, varp->name() + "__VforceRHS", rhsArrayDTypep};
+            rhsVarp->isInternal(true);
+            rhsVarp->trace(false);
+            rhsVarp->sigUserRWPublic(true);
+            varp->addNextHere(rhsVarp);
+            AstVarScope* const rhsVscp = new AstVarScope{flp, scopep, rhsVarp};
+            scopep->addVarsp(rhsVscp);
+            for (auto& forceEntry : forces) {
+                ForceInfo& finfo = forceEntry.second;
+                finfo.m_rhsArrayVscp = rhsVscp;
+                UASSERT_OBJ(finfo.m_rhsExprp, varp, "Missing force RHS expression");
+                AstVarRef* const lhsRefp = new AstVarRef{flp, rhsVscp, VAccess::WRITE};
+                AstNodeExpr* const lhsSelp
+                    = new AstArraySel{flp, lhsRefp, static_cast<int>(finfo.m_forceId)};
+                AstAssignW* const assignp
+                    = new AstAssignW{flp, lhsSelp, finfo.m_rhsExprp->cloneTreePure(false)};
+                AstActive* const activep
+                    = new AstActive{flp, "force-rhs",
+                                    new AstSenTree{flp, new AstSenItem{flp, AstSenItem::Combo{}}}};
+                activep->senTreeStorep(activep->sentreep());
+                activep->addStmtsp(new AstAlways{assignp});
+                scopep->addBlocksp(activep);
+            }
+        }
     }
 
     void cleanupRhsExpressions() {
@@ -282,9 +329,18 @@ class ForceDiscoveryVisitor final : public VNVisitorConst {
         if (const AstSel* const selp = VN_CAST(nodep->lhsp(), Sel)) {
             UASSERT_OBJ(VN_IS(selp->lsbp(), Const), nodep->lhsp(),
                         "Unsupported: force on non-const range select");
-            if (selp->lsbConst() != 0)
+            const int lsb = selp->lsbConst();
+            const int selWidth = selp->widthConst();
+            const int varWidth = lhsVarRefp->width();
+            const int upperPad = varWidth - (lsb + selWidth);
+            if (upperPad > 0) {
+                rhsClonep = new AstConcat{nodep->fileline(),
+                                          ForceState::makeZeroConst(nodep, upperPad), rhsClonep};
+            }
+            if (lsb != 0) {
                 rhsClonep = new AstConcat{nodep->fileline(), rhsClonep,
-                                          ForceState::makeZeroConst(rhsClonep, selp->lsbConst())};
+                                          ForceState::makeZeroConst(nodep, lsb)};
+            }
         }
 
         m_state.addForceAssignment(lhsVarRefp->varp(), lhsVarRefp->varScopep(), rhsClonep, nodep);
@@ -486,6 +542,7 @@ void V3Force::forceAll(AstNetlist* nodep) {
         {
             ForceDiscoveryVisitor{nodep, state};
         }  // Stage 1: Discover forces and create all __VforceEnID signals
+        state.createRhsStorage();  // Stage 1b: Materialize RHS storage wires
         { ForceConvertVisitor{nodep, state}; }  // Stage 2: Replace force/release statements
         { ForceReplaceVisitor{nodep, state}; }  // Stage 3: Replace variable reads
         state.cleanupRhsExpressions();

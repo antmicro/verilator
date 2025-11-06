@@ -888,7 +888,8 @@ class ConstraintExprVisitor final : public VNVisitor {
         // set For normal constraints: only call write_var if varp->user3() is not set
         if (!varp->user3() || (membersel && nodep->varp()->globalConstrained())) {
             // For global constraints, delete nodep here after processing
-            if (membersel && isGlobalConstrained) VL_DO_DANGLING(pushDeletep(nodep), nodep);
+            if (membersel && isGlobalConstrained && !membersel->varp()->user1())
+                VL_DO_DANGLING(pushDeletep(nodep), nodep);
             AstCMethodHard* const methodp = new AstCMethodHard{
                 varp->fileline(),
                 new AstVarRef{varp->fileline(), VN_AS(m_genp->user2p(), NodeModule), m_genp,

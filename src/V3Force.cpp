@@ -393,19 +393,6 @@ class ForceConvertVisitor final : public VNVisitor {
                 VL_DO_DANGLING(refp->deleteTree(), refp);
             }
         });
-        // Replace write refs on RHS
-        resetRdp->rhsp()->foreach([this](AstVarRef* refp) {
-            if (refp->access() != VAccess::WRITE) return;
-            AstVarScope* const vscp = refp->varScopep();
-            if (vscp->varp()->isContinuously()) {
-                refp->access(VAccess::READ);
-                ForceState::markNonReplaceable(refp);
-            } else {
-                refp->replaceWith(m_state.getForceComponents(vscp).forcedUpdate(vscp, {}));
-                VL_DO_DANGLING(refp->deleteTree(), refp);
-            }
-        });
-
         resetRdp->addNext(resetEnp);
         relinker.relink(resetRdp);
     }
@@ -491,6 +478,17 @@ class ForceReplaceVisitor final : public VNVisitor {
         }
         case VAccess::WRITE: {
             if (!m_inLogic) return;
+            if (m_releaseRhs) {
+                AstVarScope* const vscp = nodep->varScopep();
+                if (vscp->varp()->isContinuously()) {
+                    nodep->access(VAccess::READ);
+                    return;
+                } else {
+                    nodep->replaceWith(m_state.tryGetForceComponents(nodep)->forcedUpdate(vscp, m_selIndices));
+                    VL_DO_DANGLING(nodep->deleteTree(), nodep);
+                    return;
+                }
+            }
             // Emit rdVscp update after each write to any VarRef on forced LHS.
             if (ForceState::ForceComponentsVarScope* const fcp
                 = m_state.tryGetForceComponents(nodep)) {

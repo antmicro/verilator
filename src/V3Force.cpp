@@ -484,7 +484,8 @@ class ForceReplaceVisitor final : public VNVisitor {
                     nodep->access(VAccess::READ);
                     return;
                 } else {
-                    nodep->replaceWith(m_state.tryGetForceComponents(nodep)->forcedUpdate(vscp, m_selIndices));
+                    nodep->replaceWith(
+                        m_state.tryGetForceComponents(nodep)->forcedUpdate(vscp, m_selIndices));
                     VL_DO_DANGLING(nodep->deleteTree(), nodep);
                     return;
                 }

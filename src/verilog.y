@@ -263,6 +263,7 @@ BISONPRE_VERSION(3.7,%define api.header.include {"V3ParseBison.h"})
 %token<fl>              yVLT_PUBLIC_FLAT_RW         "public_flat_rw"
 %token<fl>              yVLT_PUBLIC_MODULE          "public_module"
 %token<fl>              yVLT_SC_BV                  "sc_bv"
+%token<fl>              yVLT_SC_BIGUINT             "sc_biguint"
 %token<fl>              yVLT_SFORMAT                "sformat"
 %token<fl>              yVLT_SPLIT_VAR              "split_var"
 %token<fl>              yVLT_TIMING_OFF             "timing_off"
@@ -793,6 +794,7 @@ BISONPRE_VERSION(3.7,%define api.header.include {"V3ParseBison.h"})
 %token<fl>              yVL_PUBLIC_OFF            "/*verilator public_off*/"
 %token<fl>              yVL_PUBLIC_MODULE         "/*verilator public_module*/"
 %token<fl>              yVL_SC_BV                 "/*verilator sc_bv*/"
+%token<fl>              yVL_SC_BIGUINT            "/*verilator sc_biguint*/"
 %token<fl>              yVL_SFORMAT               "/*verilator sformat*/"
 %token<fl>              yVL_SPLIT_VAR             "/*verilator split_var*/"
 %token<strp>            yVL_TAG                   "/*verilator tag*/"
@@ -3029,6 +3031,7 @@ sigAttr<nodep>:
         |       yVL_PUBLIC_FLAT_RW attr_event_controlE  { $$ = new AstAttrOf{$1, VAttrType::VAR_PUBLIC_FLAT_RW}; v3Global.dpi(true); DEL($2); }
         |       yVL_ISOLATE_ASSIGNMENTS                 { $$ = new AstAttrOf{$1, VAttrType::VAR_ISOLATE_ASSIGNMENTS}; }
         |       yVL_SC_BV                               { $$ = new AstAttrOf{$1, VAttrType::VAR_SC_BV}; }
+        |       yVL_SC_BIGUINT                          { $$ = new AstAttrOf{$1, VAttrType::VAR_SC_BIGUINT}; }
         |       yVL_SFORMAT                             { $$ = new AstAttrOf{$1, VAttrType::VAR_SFORMAT}; }
         |       yVL_SPLIT_VAR                           { $$ = new AstAttrOf{$1, VAttrType::VAR_SPLIT_VAR}; }
         ;
@@ -8144,6 +8147,7 @@ vltVarAttrFront<attrtypeen>:
         |       yVLT_PUBLIC_FLAT_RD         { $$ = VAttrType::VAR_PUBLIC_FLAT_RD; v3Global.dpi(true); }
         |       yVLT_PUBLIC_FLAT_RW         { $$ = VAttrType::VAR_PUBLIC_FLAT_RW; v3Global.dpi(true); }
         |       yVLT_SC_BV                  { $$ = VAttrType::VAR_SC_BV; }
+        |       yVLT_SC_BIGUINT             { $$ = VAttrType::VAR_SC_BIGUINT; }
         |       yVLT_SFORMAT                { $$ = VAttrType::VAR_SFORMAT; }
         |       yVLT_SPLIT_VAR              { $$ = VAttrType::VAR_SPLIT_VAR; }
         ;

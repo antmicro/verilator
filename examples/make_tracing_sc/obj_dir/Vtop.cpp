@@ -25,15 +25,15 @@ VL_ATTR_COLD void __verilator_assert_port_alias(const char* portName, const void
 Vtop::Vtop(sc_core::sc_module_name /* unused */)
     : VerilatedModel{*Verilated::threadContextp()}
     , vlSymsp{new Vtop__Syms(contextp(), name(), this)}
-    , clk{vlSymsp->TOP.clk}
-    , fastclk{vlSymsp->TOP.fastclk}
-    , reset_l{vlSymsp->TOP.reset_l}
-    , out_small{vlSymsp->TOP.out_small}
-    , in_small{vlSymsp->TOP.in_small}
-    , out_quad{vlSymsp->TOP.out_quad}
-    , in_quad{vlSymsp->TOP.in_quad}
-    , out_wide{vlSymsp->TOP.out_wide}
-    , in_wide{vlSymsp->TOP.in_wide}
+    , clk{"clk"}
+    , fastclk{"fastclk"}
+    , reset_l{"reset_l"}
+    , out_small{"out_small"}
+    , in_small{"in_small"}
+    , out_quad{"out_quad"}
+    , in_quad{"in_quad"}
+    , out_wide{"out_wide"}
+    , in_wide{"in_wide"}
     , rootp{&(vlSymsp->TOP)}
 {
     // Register model with the context

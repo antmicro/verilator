@@ -31,15 +31,15 @@ class alignas(VL_CACHE_LINE_BYTES) Vtop VL_NOT_FINAL : public ::sc_core::sc_modu
     // PORTS
     // The application code writes and reads these signals to
     // propagate new values into/out from the Verilated model.
-    sc_core::sc_in<bool> &clk;
-    sc_core::sc_in<bool> &fastclk;
-    sc_core::sc_in<bool> &reset_l;
-    sc_core::sc_out<uint32_t> &out_small;
-    sc_core::sc_in<uint32_t> &in_small;
-    sc_core::sc_out<uint64_t> &out_quad;
-    sc_core::sc_in<uint64_t> &in_quad;
-    sc_core::sc_out<sc_dt::sc_bv<70> > &out_wide;
-    sc_core::sc_in<sc_dt::sc_bv<70> > &in_wide;
+    sc_core::sc_in<bool> clk;
+    sc_core::sc_in<bool> fastclk;
+    sc_core::sc_in<bool> reset_l;
+    sc_core::sc_out<uint32_t> out_small;
+    sc_core::sc_in<uint32_t> in_small;
+    sc_core::sc_out<uint64_t> out_quad;
+    sc_core::sc_in<uint64_t> in_quad;
+    sc_core::sc_out<sc_dt::sc_bv<70> > out_wide;
+    sc_core::sc_in<sc_dt::sc_bv<70> > in_wide;
 
     // CELLS
     // Public to allow access to /* verilator public */ items.

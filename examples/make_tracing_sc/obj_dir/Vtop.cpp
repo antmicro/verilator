@@ -4,6 +4,21 @@
 #include "Vtop__pch.h"
 #include "verilated_vcd_sc.h"
 
+namespace {
+VL_ATTR_COLD void __verilator_assert_port_alias(const char* portName, const void* wrapper,
+                                               const void* internal) {
+    if (VL_UNLIKELY(wrapper != internal)) {
+        VL_PRINTF("%Error: SystemC port alias check failed for %s (wrapper=%p internal=%p)\n",
+                  portName, wrapper, internal);
+        VL_FATAL_MT(__FILE__, __LINE__, "",
+                    "SystemC port alias check failed; public ports no longer forward to the design internals.");
+    }
+}
+}  // namespace
+
+#define VL_PORT_ALIAS_CHECK(_port) \
+    __verilator_assert_port_alias(#_port, &(this->_port), &(vlSymsp->TOP._port))
+
 //============================================================
 // Constructors
 
@@ -33,6 +48,16 @@ Vtop::Vtop(sc_core::sc_module_name /* unused */)
     sensitive << in_small;
     sensitive << in_quad;
     sensitive << in_wide;
+
+    VL_PORT_ALIAS_CHECK(clk);
+    VL_PORT_ALIAS_CHECK(fastclk);
+    VL_PORT_ALIAS_CHECK(reset_l);
+    VL_PORT_ALIAS_CHECK(in_small);
+    VL_PORT_ALIAS_CHECK(out_small);
+    VL_PORT_ALIAS_CHECK(in_quad);
+    VL_PORT_ALIAS_CHECK(out_quad);
+    VL_PORT_ALIAS_CHECK(in_wide);
+    VL_PORT_ALIAS_CHECK(out_wide);
 
 }
 
@@ -147,3 +172,5 @@ VL_ATTR_COLD void Vtop::traceBaseModel(VerilatedTraceBaseC* tfp, int levels, int
     stfp->spTrace()->addInitCb(&trace_init, &(vlSymsp->TOP));
     Vtop___024root__trace_register(&(vlSymsp->TOP), stfp->spTrace());
 }
+
+#undef VL_PORT_ALIAS_CHECK

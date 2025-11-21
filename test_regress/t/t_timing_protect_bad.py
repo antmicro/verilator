@@ -15,6 +15,8 @@ test.top_filename = "t/t_timing_fork_join.v"
 if not test.have_coroutines:
     test.skip("No coroutine support")
 
-test.compile(fails=True, verilator_flags2=["--binary --protect-ids", "--protect-key SECRET_KEY"], expect_filename=test.golden_filename)
+test.compile(fails=True,
+             verilator_flags2=["--binary --protect-ids", "--protect-key SECRET_KEY"],
+             expect_filename=test.golden_filename)
 
 test.passes()

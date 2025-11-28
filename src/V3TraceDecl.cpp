@@ -199,9 +199,9 @@ class TraceDeclVisitor final : public VNVisitor {
     AstCFunc* newCFunc(FileLine* flp, const string& name) {
         AstScope* const topScopep = m_topScopep->scopep();
         AstCFunc* const funcp = new AstCFunc{flp, name, topScopep};
-        funcp->argTypes(v3Global.opt.traceClassBase() + "* tracep");
+        funcp->argTypes(v3Global.opt.traceClassBase() + "* tracep, int c");
         funcp->isTrace(true);
-        funcp->isStatic(false);
+        funcp->isStatic(true);
         funcp->isLoose(true);
         funcp->slow(true);
         topScopep->addBlocksp(funcp);
@@ -229,7 +229,6 @@ class TraceDeclVisitor final : public VNVisitor {
             const string n = cvtToStr(m_subFuncps.size());
             const string name{"trace_init_sub__" + m_currScopep->nameDotless() + "__" + n};
             AstCFunc* const funcp = newCFunc(flp, name);
-            funcp->addStmtsp(new AstCStmt{flp, "const int c = vlSymsp->__Vm_baseCode;"});
             m_subFuncps.push_back(funcp);
         }
         m_subFuncps.back()->addStmtsp(stmtp);
@@ -289,7 +288,7 @@ class TraceDeclVisitor final : public VNVisitor {
             for (AstCFunc* const subFuncp : m_scopeInitFuncps.at(scopep)) {
                 AstCCall* const callp = new AstCCall{flp, subFuncp};
                 callp->dtypeSetVoid();
-                callp->argTypes("tracep");
+                callp->argTypes("tracep, c");
                 pushp->addNext(callp->makeStmt());
             }
 
@@ -705,7 +704,7 @@ public:
         for (AstCFunc* const funcp : m_scopeInitFuncps.at(m_topScopep->scopep())) {
             AstCCall* const callp = new AstCCall{flp, funcp};
             callp->dtypeSetVoid();
-            callp->argTypes("tracep");
+            callp->argTypes("tracep, c");
             addToTopFunc(callp->makeStmt());
         }
 
@@ -718,7 +717,7 @@ public:
             for (AstCFunc* funcp : m_topFuncps) {
                 AstCCall* const callp = new AstCCall{flp, funcp};
                 callp->dtypeSetVoid();
-                callp->argTypes("tracep");
+                callp->argTypes("tracep, c");
                 topFuncp->addStmtsp(callp->makeStmt());
             }
             m_topFuncps.clear();

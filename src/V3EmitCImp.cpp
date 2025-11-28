@@ -598,8 +598,10 @@ class EmitCTrace final : public EmitCFunc {
         for (const std::string& base : v3Global.opt.traceSourceLangs()) {
             puts("#include \"" + base + ".h\"\n");
         }
-        puts("#include \"" + EmitCUtil::symClassName() + ".h\"\n");
-        puts("\n");
+        if (!m_slow) { // __Syms header is only required for fast files
+            puts("#include \"" + EmitCUtil::symClassName() + ".h\"\n");
+            puts("\n");
+        }
         // Need to emit new lazy declarations
         m_lazyDecls.reset();
     }

@@ -533,8 +533,7 @@ class EmitCModel final : public EmitCFunc {
         putns(modp, "\nvoid " + topModNameProtected + "__" + protect("trace_decl_types") + "("
                         + v3Global.opt.traceClassBase() + "* tracep);\n");
         putns(modp, "\nvoid " + topModNameProtected + "__" + protect("trace_init_top") + "("
-                        + topModNameProtected + "* vlSelf, " + v3Global.opt.traceClassBase()
-                        + "* tracep);\n");
+                        + v3Global.opt.traceClassBase() + "* tracep, int c);\n");
 
         // Static helper function
         puts("\n");
@@ -551,7 +550,7 @@ class EmitCModel final : public EmitCFunc {
         puts("vlSymsp->__Vm_baseCode = code;\n");
         puts("tracep->pushPrefix(vlSymsp->name(), VerilatedTracePrefixType::SCOPE_MODULE);\n");
         puts(topModNameProtected + "__" + protect("trace_decl_types") + "(tracep);\n");
-        puts(topModNameProtected + "__" + protect("trace_init_top") + "(vlSelf, tracep);\n");
+        puts(topModNameProtected + "__" + protect("trace_init_top") + "(tracep, code);\n");
         puts("tracep->popPrefix();\n");
         puts("}\n");
 

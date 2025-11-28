@@ -413,7 +413,7 @@ class TraceVisitor final : public VNVisitor {
         if (!m_actAllFuncp) {
             FileLine* const flp = m_topScopep->fileline();
             AstCFunc* const funcp = new AstCFunc{flp, "__Vm_traceActivitySetAll", m_topScopep};
-            funcp->slow(true);
+            funcp->slow(false);
             funcp->isStatic(false);
             funcp->isLoose(true);
             m_topScopep->addBlocksp(funcp);
@@ -508,7 +508,7 @@ class TraceVisitor final : public VNVisitor {
         funcp->isTrace(true);
         funcp->dontCombine(true);
         funcp->isLoose(true);
-        funcp->slow(traceType != VTraceType::CHANGE);
+        funcp->slow(false);
         funcp->isStatic(isTopFunc);
         // Add it to top scope
         m_topScopep->addBlocksp(funcp);
@@ -793,7 +793,7 @@ class TraceVisitor final : public VNVisitor {
         m_regFuncp = new AstCFunc{m_topScopep->fileline(), "trace_register", m_topScopep};
         m_regFuncp->argTypes(v3Global.opt.traceClassBase() + "* tracep");
         m_regFuncp->isTrace(true);
-        m_regFuncp->slow(true);
+        m_regFuncp->slow(false);
         m_regFuncp->isStatic(false);
         m_regFuncp->isLoose(true);
         m_topScopep->addBlocksp(m_regFuncp);

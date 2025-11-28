@@ -27,52 +27,75 @@ if test.vlt_all:
     if os.path.exists(trace_full_file):
         with open(trace_full_file, 'r') as f:
             trace_content = f.read()
-        
+
         # Search for inlined expressions, e.g.: bufp->fullBit(oldp+X,((1U & (~ (IData)(vlSelfRef.clk)))));
         inlined_not = re.findall(r'fullBit\([^)]*\(\(1U & \(\~', trace_content)
         inlined_arithmetic = re.findall(r'fullCData\([^)]*\(\(.*\+.*\)', trace_content)
-        complex_inlined = re.findall(r'full(?:CData|SData)\([^)]*\([^)]*\+[^)]*\)\s*\*', trace_content)
-        deeply_nested_inlined = re.findall(r'full(?:IData|QData)\([^)]*\{[^}]*\{[^}]*\}', trace_content)
+        complex_inlined = re.findall(r'full(?:CData|SData)\([^)]*\([^)]*\+[^)]*\)\s*\*',
+                                     trace_content)
+        deeply_nested_inlined = re.findall(r'full(?:IData|QData)\([^)]*\{[^}]*\{[^}]*\}',
+                                           trace_content)
 
         if len(inlined_not) > 0:
-            test.error(f"Found {len(inlined_not)} inlined NOT expressions in trace full functions - this significantly increases generated code size, which can lead to linking errors. Inlined expressions should be replaced with variable references")
-        
+            test.error(
+                f"Found {len(inlined_not)} inlined NOT expressions in trace full functions - this significantly increases generated code size, which can lead to linking errors. Inlined expressions should be replaced with variable references"
+            )
+
         if len(inlined_arithmetic) > 0:
-            test.error(f"Found {len(inlined_arithmetic)} inlined arithmetic expressions in trace full functions - this significantly increases generated code size, which can lead to linking errors. Inlined expressions should be replaced with variable references")
+            test.error(
+                f"Found {len(inlined_arithmetic)} inlined arithmetic expressions in trace full functions - this significantly increases generated code size, which can lead to linking errors. Inlined expressions should be replaced with variable references"
+            )
 
         if len(complex_inlined) > 0:
-            test.error(f"Found {len(complex_inlined)} complex inlined multiplication expressions in trace full functions - this significantly increases generated code size, which can lead to linking errors. Inlined expressions should be replaced with variable references")
-        
+            test.error(
+                f"Found {len(complex_inlined)} complex inlined multiplication expressions in trace full functions - this significantly increases generated code size, which can lead to linking errors. Inlined expressions should be replaced with variable references"
+            )
+
         if len(deeply_nested_inlined) > 0:
-            test.error(f"Found {len(deeply_nested_inlined)} deeply nested inlined expressions in trace full functions - this significantly increases generated code size, which can lead to linking errors. Inlined expressions should be replaced with variable references")
+            test.error(
+                f"Found {len(deeply_nested_inlined)} deeply nested inlined expressions in trace full functions - this significantly increases generated code size, which can lead to linking errors. Inlined expressions should be replaced with variable references"
+            )
 
         # Search for variable references
-        var_refs_simple = re.findall(r'fullBit\(oldp\+\d+,\(vlSelfRef\.t__DOT__.*__DOT__simple_not\)\)', trace_content)
-        var_refs_add = re.findall(r'fullCData\(oldp\+\d+,\(vlSelfRef\.t__DOT__.*__DOT__add_result\)', trace_content)
-        var_refs_mul = re.findall(r'fullCData\(oldp\+\d+,\(vlSelfRef\.t__DOT__.*__DOT__mul_result\)', trace_content)
+        var_refs_simple = re.findall(
+            r'fullBit\(oldp\+\d+,\(vlSelfRef\.t__DOT__.*__DOT__simple_not\)\)', trace_content)
+        var_refs_add = re.findall(
+            r'fullCData\(oldp\+\d+,\(vlSelfRef\.t__DOT__.*__DOT__add_result\)', trace_content)
+        var_refs_mul = re.findall(
+            r'fullCData\(oldp\+\d+,\(vlSelfRef\.t__DOT__.*__DOT__mul_result\)', trace_content)
 
         if len(var_refs_simple) == 0:
-            test.error("No variable references found for simple_not signal in trace code - expressions are probably inlined instead")
+            test.error(
+                "No variable references found for simple_not signal in trace code - expressions are probably inlined instead"
+            )
 
         if len(var_refs_add) == 0:
-            test.error("No variable references found for add_result signal in trace code - expressions are probably inlined instead")
+            test.error(
+                "No variable references found for add_result signal in trace code - expressions are probably inlined instead"
+            )
 
         if len(var_refs_mul) == 0:
-            test.error("No variable references found for mul_result signal in trace code - expressions are probably inlined instead")
+            test.error(
+                "No variable references found for mul_result signal in trace code - expressions are probably inlined instead"
+            )
 
     # Check `chg` functions
     if os.path.exists(trace_chg_file):
         with open(trace_chg_file, 'r') as f:
             trace_chg_content = f.read()
-        
+
         # Search for inlined expressions, e.g.: chgBit(oldp+X,((1U & (~ ...))))
         chg_inlined_not = re.findall(r'chgBit\([^)]*\(\(1U & \(\~', trace_chg_content)
         chg_inlined_arith = re.findall(r'chgCData\([^)]*\(\(.*\+.*\)', trace_chg_content)
-        
+
         if len(chg_inlined_not) > 0:
-            test.error(f"Found {len(chg_inlined_not)} inlined NOT expressions in trace chg functions - this significantly increases generated code size, which can lead to linking errors. Inlined expressions should be replaced with variable references")
-        
+            test.error(
+                f"Found {len(chg_inlined_not)} inlined NOT expressions in trace chg functions - this significantly increases generated code size, which can lead to linking errors. Inlined expressions should be replaced with variable references"
+            )
+
         if len(chg_inlined_arith) > 0:
-            test.error(f"Found {len(chg_inlined_arith)} inlined arithmetic expressions in trace chg functions - this significantly increases generated code size, which can lead to linking errors. Inlined expressions should be replaced with variable references")
+            test.error(
+                f"Found {len(chg_inlined_arith)} inlined arithmetic expressions in trace chg functions - this significantly increases generated code size, which can lead to linking errors. Inlined expressions should be replaced with variable references"
+            )
 
 test.passes()

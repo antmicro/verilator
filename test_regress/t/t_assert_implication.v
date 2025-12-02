@@ -69,6 +69,11 @@ module Test
      (cyc == 4) |=> 0
    ) else $display("[%0t] wrong implication (disable)", $time);
 
+   assert property (
+     @(posedge clk) disable iff (cyc < 3)
+     1 |=> cyc > 3
+   ) else $display("[%0t] wrong implication (disable)", $time);
+
 `endif
 
    // Test |->
@@ -112,7 +117,7 @@ module Test
    // Test correct handling of disable iff
    assert property (
      @(posedge clk) disable iff (cyc < 3)
-     1 |=> cyc > 3
+     1 |=> cyc >= 3
    );
 
    // Test correct handling of disable iff in current cycle

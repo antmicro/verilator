@@ -12,10 +12,11 @@ import vltest_bootstrap
 test.scenarios('vlt')
 test.top_filename = "t/t_time_sc.v"
 
-test.sc_time_resolution = 'SC_NS'
-test.sc_time_resolution_multiplier = 10
+test.sc_time_resolution = 'SC_PS'
+test.sc_time_resolution_multiplier = 100
+test.sim_time = 2100
 
-test.compile(verilator_flags2=['-sc', '-timescale 10ns/10ns', '+define+TEST_EXPECT=200ns'])
+test.compile(verilator_flags2=['-sc', '-timescale 100ps/100ps', '+define+TEST_EXPECT=2000ps'])
 
 test.execute(expect_filename=test.golden_filename)
 

@@ -2185,7 +2185,8 @@ class VlTest:
             if 'clk' in self._inputs:
                 fh.write("        " + setp + "clk = false;\n")
             if not timing_loop:
-                self._print_advance_time(fh, 10, None)
+                start_time = 10
+                self._print_advance_time(fh, start_time * self.sc_time_resolution_multiplier, None)
             fh.write("    }\n")
 
             timestamp = "sc_time_stamp()" if self.sc else "contextp->time()"
@@ -2242,7 +2243,7 @@ class VlTest:
                         fh.write("            topp.reset(nullptr);\n")
                         fh.write("            return 0;\n")
                         fh.write("        }\n")
-                    self._print_advance_time(fh, 1, action)
+                    self._print_advance_time(fh, self.sc_time_resolution_multiplier, action)
             if self.benchmarksim:
                 fh.write("        if (VL_UNLIKELY(!warm)) {\n")
                 fh.write("            starttime = std::chrono::steady_clock::now();\n")

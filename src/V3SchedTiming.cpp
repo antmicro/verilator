@@ -376,7 +376,7 @@ class TransformForksVisitor final : public VNVisitor {
         m_awaitMoved = false;
         iterateChildren(nodep);
         // cppcheck-suppress knownConditionTrueFalse
-        if (nodep->isCoroutine() && m_awaitMoved
+        if (nodep->isCoroutine() // && m_awaitMoved
             && !nodep->stmtsp()->exists([](AstCAwait*) { return true; })) {
             // co_return at the end (either that or a co_await is required in a coroutine
             nodep->addStmtsp(new AstCStmt{nodep->fileline(), "co_return;"});

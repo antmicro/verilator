@@ -316,6 +316,7 @@ void orderSequentially(AstCFunc* funcp, const LogicByScope& lbs) {
                             loopp->addStmtsp(new AstLoopTest{flp, loopp, condp});
                             loopp->addStmtsp(bodyp);
                             bodyp = loopp;
+                            // bodyp->addNext(new AstCStmt{flp, "co_return;"});
                         }
                     }
                     subFuncp->addStmtsp(bodyp);

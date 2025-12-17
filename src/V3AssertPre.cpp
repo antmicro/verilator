@@ -687,6 +687,8 @@ private:
                                            readCntRefp->cloneTree(false)}};
         }
         iterateChildren(nodep);
+        // Delete m_disableSeqIfp, because it is always copied before insetion to the AST
+        VL_DO_DANGLING(pushDeletep(m_disableSeqIfp), m_disableSeqIfp);
     }
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_defaultClockingp);

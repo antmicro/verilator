@@ -177,6 +177,8 @@ class RandomizeMarkVisitor final : public VNVisitor {
                 if (memberselp->varp() == varp) return true;
             } else if (const AstArraySel* const arrselp = VN_CAST(exprp, ArraySel)) {
                 if (VN_AS(arrselp->fromp(), VarRef)->varp() == varp) return true;
+            } else if (const AstCMethodHard* const methodp = VN_CAST(exprp, CMethodHard)) {
+                if (VN_AS(methodp->fromp(), VarRef)->varp() == varp) return true;
             }
         }
         return false;
@@ -544,6 +546,12 @@ class RandomizeMarkVisitor final : public VNVisitor {
                     } else if ((varrefp = VN_CAST(exprp, VarRef))) {
                         randVarp = varrefp->varp();
                         varrefp->user1(true);
+                        exprp = nullptr;
+                    } else if (AstCMethodHard* const methodp = VN_CAST(exprp, CMethodHard)) {
+                        varrefp = VN_AS(methodp->fromp(), VarRef);
+                        randVarp = varrefp->varp();
+                        varrefp->user1(true);
+                        varrefp->access(VAccess::READWRITE);
                         exprp = nullptr;
                     } else {
                         varrefp = VN_AS(VN_CAST(exprp, ArraySel)->fromp(), VarRef);

@@ -398,7 +398,7 @@ public:
                 = new AstUnpackArrayDType{flp, varp->dtypep(), range};
             v3Global.rootp()->typeTablep()->addTypesp(rhsArrayDTypep);
             AstVar* const rhsVarp
-                = new AstVar{flp, VVarType::WIRE, varp->name() + "__VforceRHS", rhsArrayDTypep};
+                = new AstVar{flp, VVarType::VAR, varp->name() + "__VforceRHS", rhsArrayDTypep};
             rhsVarp->isInternal(true);
             rhsVarp->trace(false);
             rhsVarp->sigUserRWPublic(true);
@@ -411,17 +411,51 @@ public:
                     ForceInfo& finfo = forceEntry.second;
                     finfo.m_rhsArrayVscp = rhsVscp;
                     UASSERT_OBJ(finfo.m_rhsExprp, varp, "Missing force RHS expression");
-                    AstVarRef* const lhsRefp = new AstVarRef{flp, rhsVscp, VAccess::WRITE};
-                    AstNodeExpr* const lhsSelp
-                        = new AstArraySel{flp, lhsRefp, static_cast<int>(finfo.m_forceId)};
-                    AstAssignW* const assignp
-                        = new AstAssignW{flp, lhsSelp, finfo.m_rhsExprp->cloneTreePure(false)};
-                    AstActive* const activep = new AstActive{
-                        flp, "force-rhs",
-                        new AstSenTree{flp, new AstSenItem{flp, AstSenItem::Combo{}}}};
-                    activep->senTreeStorep(activep->sentreep());
-                    activep->addStmtsp(new AstAlways{assignp});
-                    scopep->addBlocksp(activep);
+
+                    // Build sensitivity list from all VarRefs in the RHS expression
+                    AstSenItem* senItemsp = nullptr;
+                    finfo.m_rhsExprp->foreach([&](AstVarRef* refp) {
+                        AstSenItem* const itemp
+                            = new AstSenItem{flp, VEdgeType::ET_CHANGED,
+                                             new AstVarRef{flp, refp->varScopep(), VAccess::READ}};
+                        if (senItemsp) {
+                            senItemsp->addNext(itemp);
+                        } else {
+                            senItemsp = itemp;
+                        }
+                    });
+
+                    // Always create initial assignment: initial __VforceRHS[ID] = rhsExpr
+                    {
+                        AstVarRef* const initLhsRefp = new AstVarRef{flp, rhsVscp, VAccess::WRITE};
+                        AstNodeExpr* const initLhsSelp
+                            = new AstArraySel{flp, initLhsRefp, static_cast<int>(finfo.m_forceId)};
+                        AstAssign* const initAssignp = new AstAssign{
+                            flp, initLhsSelp, finfo.m_rhsExprp->cloneTreePure(false)};
+                        AstActive* const initActivep = new AstActive{
+                            flp, "force-rhs-init",
+                            new AstSenTree{flp, new AstSenItem{flp, AstSenItem::Static{}}}};
+                        initActivep->senTreeStorep(initActivep->sentreep());
+                        initActivep->addStmtsp(new AstInitial{flp, initAssignp});
+                        scopep->addBlocksp(initActivep);
+                    }
+
+                    // Only create always block if there are VarRefs in the RHS
+                    if (senItemsp) {
+                        AstVarRef* const lhsRefp = new AstVarRef{flp, rhsVscp, VAccess::WRITE};
+                        AstNodeExpr* const lhsSelp
+                            = new AstArraySel{flp, lhsRefp, static_cast<int>(finfo.m_forceId)};
+                        AstAssign* const assignp
+                            = new AstAssign{flp, lhsSelp, finfo.m_rhsExprp->cloneTreePure(false)};
+
+                        // Create always block with sensitivity list
+                        AstSenTree* const sentreep = new AstSenTree{flp, senItemsp};
+                        AstActive* const activep = new AstActive{flp, "force-rhs", sentreep};
+                        activep->senTreeStorep(activep->sentreep());
+                        activep->addStmtsp(
+                            new AstAlways{flp, VAlwaysKwd::ALWAYS, nullptr, assignp});
+                        scopep->addBlocksp(activep);
+                    }
                 }
             }
         }

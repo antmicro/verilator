@@ -6781,12 +6781,15 @@ class WidthVisitor final : public VNVisitor {
                 // IEEE 1800-2023 (18.12) limits args to current scope variables.
                 // Verilator accepts this for compatibility with other simulators.
                 continue;
-            } else if (VN_IS(exprp, VarRef) || VN_IS(exprp, ArraySel)) {
+            }
+            if (const AstCMethodHard* const methodp = VN_CAST(exprp, CMethodHard)) {
+                if (methodp->method() == VCMethod::ARRAY_AT) continue;
+            }
+            if (VN_IS(exprp, VarRef) || VN_IS(exprp, ArraySel)) {
                 // Valid usage
                 continue;
-            } else {
-                argp->v3error("Non-variable arguments for 'std::randomize()'.");
             }
+            argp->v3error("Non-variable arguments for 'std::randomize()'.");
         }
         if (nullp) nullp->v3error("'std::randomize()' does not accept 'null' as arguments.");
     }

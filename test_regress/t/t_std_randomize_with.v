@@ -18,6 +18,7 @@ module t;
    initial begin
       int a, b;
       int limit = 10;
+      int dyn_arr[];
       external_cl obj;
 
       // Test 1: Basic std::randomize with 'with' clause
@@ -46,6 +47,12 @@ module t;
       if (std::randomize(a, obj.x, obj.y) with { a > 0; a < 5; obj.x > a; obj.y > obj.x; obj.y < a + 10; } != 1) $stop;
       if (!(a > 0 && a < 5 && obj.x > a && obj.y > obj.x && obj.y < a + 10)) $stop;
       $display("Test 5 passed: a=%0d, obj.x=%0d, obj.y=%0d", a, obj.x, obj.y);
+
+      // Test 6: Randomize dynamic array elements
+      dyn_arr = new[3];
+      if (std::randomize(dyn_arr[1]) with { dyn_arr[1] > 2 && dyn_arr[1] < 5; } != 1) $stop;
+      if (!(dyn_arr[1] > 2 && dyn_arr[1] < 5)) $stop;
+      $display("Test 6 passed: dyn_arr[1]=%0d", dyn_arr[1]);
 
       $write("*-* All Finished *-*\n");
       $finish;

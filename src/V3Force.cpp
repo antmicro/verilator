@@ -169,15 +169,30 @@ public:
     }
 
     // Get or create the loop variable for a given scope
+    // loopVars tracks VarScope per scope; internally tracks Var per module to avoid duplicates
     static AstVarScope* getOrCreateLoopVar(std::unordered_map<AstScope*, AstVarScope*>& loopVars,
                                            AstScope* scopep, FileLine* flp, AstNode* dtypeSrcp) {
         auto it = loopVars.find(scopep);
         if (it != loopVars.end()) return it->second;
-        AstVar* const loopVarp
-            = new AstVar{flp, VVarType::BLOCKTEMP, "__Vforcei", dtypeSrcp->findSigned32DType()};
-        loopVarp->funcLocal(false);
-        loopVarp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
-        scopep->modp()->addStmtsp(loopVarp);
+
+        // Static map to track Var per module (shared across all scopes in same module)
+        static std::unordered_map<AstNodeModule*, AstVar*> loopVarps;
+
+        // Check if we already have a Var for this module
+        AstNodeModule* const modp = scopep->modp();
+        AstVar* loopVarp = nullptr;
+        auto varIt = loopVarps.find(modp);
+        if (varIt != loopVarps.end()) {
+            loopVarp = varIt->second;
+        } else {
+            loopVarp = new AstVar{flp, VVarType::BLOCKTEMP, "__Vforcei",
+                                  dtypeSrcp->findSigned32DType()};
+            loopVarp->funcLocal(false);
+            loopVarp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
+            modp->addStmtsp(loopVarp);
+            loopVarps[modp] = loopVarp;
+        }
+
         AstVarScope* const loopVscp = new AstVarScope{flp, scopep, loopVarp};
         scopep->addVarsp(loopVscp);
         loopVars[scopep] = loopVscp;

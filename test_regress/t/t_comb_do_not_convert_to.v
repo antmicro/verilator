@@ -30,12 +30,12 @@ module t (
     end
 
     always @(i) begin
-      force b = 1;
+      b <= 1;
       o_1 = i;
     end
 
     always @(i) begin
-      release b;
+      b <= 0;
       o_2 = i;
     end
 

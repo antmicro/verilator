@@ -905,22 +905,43 @@ class ForceConvertVisitor final : public VNVisitor {
                               new AstVarRef{flp, readInfo->m_rdVscp, VAccess::READ}});
         }
 
-        // Clear all force enables
-        for (const auto& force : forces) {
-            AstNodeExpr* enLhsp = ForceState::createEnableExpr(force.second, lhsp);
-            AstNodeExpr* enRhsp = ForceState::createEnableExpr(force.second, lhsp);
-            if (!isRanged) {
-                enLhsp->dtypep(enLhsp->findBitDType());
-                enRhsp->dtypep(enRhsp->findBitDType());
-            }
-            AstAssign* const disableAssignp = new AstAssign{
-                flp, enLhsp,
-                new AstAnd{flp, enRhsp,
-                           ForceState::makeZeroConst(lhsp, isRanged ? lhsp->width() : 1)}};
+        // Clear all force enables using a loop
+        const size_t numForces = m_state.getNumForces(releasedVarp);
+        if (numForces > 0) {
+            AstScope* const scopep = releaseVscp->scopep();
+            AstVarScope* const loopVscp
+                = ForceState::getOrCreateLoopVar(m_loopVarScopes, scopep, flp, releasedVarp);
+            AstVarScope* const enArrayVscp = forces.begin()->second.m_enArrayVscp;
+
+            // Init: __Vforcei = 0
+            AstNode* loopStmtsp = new AstAssign{flp, new AstVarRef{flp, loopVscp, VAccess::WRITE},
+                                                new AstConst{flp, 0}};
+
+            AstLoop* const loopp = new AstLoop{flp};
+            loopStmtsp->addNext(loopp);
+
+            // __Vforcei < numForces
+            loopp->addStmtsp(
+                new AstLoopTest{flp, loopp,
+                                new AstLt{flp, new AstVarRef{flp, loopVscp, VAccess::READ},
+                                          new AstConst{flp, static_cast<uint32_t>(numForces)}}});
+
+            // __VforceEns[__Vforcei] = 0
+            AstNodeExpr* const enLhsp = ForceState::createEnableExprWithVarIndex(
+                enArrayVscp, lhsp, loopVscp, VAccess::WRITE);
+            loopp->addStmtsp(new AstAssign{
+                flp, enLhsp, ForceState::makeZeroConst(lhsp, isRanged ? lhsp->width() : 1)});
+
+            // __Vforcei++
+            loopp->addStmtsp(
+                new AstAssign{flp, new AstVarRef{flp, loopVscp, VAccess::WRITE},
+                              new AstAdd{flp, new AstVarRef{flp, loopVscp, VAccess::READ},
+                                         new AstConst{flp, 1}}});
+
             if (!stmtListp) {
-                stmtListp = disableAssignp;
+                stmtListp = loopStmtsp;
             } else {
-                stmtListp->addNext(disableAssignp);
+                stmtListp->addNext(loopStmtsp);
             }
         }
 

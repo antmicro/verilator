@@ -529,14 +529,6 @@ class TaskVisitor final : public VNVisitor {
                 if (VN_IS(pinp, VarRef) || VN_IS(pinp, MemberSel) || VN_IS(pinp, StructSel)
                     || VN_IS(pinp, ArraySel)) {
                     refArgOk = true;
-                } else if (AstCMethodHard* const cMethodp = VN_CAST(pinp, CMethodHard)) {
-                    if (VN_IS(cMethodp->fromp()->dtypep()->skipRefp(), QueueDType)) {
-                        refArgOk = cMethodp->method() == VCMethod::DYN_AT_WRITE_APPEND
-                                   || cMethodp->method() == VCMethod::DYN_AT_WRITE_APPEND_BACK;
-                    } else {
-                        refArgOk = cMethodp->method() == VCMethod::ARRAY_AT
-                                   || cMethodp->method() == VCMethod::ARRAY_AT_BACK;
-                    }
                 }
                 if (refArgOk) {
                     if (AstVarRef* const varrefp = VN_CAST(pinp, VarRef)) {

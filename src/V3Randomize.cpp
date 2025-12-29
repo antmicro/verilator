@@ -551,6 +551,9 @@ class RandomizeMarkVisitor final : public VNVisitor {
                         varrefp = VN_AS(methodp->fromp(), VarRef);
                         randVarp = varrefp->varp();
                         varrefp->user1(true);
+                        if (methodp->method() == VCMethod::ARRAY_AT) {
+                            methodp->method(VCMethod::ARRAY_AT_WRITE);
+                        }
                         varrefp->access(VAccess::READWRITE);
                         exprp = nullptr;
                     } else {

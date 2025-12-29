@@ -6783,7 +6783,10 @@ class WidthVisitor final : public VNVisitor {
                 continue;
             }
             if (const AstCMethodHard* const methodp = VN_CAST(exprp, CMethodHard)) {
-                if (methodp->method() == VCMethod::ARRAY_AT) continue;
+                if (methodp->method() == VCMethod::ARRAY_AT
+                    || methodp->method() == VCMethod::ARRAY_AT_WRITE) {
+                    continue;
+                }
             }
             if (VN_IS(exprp, VarRef) || VN_IS(exprp, ArraySel)) {
                 // Valid usage

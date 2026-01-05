@@ -9,12 +9,10 @@
 
 import vltest_bootstrap
 
-test.scenarios('vlt')
+test.scenarios('simulator')
 
-test.compile()
+test.compile(verilator_flags2=["--exe", "--main", "--timing"])
 
-files = test.glob_some(test.obj_dir + "/" + test.vm_prefix + "*.h")
-test.file_grep_any(files, r' u_sub__DOT__a__VforceEn')
-test.file_grep_any(files, r' u_sub__DOT__a__VforceVal')
+test.execute()
 
 test.passes()

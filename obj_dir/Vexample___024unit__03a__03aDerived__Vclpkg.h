@@ -43,6 +43,7 @@ class Vexample___024unit__03a__03aDerived : public Vexample___024unit__03a__03aB
     void _ctor_var_reset(Vexample__Syms* __restrict vlSymsp);
   public:
     Vexample___024unit__03a__03aDerived(VlProcessRef vlProcess, Vexample__Syms* __restrict vlSymsp);
+    void init(VlProcessRef vlProcess, Vexample__Syms* __restrict vlSymsp);
     std::string to_string() const;
     std::string to_string_middle() const;
     virtual ~Vexample___024unit__03a__03aDerived();

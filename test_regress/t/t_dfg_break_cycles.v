@@ -360,7 +360,7 @@ module t (
 
   // verilator lint_off UNOPTFLAT
   `signal(VOLATILE_PACKED_IN_CYCLE, 3);
-  wire logic [2:0] volatile_packed_in_cycle /* verilator forceable */;
+  wire logic [2:0] volatile_packed_in_cycle /* verilator forceable */; // UNOPTFLAT
   assign volatile_packed_in_cycle = rand_a[2:0] ^ 3'(volatile_packed_in_cycle[2:1]);
   assign VOLATILE_PACKED_IN_CYCLE = volatile_packed_in_cycle;
   // verilator lint_on

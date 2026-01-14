@@ -27,6 +27,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vexample__Syms final : public VerilatedSyms {
   public:
     // INTERNAL STATE
     Vexample* const __Vm_modelp;
+    std::vector<VlEvent*> __Vm_triggeredEvents;
     VlDeleter __Vm_deleter;
     bool __Vm_didInit = false;
 
@@ -45,6 +46,16 @@ class alignas(VL_CACHE_LINE_BYTES) Vexample__Syms final : public VerilatedSyms {
 
     // METHODS
     const char* name() const { return TOP.vlNamep; }
+    void fireEvent(VlEvent& event) {
+        if (VL_LIKELY(!event.isTriggered())) {
+            __Vm_triggeredEvents.push_back(&event);
+        }
+        event.fire();
+    }
+    void clearTriggeredEvents() {
+        for (const auto eventp : __Vm_triggeredEvents) eventp->clearTriggered();
+        __Vm_triggeredEvents.clear();
+    }
 };
 
 #endif  // guard

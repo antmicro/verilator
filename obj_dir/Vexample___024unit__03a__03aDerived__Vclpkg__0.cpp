@@ -15,6 +15,9 @@ Vexample___024unit__03a__03aDerived::Vexample___024unit__03a__03aDerived(VlProce
     VL_DEBUG_IF(VL_DBG_MSGF("+          Vexample___024unit__03a__03aDerived::new\n"); );
     // Body
     _ctor_var_reset(vlSymsp);
+    this->__PVT__queue2 = VlQueue<IData/*31:0*/>::consVC(3U, 
+                                                         VlQueue<IData/*31:0*/>::consVV(2U, 
+                                                                                1U));
     ;
 }
 
@@ -22,6 +25,7 @@ void Vexample___024unit__03a__03aDerived::_ctor_var_reset(Vexample__Syms* __rest
     VL_DEBUG_IF(VL_DBG_MSGF("+          Vexample___024unit__03a__03aDerived::_ctor_var_reset\n"); );
     // Body
     (void)vlSymsp;  // Prevent unused variable warning
+    __PVT__queue2.atDefault() = 0;
 }
 
 Vexample___024unit__03a__03aDerived::~Vexample___024unit__03a__03aDerived() {
@@ -44,7 +48,9 @@ std::string Vexample___024unit__03a__03aDerived::to_string_middle() const {
     VL_DEBUG_IF(VL_DBG_MSGF("+          Vexample___024unit__03a__03aDerived::to_string_middle\n"); );
     // Body
     std::string out;
-    out += "__Vfunc_get_val__1__Vfuncout:" + VL_TO_STRING(__Vfunc_get_val__1__Vfuncout);
+    out += "queue2:" + VL_TO_STRING(__PVT__queue2);
+    out += ", b:" + VL_TO_STRING(__PVT__b);
+    out += ", __Vfunc_get_val__1__Vfuncout:" + VL_TO_STRING(__Vfunc_get_val__1__Vfuncout);
     out += ", "+ Vexample___024unit__03a__03aBase::to_string_middle();
     return (out);
 }

@@ -28,7 +28,7 @@ VlCoroutine Vexample___024unit__03a__03aBase::new____Vfork_1__0(VlProcessRef vlP
     VL_KEEP_THIS;
     __Vtask___VforkTask_0__1____VforkParent = unnamedblk1__DOT____VforkParent;
     if ((1U == ([&]() {
-                    VL_NULL_CHECK(__Vtask___VforkTask_0__1____VforkParent, "example.sv", 6)
+                    VL_NULL_CHECK(__Vtask___VforkTask_0__1____VforkParent, "example.sv", 8)
                 ->__VnoInFunc_status(vlSymsp, __Vtask_status__2__Vfuncout);
                 }(), __Vtask_status__2__Vfuncout))) {
         CData/*0:0*/ __VdynTrigger_hf707780e__0;
@@ -39,11 +39,11 @@ VlCoroutine Vexample___024unit__03a__03aBase::new____Vfork_1__0(VlProcessRef vlP
                                                          vlProcess, 
                                                          "@([true] (32'h1 != $_EXPRSTMT( // Function: status $unit::Base.__Vtask___VforkTask_0__1____VforkParent.($unit::Base.__Vtask_status__2__Vfuncout); , ); ))", 
                                                          "example.sv", 
-                                                         6);
+                                                         8);
             this->__Vtrigprevexpr_hcce7cd61__0 = (1U 
                                                   != 
                                                   ([&]() {
-                        VL_NULL_CHECK(__Vtask___VforkTask_0__1____VforkParent, "example.sv", 6)
+                        VL_NULL_CHECK(__Vtask___VforkTask_0__1____VforkParent, "example.sv", 8)
                                                    ->__VnoInFunc_status(vlSymsp, __Vtask_status__2__Vfuncout);
                     }(), __Vtask_status__2__Vfuncout));
             __VdynTrigger_hf707780e__0 = this->__Vtrigprevexpr_hcce7cd61__0;
@@ -53,7 +53,7 @@ VlCoroutine Vexample___024unit__03a__03aBase::new____Vfork_1__0(VlProcessRef vlP
                                                      vlProcess, 
                                                      "@([true] (32'h1 != $_EXPRSTMT( // Function: status $unit::Base.__Vtask___VforkTask_0__1____VforkParent.($unit::Base.__Vtask_status__2__Vfuncout); , ); ))", 
                                                      "example.sv", 
-                                                     6);
+                                                     8);
     }
     VL_WRITEF_NX("Do some forking\n",0);
     vlProcess->state(VlProcess::FINISHED);
@@ -72,6 +72,7 @@ void Vexample___024unit__03a__03aBase::_ctor_var_reset(Vexample__Syms* __restric
     // Body
     (void)vlSymsp;  // Prevent unused variable warning
     __PVT__k = 0;
+    __PVT__queue.atDefault() = 0;
     __Vtrigprevexpr_hcce7cd61__0 = 0;
 }
 
@@ -96,5 +97,7 @@ std::string Vexample___024unit__03a__03aBase::to_string_middle() const {
     // Body
     std::string out;
     out += "k:" + VL_TO_STRING(__PVT__k);
+    out += ", queue:" + VL_TO_STRING(__PVT__queue);
+    out += ", a:" + VL_TO_STRING(__PVT__a);
     return (out);
 }

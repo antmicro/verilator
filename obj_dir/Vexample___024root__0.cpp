@@ -24,7 +24,7 @@ VlCoroutine Vexample___024root___eval_initial__TOP__Vtiming__0(Vexample___024roo
     t__DOT__d = VL_NEW(Vexample___024unit__03a__03aDerived, vlProcess, vlSymsp);
     co_await vlSelfRef.__VdlySched.delay(1ULL, vlProcess, 
                                          "example.sv", 
-                                         28);
+                                         33);
     vlProcess->state(VlProcess::FINISHED);
     co_return;}
 
@@ -144,7 +144,7 @@ void Vexample___024root___eval(Vexample___024root* vlSelf) {
 #ifdef VL_DEBUG
             Vexample___024root___dump_triggers__act(vlSelfRef.__VnbaTriggered, "nba"s);
 #endif
-            VL_FATAL_MT("example.sv", 23, "", "NBA region did not converge after 100 tries");
+            VL_FATAL_MT("example.sv", 28, "", "NBA region did not converge after 100 tries");
         }
         __VnbaIterCount = ((IData)(1U) + __VnbaIterCount);
         vlSelfRef.__VactIterCount = 0U;
@@ -153,7 +153,7 @@ void Vexample___024root___eval(Vexample___024root* vlSelf) {
 #ifdef VL_DEBUG
                 Vexample___024root___dump_triggers__act(vlSelfRef.__VactTriggered, "act"s);
 #endif
-                VL_FATAL_MT("example.sv", 23, "", "Active region did not converge after 100 tries");
+                VL_FATAL_MT("example.sv", 28, "", "Active region did not converge after 100 tries");
             }
             vlSelfRef.__VactIterCount = ((IData)(1U) 
                                          + vlSelfRef.__VactIterCount);

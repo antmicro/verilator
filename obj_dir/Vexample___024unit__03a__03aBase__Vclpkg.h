@@ -40,6 +40,8 @@ class Vexample___024unit__03a__03aBase : public virtual VlClass {
     // DESIGN SPECIFIC STATE
     CData/*0:0*/ __Vtrigprevexpr_hcce7cd61__0;
     IData/*31:0*/ __PVT__k;
+    VlQueue<IData/*31:0*/> __PVT__queue;
+    VlEvent __PVT__a;
     void __VnoInFunc_get_val(Vexample__Syms* __restrict vlSymsp, std::string &get_val__Vfuncrtn);
   private:
     void _ctor_var_reset(Vexample__Syms* __restrict vlSymsp);

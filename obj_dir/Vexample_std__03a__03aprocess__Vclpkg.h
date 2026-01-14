@@ -62,7 +62,7 @@ std::string VL_TO_STRING(const VlClassRef<Vexample_std__03a__03aprocess>& obj);
 
 
 //*** Below code from `systemc in Verilog file
-// From `systemc at /home/ant/verilator-infrastructure-verilator/include/verilated_std.sv:196:21
+// From `systemc at /home/ant/verilator-infrastructure-verilator4/include/verilated_std.sv:196:21
 
 template<> template<>
 inline bool VlClassRef<Vexample_std__03a__03aprocess>::operator==(const VlClassRef<Vexample_std__03a__03aprocess>& rhs) const {

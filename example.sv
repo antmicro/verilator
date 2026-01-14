@@ -1,5 +1,7 @@
 class Base;
   int k = 7;
+  int queue[$];
+  event a;
 
   function new(string foo);
     $write("%s\n", foo);
@@ -15,6 +17,9 @@ class Base;
 endclass
 
 class Derived extends Base;
+  int queue2[$] = {1,2,3};
+  event b;
+
   function new();
     super.new(get_val());
   endfunction

@@ -38,6 +38,8 @@ class Vexample___024unit__03a__03aDerived : public Vexample___024unit__03a__03aB
   public:
 
     // DESIGN SPECIFIC STATE
+    VlQueue<IData/*31:0*/> __PVT__queue2;
+    VlEvent __PVT__b;
     std::string __Vfunc_get_val__1__Vfuncout;
   private:
     void _ctor_var_reset(Vexample__Syms* __restrict vlSymsp);

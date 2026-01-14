@@ -50,6 +50,7 @@ void Vexample::eval_step() {
     // Debug assertions
     Vexample___024root___eval_debug_assertions(&(vlSymsp->TOP));
 #endif  // VL_DEBUG
+    vlSymsp->clearTriggeredEvents();
     vlSymsp->__Vm_deleter.deleteAll();
     if (VL_UNLIKELY(!vlSymsp->__Vm_didInit)) {
         vlSymsp->__Vm_didInit = true;

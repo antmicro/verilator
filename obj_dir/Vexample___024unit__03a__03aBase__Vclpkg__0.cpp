@@ -4,11 +4,8 @@
 
 #include "Vexample__pch.h"
 
-Vexample___024unit__03a__03aBase::Vexample___024unit__03a__03aBase(VlProcessRef vlProcess, Vexample__Syms* __restrict vlSymsp) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+          Vexample___024unit__03a__03aBase::new\n"); );
-}
-
 void Vexample___024unit__03a__03aBase::init(VlProcessRef vlProcess, Vexample__Syms* __restrict vlSymsp, std::string foo) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+          Vexample___024unit__03a__03aBase::new\n"); );
     // Locals
     VlClassRef<Vexample_std__03a__03aprocess> __Vfunc_self__0__Vfuncout;
     // Body

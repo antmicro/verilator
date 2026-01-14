@@ -4,11 +4,8 @@
 
 #include "Vexample__pch.h"
 
-Vexample_std__03a__03asemaphore::Vexample_std__03a__03asemaphore(Vexample__Syms* __restrict vlSymsp) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+            Vexample_std__03a__03asemaphore::new\n"); );
-}
-
 void Vexample_std__03a__03asemaphore::init(Vexample__Syms* __restrict vlSymsp, IData/*31:0*/ keyCount) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+            Vexample_std__03a__03asemaphore::new\n"); );
     // Body
     _ctor_var_reset(vlSymsp);
     this->__PVT__m_keyCount = keyCount;

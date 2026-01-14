@@ -127,11 +127,8 @@ void Vexample_std__03a__03aprocess::__VnoInFunc_set_randstate(Vexample__Syms* __
     this->__PVT__m_process->randstate(s);
 }
 
-Vexample_std__03a__03aprocess::Vexample_std__03a__03aprocess(Vexample__Syms* __restrict vlSymsp) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+            Vexample_std__03a__03aprocess::new\n"); );
-}
-
 void Vexample_std__03a__03aprocess::init(Vexample__Syms* __restrict vlSymsp) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+            Vexample_std__03a__03aprocess::new\n"); );
     // Body
     _ctor_var_reset(vlSymsp);
 }

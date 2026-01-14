@@ -52,7 +52,7 @@ class Vexample_std__03a__03aprocess : public virtual VlClass {
   private:
     void _ctor_var_reset(Vexample__Syms* __restrict vlSymsp);
   public:
-    Vexample_std__03a__03aprocess(Vexample__Syms* __restrict vlSymsp);
+    Vexample_std__03a__03aprocess() = default;
     void init(Vexample__Syms* __restrict vlSymsp);
     std::string to_string() const;
     std::string to_string_middle() const;

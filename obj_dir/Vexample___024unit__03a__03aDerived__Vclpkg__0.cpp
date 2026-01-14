@@ -5,14 +5,18 @@
 #include "Vexample__pch.h"
 
 Vexample___024unit__03a__03aDerived::Vexample___024unit__03a__03aDerived(VlProcessRef vlProcess, Vexample__Syms* __restrict vlSymsp)
-    : Vexample___024unit__03a__03aBase(vlProcess, vlSymsp, 
+    : Vexample___024unit__03a__03aBase(vlProcess, vlSymsp) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+          Vexample___024unit__03a__03aDerived::new\n"); );
+}
+
+void Vexample___024unit__03a__03aDerived::init(VlProcessRef vlProcess, Vexample__Syms* __restrict vlSymsp) {
+    Vexample___024unit__03a__03aBase::init(vlProcess, vlSymsp, 
                                        VL_CVT_PACK_STR_NN(
                                                           ([&]() {
                 std::string __Vfunc_get_val__1__Vfuncout;
                 this->__VnoInFunc_get_val(vlSymsp, __Vfunc_get_val__1__Vfuncout);
                 return (__Vfunc_get_val__1__Vfuncout);
-            }()))) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+          Vexample___024unit__03a__03aDerived::new\n"); );
+            }())));
     // Body
     _ctor_var_reset(vlSymsp);
     this->__PVT__queue2 = VlQueue<IData/*31:0*/>::consVC(3U, 

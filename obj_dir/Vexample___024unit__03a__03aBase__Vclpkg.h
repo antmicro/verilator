@@ -46,7 +46,8 @@ class Vexample___024unit__03a__03aBase : public virtual VlClass {
   private:
     void _ctor_var_reset(Vexample__Syms* __restrict vlSymsp);
   public:
-    Vexample___024unit__03a__03aBase(VlProcessRef vlProcess, Vexample__Syms* __restrict vlSymsp, std::string foo);
+    Vexample___024unit__03a__03aBase(VlProcessRef vlProcess, Vexample__Syms* __restrict vlSymsp);
+    void init(VlProcessRef vlProcess, Vexample__Syms* __restrict vlSymsp, std::string foo);
   private:
     VlCoroutine new____Vfork_1__0(VlProcessRef vlProcess, Vexample__Syms* __restrict vlSymsp, VlClassRef<Vexample_std__03a__03aprocess> unnamedblk1__DOT____VforkParent);
   public:

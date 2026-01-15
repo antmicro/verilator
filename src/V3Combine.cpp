@@ -196,7 +196,9 @@ class CombineVisitor final : VNVisitor {
     }
     void visit(AstCFunc* nodep) override {
         iterateChildrenConst(nodep);
-        if (nodep->dontCombine() || (m_doTrace && !nodep->isTrace())) return;
+        if (nodep->dontCombine()
+            || (m_doTrace && nodep->name().find("trace_init") == string::npos))
+            return;
         auto& coll = nodep->slow() ? m_cfuncs(m_modp).m_slow : m_cfuncs(m_modp).m_fast;
         coll.emplace_back(nodep);
     }

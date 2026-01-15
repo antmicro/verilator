@@ -199,6 +199,7 @@ class CombineVisitor final : VNVisitor {
         if (nodep->dontCombine()
             || (m_doTrace && nodep->name().find("trace_init") == string::npos))
             return;
+        if (!m_doTrace && nodep->isTrace()) return;
         auto& coll = nodep->slow() ? m_cfuncs(m_modp).m_slow : m_cfuncs(m_modp).m_fast;
         coll.emplace_back(nodep);
     }

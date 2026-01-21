@@ -467,9 +467,7 @@ class AssertVisitor final : public VNVisitor {
             bodysp
                 = new AstIf{nodep->fileline(), new AstLogNot{nodep->fileline(), disablep}, bodysp};
         }
-        if (sentreep) {
-            bodysp = new AstAlways{nodep->fileline(), VAlwaysKwd::ALWAYS, sentreep, bodysp};
-        }
+        if (sentreep) bodysp = new AstAlwaysObserved{nodep->fileline(), sentreep, bodysp};
 
         if (passsp && !passsp->backp()) VL_DO_DANGLING(pushDeletep(passsp), passsp);
         if (failsp && !failsp->backp()) VL_DO_DANGLING(pushDeletep(failsp), failsp);

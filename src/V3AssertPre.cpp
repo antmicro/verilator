@@ -677,11 +677,11 @@ private:
             AstVarRef* const writeCntRefp = new AstVarRef{flp, disableCntp, VAccess::WRITE};
             AstAssign* const incrStmtp = new AstAssign{
                 flp, writeCntRefp, new AstAdd{flp, readCntRefp, new AstConst{flp, 1}}};
-            AstAlways* const alwaysp
-                = new AstAlways{flp, VAlwaysKwd::ALWAYS,
-                                new AstSenTree{flp, new AstSenItem{flp, VEdgeType::ET_POSEDGE,
-                                                                   m_disablep->cloneTree(false)}},
-                                incrStmtp};
+            AstAlwaysObserved* const alwaysp = new AstAlwaysObserved{
+                flp,
+                new AstSenTree{
+                    flp, new AstSenItem{flp, VEdgeType::ET_POSEDGE, m_disablep->cloneTree(false)}},
+                incrStmtp};
             disableCntp->addNextHere(alwaysp);
 
             // Store value of that counter at the beginning of sequence evaluation

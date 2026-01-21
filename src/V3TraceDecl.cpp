@@ -100,6 +100,7 @@ class TraceDeclVisitor final : public VNVisitor {
     std::set<const AstTraceDecl*> m_declUncalledps;  // Declarations not called
     int m_topFuncSize = 0;  // Size of the top function currently being built
     int m_subFuncSize = 0;  // Size of the sub function currently being built
+    int m_subFuncScopeDepth = 0;  // Current scope depth (pushPrefix - popPrefix count)
     const int m_funcSizeLimit  // Maximum size of a function
         = v3Global.opt.outputSplitCTrace() ? v3Global.opt.outputSplitCTrace()
                                            : std::numeric_limits<int>::max();
@@ -222,7 +223,14 @@ class TraceDeclVisitor final : public VNVisitor {
     }
 
     void addToSubFunc(AstNodeStmt* stmtp) {
-        if (m_subFuncSize > m_funcSizeLimit || m_subFuncps.empty()) {
+        // Track scope depth changes
+        const bool isPush = VN_IS(stmtp, TracePushPrefix);
+        const bool isPop = VN_IS(stmtp, TracePopPrefix);
+        
+        // Only split when:
+        // 1. Size limit exceeded AND
+        // 2. Scope depth is 0 (all scopes properly closed) OR this is the first function
+        if ((m_subFuncSize > m_funcSizeLimit && m_subFuncScopeDepth == 0) || m_subFuncps.empty()) {
             m_subFuncSize = 0;
             //
             FileLine* const flp = m_currScopep->fileline();
@@ -234,6 +242,13 @@ class TraceDeclVisitor final : public VNVisitor {
         }
         m_subFuncps.back()->addStmtsp(stmtp);
         m_subFuncSize += stmtp->nodeCount();
+        
+        // Update scope depth after adding the statement
+        if (isPush) {
+            ++m_subFuncScopeDepth;
+        } else if (isPop) {
+            --m_subFuncScopeDepth;
+        }
     }
 
     void addTraceDecl(const VNumRange& arrayRange,
@@ -367,6 +382,7 @@ class TraceDeclVisitor final : public VNVisitor {
         UINFO(9, "visit " << nodep);
         UASSERT_OBJ(!m_currScopep, nodep, "Should not nest");
         UASSERT_OBJ(m_subFuncps.empty(), nodep, "Should not nest");
+        UASSERT_OBJ(m_subFuncScopeDepth == 0, nodep, "Should not nest");
         UASSERT_OBJ(m_entries.empty(), nodep, "Should not nest");
         UASSERT_OBJ(!m_traVscp, nodep, "Should not nest");
         UASSERT_OBJ(!m_traValuep, nodep, "Should not nest");
@@ -443,6 +459,8 @@ class TraceDeclVisitor final : public VNVisitor {
                 }
             }
             pathAdjustor.unwind();
+            UASSERT_OBJ(m_subFuncScopeDepth == 0, nodep,
+                        "Scope depth should be 0 after unwinding");
             m_traVscp = nullptr;
             m_traName.clear();
             UASSERT_OBJ(!m_traValuep, nodep, "Should have been deleted");

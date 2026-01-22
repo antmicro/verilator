@@ -101,7 +101,12 @@ class CombineVisitor final : VNVisitor {
 
             while (true) {
                 auto dit = dupFinder.findDuplicate(funcp);
-                if (dit == dupFinder.end()) break;
+                if (dit == dupFinder.end()) {
+                    if (m_doTrace) {
+                        UINFO(3, "No duplicate found for " << funcp->name() << endl);
+                    }
+                    break;
+                }
 
                 AstCFunc* oldp = VN_AS(dit->second, CFunc);
                 AstCFunc* newp = funcp;
@@ -114,6 +119,10 @@ class CombineVisitor final : VNVisitor {
                 if (oldp->user3()) std::swap(oldp, newp);
 
                 // Something is being replaced
+                if (m_doTrace) {
+                    UINFO(1, "FOUND DUPLICATE: " << oldp->name() << " matches " 
+                          << newp->name() << endl);
+                }
                 UINFO(9, "Replacing " << oldp);
                 UINFO(9, "     with " << newp);
                 ++m_cfuncsCombined;
@@ -168,10 +177,21 @@ class CombineVisitor final : VNVisitor {
             auto funcps = std::move(m_cfuncs(modulep).m_fast);
             funcps.splice(funcps.end(), m_cfuncs(modulep).m_slow);
 
+            if (m_doTrace && !funcps.empty()) {
+                UINFO(1, "Module " << modulep->name() << " has " << funcps.size() 
+                      << " trace functions\n");
+            }
+
             V3DupFinder dupFinder{m_hasher};
 
             // First, hash all functions
-            for (AstCFunc* const funcp : funcps) dupFinder.insert(funcp);
+            for (AstCFunc* const funcp : funcps) {
+                dupFinder.insert(funcp);
+                if (m_doTrace) {
+                    V3Hash hash = m_hasher(funcp);
+                    UINFO(2, "  Function " << funcp->name() << " hash=" << hash << endl);
+                }
+            }
 
             // Iterate to fixed point
             {
@@ -202,6 +222,9 @@ class CombineVisitor final : VNVisitor {
         if (!m_doTrace && nodep->isTrace()) return;
         auto& coll = nodep->slow() ? m_cfuncs(m_modp).m_slow : m_cfuncs(m_modp).m_fast;
         coll.emplace_back(nodep);
+        if (m_doTrace) {
+            UINFO(1, "Collected trace func: " << nodep->name() << endl);
+        }
     }
     void visit(AstCCall* nodep) override {
         iterateChildrenConst(nodep);

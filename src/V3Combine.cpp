@@ -120,8 +120,8 @@ class CombineVisitor final : VNVisitor {
 
                 // Something is being replaced
                 if (m_doTrace) {
-                    UINFO(1, "FOUND DUPLICATE: " << oldp->name() << " matches " 
-                          << newp->name() << endl);
+                    UINFO(1, "FOUND DUPLICATE: " << oldp->name() << " matches " << newp->name()
+                                                 << endl);
                 }
                 UINFO(9, "Replacing " << oldp);
                 UINFO(9, "     with " << newp);
@@ -178,8 +178,8 @@ class CombineVisitor final : VNVisitor {
             funcps.splice(funcps.end(), m_cfuncs(modulep).m_slow);
 
             if (m_doTrace && !funcps.empty()) {
-                UINFO(1, "Module " << modulep->name() << " has " << funcps.size() 
-                      << " trace functions\n");
+                UINFO(1, "Module " << modulep->name() << " has " << funcps.size()
+                                   << " trace functions\n");
             }
 
             V3DupFinder dupFinder{m_hasher};
@@ -222,9 +222,7 @@ class CombineVisitor final : VNVisitor {
         if (!m_doTrace && nodep->isTrace()) return;
         auto& coll = nodep->slow() ? m_cfuncs(m_modp).m_slow : m_cfuncs(m_modp).m_fast;
         coll.emplace_back(nodep);
-        if (m_doTrace) {
-            UINFO(1, "Collected trace func: " << nodep->name() << endl);
-        }
+        if (m_doTrace) { UINFO(1, "Collected trace func: " << nodep->name() << endl); }
     }
     void visit(AstCCall* nodep) override {
         iterateChildrenConst(nodep);

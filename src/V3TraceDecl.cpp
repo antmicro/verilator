@@ -226,7 +226,7 @@ class TraceDeclVisitor final : public VNVisitor {
         // Track scope depth changes
         const bool isPush = VN_IS(stmtp, TracePushPrefix);
         const bool isPop = VN_IS(stmtp, TracePopPrefix);
-        
+
         // Only split when:
         // 1. Size limit exceeded AND
         // 2. Scope depth is 0 (all scopes properly closed) OR this is the first function
@@ -242,7 +242,7 @@ class TraceDeclVisitor final : public VNVisitor {
         }
         m_subFuncps.back()->addStmtsp(stmtp);
         m_subFuncSize += stmtp->nodeCount();
-        
+
         // Update scope depth after adding the statement
         if (isPush) {
             ++m_subFuncScopeDepth;

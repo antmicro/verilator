@@ -161,6 +161,7 @@ public:
                         = getAssignStmtsp(structSelp, vscp, lhsVarRefCopyp, assigns);
                     stmtsp = stmtsp ? stmtsp->addNext(memberStmtp) : memberStmtp;
                 }
+                VL_DO_DANGLING(lhsp->deleteTree(), lhsp);  // better yet, start cloning from the second iteration
                 return stmtsp;
             } else if (const AstUnpackArrayDType* const arrayDtypep
                        = VN_CAST(lhsDtypep, UnpackArrayDType)) {

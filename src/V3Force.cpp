@@ -102,9 +102,9 @@ public:
 
             AstVarRef* const enRefp = new AstVarRef{flp, m_enVscp, VAccess::WRITE};
             AstNodeStmt* const enInitStmtsp = rdUpdateStmtsp->cloneTree(true);
-            for (int i = 0; i < assigns.size(); i++) {
+            for (auto & assign : assigns) {
                 // Save copies, because clonep() works only after the last cloneTree
-                assigns[i] = assigns[i]->clonep();
+                assign = assign->clonep();
             }
             for (AstAssign* const assignp : assigns) {
                 AstVarRef* const lhsVarRefp

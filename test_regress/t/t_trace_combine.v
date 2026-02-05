@@ -26,6 +26,10 @@ module sub;
     for (genvar i = 0; i < VARS; ++i) begin
       bit x;
       assign x = (i % 2 == 0);
+      bit y;
+      assign y = (i % 2 == 0);
+      bit z;
+      assign z = (i % 2 == 0);
     end
   endgenerate
 endmodule

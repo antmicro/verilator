@@ -114,6 +114,7 @@ class TraceDeclVisitor final : public VNVisitor {
     // Interface refs initialization placeholders:
     // (Interface ref variable, placeholder statement)
     std::vector<std::tuple<AstVarScope*, AstNodeStmt*>> m_ifaceRefInitPlaceholders;
+    AstNodeStmt* m_lastAdded = nullptr;
 
     // A trace entry under a scope is either:
     // - A variable (including interface references)
@@ -208,7 +209,7 @@ class TraceDeclVisitor final : public VNVisitor {
         return funcp;
     }
 
-    void addToTopFunc(AstNodeStmt* stmtp) {
+    void addToTopFunc(AstNode* stmtp) {
         if (m_topFuncSize > m_funcSizeLimit || m_topFuncps.empty()) {
             m_topFuncSize = 0;
             //
@@ -222,18 +223,23 @@ class TraceDeclVisitor final : public VNVisitor {
     }
 
     void addToSubFunc(AstNodeStmt* stmtp) {
-        if (m_subFuncSize > m_funcSizeLimit || m_subFuncps.empty()) {
+        const bool createNew
+            = (!m_lastAdded || !VN_IS(m_lastAdded, TraceDecl)) && VN_IS(stmtp, TraceDecl)
+              || (!VN_IS(stmtp, TraceDecl) && m_lastAdded && VN_IS(m_lastAdded, TraceDecl));
+        if (createNew || m_subFuncSize > m_funcSizeLimit || m_subFuncps.empty()) {
             m_subFuncSize = 0;
             //
             FileLine* const flp = m_currScopep->fileline();
             const string n = cvtToStr(m_subFuncps.size());
             const string name{"trace_init_sub__" + m_currScopep->nameDotless() + "__" + n};
             AstCFunc* const funcp = newCFunc(flp, name);
-            funcp->addStmtsp(new AstCStmt{flp, "const int c = vlSymsp->__Vm_baseCode;"});
+            if (VN_IS(stmtp, TraceDecl))
+                funcp->addStmtsp(new AstCStmt{flp, "const int c = vlSymsp->__Vm_baseCode;"});
             m_subFuncps.push_back(funcp);
         }
         m_subFuncps.back()->addStmtsp(stmtp);
         m_subFuncSize += stmtp->nodeCount();
+        m_lastAdded = stmtp;
     }
 
     void addTraceDecl(const VNumRange& arrayRange,
@@ -390,6 +396,7 @@ class TraceDeclVisitor final : public VNVisitor {
                     if (entry.path() == "" && entry.vscp()) entry.rootio(true);
                 }
             }
+            m_lastAdded = nullptr;
 
             // Sort trace entries, first by if a $root io, then by enclosing instance
             // (necessary for single traversal of hierarchy during initialization), then
@@ -703,10 +710,16 @@ public:
 
         // Call the initialization functions of the root scope from the top function
         for (AstCFunc* const funcp : m_scopeInitFuncps.at(m_topScopep->scopep())) {
-            AstCCall* const callp = new AstCCall{flp, funcp};
-            callp->dtypeSetVoid();
-            callp->argTypes("tracep");
-            addToTopFunc(callp->makeStmt());
+            if (funcp->exists([](AstTracePushPrefix*) { return true; })
+                || funcp->exists([](AstTracePopPrefix*) { return true; })) {
+                addToTopFunc(funcp->stmtsp()->unlinkFrBackWithNext());
+                funcp->unlinkFrBack()->deleteTree();
+            } else {
+                AstCCall* const callp = new AstCCall{flp, funcp};
+                callp->dtypeSetVoid();
+                callp->argTypes("tracep");
+                addToTopFunc(callp->makeStmt());
+            }
         }
 
         // Ensure a top function exists, in case there was nothing to trace at all

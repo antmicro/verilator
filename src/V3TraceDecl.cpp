@@ -224,7 +224,7 @@ class TraceDeclVisitor final : public VNVisitor {
 
     void addToSubFunc(AstNodeStmt* stmtp) {
         const bool createNew
-            = (!m_lastAdded || !VN_IS(m_lastAdded, TraceDecl)) && VN_IS(stmtp, TraceDecl)
+            = ((!m_lastAdded || !VN_IS(m_lastAdded, TraceDecl)) && VN_IS(stmtp, TraceDecl))
               || (!VN_IS(stmtp, TraceDecl) && m_lastAdded && VN_IS(m_lastAdded, TraceDecl));
         if (createNew || m_subFuncSize > m_funcSizeLimit || m_subFuncps.empty()) {
             m_subFuncSize = 0;

@@ -137,24 +137,14 @@ public:
     void pushPrefix(const char*, VerilatedTracePrefixType);
     void popPrefix();
 
-    void declEvent(uint32_t code, uint32_t fidx, const char* name, int dtypenum,
-                   VerilatedTraceSigDirection, VerilatedTraceSigKind, VerilatedTraceSigType,
-                   bool array, int arraynum);
-    void declBit(uint32_t code, uint32_t fidx, const char* name, int dtypenum,
-                 VerilatedTraceSigDirection, VerilatedTraceSigKind, VerilatedTraceSigType,
-                 bool array, int arraynum);
-    void declBus(uint32_t code, uint32_t fidx, const char* name, int dtypenum,
-                 VerilatedTraceSigDirection, VerilatedTraceSigKind, VerilatedTraceSigType,
-                 bool array, int arraynum, int msb, int lsb);
-    void declQuad(uint32_t code, uint32_t fidx, const char* name, int dtypenum,
-                  VerilatedTraceSigDirection, VerilatedTraceSigKind, VerilatedTraceSigType,
-                  bool array, int arraynum, int msb, int lsb);
-    void declArray(uint32_t code, uint32_t fidx, const char* name, int dtypenum,
-                   VerilatedTraceSigDirection, VerilatedTraceSigKind, VerilatedTraceSigType,
-                   bool array, int arraynum, int msb, int lsb);
-    void declDouble(uint32_t code, uint32_t fidx, const char* name, int dtypenum,
-                    VerilatedTraceSigDirection, VerilatedTraceSigKind, VerilatedTraceSigType,
-                    bool array, int arraynum);
+    void declEvent(uint32_t code, uint32_t fidx, const char* name, DeclArgs& args);
+    void declBit(uint32_t code, uint32_t fidx, const char* name, DeclArgs& args);
+    void declBus(uint32_t code, uint32_t fidx, const char* name, DeclArgs& args, int msb, int lsb);
+    void declQuad(uint32_t code, uint32_t fidx, const char* name, DeclArgs& args, int msb,
+                  int lsb);
+    void declArray(uint32_t code, uint32_t fidx, const char* name, DeclArgs& args, int msb,
+                   int lsb);
+    void declDouble(uint32_t code, uint32_t fidx, const char* name, DeclArgs& args);
 };
 
 #ifndef DOXYGEN

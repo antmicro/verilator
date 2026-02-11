@@ -98,6 +98,15 @@ enum class VerilatedTraceSigType : uint8_t {
     TIME,
 };
 
+struct DeclArgs {
+    int dtypenum;
+    VerilatedTraceSigDirection direction;
+    VerilatedTraceSigKind kind;
+    VerilatedTraceSigType type;
+    bool array;
+    int arraynum;
+};
+
 //=============================================================================
 // Offloaded tracing
 

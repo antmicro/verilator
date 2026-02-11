@@ -579,9 +579,48 @@ public:
     }
     ~EmitCTraceTypes() override = default;
 };
+#include <functional>
+
+// Base data type of signal
+struct DeclArgs {
+    int dtypenum;
+    string direction;
+    string kind;
+    string type;
+    bool array;
+    int arraynum;
+    string to_string(int num) const {
+        return "DeclArgs arg_" + std::to_string(num) + " = {" + std::to_string(dtypenum) + ", "
+               + direction + ", " + kind + ", " + type + ", " + (array ? "true" : "false") + ", "
+               + std::to_string(arraynum) + "};\n";
+    }
+};
+struct DeclArgsHash {
+    std::size_t operator()(const DeclArgs& d) const {
+        std::size_t h = 0;
+
+        auto combine = [&h](std::size_t v) { h ^= v + 0x9e3779b9 + (h << 6) + (h >> 2); };
+
+        combine(std::hash<int>{}(d.dtypenum));
+        combine(std::hash<std::string>{}(d.direction));
+        combine(std::hash<std::string>{}(d.kind));
+        combine(std::hash<std::string>{}(d.type));
+        combine(std::hash<bool>{}(d.array));
+        combine(std::hash<int>{}(d.arraynum));
+
+        return h;
+    }
+};
+struct DeclArgsEqual {
+    bool operator()(const DeclArgs& a, const DeclArgs& b) const {
+        return a.dtypenum == b.dtypenum && a.direction == b.direction && a.kind == b.kind
+               && a.type == b.type && a.array == b.array && a.arraynum == b.arraynum;
+    }
+};
 
 class EmitCTrace final : public EmitCFunc {
     // NODE STATE/TYPES
+
     // None allowed to support threaded emitting
 
     // MEMBERS
@@ -589,6 +628,8 @@ class EmitCTrace final : public EmitCFunc {
     const std::unique_ptr<EmitCTraceTypes> m_emitTypesp{m_slow ? new EmitCTraceTypes{} : nullptr};
     V3UniqueNames m_uniqueNames;  // Generates unique file names
     const std::string m_fileBaseName = EmitCUtil::topClassName() + "_" + protect("_Trace");
+    std::unordered_map<DeclArgs, int, DeclArgsHash, DeclArgsEqual> m_argsNames;
+    int m_argsCount = 0;
 
     // METHODS
     void openNextOutputFile() {
@@ -625,7 +666,8 @@ class EmitCTrace final : public EmitCFunc {
         return varp->isSc() && (varp->isScUint() || varp->isScUintBool());
     }
 
-    void emitTraceInitOne(const AstTraceDecl* nodep, int enumNum) {
+    void emitTraceInitOne(const AstTraceDecl* nodep, int enumNum, const DeclArgs& args) {
+        // Enum number
         if (nodep->dtypep()->basicp()->isDouble()) {
             puts("tracep->declDouble(");
         } else if (nodep->isWide()) {
@@ -652,34 +694,7 @@ class EmitCTrace final : public EmitCFunc {
         puts(",");
         putsQuoted(VIdProtect::protectWordsIf(nodep->showname(), nodep->protect()));
 
-        // Enum number
-        puts("," + cvtToStr(enumNum));
-
-        // Direction
-        if (nodep->declDirection().isInout()) {
-            puts(", VerilatedTraceSigDirection::INOUT");
-        } else if (nodep->declDirection().isWritable()) {
-            puts(", VerilatedTraceSigDirection::OUTPUT");
-        } else if (nodep->declDirection().isNonOutput()) {
-            puts(", VerilatedTraceSigDirection::INPUT");
-        } else {
-            puts(", VerilatedTraceSigDirection::NONE");
-        }
-
-        // Kind
-        puts(", VerilatedTraceSigKind::");
-        puts(nodep->varType().traceSigKind());
-
-        // Type
-        puts(", VerilatedTraceSigType::");
-        puts(nodep->dtypep()->basicp()->keyword().traceSigType());
-
-        // Array range
-        if (nodep->arrayRange().ranged()) {
-            puts(", true,(i+" + cvtToStr(nodep->arrayRange().lo()) + ")");
-        } else {
-            puts(", false,-1");
-        }
+        puts(", arg_" + std::to_string(m_argsNames[args]));
 
         // Bit range
         if (!nodep->dtypep()->basicp()->isDouble() && nodep->bitRange().ranged()) {
@@ -687,8 +702,8 @@ class EmitCTrace final : public EmitCFunc {
                  + cvtToStr(nodep->bitRange().right()));
         }
 
-        //
         puts(");");
+        //
     }
 
     int emitTraceDeclDType(AstNodeDType* nodep) {
@@ -785,6 +800,8 @@ class EmitCTrace final : public EmitCFunc {
     void visit(AstCFunc* nodep) override {
         if (!nodep->isTrace()) return;
         if (nodep->slow() != m_slow) return;
+        m_argsCount = 0;
+        m_argsNames.clear();
 
         if (splitNeeded()) {
             // Splitting file, so using parallel build.
@@ -810,12 +827,46 @@ class EmitCTrace final : public EmitCFunc {
     void visit(AstTraceDecl* nodep) override {
         const int enumNum = emitTraceDeclDType(nodep->dtypep());
         putns(nodep, "");
+        DeclArgs args;
+        args.dtypenum = enumNum;
+        // Direction
+        if (nodep->declDirection().isInout()) {
+            args.direction = "VerilatedTraceSigDirection::INOUT";
+        } else if (nodep->declDirection().isWritable()) {
+            args.direction = "VerilatedTraceSigDirection::OUTPUT";
+        } else if (nodep->declDirection().isNonOutput()) {
+            args.direction = "VerilatedTraceSigDirection::INPUT";
+        } else {
+            args.direction = "VerilatedTraceSigDirection::NONE";
+        }
+
+        // Kind
+        args.kind = "VerilatedTraceSigKind::" + std::string(nodep->varType().traceSigKind());
+
+        // Type
+        args.type = "VerilatedTraceSigType::"
+                    + std::string(nodep->dtypep()->basicp()->keyword().traceSigType());
+
+        // Array range
+        if (nodep->arrayRange().ranged()) {
+            args.array = true;
+            args.arraynum = nodep->arrayRange().lo();
+        } else {
+            args.array = false;
+            args.arraynum = -1;
+        }
+
+        if (m_argsNames.find(args) == m_argsNames.end()) {
+            puts(args.to_string(m_argsCount));
+            m_argsNames[args] = m_argsCount++;
+        }
+
         if (nodep->arrayRange().ranged()) {
             puts("for (int i = 0; i < " + cvtToStr(nodep->arrayRange().elements()) + "; ++i) {\n");
-            emitTraceInitOne(nodep, enumNum);
+            emitTraceInitOne(nodep, enumNum, args);
             puts("\n}\n");
         } else {
-            emitTraceInitOne(nodep, enumNum);
+            emitTraceInitOne(nodep, enumNum, args);
             puts("\n");
         }
     }

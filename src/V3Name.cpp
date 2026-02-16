@@ -154,6 +154,9 @@ class NameVisitor final : public VNVisitorConst {
             iterateChildrenConst(nodep);
         }
     }
+    void visit(AstArg* nodep) override {
+        nodep->v3fatalSrc("AstArg after V3Task");
+    }
 
     //--------------------
     void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }

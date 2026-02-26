@@ -1056,6 +1056,22 @@ private:
         }
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
+    void visit(AstUntil* nodep) override {
+        FileLine* const flp = nodep->fileline();
+        AstLoop* const loopp = new AstLoop{flp};
+        AstNodeExpr* const rhsp = nodep->rhsp()->unlinkFrBack();
+        AstLogAnd* const condp
+            = new AstLogAnd{flp, nodep->lhsp()->unlinkFrBack(), new AstLogNot{flp, rhsp}};
+        loopp->addStmtsp(new AstLoopTest{flp, loopp, condp});
+        loopp->addStmtsp(new AstEventControl{flp, newSenTree(nodep), nullptr});
+
+        AstBegin* const beginp = new AstBegin{flp, "", loopp, true};
+        beginp->addStmtsp(new AstIf{flp, rhsp->cloneTreePure(false), new AstPExprClause{flp},
+                                    new AstPExprClause{flp, false}});
+
+        nodep->replaceWith(new AstPExpr{flp, beginp, nodep->dtypep()});
+        VL_DO_DANGLING(pushDeletep(nodep), nodep);
+    }
 
     void visit(AstDefaultDisable* nodep) override {
         // Done with these

@@ -47,4 +47,8 @@
                                      : ... note: In instance 't'
    36 |        s.get();
       |          ^~~
+%Error-NOTIMING: t/t_notiming.v:38:26: s_eventually requires --timing
+                                     : ... note: In instance 't'
+   38 |    assert property (@(e) s_eventually 1'h1);
+      |                          ^~~~~~~~~~~~
 %Error: Exiting due to

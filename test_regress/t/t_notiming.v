@@ -35,6 +35,7 @@ module t;
        m.peek(i);
        s.get();
    end
+   assert property (@(e) s_eventually 1'h1);
 endmodule
 
 `ifdef VERILATOR_TIMING

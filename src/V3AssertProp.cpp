@@ -50,10 +50,12 @@ class DfaVertex VL_NOT_FINAL : public V3GraphVertex {
     // STATE
     AstNode* const m_nodep;  // Underlying node
 
-public:
+protected:
     // CONSTRUCTORS
     explicit DfaVertex(V3Graph* graphp, AstNode* nodep) VL_MT_DISABLED : V3GraphVertex{graphp},
                                                                          m_nodep{nodep} {}
+
+public:
     AstNode* nodep() const { return m_nodep; }
     string name() const override VL_MT_STABLE {
         return cvtToHex(m_nodep) + "\\n " + cvtToStr(m_nodep->typeName()) + "\\n"s
@@ -173,6 +175,15 @@ class AssertPropBuildVisitor final : public VNVisitorConst {
         }
     }
     void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }
+    void visit(AstSEventually* nodep) override {
+        if (!VN_IS(nodep->backp(), PropSpec)) {
+            nodep->v3warn(E_UNSUPPORTED, "s_eventually as an expression");
+            nodep->replaceWith(new AstConst{nodep->fileline(), 0});
+            VL_DO_DANGLING(nodep->deleteTree(), nodep);
+            return;
+        }
+        // Don't iterate, will be processed in V3AssertPre
+    }
     void visit(AstConstPool* nodep) override {}
 
 public:

@@ -144,7 +144,6 @@ for s in [
         'Unsupported: Size-changing cast on non-basic data type',
         'Unsupported: Slice of non-constant bounds',
         'Unsupported: Stream operation on a variable of a type',
-        'Unsupported: Unclocked assertion',
         'Unsupported: Using --protect-ids with public function',
         'Unsupported: Verilog 1995 gate primitive:',
         'Unsupported: [] dimensions',

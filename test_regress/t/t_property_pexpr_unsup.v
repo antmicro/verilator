@@ -1,7 +1,7 @@
 // DESCRIPTION: Verilator: Verilog Test module
 //
 // This file ONLY is placed under the Creative Commons Public Domain.
-// SPDX-FileCopyrightText: 2023 Wilson Snyder
+// SPDX-FileCopyrightText: 2026 Wilson Snyder
 // SPDX-License-Identifier: CC0-1.0
 
 module t (/*AUTOARG*/
@@ -10,15 +10,16 @@ module t (/*AUTOARG*/
    );
 
    input clk;
-   int   a;
-   int   b;
-   int   c;
+   bit   a;
+   bit   b;
+   bit   c;
    int cyc = 0;
 
    always @(posedge clk) begin
       cyc <= cyc + 1;
    end
 
+`ifdef PARSING_TIME
    // NOTE this grammar hasn't been checked with other simulators,
    // is here just to avoid uncovered code lines in the grammar.
    property p_strong;
@@ -124,6 +125,11 @@ module t (/*AUTOARG*/
    property p_ifelse;
       if (a) b else c
    endproperty
+`endif
+
+   assert property ((s_eventually a) implies (s_eventually a));
+
+   assert property ((s_eventually a) iff (s_eventually a));
 
    always @(posedge clk) begin
       if (cyc == 10) begin

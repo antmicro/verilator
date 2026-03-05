@@ -48,7 +48,7 @@ class LinkJumpVisitor final : public VNVisitor {
     //  AstBegin/etc::user1()  -> AstJumpBlock*, for body of this loop
     //  AstFinish::user1()     -> bool, processed
     //  AstNode::user2()       -> AstJumpBlock*, for this block
-    //  AstNodeBegin::user3()  -> bool, true if contains a fork
+    //  AstBegin::user3()      -> bool, true if inside a fork
     const VNUser1InUse m_user1InUse;
     const VNUser2InUse m_user2InUse;
     const VNUser3InUse m_user3InUse;
@@ -187,7 +187,7 @@ class LinkJumpVisitor final : public VNVisitor {
         if (m_ftaskp) {
             if (!m_ftaskp->exists(
                     [targetp](const AstNodeBlock* blockp) -> bool { return blockp == targetp; })) {
-                // Disabling a fork, which is within the same task, is not a problem
+                // Disabling a block, which is within the same task, is not a problem
                 nodep->v3warn(E_UNSUPPORTED, "Unsupported: disabling fork from task / function");
             }
         }
@@ -263,6 +263,7 @@ class LinkJumpVisitor final : public VNVisitor {
         UINFO(8, "  " << nodep);
         VL_RESTORER(m_unrollFull);
         m_blockStack.push_back(nodep);
+        nodep->user3(m_inFork);
         iterateChildren(nodep);
         m_blockStack.pop_back();
     }
@@ -271,10 +272,6 @@ class LinkJumpVisitor final : public VNVisitor {
         VL_RESTORER(m_unrollFull);
         VL_RESTORER(m_inFork);
         m_inFork = true;
-        // Mark all upper blocks, can stop once see one set to avoid O(n^2)
-        for (AstNodeBlock* const blockp : vlstd::reverse_view(m_blockStack)) {
-            if (blockp->user3SetOnce()) break;
-        }
         m_blockStack.push_back(nodep);
         iterateChildren(nodep);
         m_blockStack.pop_back();

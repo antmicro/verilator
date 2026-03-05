@@ -919,6 +919,16 @@ public:
         , m_pass{pass} {}
     bool pass() const { return m_pass; }
 };
+
+class AstPossibleDisableQueueFork final : public AstNodeStmt {
+public:
+    
+};
+
+class AstPossibleQueuePush final : public AstNodeStmt {
+};
+
+
 class AstPrintTimeScale final : public AstNodeStmt {
     // Parents: stmtlist
     string m_name;  // Parent module name

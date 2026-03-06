@@ -922,12 +922,9 @@ public:
 
 class AstPossibleDisableQueueFork final : public AstNodeStmt {
 public:
-    
 };
 
-class AstPossibleQueuePush final : public AstNodeStmt {
-};
-
+class AstPossibleQueuePush final : public AstNodeStmt {};
 
 class AstPrintTimeScale final : public AstNodeStmt {
     // Parents: stmtlist

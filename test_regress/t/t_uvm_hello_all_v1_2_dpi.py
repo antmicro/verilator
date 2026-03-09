@@ -9,9 +9,8 @@
 
 import vltest_bootstrap
 
-test.priority(50)
 test.scenarios('vlt')
-test.top_filename = 't/t_uvm_hello.v'
+test.top_filename = "t/t_uvm_dpi.v"
 test.pli_filename = "t/t_uvm_1_2/src/dpi/uvm_dpi.cc"
 
 if test.have_dev_gcov:
@@ -23,12 +22,9 @@ test.compile(v_flags2=[
     "-j 0",
     "-Wno-UNSIGNED",
     "+incdir+t/t_uvm_1_2/src",
-    "t/t_uvm_1_2/src/uvm.sv",
     test.pli_filename
 ])
 
-test.execute()
-
-test.file_grep(test.run_log_filename, r'UVM TEST PASSED')
+test.execute(expect_filename=test.golden_filename)
 
 test.passes()

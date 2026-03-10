@@ -41,6 +41,7 @@ module t;
 
   // To cover testing cases, this has non-zero LSB/LO
   logic [31+8:8] exposed  /*verilator public*/;
+  logic [31+8:8] exposed_forced  /*verilator public*/ /*verilator forceable*/;
   logic not_exposed;
   logic exposed_not_forceable;
 
@@ -243,20 +244,25 @@ module t;
 `endif
     end
 
-    begin : t_force_release
-      exposed = 32'h11223344;
-      i = uvm_hdl_read("t.exposed", lval);
+     begin : t_force_release
+      exposed_forced = 32'h11223344;
+      i = uvm_hdl_read("t.exposed_forced", lval);
       `checkh(i, 1);
-      `checkh(lval[31:0], exposed);
-      // UNSUPPORTED: force/release via VPI
-      // If support, validate or throw unsupported on force/release part-selects
+      `checkh(lval[31:0], exposed_forced);
+
       $display("= uvm_hdl_force");
-      i = uvm_hdl_force("t.exposed", 62);
+      i = uvm_hdl_force("t.exposed_forced", 62);
       `checkh(i, 1);
+       #1;
+      `checkh(exposed_forced, 62);
 
       $display("= uvm_hdl_release");
       i = uvm_hdl_release("t.exposed");
       `checkh(i, 1);
+
+      #1;
+      exposed_forced = 12;
+      `checkh(exposed_forced, 12);
 
       $display("= uvm_hdl_release_and_read");
       i = uvm_hdl_release_and_read("t.exposed", lval);

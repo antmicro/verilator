@@ -394,7 +394,6 @@ class AssertVisitor final : public VNVisitor {
         if (m_beginp && nodep->name() == "") nodep->name(m_beginp->name());
 
         { AssertDeFutureVisitor{nodep->propp(), m_modp, m_modPastNum++}; }
-        iterateChildren(nodep);
 
         AstSenTree* const sentreep = nodep->sentreep();
         if (nodep->immediate()) {

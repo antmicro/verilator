@@ -395,12 +395,17 @@ class AssertVisitor final : public VNVisitor {
 
         { AssertDeFutureVisitor{nodep->propp(), m_modp, m_modPastNum++}; }
 
+        iterateAndNextNull(nodep->propp());
+        iterateAndNextNull(nodep->sentreep());
+        iterateAndNextNull(nodep->op3p());
+        iterateAndNextNull(nodep->passsp());
         AstSenTree* const sentreep = nodep->sentreep();
         if (nodep->immediate()) {
             UASSERT_OBJ(!sentreep, nodep, "Immediate assertions don't have sensitivity");
         } else {
             UASSERT_OBJ(sentreep, nodep, "Concurrent assertions must have sensitivity");
             if (m_procedurep) {
+                iterateChildren(nodep->propp());
                 if (!nodep->senFromAlways()) {
                     // To support this need queue of asserts to activate
                     nodep->v3warn(E_UNSUPPORTED,

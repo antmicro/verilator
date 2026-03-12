@@ -17,12 +17,7 @@ if test.have_dev_gcov:
     test.skip("Test suite intended for full dev coverage without needing this test")
 
 test.compile(v_flags2=[
-    "--binary",
-    "--vpi",
-    "-j 0",
-    "-Wno-UNSIGNED",
-    "+incdir+t/t_uvm_1_2/src",
-    test.pli_filename
+    "--binary", "--vpi", "-j 0", "-Wno-UNSIGNED", "+incdir+t/t_uvm_1_2/src", test.pli_filename
 ])
 
 test.execute(expect_filename=test.golden_filename)

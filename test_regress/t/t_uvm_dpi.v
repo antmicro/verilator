@@ -257,10 +257,9 @@ module t;
       `checkh(exposed_forced, 62);
 
       $display("= uvm_hdl_release");
-      i = uvm_hdl_release("t.exposed");
+      i = uvm_hdl_release("t.exposed_forced");
       `checkh(i, 1);
 
-      #1;
       exposed_forced = 12;
       `checkh(exposed_forced, 12);
 

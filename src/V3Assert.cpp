@@ -396,7 +396,6 @@ class AssertVisitor final : public VNVisitor {
 
         { AssertDeFutureVisitor{nodep->propp(), m_modp, m_modPastNum++}; }
 
-        iterateAndNextNull(nodep->propp());
         iterateAndNextNull(nodep->sentreep());
         iterateAndNextNull(nodep->op3p());
         iterateAndNextNull(nodep->passsp());
@@ -716,6 +715,7 @@ class AssertVisitor final : public VNVisitor {
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
     void visit(AstVarRef* nodep) override {
+        if (nodep->user1()) return;
         iterateChildren(nodep);
         if (m_inSampled && !VString::startsWith(nodep->name(), "__VcycleDly")) {
             if (!nodep->access().isReadOnly()) {
@@ -739,13 +739,18 @@ class AssertVisitor final : public VNVisitor {
     }
     void visit(AstPExprClause* nodep) override {
         if (m_underAssert) {
+            AstNode* stmtsp = nullptr;
             if (nodep->pass() && m_passsp) {
                 // Cover adds COVERINC by AstNode::addNext, thus need to clone next too.
-                nodep->replaceWith(m_passsp->cloneTree(true));
+                stmtsp = m_passsp->cloneTree(true);
             } else if (!nodep->pass() && m_failsp) {
                 // Asserts with multiple statements are wrapped in implicit begin/end blocks so no
                 // need to clone next.
-                nodep->replaceWith(m_failsp->cloneTree(false));
+                stmtsp = m_failsp->cloneTree(false);
+            }
+            if (stmtsp) {
+                stmtsp->foreach([](AstVarRef* const refp) { refp->user1(1); });
+                nodep->replaceWith(stmtsp);
             } else {
                 nodep->unlinkFrBack();
             }

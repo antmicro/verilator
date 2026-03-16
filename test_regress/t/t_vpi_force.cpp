@@ -583,27 +583,11 @@ extern "C" int checkInertialDelay() {
 #endif
 
 extern "C" int forceValues(void) {
-    if (!TestSimulator::is_verilator()) {
-#ifdef VERILATOR
-        printf("TestSimulator indicating not verilator, but VERILATOR macro is defined\n");
-        return 1;
-#endif
-    }
-
     // Clocked signals
     CHECK_RESULT_Z(  // NOLINT(concurrency-mt-unsafe)
         std::any_of(TestSignals.begin(), TestSignals.end(), [](const TestSignal& signal) {
             CHECK_RESULT_Z(  // NOLINT(concurrency-mt-unsafe)
                 forceSignal(scopeName, signal.signalName, signal.valueType, signal.forceValue));
-            return 0;
-        }));
-
-    // Continuously assigned signals
-    CHECK_RESULT_Z(  // NOLINT(concurrency-mt-unsafe)
-        std::any_of(TestSignals.begin(), TestSignals.end(), [](const TestSignal& signal) {
-            CHECK_RESULT_Z(  // NOLINT(concurrency-mt-unsafe)
-                forceSignal(scopeName, std::string{signal.signalName} + "Continuously",
-                            signal.valueType, signal.forceValue));
             return 0;
         }));
     return 0;

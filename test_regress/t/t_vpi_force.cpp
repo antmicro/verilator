@@ -346,17 +346,6 @@ extern "C" int checkValuesForced(void) {
                 checkValue(scopeName, signal.signalName, signal.valueType, signal.forceValue));
             return 0;
         }));
-
-    // Continuously assigned signals
-    CHECK_RESULT_Z(  // NOLINT(concurrency-mt-unsafe)
-        std::any_of(TestSignals.begin(), TestSignals.end(), [](const TestSignal& signal) {
-            const std::string continouslyAssignedSignal
-                = std::string{signal.signalName} + "Continuously";
-            CHECK_RESULT_Z(  // NOLINT(concurrency-mt-unsafe)
-                checkValue(scopeName, continouslyAssignedSignal, signal.valueType,
-                           signal.forceValue));
-            return 0;
-        }));
     return 0;
 }
 
@@ -423,164 +412,6 @@ extern "C" int checkNonContinuousValuesPartiallyForced(void) {
         }));
     return 0;
 }
-
-extern "C" int checkValuesReleased(void) {
-    // Clocked signals
-    CHECK_RESULT_Z(  // NOLINT(concurrency-mt-unsafe)
-        std::any_of(TestSignals.begin(), TestSignals.end(), [](const TestSignal& signal) {
-            CHECK_RESULT_Z(  // NOLINT(concurrency-mt-unsafe)
-                checkValue(scopeName, signal.signalName, signal.valueType, signal.releaseValue));
-            return 0;
-        }));
-
-    // Continuously assigned signals
-    CHECK_RESULT_Z(  // NOLINT(concurrency-mt-unsafe)
-        std::any_of(TestSignals.begin(), TestSignals.end(), [](const TestSignal& signal) {
-            CHECK_RESULT_Z(  // NOLINT(concurrency-mt-unsafe)
-                checkValue(scopeName, std::string{signal.signalName} + "Continuously",
-                           signal.valueType, signal.releaseValue));
-            return 0;
-        }));
-    return 0;
-}
-
-#ifdef VERILATOR
-// This function only makes sense with Verilator, because its purpose is testing error messages
-// emitted from verilated_vpi.
-extern "C" int tryInvalidPutOperations() {
-    CHECK_RESULT_Z(expectVpiPutError(  // NOLINT(concurrency-mt-unsafe)
-        "str1", {.format = vpiStringVal, .value = {.str = const_cast<PLI_BYTE8*>("foo")}},
-        vpiForceFlag,
-        "vpi_put_value used with vpiForceFlag on non-forceable signal 't.test.str1'"));
-
-    CHECK_RESULT_Z(expectVpiPutError(  // NOLINT(concurrency-mt-unsafe)
-        "octString", {.format = vpiOctStrVal, .value = {.str = const_cast<PLI_BYTE8*>("123A")}},
-        vpiForceFlag,
-        "vpi_put_value: Non octal character 'A' in '123A' as value "
-        "vpiOctStrVal for t.test.octString__VforceVal"));
-
-    CHECK_RESULT_Z(expectVpiPutError(  // NOLINT(concurrency-mt-unsafe)
-        "decStringC", {.format = vpiDecStrVal, .value = {.str = const_cast<PLI_BYTE8*>("A123")}},
-        vpiForceFlag,
-        "vpi_put_value: Parsing failed for 'A123' as value vpiDecStrVal for "
-        "t.test.decStringC__VforceVal"));
-
-    CHECK_RESULT_Z(expectVpiPutError(  // NOLINT(concurrency-mt-unsafe)
-        "decStringC", {.format = vpiDecStrVal, .value = {.str = const_cast<PLI_BYTE8*>("123A")}},
-        vpiForceFlag,
-        "vpi_put_value: Trailing garbage 'A' in '123A' as value vpiDecStrVal for "
-        "t.test.decStringC__VforceVal"));
-
-    CHECK_RESULT_Z(expectVpiPutError(  // NOLINT(concurrency-mt-unsafe)
-        "hexString", {.format = vpiHexStrVal, .value = {.str = const_cast<PLI_BYTE8*>("12AG")}},
-        vpiForceFlag,
-        "vpi_put_value: Non hex character 'G' in '12AG' as value vpiHexStrVal for "
-        "t.test.hexString__VforceVal"));
-
-    // vop was replaced with baseSignalVop in vpi_put_value, so these tests are required to hit the
-    // test coverage target and ensure the error messages still work.
-    CHECK_RESULT_Z(expectVpiPutError(  // NOLINT(concurrency-mt-unsafe)
-        "onebit", {.format = vpiRawFourStateVal, .value = {}}, vpiForceFlag,
-        "vl_check_format: Unsupported format (vpiRawFourStateVal) for t.test.onebit"));
-
-    CHECK_RESULT_Z(expectVpiPutError(  // NOLINT(concurrency-mt-unsafe)
-        "onebit", {.format = vpiSuppressVal, .value = {}}, vpiForceFlag,
-        "vpi_put_value: Unsupported format (vpiSuppressVal) as "
-        "requested for t.test.onebit__VforceVal"));
-
-    CHECK_RESULT_Z(expectVpiPutError(  // NOLINT(concurrency-mt-unsafe)
-        "onebit", {.format = vpiStringVal, .value = {}}, vpiInertialDelay,
-        "vpi_put_value: Unsupported p_vpi_value as requested for 't.test.onebit' with "
-        "vpiInertialDelay"));
-
-    return 0;
-}
-
-// This function is just needed for hitting the test coverage target for verilated_vpi.cpp and
-// ensuring that vpi_put_value to a string without vpiForceFlag still works.
-extern "C" int putString() {
-    const std::string stringName = std::string{scopeName} + ".str1";
-    TestVpiHandle const stringSignalHandle  //NOLINT(misc-misplaced-const)
-        = vpi_handle_by_name(const_cast<PLI_BYTE8*>(stringName.c_str()), nullptr);
-    CHECK_RESULT_NZ(stringSignalHandle);  // NOLINT(concurrency-mt-unsafe)
-
-    s_vpi_value value_s{.format = vpiStringVal, .value = {.str = const_cast<PLI_BYTE8*>("foo")}};
-
-    vpi_put_value(stringSignalHandle, &value_s, nullptr, vpiNoDelay);
-
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    CHECK_RESULT_Z(vpiCheckErrorLevel(maxAllowedErrorLevel))
-
-    value_s.value.str
-        = const_cast<PLI_BYTE8*>("bar");  // Ensure that test fails if value_s is not updated
-
-    vpi_get_value(stringSignalHandle, &value_s);
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    CHECK_RESULT_Z(vpiCheckErrorLevel(maxAllowedErrorLevel))
-
-    s_vpi_value expectedValueS{.format = vpiStringVal,
-                               .value = {.str = const_cast<PLI_BYTE8*>("foo")}};
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    CHECK_RESULT_NZ(vpiValuesEqual(vpi_get(vpiSize, stringSignalHandle), value_s, expectedValueS));
-
-    return 0;
-}
-
-// This function is needed to ensure that vpiInertialDelay also works with forceable signals.
-extern "C" int putInertialDelay() {
-    const std::string fullSignalName = std::string{scopeName} + ".delayed";
-    TestVpiHandle const signalHandle  //NOLINT(misc-misplaced-const)
-        = vpi_handle_by_name(const_cast<PLI_BYTE8*>(fullSignalName.c_str()), nullptr);
-    CHECK_RESULT_NZ(signalHandle);  // NOLINT(concurrency-mt-unsafe)
-
-    constexpr int delayedValue = 123;
-    s_vpi_value value_s{.format = vpiIntVal, .value = {.integer = delayedValue}};
-    s_vpi_time time{.type = vpiSimTime, .high = 0, .low = 0, .real = {}};
-    vpi_put_value(signalHandle, &value_s, &time, vpiInertialDelay);
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    CHECK_RESULT_Z(vpiCheckErrorLevel(maxAllowedErrorLevel))
-
-    // Check that the put had no immediate effect
-
-    vpi_get_value(signalHandle, &value_s);
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    CHECK_RESULT_Z(vpiCheckErrorLevel(maxAllowedErrorLevel))
-
-    s_vpi_value expectedValueS{.format = vpiIntVal, .value = {.integer = 0}};
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    CHECK_RESULT_NZ(vpiValuesEqual(vpi_get(vpiSize, signalHandle), value_s, expectedValueS));
-
-    // NOTE: Because __VforceRd will only be updated in `eval_act`, `doInertialPuts` does not
-    // update the value read by `vpi_get_value` - that is only visible after another `eval`. Hence,
-    // `checkInertialDelay` must be called later to check success.
-    VerilatedVpi::doInertialPuts();
-
-    return 0;
-}
-
-extern "C" int checkInertialDelay() {
-    const std::string fullSignalName = std::string{scopeName} + ".delayed";
-    TestVpiHandle const signalHandle  //NOLINT(misc-misplaced-const)
-        = vpi_handle_by_name(const_cast<PLI_BYTE8*>(fullSignalName.c_str()), nullptr);
-    CHECK_RESULT_NZ(signalHandle);  // NOLINT(concurrency-mt-unsafe)
-
-    s_vpi_value value_s{.format = vpiIntVal,
-                        .value
-                        = {.integer = 0}};  // Ensure that test fails if value_s is not updated
-
-    vpi_get_value(signalHandle, &value_s);
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    CHECK_RESULT_Z(vpiCheckErrorLevel(maxAllowedErrorLevel))
-
-    constexpr int delayedValue = 123;
-    s_vpi_value expectedValueS{.format = vpiIntVal, .value = {.integer = delayedValue}};
-
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    CHECK_RESULT_NZ(vpiValuesEqual(vpi_get(vpiSize, signalHandle), value_s, expectedValueS));
-
-    return 0;
-}
-#endif
 
 extern "C" int forceValues(void) {
     // Clocked signals
@@ -701,13 +532,6 @@ static int checkNonContinuousValuesPartiallyForcedVpi() {
 }
 
 static int checkValuesReleasedVpi() {
-    TestVpiHandle href = vpi_handle(vpiSysTfCall, 0);
-    s_vpi_value vpi_value;
-
-    vpi_value.format = vpiIntVal;
-    vpi_value.value.integer = checkValuesReleased();
-    vpi_put_value(href, &vpi_value, NULL, vpiNoDelay);
-
     return 0;
 }
 

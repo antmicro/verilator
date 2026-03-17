@@ -531,9 +531,7 @@ static int checkNonContinuousValuesPartiallyForcedVpi() {
     return 0;
 }
 
-static int checkValuesReleasedVpi() {
-    return 0;
-}
+static int checkValuesReleasedVpi() { return 0; }
 
 static int forceValuesVpi() {
     TestVpiHandle href = vpi_handle(vpiSysTfCall, 0);

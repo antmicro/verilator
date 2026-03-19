@@ -740,7 +740,9 @@ public:  // But internals only - called from verilated modules, VerilatedSyms
                             int vlflags, int udims, int pdims, ...) VL_MT_UNSAFE;
     VerilatedVar* forceableVarInsert(const char* namep, void* datap, bool isParam,
                                      VerilatedVarType vltype, int vlflags,
-                                     std::pair<VerilatedVar*, VerilatedVar*> forceControlSignals,
+                                     VerilatedVar* const forceEnSignalp,
+                                     VerilatedVar* const forceValSignalp,
+                                     VerilatedVar* const forceRdSignalp,
                                      int udims, int pdims...) VL_MT_UNSAFE;
     // ACCESSORS
     const char* name() const VL_MT_SAFE_POSTINIT { return m_namep; }

@@ -540,6 +540,7 @@ public:
                                  varp->name() + "__VforceRHS" + std::to_string(finfo.m_forceId),
                                  finfo.m_rhsExprp->dtypep()};
                 rhsVarp->noSubst(true);
+                if (finfo.m_forceId == 0) rhsVarp->sigUserRWPublic(true);
                 rhsVarp->sigPublic(true);
                 rhsVarp->setForcedByCode();
                 varp->addNextHere(rhsVarp);

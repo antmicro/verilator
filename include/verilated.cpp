@@ -3760,13 +3760,12 @@ VerilatedVar* VerilatedScope::varInsert(const char* namep, void* datap, bool isP
     return &(m_varsp->find(namep)->second);
 }
 
-VerilatedVar*
-VerilatedScope::forceableVarInsert(const char* namep, void* datap, bool isParam,
-                                   VerilatedVarType vltype, int vlflags,
-                                   VerilatedVar* const forceEnSignalp,
-                                   VerilatedVar* const forceValSignalp,
-                                   VerilatedVar* const forceRHS0Signalp,
-                                   int udims, int pdims...) VL_MT_UNSAFE {
+VerilatedVar* VerilatedScope::forceableVarInsert(const char* namep, void* datap, bool isParam,
+                                                 VerilatedVarType vltype, int vlflags,
+                                                 VerilatedVar* const forceEnSignalp,
+                                                 VerilatedVar* const forceValSignalp,
+                                                 VerilatedVar* const forceRHS0Signalp, int udims,
+                                                 int pdims...) VL_MT_UNSAFE {
     if (!m_varsp) m_varsp = new VerilatedVarNameMap;
 
     std::unique_ptr<VerilatedForceControlSignals> verilatedForceControlSignalsp

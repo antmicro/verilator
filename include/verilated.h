@@ -742,8 +742,8 @@ public:  // But internals only - called from verilated modules, VerilatedSyms
                                      VerilatedVarType vltype, int vlflags,
                                      VerilatedVar* const forceEnSignalp,
                                      VerilatedVar* const forceValSignalp,
-                                     VerilatedVar* const forceRHS0Signalp,
-                                     int udims, int pdims...) VL_MT_UNSAFE;
+                                     VerilatedVar* const forceRHS0Signalp, int udims,
+                                     int pdims...) VL_MT_UNSAFE;
     // ACCESSORS
     const char* name() const VL_MT_SAFE_POSTINIT { return m_namep; }
     const char* identifier() const VL_MT_SAFE_POSTINIT { return m_identifierp; }

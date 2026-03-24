@@ -3158,6 +3158,7 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
                                std::unique_ptr<VerilatedVpioVar>>{nullptr, nullptr, nullptr};
         const VerilatedVpioVar* const forceEnableSignalVop = std::get<0>(forceControlSignals).get();
         const VerilatedVpioVar* const forceValueSignalVop = std::get<1>(forceControlSignals).get();
+        const VerilatedVpioVar* const forceRHS0SignalVop = std::get<2>(forceControlSignals).get();
         t_vpi_error_info getForceControlSignalsError{};
         bool errorOccurred = vpi_chk_error(&getForceControlSignalsError);
         // LCOV_EXCL_START - Cannot test, since getForceControlSignals does not (currently) produce
@@ -3264,6 +3265,9 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
                 return object;
             } else {
                 vl_vpi_put_word(valueVop, valuep->value.vector[0].aval, 32, 0);
+                if (forceFlag == vpiForceFlag) {
+                    vl_vpi_put_word(forceRHS0SignalVop, valuep->value.vector[0].aval, 32, 0);
+                }
                 return object;
             }
         } else if (valuep->format == vpiBinStrVal) {

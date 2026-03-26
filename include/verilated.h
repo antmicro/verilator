@@ -413,6 +413,7 @@ protected:
         uint32_t m_profExecWindow = 2;  // +prof+exec+window size
         // Slow path
         std::string m_coverageFilename;  // +coverage+file filename
+        uint8_t m_delayMode = 1;  // +mindelays/+typdelays/+maxdelays
         std::string m_profExecFilename;  // +prof+exec+file filename
         std::string m_profVltFilename;  // +prof+vlt filename
         std::string m_solverProgram;  // SMT solver program
@@ -665,6 +666,10 @@ public:
     void profExecFilename(const std::string& flag) VL_MT_SAFE;
     std::string profVltFilename() const VL_MT_SAFE;
     void profVltFilename(const std::string& flag) VL_MT_SAFE;
+    uint8_t delayMode() const VL_MT_SAFE { return m_ns.m_delayMode; }
+    void delayMode(uint8_t mode) VL_MT_SAFE { m_ns.m_delayMode = mode; }
+    bool delayModeIsMin() const VL_MT_SAFE { return m_ns.m_delayMode == 0; }
+    bool delayModeIsMax() const VL_MT_SAFE { return m_ns.m_delayMode == 2; }
 
     // Internal: SMT solver program
     std::string solverProgram() const VL_MT_SAFE;

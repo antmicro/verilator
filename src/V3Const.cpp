@@ -4325,6 +4325,18 @@ class ConstVisitor final : public VNVisitor {
                     VL_DO_DANGLING(pushDeletep(crp), crp);
                 }
                 return;
+            } else if (AstCExpr* const cexprp = VN_CAST(nodep, CExpr)) {
+                // min/typ/max selection is represented using internal pure CExpr predicates.
+                // In constant contexts, these are treated as selecting the typ delay.
+                if (cexprp->isPure()) {
+                    const AstText* const textp = VN_CAST(cexprp->nodesp(), Text);
+                    const string text = textp ? textp->text() : "";
+                    if (text == "vlSymsp->_vm_contextp__->delayModeIsMin()"
+                        || text == "vlSymsp->_vm_contextp__->delayModeIsMax()") {
+                        replaceNum(nodep, 0);
+                        return;
+                    }
+                }
             } else {
                 nodep->v3error("Expecting expression to be constant, but can't convert a "
                                << nodep->prettyTypeName() << " to constant.");

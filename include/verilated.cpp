@@ -3201,7 +3201,13 @@ std::pair<int, char**> VerilatedContextImp::argc_argv() VL_MT_SAFE_EXCLUDES(m_ar
 }
 
 void VerilatedContextImp::commandArgVl(const std::string& arg) {
-    if (0 == std::strncmp(arg.c_str(), "+verilator+", std::strlen("+verilator+"))) {
+    if (arg == "+mindelays") {
+        delayMode(0);
+    } else if (arg == "+typdelays") {
+        delayMode(1);
+    } else if (arg == "+maxdelays") {
+        delayMode(2);
+    } else if (0 == std::strncmp(arg.c_str(), "+verilator+", std::strlen("+verilator+"))) {
         std::string str;
         uint64_t u64;
         if (commandArgVlString(arg, "+verilator+coverage+file+", str)) {

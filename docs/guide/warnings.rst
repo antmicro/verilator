@@ -1269,8 +1269,9 @@ List Of Warnings
 
       #(3:5:8) clk = ~clk;
 
-   Warns that minimum, typical, and maximum delay expressions are currently
-   unsupported. Verilator uses only the typical delay value.
+   Historical warning for minimum/typical/maximum delay expressions.
+   Verilator now uses the typical delay by default, and ``+mindelays``,
+   ``+typdelays``, and ``+maxdelays`` select the runtime delay mode.
 
 
 .. option:: MISINDENT
@@ -1855,8 +1856,11 @@ List Of Warnings
 
       and #(1,2,3) AND (out, a, b);
 
-   Warns that rising, falling, and turn-off delays are currently unsupported.
-   The first (rising) delay is used for all cases.
+   Warns that the third (turn-off) delay is currently unsupported and is
+   ignored. Rising and falling delays are supported.
+
+   In versions before 5.048, warned that rising, falling, and turn-off delays were
+unsupported. The first (rising) delay was used for all cases.
 
 
 .. option:: SELRANGE

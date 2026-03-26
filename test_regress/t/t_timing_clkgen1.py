@@ -11,8 +11,11 @@ import vltest_bootstrap
 
 test.scenarios('simulator')
 
-test.compile(verilator_flags2=["--binary -Wno-MINTYPMAXDLY"])
+test.compile(verilator_flags2=["--binary"])
 
 test.execute()
+test.execute(all_run_flags=["+typdelays"])
+test.execute(all_run_flags=["+mindelays"])
+test.execute(all_run_flags=["+maxdelays"])
 
 test.passes()

@@ -124,9 +124,9 @@ with C++20 coroutine support, e.g. Clang 5, GCC 10, or newer.
 Rising/falling/turn-off delays are currently unsupported and cause the
 :option:`RISEFALLDLY` warning.
 
-Minimum/typical/maximum delays are currently unsupported. The typical delay
-is always the one chosen. Such expressions cause the :option:`MINTYPMAXDLY`
-warning.
+Minimum/typical/maximum delays use the typical delay by default. Runtime
+arguments ``+mindelays``, ``+typdelays``, and ``+maxdelays`` select the
+minimum, typical, or maximum delay value, respectively.
 
 Another consequence of using :vlopt:`--timing` is that the :vlopt:`--main`
 option generates a main file with a proper timing eval loop, eliminating

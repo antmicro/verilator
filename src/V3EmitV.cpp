@@ -1128,7 +1128,15 @@ class EmitVBaseVisitorConst VL_NOT_FINAL : public VNVisitorConst {
         }
         VL_RESTORER(m_prefixed);
         m_prefixed = false;
-        iterateConst(nodep->lhsp());
+        if (AstNodeExpr* const fallDelayp = nodep->fallDelayp()) {
+            puts("(");
+            iterateConst(nodep->lhsp());
+            puts(", ");
+            iterateConst(fallDelayp);
+            puts(")");
+        } else {
+            iterateConst(nodep->lhsp());
+        }
         if (!m_suppressSemi) {
             puts(";\n");
         } else {

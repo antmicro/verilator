@@ -15,8 +15,17 @@ endmodule
 
 module t;
   wire logic clk;
+  time first_posedge = 5;
 
   clkgen clkgen (.clk);
+
+  initial begin
+    if ($test$plusargs("mindelays")) begin
+      first_posedge = 8;
+    end else if ($test$plusargs("maxdelays")) begin
+      first_posedge = 3;
+    end
+  end
 
   int  cyc;
   always @ (posedge clk) begin
@@ -25,13 +34,13 @@ module t;
     $display("[%0t] cyc=%0d", $time, cyc);
 `endif
     if (cyc == 0) begin
-      if ($time != 5) $stop;
+      if ($time != first_posedge) $stop;
     end
     else if (cyc == 1) begin
-      if ($time != 15) $stop;
+      if ($time != first_posedge + 10) $stop;
     end
     else if (cyc == 2) begin
-      if ($time != 25) $stop;
+      if ($time != first_posedge + 20) $stop;
     end
     else if (cyc == 9) begin
       $write("*-* All Finished *-*\n");

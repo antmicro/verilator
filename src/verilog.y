@@ -38,14 +38,7 @@
     { BBUNSUP((fl), "Unsupported: Verilog 1995 gate primitive: " << (tok)); }
 #define RISEFALLDLYUNSUP(nodep) \
     if (nodep->fileline()->timingOn() && v3Global.opt.timing().isSetTrue()) { \
-        nodep->v3warn(RISEFALLDLY, \
-                      "Unsupported: rising/falling/turn-off delays. Using the first delay"); \
-    }
-#define MINTYPMAXDLYUNSUP(nodep) \
-    if (nodep->fileline()->timingOn() && v3Global.opt.timing().isSetTrue()) { \
-        nodep->v3warn( \
-            MINTYPMAXDLY, \
-            "Unsupported: minimum/typical/maximum delay expressions. Using the typical delay"); \
+        nodep->v3warn(RISEFALLDLY, "Unsupported: turn-off delays. Ignoring the third delay"); \
     }
 // Apply a delay to all continuous assignments under listp
 static void DELAY_LIST(AstNode* listp, AstDelay* delayp) {
@@ -71,6 +64,15 @@ static void STRENGTHUNSUP(AstStrengthSpec* nodep) {
     if (!nodep) return;
     BBUNSUP((nodep->fileline()), "Unsupported: Strength specifier on this gate type");
     nodep->deleteTree();
+}
+
+static AstNodeExpr* selectMinTypMax(FileLine* fl, AstNodeExpr* minp, AstNodeExpr* typp,
+                                    AstNodeExpr* maxp) {
+    AstNodeExpr* const selectMinp
+        = new AstCExpr{fl, AstCExpr::Pure{}, "vlSymsp->_vm_contextp__->delayModeIsMin()", 1};
+    AstNodeExpr* const selectMaxp
+        = new AstCExpr{fl, AstCExpr::Pure{}, "vlSymsp->_vm_contextp__->delayModeIsMax()", 1};
+    return new AstCond{fl, selectMinp, minp, new AstCond{fl, selectMaxp, maxp, typp}};
 }
 
 //======================================================================
@@ -3043,9 +3045,9 @@ delay_control<delayp>:   //== IEEE: delay_control
         |       '#' '(' minTypMax ')'
                         { $$ = new AstDelay{$<fl>1, $3, false}; }
         |       '#' '(' minTypMax ',' minTypMax ')'
-                        { $$ = new AstDelay{$<fl>1, $3, false}; RISEFALLDLYUNSUP($3); DEL($5); }
+                        { $$ = new AstDelay{$<fl>1, $3, false, $5}; }
         |       '#' '(' minTypMax ',' minTypMax ',' minTypMax ')'
-                        { $$ = new AstDelay{$<fl>1, $5, false}; RISEFALLDLYUNSUP($5); DEL($3); DEL($7); }
+                        { $$ = new AstDelay{$<fl>1, $3, false, $5}; RISEFALLDLYUNSUP($7); DEL($7); }
         ;
 
 delay_value<nodeExprp>:         // ==IEEE:delay_value
@@ -3059,7 +3061,7 @@ delay_value<nodeExprp>:         // ==IEEE:delay_value
 
 minTypMax<nodeExprp>:           // IEEE: mintypmax_expression and constant_mintypmax_expression
                 expr                               { $$ = $1; }
-        |       expr ':' expr ':' expr { $$ = $3; MINTYPMAXDLYUNSUP($3); DEL($1); DEL($5); }
+        |       expr ':' expr ':' expr { $$ = selectMinTypMax($3->fileline(), $1, $3, $5); }
         ;
 
 minTypMaxE<nodeExprp>:
@@ -5179,7 +5181,7 @@ expr<nodeExprp>:                // IEEE: part of expression/constant_expression/
         //                      // IEEE: '(' mintypmax_expression ')'
         |       ~noPar__IGNORE~'(' expr ')'             { $$ = $2; }
         |       ~noPar__IGNORE~'(' expr ':' expr ':' expr ')'
-                        { $$ = $4; MINTYPMAXDLYUNSUP($4); DEL($2); DEL($6); }
+                        { $$ = selectMinTypMax($4->fileline(), $2, $4, $6); }
         //                      // PSL rule
         |       '_' '(' expr ')'                        { $$ = $3; }    // Arbitrary Verilog inside PSL
         //
@@ -6882,8 +6884,8 @@ cycle_delay_range<delayp>:  // IEEE: ==cycle_delay_range
         //                      // as ()'s mismatch between primary and the following statement
         //                      // the sv-ac committee has been asked to clarify  (Mantis 1901)
         |       yP_POUNDPOUND '[' constExpr ':' constExpr ']'
-                        { $$ = new AstDelay{$1, $3, true};
-                          $$->rhsp($5); }
+                                                                                                { $$ = new AstDelay{$1, $3, true};
+                                                                                                        $$->fallDelayp($5); }
         |       yP_POUNDPOUND yP_BRASTAR ']'
                         { $$ = new AstDelay{$1, new AstConst{$1, AstConst::BitFalse{}}, true};
                           BBUNSUP($<fl>1, "Unsupported: ## [*] cycle delay range expression"); }

@@ -1327,7 +1327,7 @@ auto VerilatedVpiImp::getForceControlSignals(const VerilatedVpioVarBase* const b
     const VerilatedVar* const forceEnableSignalVarp = forceControlSignals->forceEnableSignalp;
     const VerilatedVar* const forceValueSignalVarp = forceControlSignals->forceValueSignalp;
     const VerilatedVar* const forceRHS0SignalVarp = forceControlSignals->forceRHS0Signalp;
-    const VerilatedVar* const forceVecVarp = forceControlSignals->forceVecSp;
+    const VerilatedVar* const forceVecVarp = forceControlSignals->forceVecp;
     // LCOV_EXCL_START - Would require a Verilation time error, so cannot test
     if (VL_UNLIKELY(!forceEnableSignalVarp)) {
         VL_VPI_ERROR_(__FILE__, __LINE__,
@@ -1349,12 +1349,13 @@ auto VerilatedVpiImp::getForceControlSignals(const VerilatedVpioVarBase* const b
     VerilatedVpioVar forceEnableSignal{forceEnableSignalVarp, baseSignalVop->scopep()};
     VerilatedVpioVar forceValueSignal{forceValueSignalVarp, baseSignalVop->scopep()};
     VerilatedVpioVar forceRHS0Signal{forceRHS0SignalVarp, baseSignalVop->scopep()};
+    VerilatedVpioVar forceVec{forceVecVarp, baseSignalVop->scopep()};
     return std::tuple<std::unique_ptr<VerilatedVpioVar>, std::unique_ptr<VerilatedVpioVar>,
                       std::unique_ptr<VerilatedVpioVar>, std::unique_ptr<VerilatedVpioVar>>{
         std::make_unique<VerilatedVpioVar>(forceEnableSignal),
         std::make_unique<VerilatedVpioVar>(forceValueSignal),
         std::make_unique<VerilatedVpioVar>(forceRHS0Signal),
-        std::make_unique<VerilatedVpioVar>(forceVecp)};
+        std::make_unique<VerilatedVpioVar>(forceVec)};
 }
 
 std::size_t VerilatedVpiImp::vlTypeSize(const VerilatedVarType vltype) {
@@ -2900,7 +2901,7 @@ void vl_vpi_get_value(const VerilatedVpioVarBase* vop, p_vpi_value valuep) {
         = vop->varp()->isForceable()
               ? VerilatedVpiImp::getForceControlSignals(vop)
               : std::tuple<std::unique_ptr<VerilatedVpioVar>, std::unique_ptr<VerilatedVpioVar>,
-                           std::unique_ptr<VerilatedVpioVar>>{nullptr, nullptr, nullptr};
+                           std::unique_ptr<VerilatedVpioVar>, std::unique_ptr<VerilatedVpioVar>>{nullptr, nullptr, nullptr, nullptr};
     const VerilatedVpioVarBase* const forceEnableSignalVop
         = std::get<0>(forceControlSignals).get();
     const VerilatedVpioVarBase* const forceValueSignalVop = std::get<1>(forceControlSignals).get();

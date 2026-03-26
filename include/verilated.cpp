@@ -3764,13 +3764,14 @@ VerilatedVar* VerilatedScope::forceableVarInsert(const char* namep, void* datap,
                                                  VerilatedVarType vltype, int vlflags,
                                                  VerilatedVar* const forceEnSignalp,
                                                  VerilatedVar* const forceValSignalp,
-                                                 VerilatedVar* const forceRHS0Signalp, int udims,
+                                                 VerilatedVar* const forceRHS0Signalp,
+                                                 VerilatedVar* const forceVecp, int udims,
                                                  int pdims...) VL_MT_UNSAFE {
     if (!m_varsp) m_varsp = new VerilatedVarNameMap;
 
     std::unique_ptr<VerilatedForceControlSignals> verilatedForceControlSignalsp
         = std::make_unique<VerilatedForceControlSignals>(
-            VerilatedForceControlSignals{forceEnSignalp, forceValSignalp, forceRHS0Signalp});
+            VerilatedForceControlSignals{forceEnSignalp, forceValSignalp, forceRHS0Signalp, forceVecp});
 
     VerilatedVar var(namep, datap, vltype, static_cast<VerilatedVarFlags>(vlflags), udims, pdims,
                      isParam, std::move(verilatedForceControlSignalsp));

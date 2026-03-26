@@ -1322,11 +1322,12 @@ auto VerilatedVpiImp::getForceControlSignals(const VerilatedVpioVarBase* const b
                       "control signals. Ensure signal is marked as forceable",
                       __func__, baseSignalVop->fullname());
         return std::tuple<std::unique_ptr<VerilatedVpioVar>, std::unique_ptr<VerilatedVpioVar>,
-                          std::unique_ptr<VerilatedVpioVar>>{nullptr, nullptr, nullptr};
+                          std::unique_ptr<VerilatedVpioVar>, std::unique_ptr<VerilatedVpioVar>>{nullptr, nullptr, nullptr, nullptr};
     }  // LCOV_EXCL_STOP
     const VerilatedVar* const forceEnableSignalVarp = forceControlSignals->forceEnableSignalp;
     const VerilatedVar* const forceValueSignalVarp = forceControlSignals->forceValueSignalp;
     const VerilatedVar* const forceRHS0SignalVarp = forceControlSignals->forceRHS0Signalp;
+    const VerilatedVar* const forceVecVarp = forceControlSignals->forceVecSp;
     // LCOV_EXCL_START - Would require a Verilation time error, so cannot test
     if (VL_UNLIKELY(!forceEnableSignalVarp)) {
         VL_VPI_ERROR_(__FILE__, __LINE__,
@@ -1334,7 +1335,7 @@ auto VerilatedVpiImp::getForceControlSignals(const VerilatedVpioVarBase* const b
                       "not be found. Ensure signal is marked as forceable",
                       __func__, baseSignalVop->fullname());
         return std::tuple<std::unique_ptr<VerilatedVpioVar>, std::unique_ptr<VerilatedVpioVar>,
-                          std::unique_ptr<VerilatedVpioVar>>{nullptr, nullptr, nullptr};
+                          std::unique_ptr<VerilatedVpioVar>, std::unique_ptr<VerilatedVpioVar>>{nullptr, nullptr, nullptr, nullptr};
     }
     if (VL_UNLIKELY(!forceValueSignalVarp)) {
         VL_VPI_ERROR_(__FILE__, __LINE__,
@@ -1342,17 +1343,18 @@ auto VerilatedVpiImp::getForceControlSignals(const VerilatedVpioVarBase* const b
                       "not be found. Ensure signal is marked as forceable",
                       __func__, baseSignalVop->fullname());
         return std::tuple<std::unique_ptr<VerilatedVpioVar>, std::unique_ptr<VerilatedVpioVar>,
-                          std::unique_ptr<VerilatedVpioVar>>{nullptr, nullptr, nullptr};
+                          std::unique_ptr<VerilatedVpioVar>, std::unique_ptr<VerilatedVpioVar>>{nullptr, nullptr, nullptr, nullptr};
     }
     // LCOV_EXCL_STOP
     VerilatedVpioVar forceEnableSignal{forceEnableSignalVarp, baseSignalVop->scopep()};
     VerilatedVpioVar forceValueSignal{forceValueSignalVarp, baseSignalVop->scopep()};
     VerilatedVpioVar forceRHS0Signal{forceRHS0SignalVarp, baseSignalVop->scopep()};
     return std::tuple<std::unique_ptr<VerilatedVpioVar>, std::unique_ptr<VerilatedVpioVar>,
-                      std::unique_ptr<VerilatedVpioVar>>{
+                      std::unique_ptr<VerilatedVpioVar>, std::unique_ptr<VerilatedVpioVar>>{
         std::make_unique<VerilatedVpioVar>(forceEnableSignal),
         std::make_unique<VerilatedVpioVar>(forceValueSignal),
-        std::make_unique<VerilatedVpioVar>(forceRHS0Signal)};
+        std::make_unique<VerilatedVpioVar>(forceRHS0Signal),
+        std::make_unique<VerilatedVpioVar>(forceVecp)};
 }
 
 std::size_t VerilatedVpiImp::vlTypeSize(const VerilatedVarType vltype) {
@@ -3158,11 +3160,13 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
                   ? VerilatedVpiImp::getForceControlSignals(baseSignalVop)
                   : std::tuple<std::unique_ptr<VerilatedVpioVar>,
                                std::unique_ptr<VerilatedVpioVar>,
-                               std::unique_ptr<VerilatedVpioVar>>{nullptr, nullptr, nullptr};
+                               std::unique_ptr<VerilatedVpioVar>,
+                               std::unique_ptr<VerilatedVpioVar>>{nullptr, nullptr, nullptr, nullptr};
         const VerilatedVpioVar* const forceEnableSignalVop
             = std::get<0>(forceControlSignals).get();
         const VerilatedVpioVar* const forceValueSignalVop = std::get<1>(forceControlSignals).get();
         const VerilatedVpioVar* const forceRHS0SignalVop = std::get<2>(forceControlSignals).get();
+        const VerilatedVpioVar* const forceVecVop = std::get<3>(forceControlSignals).get();
         t_vpi_error_info getForceControlSignalsError{};
         bool errorOccurred = vpi_chk_error(&getForceControlSignalsError);
         // LCOV_EXCL_START - Cannot test, since getForceControlSignals does not (currently) produce

@@ -257,6 +257,7 @@ struct VerilatedForceControlSignals final {
     const VerilatedVar* forceEnableSignalp{nullptr};  // __VforceEn signal
     const VerilatedVar* forceValueSignalp{nullptr};  // __VforceVal signal
     const VerilatedVar* forceRHS0Signalp{nullptr};  // __VforceRHS0 signal
+    const VerilatedVar* forceVecp{nullptr};  // __VforceVec signal
 };
 
 //===========================================================================

@@ -349,6 +349,30 @@ class EmitCSyms final : EmitCBaseVisitorConst {
             const std::string bounds = std::get<2>(dimensions);
             stmt += insertVarStatement(svd, scopep, varp, udim, pdim, bounds);
         }
+        stmt += ", ";
+        // Find __VforceVec
+        {
+            const std::string rhsSignalKey = getKeyName(scopep, varp->name() + "__VforceVec");
+            const std::map<const std::string, ScopeVarData>::const_iterator itpair
+                = m_scopeVars.find(rhsSignalKey);
+
+            if (itpair == m_scopeVars.end()) {
+                varp->v3fatalSrc("Signal " << varp->prettyNameQ()
+                                           << " is marked forceable, but the force value signal '"
+                                           << varp->name() << "__VforceVec"
+                                           << "' can not be found in m_scopeVars with key '"
+                                           << rhsSignalKey << "'.");
+            }
+
+            const ScopeVarData& svd = itpair->second;
+            const AstScope* const scopep = svd.m_scopep;
+            const AstVar* const varp = svd.m_varp;
+            const std::tuple<int, int, std::string> dimensions = getDimensions(varp);
+            const int pdim = std::get<0>(dimensions);
+            const int udim = std::get<1>(dimensions);
+            const std::string bounds = std::get<2>(dimensions);
+            stmt += insertVarStatement(svd, scopep, varp, udim, pdim, bounds);
+        }
 
         stmt += ", ";
         stmt += std::to_string(udim);

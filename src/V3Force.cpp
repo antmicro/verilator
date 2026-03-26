@@ -396,6 +396,7 @@ public:
 
             AstVar* const forceVecVarp
                 = new AstVar{flp, VVarType::MEMBER, varp->name() + "__VforceVec", forceVecDtypep};
+            forceVecVarp->sigUserRWPublic(true);
             forceVecVarp->funcLocal(false);
             forceVecVarp->isInternal(true);
             varp->addNextHere(forceVecVarp);

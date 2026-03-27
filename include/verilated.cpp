@@ -3756,16 +3756,18 @@ VerilatedVar* VerilatedScope::varInsert(const char* namep, void* datap, bool isP
     return &(m_varsp->find(namep)->second);
 }
 
-VerilatedVar*
-VerilatedScope::forceableVarInsert(const char* namep, void* datap, bool isParam,
-                                   VerilatedVarType vltype, int vlflags,
-                                   std::pair<VerilatedVar*, VerilatedVar*> forceControlSignals,
-                                   int udims, int pdims...) VL_MT_UNSAFE {
+VerilatedVar* VerilatedScope::forceableVarInsert(const char* namep, void* datap, bool isParam,
+                                                 VerilatedVarType vltype, int vlflags,
+                                                 VerilatedVar* const forceEnSignalp,
+                                                 VerilatedVar* const forceValSignalp,
+                                                 VerilatedVar* const forceRHS0Signalp,
+                                                 VerilatedVar* const forceVecp, int udims,
+                                                 int pdims...) VL_MT_UNSAFE {
     if (!m_varsp) m_varsp = new VerilatedVarNameMap;
 
     std::unique_ptr<VerilatedForceControlSignals> verilatedForceControlSignalsp
-        = std::make_unique<VerilatedForceControlSignals>(
-            VerilatedForceControlSignals{forceControlSignals.first, forceControlSignals.second});
+        = std::make_unique<VerilatedForceControlSignals>(VerilatedForceControlSignals{
+            forceEnSignalp, forceValSignalp, forceRHS0Signalp, forceVecp});
 
     VerilatedVar var(namep, datap, vltype, static_cast<VerilatedVarFlags>(vlflags), udims, pdims,
                      isParam, std::move(verilatedForceControlSignalsp));

@@ -300,6 +300,7 @@ public:
 
             AstVar* const forceVecVarp
                 = new AstVar{flp, VVarType::MEMBER, varp->name() + "__VforceVec", forceVecDtypep};
+            forceVecVarp->sigUserRWPublic(true);
             forceVecVarp->funcLocal(false);
             forceVecVarp->isInternal(true);
             varp->addNextHere(forceVecVarp);
@@ -441,6 +442,7 @@ public:
                     = new AstVar{flp, VVarType::VAR,
                                  varp->name() + "__VforceRHS" + std::to_string(finfo.m_forceId),
                                  finfo.m_rhsExprp->dtypep()};
+                if (finfo.m_forceId == 0) rhsVarp->sigUserRWPublic(true);
                 rhsVarp->noSubst(true);
                 rhsVarp->sigPublic(true);
                 rhsVarp->setForcedByCode();

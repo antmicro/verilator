@@ -3770,8 +3770,8 @@ VerilatedVar* VerilatedScope::forceableVarInsert(const char* namep, void* datap,
     if (!m_varsp) m_varsp = new VerilatedVarNameMap;
 
     std::unique_ptr<VerilatedForceControlSignals> verilatedForceControlSignalsp
-        = std::make_unique<VerilatedForceControlSignals>(
-            VerilatedForceControlSignals{forceEnSignalp, forceValSignalp, forceRHS0Signalp, forceVecp});
+        = std::make_unique<VerilatedForceControlSignals>(VerilatedForceControlSignals{
+            forceEnSignalp, forceValSignalp, forceRHS0Signalp, forceVecp});
 
     VerilatedVar var(namep, datap, vltype, static_cast<VerilatedVarFlags>(vlflags), udims, pdims,
                      isParam, std::move(verilatedForceControlSignalsp));

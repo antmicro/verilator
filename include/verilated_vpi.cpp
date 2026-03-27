@@ -32,6 +32,7 @@
 #include "verilated.h"
 #include "verilated_imp.h"
 #include "verilated_vpi.h"
+#include "verilated_force.h"
 
 #include "vltstd/vpi_user.h"
 
@@ -3276,6 +3277,7 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
                 vl_vpi_put_word(valueVop, valuep->value.vector[0].aval, 32, 0);
                 if (forceFlag == vpiForceFlag) {
                     vl_vpi_put_word(forceRHS0SignalVop, valuep->value.vector[0].aval, 32, 0);
+                    static_cast<VlForceVec*>(forceVecVop->varp()->datap())->addForce(0, 31, forceRHS0SignalVop->varp()->datap(), 0);
                 }
                 return object;
             }

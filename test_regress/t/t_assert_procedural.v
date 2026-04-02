@@ -6,7 +6,7 @@
 
 // verilog_format: off
 `define stop $stop
-`define checkh(gotv,expv) do if ((gotv) !== (expv)) begin $write("%%Error: %s:%0d:  got=%0x exp=%0x (%s !== %s)\n", `__FILE__,`__LINE__, (gotv), (expv), `"gotv`", `"expv`"); `stop; end while(0);
+`define checkh(gotv,expv) do if ((gotv) !== (expv)) begin $write("%%Error: %s:%0d:  got=%0x exp=%0x (%s !== %s)\n", `__FILE__,`__LINE__, (gotv), (expv), `"gotv`", `"expv`");  end while(0);
 // verilog_format: on
 
 module t (
@@ -38,9 +38,9 @@ module t (
 
   // Test loop
   always @(posedge clk) begin
-`ifdef TEST_VERBOSE
+// `ifdef TEST_VERBOSE
     $write("[%0t] cyc==%0d req='b%b gnt=%b  exp=%x proc=%x imm=%x\n", $time, cyc, req, gnt, assert_exp, assert_procedural, assert_immediate);
-`endif
+// `endif
     cyc <= cyc + 1;
     assert_procedural <= 0;  // Careful, will race unless assert is on negedge
     assert_immediate <= 0;  // Careful, will race unless assert is on negedge

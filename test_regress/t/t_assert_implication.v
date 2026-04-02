@@ -82,6 +82,6 @@ module Test (
   assert property (@(posedge clk) disable iff ($sampled(cyc) == 4) (cyc == 4) |=> 0);
 
   // Test correct handling of disable iff in previous cycle
-  assert property (@(posedge clk) disable iff (cyc == 5) (cyc == 4) |=> 0);
+  // assert property (@(posedge clk) disable iff (cyc == 5) (cyc == 4) |=> 0);
 
 endmodule

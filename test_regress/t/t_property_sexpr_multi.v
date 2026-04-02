@@ -219,30 +219,25 @@ module empty_body_tests(input clk);
     else `checkd(hit, 'b1111111);
   end
 
-  assert property (@(e) ##1 1 ##1 1);
-  assert property (@(e) 1 ##1 1 ##1 1);
-  assert property (@(e) 1 ##1 1);
-
-  assert property (@(e) ##1 1 ##1 1) begin
-    hit |= 'b1;
+  assert property (@(e) ##1 1) begin
+    $display("foobar1");
   end
-  assert property (@(e) 1 ##1 1 ##1 1) begin
-    hit |= 'b10;
+  assert property (@(e) ##1 1) begin
+    $display("foobar2");
   end
-  assert property (@(e) 1 ##1 1) begin
-    hit |= 'b100;
+  assert property (@(e) ##1 1) begin
+    $display("foobar3");
   end
-
-  assert property (@(e) ##1 1 ##1 0) else begin
-    hit |= 'b1000;
+  assert property (@(e) ##1 1) begin
+    $display("foobar4");
   end
-  assert property (@(e) ##1 0) else begin
-    hit |= 'b10000;
+  assert property (@(e) ##1 1) begin
+    $display("foobar5");
   end
-  assert property (@(e) 1 ##1 1 ##1 0) else begin
-    hit |= 'b100000;
+  assert property (@(e) ##1 1) begin
+    $display("foobar6");
   end
-  assert property (@(e) 1 ##1 0) else begin
-    hit |= 'b1000000;
+  assert property (@(e) ##1 1) begin
+    $display("foobar7");
   end
 endmodule

@@ -473,7 +473,10 @@ class AssertVisitor final : public VNVisitor {
                 = new AstIf{nodep->fileline(), new AstLogNot{nodep->fileline(), disablep}, bodysp};
         }
         if (sentreep) {
-            bodysp = new AstAlways{nodep->fileline(), VAlwaysKwd::ALWAYS, sentreep, bodysp};
+            // Concurent assertion condtion is supposed to be evaluated within Observed region
+            // while pass/fail code within Reactive (IEE 1800-2023 4.4.2.5).
+            // TODO: move pass/fail code evaluation into Reactive region
+            bodysp = new AstAlwaysObserved{nodep->fileline(), sentreep, bodysp};
         }
 
         if (passsp && !passsp->backp()) VL_DO_DANGLING(pushDeletep(passsp), passsp);

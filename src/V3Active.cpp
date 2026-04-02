@@ -528,6 +528,13 @@ class ActiveVisitor final : public VNVisitor {
     }
     void visit(AstAlwaysObserved* nodep) override {
         UASSERT_OBJ(nodep->sentreep(), nodep, "Should have a sentree");
+        nodep->foreach([this](AstSenItem* senItemp) {
+            if (const AstNodeDType* const dtypep = senItemp->sensp()->dtypep()) {
+                if (const AstBasicDType* const basicp = dtypep->basicp()) {
+                    if (basicp->isEvent()) senItemp->edgeType(VEdgeType::ET_EVENT);
+                }
+            }
+        });
         AstSenTree* const sentreep = nodep->sentreep();
         sentreep->unlinkFrBack();
         // Make a new active for it, needs to be the only item under the active for V3Sched

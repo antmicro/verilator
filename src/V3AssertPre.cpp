@@ -41,7 +41,9 @@ class AssertPreVisitor final : public VNVisitor {
 private:
     // NODE STATE
     // AstClockingItem::user1p()         // AstVar*.      varp() of ClockingItem after unlink
+    // AstPExpr::user2()         -> bool.  True if processed
     const VNUser1InUse m_inuser1;
+    const VNUser2InUse m_inuser2;
     // STATE
     // Current context:
     AstNetlist* const m_netlistp = nullptr;  // Current netlist
@@ -1040,6 +1042,7 @@ private:
         iterate(nodep->propp());
     }
     void visit(AstPExpr* nodep) override {
+        if (nodep->user2()) return;
         if (AstLogNot* const notp = VN_CAST(nodep->backp(), LogNot)) {
             notp->replaceWith(nodep->unlinkFrBack());
             VL_DO_DANGLING(pushDeletep(notp), notp);
@@ -1110,6 +1113,7 @@ private:
             // Delete it, because it is always copied before insetion to the AST
             pushDeletep(m_disableSeqIfp);
         }
+        nodep->user2(true);
         iterateChildren(nodep);
     }
     void visit(AstNodeModule* nodep) override {

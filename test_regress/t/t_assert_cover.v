@@ -61,9 +61,9 @@ module Test
 
   // Disable statement
   // Note () after disable are required
-  cover property (@(posedge clk) disable iff (toggle) cyc==8)
-    $display("*COVER: Cyc==8");
   cover property (@(posedge clk) disable iff (!toggle) cyc==8)
+    $display("*COVER: Cyc==8");
+  cover property (@(posedge clk) disable iff (toggle) cyc==8)
     $stop;
 
   always_ff @ (posedge clk) begin
@@ -96,10 +96,17 @@ module Test
   // Using a more complicated property
   property C1;
     @(posedge clk)
-      disable iff (!toggle)
+      disable iff (toggle)
       cyc==5;
   endproperty
   cover property (C1) $display("*COVER: Cyc==5");
+
+  property C2;
+    @(posedge clk)
+      disable iff (!toggle)
+      cyc==5;
+  endproperty
+  cover property (C2) $stop;
 
 `ifndef verilator // Unsupported
   //============================================================

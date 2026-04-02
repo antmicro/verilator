@@ -60,11 +60,13 @@ private:
     // Reset each assertion:
     AstNodeExpr* m_disablep = nullptr;  // Last disable
     AstIf* m_disableSeqIfp = nullptr;  // Used for handling disable iff in sequences
+    AstVar* m_insidePexprEvtVarp = nullptr;  // Event fired at begining of pexpr (observed region). Used for delay control (waiting for senip directly would end up in wrong region)
     // Other:
     V3UniqueNames m_cycleDlyNames{"__VcycleDly"};  // Cycle delay counter name generator
     V3UniqueNames m_consRepNames{"__VconsRep"};  // Consecutive repetition counter name generator
     V3UniqueNames m_gotoRepNames{"__VgotoRep"};  // Goto repetition counter name generator
     V3UniqueNames m_disableCntNames{"__VdisableCnt"};  // Disable condition counter name generator
+    V3UniqueNames m_insidePexprEvtNames{"__VinsidePexprEvt"};  // Inside PExpr event var name generator
     V3UniqueNames m_propVarNames{"__Vpropvar"};  // Property-local variable name generator
     bool m_inAssign = false;  // True if in an AssignNode
     bool m_inAssignDlyLhs = false;  // True if in AssignDly's LHS
@@ -469,12 +471,12 @@ private:
                 VL_DO_DANGLING(valuep->deleteTree(), valuep);
                 return;
             }
-            sensesp = m_senip;
+            sensesp = new AstSenItem{flp, VEdgeType::ET_EVENT, new AstVarRef{flp, m_insidePexprEvtVarp, VAccess::READ}};
         } else {
-            sensesp = m_defaultClockingp->sensesp();
+            sensesp = m_defaultClockingp->sensesp()->cloneTree(false);
         }
         AstEventControl* const controlp = new AstEventControl{
-            nodep->fileline(), new AstSenTree{flp, sensesp->cloneTree(false)}, nullptr};
+            nodep->fileline(), new AstSenTree{flp, sensesp}, nullptr};
         const std::string delayName = m_cycleDlyNames.get(nodep);
         AstVar* const cntVarp = new AstVar{flp, VVarType::BLOCKTEMP, delayName + "__counter",
                                            nodep->findBasicDType(VBasicDTypeKwd::UINT32)};
@@ -1061,7 +1063,17 @@ private:
         }
         VL_RESTORER(m_inPExpr);
         VL_RESTORER(m_disableSeqIfp);
+        VL_RESTORER(m_insidePexprEvtVarp);
         m_inPExpr = true;
+        FileLine* const flp = nodep->fileline();
+
+        m_insidePexprEvtVarp = new AstVar{flp, VVarType::MODULETEMP, m_insidePexprEvtNames.get(""),
+                                      nodep->findBasicDType(VBasicDTypeKwd::EVENT)};
+        m_insidePexprEvtVarp->lifetime(VLifetime::STATIC_EXPLICIT);
+        AstFireEvent* fireEv = new AstFireEvent{flp, new AstVarRef{flp, m_insidePexprEvtVarp, VAccess::WRITE}, false};
+        nodep->bodyp()->stmtsp()->addHereThisAsNext(fireEv);
+        nodep->bodyp()->stmtsp()->addHereThisAsNext(m_insidePexprEvtVarp);
+        v3Global.setHasEvents();
 
         if (m_disablep) {
             const AstSampled* sampledp;

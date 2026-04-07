@@ -740,12 +740,10 @@ class AssertVisitor final : public VNVisitor {
                 // Cover adds COVERINC by AstNode::addNext, thus need to clone next too.
                 stmtsp = m_passsp->cloneTree(true);
             } else if (!nodep->pass() && m_failsp) {
-                // Asserts with multiple statements are wrapped in implicit begin/end blocks so no
-                // need to clone next.
-                stmtsp = m_failsp->cloneTree(false);
+                stmtsp = m_failsp->cloneTree(true);
             }
             if (stmtsp) {
-                stmtsp->foreach([](AstVarRef* const refp) { refp->user1(1); });
+                stmtsp->foreachAndNext([](AstVarRef* const refp) { refp->user1(1); });
                 nodep->replaceWith(stmtsp);
             } else {
                 nodep->unlinkFrBack();

@@ -1163,6 +1163,7 @@ private:
             AstVar* const initialCntp = new AstVar{flp, VVarType::BLOCKTEMP, "__VinitialCnt",
                                                    nodep->findBasicDType(VBasicDTypeKwd::UINT32)};
             initialCntp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
+            initialCntp->noSample(true);
             AstAssign* const assignp
                 = new AstAssign{flp, new AstVarRef{flp, initialCntp, VAccess::WRITE},
                                 readCntRefp->cloneTree(false)};

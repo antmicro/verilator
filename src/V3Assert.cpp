@@ -714,7 +714,7 @@ class AssertVisitor final : public VNVisitor {
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
     void visit(AstNodeVarRef* nodep) override {
-        if (m_inSampled && !nodep->varp()->noSample()) {
+        if (m_inSampled && !nodep->varp()->isTemp()) {
             if (!nodep->access().isReadOnly()) {
                 nodep->v3warn(E_UNSUPPORTED,
                               "Unsupported: Write to variable in sampled expression");

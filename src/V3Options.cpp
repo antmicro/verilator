@@ -1496,6 +1496,7 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc,
     DECL_OPTION("-fmerge-const-pool", FOnOff, &m_fMergeConstPool);
     DECL_OPTION("-freloop", FOnOff, &m_fReloop);
     DECL_OPTION("-freorder", FOnOff, &m_fReorder);
+    DECL_OPTION("-fshuffle", FOnOff, &m_fShuffle);
     DECL_OPTION("-fslice", FOnOff, &m_fSlice);
     DECL_OPTION("-fslice-element-limit", CbVal, [this, fl](const char* valp) {
         m_fSliceElementLimit = std::atoi(valp);
@@ -2366,6 +2367,7 @@ void V3Options::optimize(int level) {
     m_fMergeCond = flag;
     m_fReloop = flag;
     m_fReorder = flag;
+    m_fShuffle = flag;
     m_fSplit = flag;
     m_fSubst = flag;
     m_fSubstConst = flag;

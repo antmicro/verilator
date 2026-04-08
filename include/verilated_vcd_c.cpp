@@ -777,6 +777,33 @@ void VerilatedVcdBuffer::emitFourstateWData(uint32_t code, const WData* newvalp,
 }
 
 VL_ATTR_ALWINLINE
+void VerilatedVcdBuffer::emitFourstateShuffledWData(uint32_t code, const WData* newvalp,
+                                                    int bits) {
+    char* wp = m_writep;
+    *wp++ = 'b';
+    const int lastIdx = ((bits - 1) / VL_EDATASIZE) << 1;
+    {
+        const EData value = newvalp[lastIdx];
+        const EData xz = newvalp[lastIdx | 1];
+        for (int i = (bits - 1) % VL_EDATASIZE; i >= 0; --i) {
+            const EData mask = 1 << i;
+            *wp++ = (xz & mask) ? (value & mask ? 'x' : 'z')
+                                : ('0' | (static_cast<char>(value >> i) & 1));
+        }
+    }
+    for (int w = lastIdx - 2; w >= 0; w -= 2) {
+        const EData value = newvalp[w];
+        const EData xz = newvalp[w | 1];
+        for (int i = VL_EDATASIZE - 1; i >= 0; --i) {
+            const EData mask = 1 << i;
+            *wp++ = (xz & mask) ? (value & mask ? 'x' : 'z')
+                                : ('0' | (static_cast<char>(value >> i) & 1));
+        }
+    }
+    finishLine(code, wp);
+}
+
+VL_ATTR_ALWINLINE
 void VerilatedVcdBuffer::emitDouble(uint32_t code, double newval) {
     char* wp = m_writep;
     // Buffer can't overflow before VL_SNPRINTF; we sized during declaration

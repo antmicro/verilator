@@ -2007,6 +2007,7 @@ class AstVar final : public AstNode {
     bool m_isStdRandomizeArg : 1;  // Argument variable created for std::randomize (__Varg*)
     bool m_processQueue : 1;  // Process queue variable
     bool m_isFourstateComplement : 1;  // Set in four-state xz part
+    bool m_isFourstateShuffle : 1;  // Set if is shuffled version of four-state value
     void init() {
         m_fourstateOriginalDTypeKwd = VBasicDTypeKwd::UNKNOWN;
         m_ansi = false;
@@ -2070,6 +2071,7 @@ class AstVar final : public AstNode {
         m_isStdRandomizeArg = false;
         m_processQueue = false;
         m_isFourstateComplement = false;
+        m_isFourstateShuffle = false;
     }
 
 public:
@@ -2185,6 +2187,13 @@ public:
         m_fourstateOriginalDTypeKwd = dtypeKwd;
     }
     bool isFourstateComplement() const { return m_isFourstateComplement; }
+    void unsetFourstateComplement() { m_isFourstateComplement = false; }
+    void setFourstateShuffle() {
+        // * 2 because we need to store value and xz part
+        UASSERT_OBJ(width() > VL_QUADSIZE * 2, this, "This shall only happen on wide signals");
+        m_isFourstateShuffle = true;
+    }
+    bool isFourstateShuffle() const { return m_isFourstateShuffle; }
     void attrFileDescr(bool flag) { m_fileDescr = flag; }
     void attrScBv(bool flag) { m_attrScBv = flag; }
     void attrScBigUint(bool flag) { m_attrScBigUint = flag; }

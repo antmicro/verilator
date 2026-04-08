@@ -31,4 +31,8 @@
                                                     : ... note: In instance 't'
    47 |   assert property (@(posedge clk) val until val until val) $display("[%0t] nested until, fileline:%d", $time, 47);
       |                                                 ^~~~~
+%Error-UNSUPPORTED: t/t_property_sexpr_unsup.v:49:50: Unsupported: Complex property expression inside until
+                                                    : ... note: In instance 't'
+   49 |   assert property (@(posedge clk) val until (val ##1 val)) $display("[%0t] sequence in until, fileline:%d", $time, 49);
+      |                                                  ^~
 %Error: Exiting due to

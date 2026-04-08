@@ -1055,6 +1055,12 @@ private:
     }
     void visit(AstUntil* nodep) override {
         FileLine* const flp = nodep->fileline();
+        if (m_inPExpr) {
+            nodep->v3warn(E_UNSUPPORTED, "Unsupported: until in complex property expression");
+            nodep->replaceWith(new AstConst{flp, AstConst::BitFalse{}});
+            VL_DO_DANGLING(pushDeletep(nodep), nodep);
+            return;
+        }
         AstLoop* const loopp = new AstLoop{flp};
         AstNodeExpr* const rhsp = nodep->rhsp()->unlinkFrBack();
         AstLogAnd* const condp

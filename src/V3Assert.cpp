@@ -405,7 +405,6 @@ class AssertVisitor final : public VNVisitor {
         } else {
             UASSERT_OBJ(sentreep, nodep, "Concurrent assertions must have sensitivity");
             if (m_procedurep) {
-                iterateChildren(nodep->propp());
                 if (!nodep->senFromAlways()) {
                     // To support this need queue of asserts to activate
                     nodep->v3warn(E_UNSUPPORTED,

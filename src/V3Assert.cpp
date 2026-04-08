@@ -127,6 +127,7 @@ class AssertVisitor final : public VNVisitor {
     // Cleared on netlist
     //  AstNode::user1()         -> bool.  True if processed
     //  AstAlways::user2p()      -> std::vector<AstVar*>. Delayed variables via 'm_delayed'
+    //  AstNodeVarRef::user2()   -> bool.  True if shouldn't be sampled
     const VNUser1InUse m_user1InUse;
     const VNUser2InUse m_user2InUse;
     AstUser2Allocator<AstAlways, std::vector<AstVar*>> m_delayed;
@@ -712,7 +713,7 @@ class AssertVisitor final : public VNVisitor {
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
     void visit(AstNodeVarRef* nodep) override {
-        if (m_inSampled && !nodep->varp()->isTemp()) {
+        if (m_inSampled && !nodep->user2() && !nodep->varp()->isTemp()) {
             if (!nodep->access().isReadOnly()) {
                 nodep->v3warn(E_UNSUPPORTED,
                               "Unsupported: Write to variable in sampled expression");
@@ -742,7 +743,12 @@ class AssertVisitor final : public VNVisitor {
                 stmtsp = m_failsp->cloneTree(true);
             }
             if (stmtsp) {
-                stmtsp->foreachAndNext([](AstVarRef* const refp) { refp->user1(1); });
+                stmtsp->foreachAndNext([](AstNodeVarRef* const refp) {
+                    // References inside action blocks shouldn't be implicitly sampled
+                    // m_passsp/m_failsp have been already visited once and refs explicitly sampled
+                    // are handled already
+                    refp->user2(1);
+                });
                 nodep->replaceWith(stmtsp);
             } else {
                 nodep->unlinkFrBack();

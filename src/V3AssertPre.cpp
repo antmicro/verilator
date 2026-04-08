@@ -489,6 +489,7 @@ private:
         if (throughoutp) {
             throughoutOkp = new AstVar{flp, VVarType::BLOCKTEMP, delayName + "__throughoutOk",
                                        nodep->findBasicDType(VBasicDTypeKwd::LOGIC_IMPLICIT)};
+            throughoutOkp->noSample(true);
             throughoutOkp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
             beginp->addStmtsp(throughoutOkp);
             beginp->addStmtsp(new AstAssign{flp, new AstVarRef{flp, throughoutOkp, VAccess::WRITE},

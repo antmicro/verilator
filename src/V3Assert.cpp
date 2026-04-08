@@ -336,7 +336,6 @@ class AssertVisitor final : public VNVisitor {
         AstVar* const varp = new AstVar{flp, VVarType::MODULETEMP, name, exprp->dtypep()};
         // TODO: this lifetime seems nonsene (can't have NBAs to automatics), but is as before
         varp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
-        varp->noSample(true);
         m_modp->addStmtsp(varp);
         ++m_statPastVars;
         // Actually set the delayed value

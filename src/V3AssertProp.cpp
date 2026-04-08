@@ -1350,15 +1350,12 @@ class RangeDelayExpander final : public VNVisitor {
         AstVar* const stateVarp = new AstVar{flp, VVarType::MODULETEMP, baseName + "__state",
                                              nodep->findBasicDType(VBasicDTypeKwd::UINT32)};
         stateVarp->lifetime(VLifetime::STATIC_EXPLICIT);
-        stateVarp->noSample(true);
         AstVar* const cntVarp = new AstVar{flp, VVarType::MODULETEMP, baseName + "__cnt",
                                            nodep->findBasicDType(VBasicDTypeKwd::UINT32)};
         cntVarp->lifetime(VLifetime::STATIC_EXPLICIT);
-        cntVarp->noSample(true);
         AstVar* const failVarp = new AstVar{flp, VVarType::MODULETEMP, baseName + "__fail",
                                             nodep->findBasicDType(VBasicDTypeKwd::BIT)};
         failVarp->lifetime(VLifetime::STATIC_EXPLICIT);
-        failVarp->noSample(true);
 
         // Build FSM body
         AstNode* const fsmBodyp = buildFsmBody(flp, stateVarp, cntVarp, failVarp, steps, antExprp);

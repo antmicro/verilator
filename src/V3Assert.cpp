@@ -150,7 +150,6 @@ class AssertVisitor final : public VNVisitor {
     bool m_inRestrict = false;  // True inside restrict assertion
     AstNode* m_passsp = nullptr;  // Current pass statement
     AstNode* m_failsp = nullptr;  // Current fail statement
-    bool m_underAssert = false;  // Visited from assert
     // Map from (expression, senTree) to AstAlways that computes delayed values of the expression
     std::unordered_map<VNRef<AstNodeExpr>, std::unordered_map<VNRef<AstSenTree>, AstAlways*>>
         m_modExpr2Sen2DelayedAlwaysp;
@@ -456,10 +455,8 @@ class AssertVisitor final : public VNVisitor {
 
         VL_RESTORER(m_passsp);
         VL_RESTORER(m_failsp);
-        VL_RESTORER(m_underAssert);
         m_passsp = passsp;
         m_failsp = failsp;
-        m_underAssert = true;
         iterate(nodep->propp());
 
         AstNode* propExprp;
@@ -734,7 +731,6 @@ class AssertVisitor final : public VNVisitor {
         iterateChildren(nodep);
     }
     void visit(AstPExprClause* nodep) override {
-        if (m_underAssert) {
             AstNode* stmtsp = nullptr;
             if (nodep->pass() && m_passsp) {
                 // Cover adds COVERINC by AstNode::addNext, thus need to clone next too.
@@ -754,13 +750,12 @@ class AssertVisitor final : public VNVisitor {
                 nodep->unlinkFrBack();
             }
             VL_DO_DANGLING(pushDeletep(nodep), nodep);
-        }
     }
     void visit(AstPExpr* nodep) override {
-        if (m_underAssert) {
-            iterateChildren(nodep);
-        } else if (m_inRestrict) {
+        if (m_inRestrict) {
             VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
+        } else {
+            iterateChildren(nodep);
         }
     }
 

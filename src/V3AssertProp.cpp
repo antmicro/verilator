@@ -242,8 +242,8 @@ class AssertPropConsRepVisitor final : public VNVisitor {
                 // Zero-repetition path: skip directly to ##1 and check next
                 AstBegin* const skipBlockp = new AstBegin{flp, "", nullptr, true};
                 skipBlockp->addStmtsp(delayp->cloneTree(false));
-                skipBlockp->addStmtsp(new AstIf{flp, nextExprp->cloneTreePure(false),
-                                                passStmts(), failStmts()});
+                skipBlockp->addStmtsp(
+                    new AstIf{flp, nextExprp->cloneTreePure(false), passStmts(), failStmts()});
                 return skipBlockp;
             }
             return new AstPExprClause{flp, false};
@@ -579,8 +579,8 @@ class AssertPropLowerVisitor final : public VNVisitor {
                     AstNodeExpr* const alive2p
                         = new AstLogNot{flp, new AstVarRef{flp, deadVarp, VAccess::READ}};
                     alive2p->dtypeSetBit();
-                    AstNodeExpr* const failCond = new AstLogAnd{
-                        flp, alive2p, new AstLogNot{flp, exprp->cloneTree(false)}};
+                    AstNodeExpr* const failCond
+                        = new AstLogAnd{flp, alive2p, new AstLogNot{flp, exprp->cloneTree(false)}};
                     failCond->dtypeSetBit();
                     cycleBlock->addStmtsp(
                         new AstIf{flp, failCond,
@@ -1091,10 +1091,7 @@ class RangeDelayExpander final : public VNVisitor {
     AstNode* makeRangeCheckBody(FileLine* flp, AstVar* stateVarp, AstVar* cntVarp,
                                 AstVar* failVarp, AstNodeExpr* exprp, AstNode* matchActionp,
                                 bool isUnbounded) {
-        if (isUnbounded) {
-            return new AstIf{flp, exprp->cloneTree(false), matchActionp,
-                             nullptr};
-        }
+        if (isUnbounded) { return new AstIf{flp, exprp->cloneTree(false), matchActionp, nullptr}; }
         AstBegin* const timeoutp = new AstBegin{flp, "", nullptr, true};
         timeoutp->addStmtsp(new AstAssign{flp, new AstVarRef{flp, failVarp, VAccess::WRITE},
                                           new AstConst{flp, AstConst::BitTrue{}}});
@@ -1106,8 +1103,7 @@ class RangeDelayExpander final : public VNVisitor {
         AstIf* const failOrRetryp = new AstIf{
             flp, new AstEq{flp, new AstVarRef{flp, cntVarp, VAccess::READ}, new AstConst{flp, 0}},
             timeoutp, decrementp};
-        return new AstIf{flp, exprp->cloneTree(false), matchActionp,
-                         failOrRetryp};
+        return new AstIf{flp, exprp->cloneTree(false), matchActionp, failOrRetryp};
     }
 
     AstNode* buildFsmBody(FileLine* flp, AstVar* stateVarp, AstVar* cntVarp, AstVar* failVarp,
@@ -1176,8 +1172,7 @@ class RangeDelayExpander final : public VNVisitor {
                                                new AstConst{flp, AstConst::BitTrue{}}});
                 failp->addStmtsp(new AstAssign{flp, new AstVarRef{flp, stateVarp, VAccess::WRITE},
                                                new AstConst{flp, 0}});
-                AstIf* const bodyp = new AstIf{
-                    flp, step.exprp->cloneTree(false), passp, failp};
+                AstIf* const bodyp = new AstIf{flp, step.exprp->cloneTree(false), passp, failp};
                 fsmChainp = chainState(flp, fsmChainp, stateVarp, bounds[i].checkState, bodyp);
             }
         }
@@ -1189,8 +1184,8 @@ class RangeDelayExpander final : public VNVisitor {
         // Trigger = antecedent AND/OR first step expression
         AstNodeExpr* triggerp = nullptr;
         if (antExprp && firstStep.exprp) {
-            triggerp = new AstAnd{flp, antExprp->cloneTree(false),
-                                  firstStep.exprp->cloneTree(false)};
+            triggerp
+                = new AstAnd{flp, antExprp->cloneTree(false), firstStep.exprp->cloneTree(false)};
         } else if (antExprp) {
             triggerp = antExprp->cloneTree(false);
         } else if (firstStep.exprp) {

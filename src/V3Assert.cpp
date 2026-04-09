@@ -731,25 +731,25 @@ class AssertVisitor final : public VNVisitor {
         iterateChildren(nodep);
     }
     void visit(AstPExprClause* nodep) override {
-            AstNode* stmtsp = nullptr;
-            if (nodep->pass() && m_passsp) {
-                // Cover adds COVERINC by AstNode::addNext, thus need to clone next too.
-                stmtsp = m_passsp->cloneTree(true);
-            } else if (!nodep->pass() && m_failsp) {
-                stmtsp = m_failsp->cloneTree(true);
-            }
-            if (stmtsp) {
-                stmtsp->foreachAndNext([](AstNodeVarRef* const refp) {
-                    // References inside action blocks shouldn't be implicitly sampled
-                    // m_passsp/m_failsp have been already visited once and refs explicitly sampled
-                    // are handled already
-                    refp->user2(1);
-                });
-                nodep->replaceWith(stmtsp);
-            } else {
-                nodep->unlinkFrBack();
-            }
-            VL_DO_DANGLING(pushDeletep(nodep), nodep);
+        AstNode* stmtsp = nullptr;
+        if (nodep->pass() && m_passsp) {
+            // Cover adds COVERINC by AstNode::addNext, thus need to clone next too.
+            stmtsp = m_passsp->cloneTree(true);
+        } else if (!nodep->pass() && m_failsp) {
+            stmtsp = m_failsp->cloneTree(true);
+        }
+        if (stmtsp) {
+            stmtsp->foreachAndNext([](AstNodeVarRef* const refp) {
+                // References inside action blocks shouldn't be implicitly sampled
+                // m_passsp/m_failsp have been already visited once and refs explicitly sampled
+                // are handled already
+                refp->user2(1);
+            });
+            nodep->replaceWith(stmtsp);
+        } else {
+            nodep->unlinkFrBack();
+        }
+        VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
     void visit(AstPExpr* nodep) override {
         if (m_inRestrict) {

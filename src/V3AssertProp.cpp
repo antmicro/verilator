@@ -196,9 +196,7 @@ class AssertPropConsRepVisitor final : public VNVisitor {
             return bp;
         };
         auto sampled = [&](AstNodeExpr* ep) {
-            AstSampled* const sp = new AstSampled{flp, ep};
-            sp->dtypeFrom(ep);
-            return sp;
+            return ep;
         };
 
         // Loop body: ##1 delay, then branch on count vs min

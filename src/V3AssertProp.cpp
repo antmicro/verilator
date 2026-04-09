@@ -195,9 +195,6 @@ class AssertPropConsRepVisitor final : public VNVisitor {
             bp->addStmtsp(setDone());
             return bp;
         };
-        auto sampled = [&](AstNodeExpr* ep) {
-            return ep;
-        };
 
         // Loop body: ##1 delay, then branch on count vs min
         AstLoop* const loopp = new AstLoop{flp};
@@ -215,13 +212,13 @@ class AssertPropConsRepVisitor final : public VNVisitor {
                           failStmts()});
         }
         AstIf* const tryNextp = new AstIf{
-            flp, sampled(nextExprp), passStmts(),
-            new AstIf{flp, sampled(repExprp->cloneTreePure(false)), continueBlockp, failStmts()}};
+            flp, nextExprp, passStmts(),
+            new AstIf{flp, repExprp->cloneTreePure(false), continueBlockp, failStmts()}};
 
         if (r.minN > 0) {
             // When cnt < minN: still accumulating -- must see expr to continue
             AstIf* const accumulatep
-                = new AstIf{flp, sampled(repExprp->cloneTreePure(false)), incrCnt(), failStmts()};
+                = new AstIf{flp, repExprp->cloneTreePure(false), incrCnt(), failStmts()};
             loopp->addStmtsp(
                 new AstIf{flp,
                           new AstGte{flp, cntRef(VAccess::READ),
@@ -245,14 +242,14 @@ class AssertPropConsRepVisitor final : public VNVisitor {
                 // Zero-repetition path: skip directly to ##1 and check next
                 AstBegin* const skipBlockp = new AstBegin{flp, "", nullptr, true};
                 skipBlockp->addStmtsp(delayp->cloneTree(false));
-                skipBlockp->addStmtsp(new AstIf{flp, sampled(nextExprp->cloneTreePure(false)),
+                skipBlockp->addStmtsp(new AstIf{flp, nextExprp->cloneTreePure(false),
                                                 passStmts(), failStmts()});
                 return skipBlockp;
             }
             return new AstPExprClause{flp, false};
         }();
 
-        AstIf* const topIfp = new AstIf{flp, sampled(repExprp), entryBlockp, elsep};
+        AstIf* const topIfp = new AstIf{flp, repExprp, entryBlockp, elsep};
 
         // Wrap everything in a PExpr with cnt and done as locals
         AstBegin* const bodyp = new AstBegin{flp, "", cntVarp, true};
@@ -568,14 +565,14 @@ class AssertPropLowerVisitor final : public VNVisitor {
                 const int brMaxCycle = (entry.branchId == 0) ? br0MaxCycle : br1MaxCycle;
                 const bool isLast = (cycle == brMaxCycle);
 
-                AstNodeExpr* const sampledp = entry.exprp->cloneTree(false);
+                AstNodeExpr* const exprp = entry.exprp->cloneTree(false);
                 AstNodeExpr* const alivep
                     = new AstLogNot{flp, new AstVarRef{flp, deadVarp, VAccess::READ}};
                 alivep->dtypeSetBit();
 
                 if (isLast) {
                     // Last check: alive && passes -> pass
-                    AstNodeExpr* const passCond = new AstLogAnd{flp, alivep, sampledp};
+                    AstNodeExpr* const passCond = new AstLogAnd{flp, alivep, exprp};
                     passCond->dtypeSetBit();
                     cycleBlock->addStmtsp(new AstIf{flp, passCond, makePass()});
                     // alive && fails -> dead
@@ -583,7 +580,7 @@ class AssertPropLowerVisitor final : public VNVisitor {
                         = new AstLogNot{flp, new AstVarRef{flp, deadVarp, VAccess::READ}};
                     alive2p->dtypeSetBit();
                     AstNodeExpr* const failCond = new AstLogAnd{
-                        flp, alive2p, new AstLogNot{flp, sampledp->cloneTree(false)}};
+                        flp, alive2p, new AstLogNot{flp, exprp->cloneTree(false)}};
                     failCond->dtypeSetBit();
                     cycleBlock->addStmtsp(
                         new AstIf{flp, failCond,
@@ -592,7 +589,7 @@ class AssertPropLowerVisitor final : public VNVisitor {
                 } else {
                     // Non-last: alive && fails -> dead
                     AstNodeExpr* const failCond
-                        = new AstLogAnd{flp, alivep, new AstLogNot{flp, sampledp}};
+                        = new AstLogAnd{flp, alivep, new AstLogNot{flp, exprp}};
                     failCond->dtypeSetBit();
                     cycleBlock->addStmtsp(
                         new AstIf{flp, failCond,

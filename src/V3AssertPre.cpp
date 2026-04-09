@@ -494,9 +494,8 @@ private:
             beginp->addStmtsp(new AstAssign{flp, new AstVarRef{flp, throughoutOkp, VAccess::WRITE},
                                             new AstConst{flp, AstConst::BitTrue{}}});
             // Check condition at tick 0 (sequence start, before entering loop)
-            AstNodeExpr* const initSampledp = throughoutp->cloneTreePure(false);
             beginp->addStmtsp(
-                new AstIf{flp, new AstLogNot{flp, initSampledp},
+                new AstIf{flp, new AstLogNot{flp, throughoutp->cloneTreePure(false)},
                           new AstAssign{flp, new AstVarRef{flp, throughoutOkp, VAccess::WRITE},
                                         new AstConst{flp, AstConst::BitFalse{}}}});
         }
@@ -518,9 +517,8 @@ private:
                                          new AstConst{flp, 1}}});
             // Check throughout condition at each tick during delay (IEEE 1800-2023 16.9.9)
             if (throughoutp) {
-                AstNodeExpr* const sampledp = throughoutp;
                 loopp->addStmtsp(
-                    new AstIf{flp, new AstLogNot{flp, sampledp},
+                    new AstIf{flp, new AstLogNot{flp, throughoutp},
                               new AstAssign{flp, new AstVarRef{flp, throughoutOkp, VAccess::WRITE},
                                             new AstConst{flp, AstConst::BitFalse{}}}});
             }
@@ -860,9 +858,9 @@ private:
                                          new AstLt{flp, new AstVarRef{flp, cntVarp, VAccess::READ},
                                                    countp->cloneTreePure(false)}});
         // if ($sampled(expr)) cnt++
-        AstNodeExpr* const sampledp = exprp;
+        // sampled is applied to whole property expr
         loopp->addStmtsp(
-            new AstIf{flp, sampledp,
+            new AstIf{flp, exprp,
                       new AstAssign{flp, new AstVarRef{flp, cntVarp, VAccess::WRITE},
                                     new AstAdd{flp, new AstVarRef{flp, cntVarp, VAccess::READ},
                                                new AstConst{flp, 1}}}});
@@ -878,8 +876,7 @@ private:
                 beginp->addStmtsp(new AstEventControl{
                     flp, new AstSenTree{flp, sensesp->cloneTree(false)}, nullptr});
             }
-            AstNodeExpr* const sampledRhsp = rhsp;
-            beginp->addStmtsp(new AstIf{flp, sampledRhsp, new AstPExprClause{flp, true},
+            beginp->addStmtsp(new AstIf{flp, rhsp, new AstPExprClause{flp, true},
                                         new AstPExprClause{flp, false}});
         } else {
             beginp->addStmtsp(new AstPExprClause{flp, true});

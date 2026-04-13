@@ -654,22 +654,6 @@ class ForkVisitor final : public VNVisitor {
         // start executing until the parent process is blocked or terminates.
         // Because join and join_any block the parent process, it is only needed when join_none
         // is used.
-        // if (nodep->joinType().joinNone()) {
-        //     UINFO(9, "Visiting fork..join_none " << nodep);
-        //     FileLine* fl = nodep->fileline();
-        //     // We use a sentinel value of UINT64_MAX to mark this delay so that it goes to the
-        //     // ACTIVE region with a delay value of 0.
-        //     for (AstBegin *itemp = nodep->forksp(), *nextp; itemp; itemp = nextp) {
-        //         nextp = VN_AS(itemp->nextp(), Begin);
-        //         if (!itemp->stmtsp()) continue;
-        //         AstDelay* const delayp = new AstDelay{
-        //             fl,
-        //             new AstConst{fl, AstConst::Unsized64{}, std::numeric_limits<uint64_t>::max()},
-        //             false};
-        //         itemp->stmtsp()->addHereThisAsNext(delayp);
-        //         moveForkSentinelAfterDisableQueuePushes(itemp);
-        //     }
-        // }
 
         iterateAndNextNull(nodep->declsp());
         iterateAndNextNull(nodep->stmtsp());

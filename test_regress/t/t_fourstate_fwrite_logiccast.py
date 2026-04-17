@@ -9,9 +9,9 @@
 
 import vltest_bootstrap
 
-test.scenarios('simulator')
+test.top_filename = 't/t_fourstate_fwrite.v'
 
-test.top_filename = "t/t_fourstate_format.v"
+test.scenarios('linter')
 
 test.lint(verilator_flags2=['--fourstate', '-Wno-FUTURE'],
           fails=True,

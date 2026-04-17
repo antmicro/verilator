@@ -440,6 +440,8 @@ using ssize_t = uint32_t;  ///< signed size_t; returned from read()
 // (...) indicates what is passed as arguments in emitted code
 #define VL_VFORMATATTR_UNSIGNED '#'  // (int widthMin, IData/WData/etc) Use standard format
 #define VL_VFORMATATTR_SIGNED '~'  // (int widthMin, IData/WData/etc) Signed number; for %d showing sign
+#define VL_VFORMATATTR_UNSIGNED_FOURSTATE '^'  // The same as above but for four-state
+#define VL_VFORMATATTR_SIGNED_FOURSTATE '&'  // The same as above but for four-state
 #define VL_VFORMATATTR_COMPLEX '!'  // (std::string*); for non-POD; e.g. struct, requires %p typically
 #define VL_VFORMATATTR_DOUBLE 'D'  // (double); promote %p to %f
 #define VL_VFORMATATTR_SCOPE 'M'  // (char* name, char* scope); for scopes

@@ -43,6 +43,8 @@ public:
         //               // AstSFormatArg is typically skipped for UNSIGNED, as is the default
         UNSIGNED = VL_VFORMATATTR_UNSIGNED,
         SIGNED = VL_VFORMATATTR_SIGNED,
+        UNSIGNED_FOURSTATE = VL_VFORMATATTR_UNSIGNED_FOURSTATE,
+        SIGNED_FOURSTATE = VL_VFORMATATTR_SIGNED_FOURSTATE,
         //
         COMPLEX = VL_VFORMATATTR_COMPLEX,
         DOUBLE = VL_VFORMATATTR_DOUBLE,
@@ -63,8 +65,12 @@ public:
     bool isComplex() const { return m_e == COMPLEX; }
     bool isDouble() const { return m_e == DOUBLE; }
     bool isSigned() const { return m_e == SIGNED; }
+    bool isSignedFourstate() const { return m_e == SIGNED_FOURSTATE; }
     bool isString() const { return m_e == STRING; }
     bool isUnsigned() const { return m_e == UNSIGNED; }
+    bool isUnsignedFourstate() const { return m_e == UNSIGNED_FOURSTATE; }
+    bool isTwostate() const { return m_e == SIGNED || m_e == UNSIGNED; }
+    bool isFourstate() const { return m_e == SIGNED_FOURSTATE || m_e == UNSIGNED_FOURSTATE; }
 };
 constexpr bool operator==(const VFormatAttr& lhs, const VFormatAttr& rhs) {
     return lhs.m_e == rhs.m_e;

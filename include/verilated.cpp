@@ -1081,6 +1081,9 @@ void _vl_vsformat(std::string& output, const std::string& format, int argc,
             QData ld = 0;
             std::vector<EData> strwide;
             WDataInP lwp = nullptr;
+            QData ldxz = 0;
+            std::vector<EData> strwidexz;
+            WDataInP lwxzp = nullptr;
             int lsb = 0;
             double real = 0.0;
             if (formatAttr == VL_VFORMATATTR_COMPLEX) {  // printed as string
@@ -1107,6 +1110,18 @@ void _vl_vsformat(std::string& output, const std::string& format, int argc,
                 } else {
                     lwp = va_arg(ap, WDataInP);
                     ld = lwp[0];
+                }
+                if (formatAttr == VL_VFORMATATTR_SIGNED_FOURSTATE
+                    || formatAttr == VL_VFORMATATTR_UNSIGNED_FOURSTATE) {
+                    if (lbits <= VL_QUADSIZE) {
+                        ldxz = VL_VA_ARG_Q_(ap, lbits);
+                        strwidexz.resize(2);
+                        VL_SET_WQ(strwidexz, ldxz);
+                        lwxzp = strwidexz.data();
+                    } else {
+                        lwxzp = va_arg(ap, WDataInP);
+                        ldxz = lwxzp[0];
+                    }
                 }
                 if (fmt == 'p') {
                     if (widthSet && width == 0) {  // For %0p, IEEE our choice, use 'h%0h
@@ -1182,38 +1197,75 @@ void _vl_vsformat(std::string& output, const std::string& format, int argc,
             case 'd': {  // Signed/unsigned decimal
                 int digits = 0;
                 std::string append;
-                if (formatAttr == VL_VFORMATATTR_SIGNED) {
-                    if (lbits <= VL_QUADSIZE) {
-                        digits = _vl_snprintf_string(
-                            t_tmp, "%" PRId64,
-                            static_cast<int64_t>(VL_EXTENDS_QQ(lbits, lbits, ld)));
-                        append = t_tmp;
-                    } else {
-                        if (VL_SIGN_E(lbits, lwp[VL_WORDS_I(lbits) - 1])) {
-                            std::vector<EData> neg(VL_WORDS_I(lbits));
-                            VL_NEGATE_W(VL_WORDS_I(lbits), neg.data(), lwp);
-                            append = "-"s + VL_DECIMAL_NW(lbits, neg.data());
+                std::vector<EData> zeros;
+                std::vector<EData> buffer;
+                const int words = VL_WORDS_I(lbits);
+                zeros.resize(words, 0);
+                buffer.resize(words);
+                if (formatAttr == VL_VFORMATATTR_SIGNED || formatAttr == VL_VFORMATATTR_UNSIGNED
+                    || VL_EQ_W(words, zeros.data(), lwxzp)) {
+                    if (formatAttr == VL_VFORMATATTR_SIGNED
+                        || formatAttr == VL_VFORMATATTR_SIGNED_FOURSTATE) {
+                        if (lbits <= VL_QUADSIZE) {
+                            digits = _vl_snprintf_string(
+                                t_tmp, "%" PRId64,
+                                static_cast<int64_t>(VL_EXTENDS_QQ(lbits, lbits, ld)));
+                            append = t_tmp;
+                        } else {
+                            if (VL_SIGN_E(lbits, lwp[VL_WORDS_I(lbits) - 1])) {
+                                std::vector<EData> neg(VL_WORDS_I(lbits));
+                                VL_NEGATE_W(VL_WORDS_I(lbits), neg.data(), lwp);
+                                append = "-"s + VL_DECIMAL_NW(lbits, neg.data());
+                            } else {
+                                append = VL_DECIMAL_NW(lbits, lwp);
+                            }
+                            digits = static_cast<int>(append.length());
+                        }
+                    } else {  // Unsigned decimal
+                        if (lbits <= VL_QUADSIZE) {
+                            digits = _vl_snprintf_string(t_tmp, "%" PRIu64, ld);
+                            append = t_tmp;
                         } else {
                             append = VL_DECIMAL_NW(lbits, lwp);
+                            digits = static_cast<int>(append.length());
                         }
-                        digits = static_cast<int>(append.length());
                     }
-                } else {  // Unsigned decimal
-                    if (lbits <= VL_QUADSIZE) {
-                        digits = _vl_snprintf_string(t_tmp, "%" PRIu64, ld);
-                        append = t_tmp;
+                } else if (VL_EQ_W(words, zeros.data(),
+                                   VL_CLEAN_WW(lbits, buffer.data(),
+                                               VL_NOT_W(words, buffer.data(), lwxzp)))) {
+                    if (VL_EQ_W(words, zeros.data(), lwp)) {
+                        append = "z";
+                    } else if (VL_EQ_W(words, zeros.data(),
+                                       VL_CLEAN_WW(lbits, buffer.data(),
+                                                   VL_NOT_W(words, buffer.data(), lwp)))) {
+                        append = "x";
                     } else {
-                        append = VL_DECIMAL_NW(lbits, lwp);
-                        digits = static_cast<int>(append.length());
+                        append = "X";
                     }
+                    digits = 1;
+                } else {
+                    if (VL_NEQ_W(words, zeros.data(),
+                                 VL_AND_W(words, buffer.data(), lwp, lwxzp))) {
+                        append = "X";
+                    } else {
+                        append = "Z";
+                    }
+                    digits = 1;
                 }
                 if (!widthSet) {
                     const double mantissabits
-                        = lbits - ((formatAttr == VL_VFORMATATTR_SIGNED) ? 1 : 0);
+                        = lbits
+                          - ((formatAttr == VL_VFORMATATTR_SIGNED
+                              || formatAttr == VL_VFORMATATTR_SIGNED_FOURSTATE)
+                                 ? 1
+                                 : 0);
                     // This is log10(2**mantissabits) as log2(2**mantissabits)/log2(10),
                     // + 1.0 rounding bias.
                     double dchars = mantissabits / 3.321928094887362 + 1.0;
-                    if (formatAttr == VL_VFORMATATTR_SIGNED) ++dchars;  // space for sign
+                    if (formatAttr == VL_VFORMATATTR_SIGNED
+                        || formatAttr == VL_VFORMATATTR_SIGNED_FOURSTATE) {
+                        ++dchars;  // space for sign
+                    }
                     width = static_cast<int>(dchars);
                 }
                 const int needmore = static_cast<int>(width) - digits;
@@ -1274,29 +1326,90 @@ void _vl_vsformat(std::string& output, const std::string& format, int argc,
                 switch (fmt) {
                 case 'b': {
                     digits = lsb + 1;
-                    for (; lsb >= 0; --lsb) append += (VL_BITRSHIFT_W(lwp, lsb) & 1) + '0';
+                    if (formatAttr == VL_VFORMATATTR_SIGNED_FOURSTATE
+                        || formatAttr == VL_VFORMATATTR_UNSIGNED_FOURSTATE) {
+                        for (; lsb >= 0; --lsb) {
+                            append += "01zx"[((VL_BITRSHIFT_W(lwxzp, lsb) << 1) & 2)
+                                             | (VL_BITRSHIFT_W(lwp, lsb) & 1)];
+                        }
+                    } else {
+                        for (; lsb >= 0; --lsb) append += (VL_BITRSHIFT_W(lwp, lsb) & 1) + '0';
+                    }
                     break;
                 }
                 case 'o': {
                     digits = (lsb + 1 + 2) / 3;
-                    for (; lsb >= 0; --lsb) {
-                        lsb = (lsb / 3) * 3;  // Next digit
-                        // Octal numbers may span more than one wide word,
-                        // so we need to grab each bit separately and check for overrun
-                        // Octal is rare, so we'll do it a slow simple way
-                        append += static_cast<char>(
-                            '0' + ((VL_BITISSETLIMIT_W(lwp, lbits, lsb + 0)) ? 1 : 0)
-                            + ((VL_BITISSETLIMIT_W(lwp, lbits, lsb + 1)) ? 2 : 0)
-                            + ((VL_BITISSETLIMIT_W(lwp, lbits, lsb + 2)) ? 4 : 0));
+                    if (formatAttr == VL_VFORMATATTR_SIGNED_FOURSTATE
+                        || formatAttr == VL_VFORMATATTR_UNSIGNED_FOURSTATE) {
+                        for (; lsb >= 0; --lsb) {
+                            lsb = (lsb / 3) * 3;  // Next digit
+                            // Octal numbers may span more than one wide word,
+                            // so we need to grab each bit separately and check for overrun
+                            // Octal is rare, so we'll do it a slow simple way
+                            const char valueMask = static_cast<char>(
+                                +((VL_BITISSETLIMIT_W(lwp, lbits, lsb + 0)) ? 1 : 0)
+                                + ((VL_BITISSETLIMIT_W(lwp, lbits, lsb + 1)) ? 2 : 0)
+                                + ((VL_BITISSETLIMIT_W(lwp, lbits, lsb + 2)) ? 4 : 0));
+                            const char xzMask = static_cast<char>(
+                                +((VL_BITISSETLIMIT_W(lwxzp, lbits, lsb + 0)) ? 1 : 0)
+                                + ((VL_BITISSETLIMIT_W(lwxzp, lbits, lsb + 1)) ? 2 : 0)
+                                + ((VL_BITISSETLIMIT_W(lwxzp, lbits, lsb + 2)) ? 4 : 0));
+                            if (xzMask != 0) {
+                                const char maxVal = static_cast<char>(
+                                    +((lbits > lsb + 0) ? 1 : 0) + ((lbits > lsb + 1) ? 2 : 0)
+                                    + ((lbits > lsb + 2) ? 4 : 0));
+                                if ((valueMask & xzMask) != 0) {
+                                    append += (valueMask == maxVal) ? 'x' : 'X';
+                                } else {
+                                    append += ((~valueMask & xzMask) == maxVal) ? 'z' : 'Z';
+                                }
+                            } else {
+                                append += '0' + valueMask;
+                            }
+                        }
+                    } else {
+                        for (; lsb >= 0; --lsb) {
+                            lsb = (lsb / 3) * 3;  // Next digit
+                            // Octal numbers may span more than one wide word,
+                            // so we need to grab each bit separately and check for overrun
+                            // Octal is rare, so we'll do it a slow simple way
+                            append += static_cast<char>(
+                                '0' + ((VL_BITISSETLIMIT_W(lwp, lbits, lsb + 0)) ? 1 : 0)
+                                + ((VL_BITISSETLIMIT_W(lwp, lbits, lsb + 1)) ? 2 : 0)
+                                + ((VL_BITISSETLIMIT_W(lwp, lbits, lsb + 2)) ? 4 : 0));
+                        }
                     }
                     break;
                 }
                 default: {  // 'x'
                     digits = (lsb + 1 + 3) / 4;
-                    for (; lsb >= 0; --lsb) {
-                        lsb = (lsb / 4) * 4;  // Next digit
-                        const IData charval = VL_BITRSHIFT_W(lwp, lsb) & 0xf;
-                        append += "0123456789abcdef"[charval];
+                    if (formatAttr == VL_VFORMATATTR_SIGNED_FOURSTATE
+                        || formatAttr == VL_VFORMATATTR_UNSIGNED_FOURSTATE) {
+                        for (; lsb >= 0; --lsb) {
+                            // ...00 0x1
+                            // ...01 0x3
+                            // ...10 0x7
+                            // ...11 0xf
+                            const IData maxValue = (1 << ((lsb & 0x3) + 1)) - 1;
+                            lsb = (lsb / 4) * 4;  // Next digit
+                            const IData charval = VL_BITRSHIFT_W(lwp, lsb) & 0xf;
+                            const IData charxz = VL_BITRSHIFT_W(lwxzp, lsb) & 0xf;
+                            if (charxz != 0) {
+                                if ((charval & charxz) != 0) {
+                                    append += ((charval & charxz) == maxValue) ? 'x' : 'X';
+                                } else {
+                                    append += ((~charval & charxz) == maxValue) ? 'z' : 'Z';
+                                }
+                            } else {
+                                append += "0123456789abcdef"[charval];
+                            }
+                        }
+                    } else {
+                        for (; lsb >= 0; --lsb) {
+                            lsb = (lsb / 4) * 4;  // Next digit
+                            const IData charval = VL_BITRSHIFT_W(lwp, lsb) & 0xf;
+                            append += "0123456789abcdef"[charval];
+                        }
                     }
                     break;
                 }

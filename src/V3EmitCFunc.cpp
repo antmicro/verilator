@@ -161,7 +161,7 @@ void EmitCFunc::emitOpName(AstNode* nodep, const string& format, AstNode* lhsp, 
                         const AstVarRef* const varRefp = VN_CAST(detailp, VarRef);
                         out += cvtToStr(
                             detailp->widthWords()
-                            / (varRefp && varRefp->varp()->isFourStateShuffle() ? 2 : 1));
+                            / (varRefp && varRefp->varp()->isFourstateShuffle() ? 2 : 1));
                         needComma = true;
                     }
                     break;

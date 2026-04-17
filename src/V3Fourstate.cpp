@@ -2420,27 +2420,27 @@ class FourstateShuffleVisitor final : public VNVisitor {
     //                                  signal
 
     static bool needsShuffle(const AstVar* const varp) {
-        return varp->isWide() && (varp->fourStateComplementp() || varp->isFourStateComplement());
+        return varp->isWide() && (varp->fourstateComplementp() || varp->isFourstateComplement());
     }
 
     AstVar* getCreateShuffledVariantp(AstVar* varp) {
         UASSERT_OBJ(
-            varp->fourStateComplementp() || varp->isFourStateComplement(), varp,
+            varp->fourstateComplementp() || varp->isFourstateComplement(), varp,
             "This function is ment to be called on variables which create a four-state value");
         UASSERT_OBJ(varp->isWide(), varp,
                     "This function is only ment to be called on wide wariables");
-        if (AstVar* newp = varp->fourStateComplementp()) varp = newp;
+        if (AstVar* newp = varp->fourstateComplementp()) varp = newp;
         UASSERT_OBJ(
             VString::endsWith(varp->name(), "__Vxz"), varp,
             "Four-state complementary value (xz part) shall have '__Vxz' suffix, but it is named: "
                 << varp->name());
         if (AstVar* resultp = VN_AS(varp->user1p(), Var)) return resultp;
         AstVar* const resultp = varp->cloneTree(false);
-        resultp->unsetIsFourStateComplement();
+        resultp->unsetIsFourstateComplement();
         resultp->name(resultp->name().erase(resultp->name().size() + 1 - sizeof("__Vxz")));
         resultp->dtypeSetBitUnsized(resultp->widthWords() * 2 * VL_IDATASIZE,
                                     resultp->dtypep()->widthMin() * 2, varp->dtypep()->numeric());
-        resultp->setFourStateShuffle();
+        resultp->setFourstateShuffle();
         varp->addNextHere(resultp);
         varp->user1p(resultp);
         return resultp;
@@ -2451,9 +2451,9 @@ class FourstateShuffleVisitor final : public VNVisitor {
         AstNodeExpr* exprp = nodep->argsp();
         for (AstVar* varp = nodep->funcp()->argsp(); varp; varp = VN_AS(varp->nextp(), Var)) {
             UASSERT_OBJ(exprp, varp, "Too little arguments");
-            UASSERT_OBJ(!varp->isFourStateComplement(), varp,
+            UASSERT_OBJ(!varp->isFourstateComplement(), varp,
                         "This loop shall never reach four-state complement");
-            if (AstVar* const complement = varp->fourStateComplementp()) {
+            if (AstVar* const complement = varp->fourstateComplementp()) {
                 getCreateShuffledVariantp(complement);
                 UASSERT_OBJ(VN_IS(exprp, NodeVarRef) && VN_IS(exprp->nextp(), NodeVarRef), exprp,
                             "Wide four-state signals shall be passed only as lvalue references");
@@ -2484,7 +2484,7 @@ class FourstateShuffleVisitor final : public VNVisitor {
             vscp->optimizeLifePost(oldVscp->optimizeLifePost());
             nodep->varScopep(vscp);
         }
-        nodep->fourstateXZPart(nodep->varp()->isFourStateComplement());
+        nodep->fourstateXZPart(nodep->varp()->isFourstateComplement());
         nodep->varp(varp);
         if (AstWordSel* const wselp = VN_CAST(nodep->firstAbovep(), WordSel)) {
             AstNodeExpr* idxp

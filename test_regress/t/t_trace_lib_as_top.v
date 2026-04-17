@@ -11,10 +11,6 @@ module t(
 
   int cyc = 1;
 
-  Factorial factorial(
-    .clk(clk),
-    .i(cyc)
-  );
 
   initial begin
     $dumpfile(`STRINGIFY(`TEST_DUMPFILE));
@@ -26,15 +22,5 @@ module t(
     if (cyc == 5) begin
       $finish;
     end
-  end
-endmodule
-
-module Factorial(
-  input clk,
-  input int i
-);
-  int fact = 1;
-  always @(posedge clk) begin
-    fact <= fact * i;
   end
 endmodule

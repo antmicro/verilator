@@ -2106,21 +2106,32 @@ class FourstateVisitor final : public VNVisitor {
         for (AstNodeExpr* exprp = nodep->exprsp(); exprp;
              exprp = VN_AS(exprp->nextp(), NodeExpr)) {
             if (isFourstate(exprp)) {
-                exprp->v3warn(
-                    LOGICCAST,
-                    "Some features are not supported with four-state values - cast it to "
-                    "two-state logic or suppress this warning and it will be done implicitly");
                 if (AstSFormatArg* const sformatArgp = VN_CAST(exprp, SFormatArg)) {
+                    switch (sformatArgp->formatAttr()) {
+                    case VFormatAttr::SIGNED:
+                        sformatArgp->formatAttr(VFormatAttr::SIGNED_FOURSTATE);
+                        break;
+                    case VFormatAttr::UNSIGNED:
+                        sformatArgp->formatAttr(VFormatAttr::UNSIGNED_FOURSTATE);
+                        break;
+                    default: exprp->v3fatalSrc("Expected a four-state");
+                    }
                     AstNodeExpr* const currentExprp = sformatArgp->exprp();
-                    currentExprp->replaceWith(getTwoStateCast(currentExprp));
+                    currentExprp->replaceWith(new AstFourstateExpr{
+                        currentExprp->fileline(), getFourstateExpressionValue(currentExprp),
+                        getFourstateExpressionXZ(currentExprp)});
                     currentExprp->deleteTree();
-                    setFourstate(exprp, isFourstate(sformatArgp->exprp()));
                 } else {
-                    AstNodeExpr* const newp = getTwoStateCast(exprp);
+                    FileLine* const flp = exprp->fileline();
+                    AstNodeExpr* const newp = new AstSFormatArg{
+                        flp, VFormatAttr::UNSIGNED_FOURSTATE,
+                        new AstFourstateExpr{flp, getFourstateExpressionValue(exprp),
+                                             getFourstateExpressionXZ(exprp)}};
                     exprp->replaceWith(newp);
                     exprp->deleteTree();
                     exprp = newp;
                 }
+                { FourstateLogicTypePropagator{nodep}; }
             }
         }
         iterateChildren(nodep);

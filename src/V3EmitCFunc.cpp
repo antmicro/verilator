@@ -344,7 +344,7 @@ void EmitCFunc::displayNode(AstNode* nodep, AstSFormatF* fmtp,  // fmtp is nullp
         AstNode* const subargp = fargp ? fargp->exprp() : argp;
         const VFormatAttr formatAttr = AstSFormatArg::formatAttrDefauled(fargp, subargp->dtypep());
         puts(", '"s + formatAttr.ascii() + '\'');
-        if (formatAttr.isSigned() || formatAttr.isUnsigned())
+        if (formatAttr.isTwostate() || formatAttr.isFourstate())
             puts("," + cvtToStr(subargp->widthMin()));
         const bool addrof = isScan || formatAttr.isString() || formatAttr.isComplex();
         puts(",");
@@ -353,7 +353,17 @@ void EmitCFunc::displayNode(AstNode* nodep, AstSFormatF* fmtp,  // fmtp is nullp
             emitStreamR(
                 VN_CAST(subargp, StreamR),
                 nodep);  // This has to be done here because streamR doesn't know what it returns
-        else { iterateConst(subargp); }
+        else if (const AstFourstateExpr* const fourstate = VN_CAST(subargp, FourstateExpr)) {
+            iterateConst(fourstate->valuep());
+            if (addrof) {
+                puts("), &(");
+            } else {
+                puts(", ");
+            }
+            iterateConst(fourstate->xzp());
+        } else {
+            iterateConst(subargp);
+        }
         if (addrof) puts(")");
         if (!addrof) emitDatap(argp);
         ofp()->indentDec();

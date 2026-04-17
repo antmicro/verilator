@@ -4640,7 +4640,7 @@ public:
         out.opMul(lhs, rhs);
     }
     string emitVerilog() override { return "%k(%l %f* %r)"; }
-    string emitC() override { return "VL_MUL_%lq(%lW, %P, %li, %ri)"; }
+    string emitC() override { return "VL_MUL_%lq_%pf%lf%rf(%lW, %P, %li, %ri)"; }
     string emitSMT() const override { return "(bvmul %l %r)"; }
     string emitSimpleOperator() override { return "*"; }
     bool cleanOut() const override { return false; }

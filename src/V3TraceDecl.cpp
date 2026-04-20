@@ -144,6 +144,8 @@ class TraceDeclVisitor final : public VNVisitor {
     int m_subFuncSize = 0;  // Size of the sub function currently being built
     size_t m_topScopeRootFuncCount = 0;  // Top-scope init functions used only for wrapper IOs
     bool m_topScopeRootPhase = false;  // Emitting top-scope wrapper IO declarations
+    AstCFunc* m_initRootp = nullptr;
+    AstCFunc* m_initTopp = nullptr;
     const int m_funcSizeLimit  // Maximum size of a function
         = v3Global.opt.outputSplitCTrace() ? v3Global.opt.outputSplitCTrace()
                                            : std::numeric_limits<int>::max();
@@ -296,6 +298,29 @@ class TraceDeclVisitor final : public VNVisitor {
     }
 
     void addToSubFunc(AstNodeStmt* stmtp) {
+        FileLine* const flp = m_currScopep->fileline();
+        if (m_currScopep == m_topScopep->scopep() && !v3Global.opt.libCreate().empty()) {
+            AstCFunc* funcp;
+            bool newlyCreated = false;
+            if (m_topScopeRootPhase) {
+                if (!m_initRootp) {
+                    m_initRootp = newCFunc(flp, "trace_init_root");
+                    newlyCreated = true;
+                }
+                funcp = m_initRootp;
+            } else {
+                if (!m_initTopp) {
+                    m_initTopp = newCFunc(flp, "trace_init_top");
+                    newlyCreated = true;
+                }
+                funcp = m_initTopp;
+            }
+            if (newlyCreated) {
+                funcp->addStmtsp(new AstCStmt{flp, "const int c = vlSymsp->__Vm_baseCode;"});
+            }
+            funcp->addStmtsp(stmtp);
+            return;
+        }
         // TODO (maybe) -- sub funcs for dtype components
         if (m_dtypeSubFuncp) {
             if (m_subFuncSize > m_funcSizeLimit) newDeclSubFunc();
@@ -305,13 +330,8 @@ class TraceDeclVisitor final : public VNVisitor {
         }
         // Defer trace splitting until V3Trace
         if (m_subFuncps.empty()) {
-            FileLine* const flp = m_currScopep->fileline();
             const string n = cvtToStr(m_subFuncps.size());
-            const string name
-                = m_currScopep == m_topScopep->scopep() && !v3Global.opt.libCreate().empty()
-                      ? (m_topScopeRootPhase ? "trace_init_leaf_root__" : "trace_init_leaf_top__")
-                            + n
-                      : "trace_init_sub__" + m_currScopep->nameDotless() + "__" + n;
+            const string name = "trace_init_sub__" + m_currScopep->nameDotless() + "__" + n;
             AstCFunc* const funcp = newCFunc(flp, name);
             funcp->addStmtsp(new AstCStmt{flp, "const int c = vlSymsp->__Vm_baseCode;"});
             m_subFuncps.push_back(funcp);

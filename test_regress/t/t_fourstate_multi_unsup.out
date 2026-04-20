@@ -39,10 +39,6 @@
                                                      : ... note: In instance 't'
    98 |     y = 2 ** x;
       |           ^~
-%Error-UNSUPPORTED: t/t_fourstate_multi_unsup.v:99:10: Unsupported: Fourstate LHS other than a simple variable reference with --fourstate
-                                                     : ... note: In instance 't'
-   99 |     x[1] = 1;
-      |          ^
 %Error-UNSUPPORTED: t/t_fourstate_multi_unsup.v:101:21: Unsupported: Conditional expression with four-state condition and non-integral result with --fourstate
                                                       : ... note: In instance 't'
   101 |     c = (f(($c(1))) ? a : b);

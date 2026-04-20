@@ -820,6 +820,36 @@ class FourstateVisitor final : public VNVisitor {
     AstNodeExpr* getFourstateExpressionSelHandler(AstSel* const selp, AstNodeExpr* const valueExpr,
                                                   const bool defaultsToZero) {
         FileLine* const flp = selp->fileline();
+        if (const AstNodeVarRef* const varrefp = VN_CAST(selp->fromp(), NodeVarRef)) {
+            if (!varrefp->access().isReadOnly()) {
+                AstNodeExpr* const lsbp = selp->lsbp()->unlinkFrBack();
+                AstNodeExpr* const fromp = selp->fromp()->unlinkFrBack();
+                AstSel* const newp = selp->cloneTree(false);
+                selp->lsbp(lsbp);
+                selp->fromp(fromp);
+                if (isFourstate(lsbp)) {
+                    auto assureWidth = [flp, minWidth = std::min(64, lsbp->width())](
+                                           AstNodeExpr* const exprp) -> AstNodeExpr* {
+                        UASSERT_OBJ(exprp->width() <= minWidth, exprp,
+                                    "This function shall only expand values");
+                        if (exprp->width() < minWidth) return new AstExtend{flp, exprp};
+                        return exprp;
+                    };
+                    // The assumption is that no signal/array will ever have 2^64 indexes so,
+                    // V3Unknown will handle x/z
+                    newp->lsbp(new AstCond{
+                        flp,
+                        new AstNeq{flp, getFourstateExpressionXZ(lsbp), createZeroOrOnesp(lsbp)},
+                        assureWidth(new AstConst{flp, AstConst::SizedEData{}, ~(0ull)}),
+                        assureWidth(getFourstateExpressionValue(lsbp))});
+                } else {
+                    newp->lsbp(lsbp->cloneTree(false));
+                }
+                newp->fromp(valueExpr);
+                { FourstateLogicTypePropagator{newp}; }
+                return newp;
+            }
+        }
         AstNodeExpr* lsbp = selp->lsbp();
         V3Number maxmsb{flp, lsbp->width(),
                         static_cast<uint32_t>(selp->fromp()->dtypep()->width() - 1)};
@@ -1825,18 +1855,12 @@ class FourstateVisitor final : public VNVisitor {
         m_currentStmtp = nodep;
         TmpVarsReleaser tmpVarsReleaser{*this};
         if (isFourstate(nodep->lhsp())) {
-            AstNodeVarRef* const lhsVarRefp = VN_CAST(nodep->lhsp(), NodeVarRef);
-            if (VL_UNLIKELY(!lhsVarRefp)) {
-                nodep->v3warn(
-                    E_UNSUPPORTED,
-                    "Fourstate LHS other than a simple variable reference is not supported");
-                return;
-            }
+            AstNodeExpr* const lhsp = nodep->lhsp()->unlinkFrBack();
+            pushDeletep(lhsp);
             AstNodeAssign* const assignXZp = nodep->cloneTree(false);
             {
-                assignXZp->lhsp()->unlinkFrBack()->deleteTree();
                 assignXZp->rhsp()->unlinkFrBack()->deleteTree();
-                AstNodeExpr* const newLhsp = getFourstateExpressionXZ(lhsVarRefp);
+                AstNodeExpr* const newLhsp = getFourstateExpressionXZ(lhsp);
                 assignXZp->lhsp(newLhsp);
                 assignXZp->rhsp(getFourstateExpressionXZ(nodep->rhsp()));
                 assignXZp->dtypeFrom(newLhsp);
@@ -1844,20 +1868,25 @@ class FourstateVisitor final : public VNVisitor {
             }
             {
                 AstNodeExpr* const newRhsp = getFourstateExpressionValue(nodep->rhsp());
-                AstNodeExpr* const newLhsp = getFourstateExpressionValue(lhsVarRefp);
-                pushDeletep(nodep->lhsp()->unlinkFrBack());
+                AstNodeExpr* const newLhsp = getFourstateExpressionValue(lhsp);
                 pushDeletep(nodep->rhsp()->unlinkFrBack());
                 nodep->lhsp(newLhsp);
                 nodep->rhsp(newRhsp);
                 nodep->dtypeFrom(newLhsp);
             }
             if (AstAssignW* const assignWValuep = VN_CAST(nodep, AssignW)) {
-                assignWConflictResolution(lhsVarRefp->varp(), assignWValuep,
-                                          VN_AS(assignXZp, AssignW));
-                if (const AstNode* const timingControlp = assignWValuep->timingControlp()) {
-                    timingControlp->v3warn(
-                        E_UNSUPPORTED,
-                        "Continuous assignment delays are unsupported with --fourstate");
+                if (const AstNodeVarRef* const lhsVarRefp = VN_CAST(lhsp, NodeVarRef)) {
+                    assignWConflictResolution(lhsVarRefp->varp(), assignWValuep,
+                                              VN_AS(assignXZp, AssignW));
+                    if (const AstNode* const timingControlp = assignWValuep->timingControlp()) {
+                        timingControlp->v3warn(
+                            E_UNSUPPORTED,
+                            "Continuous assignment delays are unsupported with --fourstate");
+                    }
+                } else {
+                    nodep->v3warn(E_UNSUPPORTED,
+                                  "Fourstate LHS other than a simple variable "
+                                  "reference is not supported with continuous assignment");
                 }
             }
         } else if (isFourstate(nodep->rhsp())) {

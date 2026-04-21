@@ -984,7 +984,7 @@ public:
         // push/pop pairs is a bit hard. It is cleaner to remove them.
         removeRedundantPrefixPushPop();
 
-        if(!m_initRootp && !v3Global.opt.libCreate().empty()) {
+        if (!m_initRootp && !v3Global.opt.libCreate().empty()) {
             m_initRootp = newCFunc(flp, "trace_init_root");
             m_initRootp->addStmtsp(new AstComment{flp, "Empty"});
         }

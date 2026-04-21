@@ -13,6 +13,7 @@ class Base;
 endclass
 
 class Derived extends Base;
+  logic [15:0] bar;
 endclass
 
 module t;
@@ -30,6 +31,9 @@ module t;
     if (foo.foo !== 16'b00000xz0000xz011) $stop;
     foo.foo[$c("100")-:2] = 2'bxz;
     if (foo.foo !== 16'b00000xz0000xz011) $stop;
+    {foo.foo, foo.bar} = 32'h71209zx6;
+    if (foo.foo !== 16'h7120) $stop;
+    if (foo.bar !== 16'h9zx6) $stop;
     $write("*-* All Finished *-*\n" );
     $finish;
   end

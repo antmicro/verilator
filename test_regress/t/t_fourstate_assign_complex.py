@@ -11,7 +11,7 @@ import vltest_bootstrap
 
 test.scenarios('simulator')
 
-test.compile(verilator_flags2=['--binary', '--fourstate', '-Wno-FUTURE'])
+test.compile(verilator_flags2=['--binary', '--fourstate', '-Wno-FUTURE', '-Wno-SIDEEFFECT'])
 
 test.execute()
 

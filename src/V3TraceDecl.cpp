@@ -1003,25 +1003,16 @@ public:
         if (m_topFuncps.empty()) addToTopFunc(new AstComment{flp, "Empty"});
 
         // Create single top level function, if more than one exists
-        if (m_topFuncps.size() > 1) {
-            AstCFunc* const topFuncp = newCFunc(flp, "");
-            for (AstCFunc* funcp : m_topFuncps) {
-                AstCCall* const callp = new AstCCall{flp, funcp};
-                callp->dtypeSetVoid();
-                callp->argTypes("tracep");
-                topFuncp->addStmtsp(callp->makeStmt());
-            }
-            m_topFuncps.clear();
-            m_topFuncps.push_back(topFuncp);
+        if (!m_initTopp) m_initTopp = newCFunc(flp, "trace_init_top");
+        for (AstCFunc* funcp : m_topFuncps) {
+            AstCCall* const callp = new AstCCall{flp, funcp};
+            callp->dtypeSetVoid();
+            callp->argTypes("tracep");
+            m_initTopp->addStmtsp(callp->makeStmt());
         }
 
-        // Set name of top level function
-        AstCFunc* const topFuncp = m_topFuncps.front();
-        topFuncp->name("trace_init_top");
-
-        v3Global.rootp()->dumpTree();
         if (m_initRootp && v3Global.opt.debugCheck()) checkCallsRecurse(m_initRootp);
-        checkCalls(topFuncp);
+        checkCalls(m_initTopp);
     }
     ~TraceDeclVisitor() override {
         V3Stats::addStat("Tracing, Traced signals", m_statSigs);

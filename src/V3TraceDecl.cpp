@@ -984,20 +984,13 @@ public:
         // push/pop pairs is a bit hard. It is cleaner to remove them.
         removeRedundantPrefixPushPop();
 
-        const std::vector<AstCFunc*>& topScopeFuncps = m_scopeInitFuncps.at(m_topScopep->scopep());
-        AstCFunc* rootFuncp = nullptr;
-        if (!v3Global.opt.libCreate().empty()) {
-            rootFuncp = newCFunc(flp, "trace_init_root");
-            for (size_t i = 0; i < m_topScopeRootFuncCount; ++i) {
-                AstCCall* const callp = new AstCCall{flp, topScopeFuncps.at(i)};
-                callp->dtypeSetVoid();
-                callp->argTypes("tracep");
-                rootFuncp->addStmtsp(callp->makeStmt());
-            }
-            if (!m_topScopeRootFuncCount) rootFuncp->addStmtsp(new AstComment{flp, "Empty"});
+        if(!m_initRootp && !v3Global.opt.libCreate().empty()) {
+            m_initRootp = newCFunc(flp, "trace_init_root");
+            m_initRootp->addStmtsp(new AstComment{flp, "Empty"});
         }
 
         // Call the non-wrapper initialization functions of the root scope from the top function
+        const std::vector<AstCFunc*>& topScopeFuncps = m_scopeInitFuncps.at(m_topScopep->scopep());
         for (size_t i = m_topScopeRootFuncCount; i < topScopeFuncps.size(); ++i) {
             AstCFunc* const funcp = topScopeFuncps.at(i);
             AstCCall* const callp = new AstCCall{flp, funcp};
@@ -1026,7 +1019,8 @@ public:
         AstCFunc* const topFuncp = m_topFuncps.front();
         topFuncp->name("trace_init_top");
 
-        if (rootFuncp && v3Global.opt.debugCheck()) checkCallsRecurse(rootFuncp);
+        v3Global.rootp()->dumpTree();
+        if (m_initRootp && v3Global.opt.debugCheck()) checkCallsRecurse(m_initRootp);
         checkCalls(topFuncp);
     }
     ~TraceDeclVisitor() override {

@@ -356,6 +356,7 @@ class TraceDeclVisitor final : public VNVisitor {
         AstTraceDecl* const newp
             = new AstTraceDecl{flp,      m_traName,  m_traVscp->varp(), valuep,
                                bitRange, arrayRange, dtypeCallp,        validOffset};
+        if (dtypeCallp) dtypeCallp->funcp()->keepIfEmpty(true);
         if (validOffset) {
             newp->code(m_offset);
             if (!dtypeCallp) { m_offset += newp->codeInc(); }

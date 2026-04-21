@@ -325,10 +325,10 @@ class FourstateLogicTypePropagator final : public VNVisitor {
         setFourstate(nodep, false, m_fourstateInSubtree);
     }
 
-    void visit(AstStructSel* const nodep) override {
-        iterateChildrenSeparately(nodep);
-        setFourstate(nodep, isFourstate(nodep->fromp()), m_fourstateInSubtree);
-    }
+    // void visit(AstStructSel* const nodep) override {
+    //     iterateChildrenSeparately(nodep);
+    //     setFourstate(nodep, isFourstate(nodep->fromp()), m_fourstateInSubtree);
+    // }
 
     void visit(AstExprStmt* const nodep) override {
         iterateChildrenSeparately(nodep);
@@ -1453,6 +1453,29 @@ class FourstateVisitor final : public VNVisitor {
                                          replicatep->dtypep()->numeric());
         }
 
+        void visit(AstMemberSel* const memberSelp) override {
+            // This may potentially be called twice - for value and xz.
+            // To fix it it simple need to be added to precalculations
+            memberSelp->fromp()->purityCheck();
+            m_fourstateVisitor.splitVar(memberSelp->varp());
+            AstMemberSel* const newp
+                = new AstMemberSel{memberSelp->fileline(), memberSelp->fromp()->cloneTree(false),
+                                   getSplittedValue(memberSelp->varp())};
+            newp->name(memberSelp->name() + VALUE_SUFFIX);
+            newp->access(memberSelp->access());
+            m_result = newp;
+        }
+
+        // void visit(AstStructSel* const structSelp) override {
+        //     // This may potentially be called twice - for value and xz.
+        //     // To fix it it simple need to be added to precalculations
+        //     structSelp->fromp()->purityCheck();
+        //     m_result
+        //         = new AstStructSel{structSelp->fileline(),
+        //         structSelp->fromp()->cloneTree(false),
+        //                            structSelp->name() + VALUE_SUFFIX};
+        // }
+
         void visit(AstNodeVarRef* const varRefp) override {
             noTmp();
             if (needsSplitting(varRefp->varp()->dtypep())) {
@@ -1715,6 +1738,29 @@ class FourstateVisitor final : public VNVisitor {
             m_result->dtypeSetBitUnsized(replicatep->width(), replicatep->dtypep()->widthMin(),
                                          replicatep->dtypep()->numeric());
         }
+
+        void visit(AstMemberSel* const memberSelp) override {
+            // This may potentially be called twice - for value and xz.
+            // To fix it it simple need to be added to precalculations
+            memberSelp->fromp()->purityCheck();
+            m_fourstateVisitor.splitVar(memberSelp->varp());
+            AstMemberSel* const newp
+                = new AstMemberSel{memberSelp->fileline(), memberSelp->fromp()->cloneTree(false),
+                                   getSplittedXZ(memberSelp->varp())};
+            newp->name(memberSelp->name() + XZ_SUFFIX);
+            newp->access(memberSelp->access());
+            m_result = newp;
+        }
+
+        // void visit(AstStructSel* const structSelp) override {
+        //     // This may potentially be called twice - for value and xz.
+        //     // To fix it it simple need to be added to precalculations
+        //     structSelp->fromp()->purityCheck();
+        //     m_result
+        //         = new AstStructSel{structSelp->fileline(),
+        //         structSelp->fromp()->cloneTree(false),
+        //                            structSelp->name() + XZ_SUFFIX};
+        // }
 
         void visit(AstNodeFTaskRef* const funcp) override {
             fourstateExpressionFuncRefHandler(funcp);

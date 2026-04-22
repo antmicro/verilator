@@ -865,7 +865,7 @@ class FourstateVisitor final : public VNVisitor {
                 selp->lsbp(lsbp);
                 selp->fromp(fromp);
                 if (isFourstate(lsbp)) {
-                    auto assureWidth = [flp, minWidth = std::min(64, lsbp->width())](
+                    auto assureWidth = [flp, minWidth = std::max(64, lsbp->width())](
                                            AstNodeExpr* const exprp) -> AstNodeExpr* {
                         UASSERT_OBJ(exprp->width() <= minWidth, exprp,
                                     "This function shall only expand values");
@@ -874,11 +874,13 @@ class FourstateVisitor final : public VNVisitor {
                     };
                     // The assumption is that no signal/array will ever have 2^64 indexes so,
                     // V3Unknown will handle x/z
+                    AstConst* const constp = new AstConst{flp, 0};
+                    constp->dtypeSetBitSized(64, VSigning::UNSIGNED);
+                    constp->num().setAllBits1();
                     newp->lsbp(new AstCond{
                         flp,
                         new AstNeq{flp, getFourstateExpressionXZ(lsbp), createZeroOrOnesp(lsbp)},
-                        assureWidth(new AstConst{flp, AstConst::SizedEData{}, ~(0ull)}),
-                        assureWidth(getFourstateExpressionValue(lsbp))});
+                        assureWidth(constp), assureWidth(getFourstateExpressionValue(lsbp))});
                 } else {
                     newp->lsbp(lsbp->cloneTree(false));
                 }

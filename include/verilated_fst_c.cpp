@@ -419,6 +419,35 @@ void VerilatedFstBuffer::emitWData(uint32_t code, WDataInP newval, int) {
 }
 
 VL_ATTR_ALWINLINE
+void VerilatedFstBuffer::emitFourstateWData(uint32_t code, const WDataInP newval,
+                                            const WDataInP newvalXZ, int bits) {
+    char buf[VL_BYTESIZE];
+    char* wp = buf;
+    VL_DEBUG_IFDEF(assert(m_symbolp[code]););
+    const int lastIdx = (bits - 1) / VL_EDATASIZE;
+    {
+        const EData value = newval[lastIdx];
+        const EData xz = newvalXZ[lastIdx];
+        for (int i = (bits - 1) % VL_EDATASIZE; i >= 0; --i) {
+            const EData mask = 1 << i;
+            *wp++ = (xz & mask) ? (value & mask ? 'x' : 'z')
+                                : ('0' | (static_cast<char>(value >> i) & 1));
+        }
+    }
+    for (int w = lastIdx - 1; w >= 0; --w) {
+        const EData value = newval[w];
+        const EData xz = newvalXZ[w];
+        for (int i = VL_EDATASIZE - 1; i >= 0; --i) {
+            const EData mask = 1 << i;
+            *wp++ = (xz & mask) ? (value & mask ? 'x' : 'z')
+                                : ('0' | (static_cast<char>(value >> i) & 1));
+        }
+    }
+    m_owner.emitTimeChangeMaybe();
+    fstWriterEmitValueChange(m_fst, m_symbolp[code], buf);
+}
+
+VL_ATTR_ALWINLINE
 void VerilatedFstBuffer::emitDouble(uint32_t code, double newval) {
     VL_DEBUG_IFDEF(assert(m_symbolp[code]););  // LCOV_EXCL_BR_LINE
     m_owner.emitTimeChangeMaybe();

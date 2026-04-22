@@ -123,8 +123,21 @@ static bool isStaticallyNGte(const V3Number& msb, const AstNodeExpr* const exprp
     return false;
 }
 static bool needsSplitting(const AstNodeDType* const dtypep) {
-    if (const AstBasicDType* const basicp = VN_CAST(dtypep->skipRefp(), BasicDType)) {
+    const AstNodeDType* const skipDTypep = dtypep->skipRefp();
+    if (const AstBasicDType* const basicp = VN_CAST(skipDTypep, BasicDType)) {
         return basicp->isFourstate();
+    }
+    if (const AstStructDType* const structDtypep = VN_CAST(skipDTypep, StructDType)) {
+        return structDtypep->isFourstate();
+    }
+    if (const AstPackArrayDType* const containerDTypep = VN_CAST(skipDTypep, PackArrayDType)) {
+        return needsSplitting(containerDTypep->subDTypep()->skipRefp());
+    }
+    if (const AstUnpackArrayDType* const containerDTypep = VN_CAST(skipDTypep, UnpackArrayDType)) {
+        return needsSplitting(containerDTypep->subDTypep()->skipRefp());
+    }
+    if (const AstDynArrayDType* const containerDTypep = VN_CAST(dtypep, DynArrayDType)) {
+        return needsSplitting(containerDTypep->subDTypep()->skipRefp());
     }
     return false;
 }
@@ -259,6 +272,11 @@ class FourstateLogicTypePropagator final : public VNVisitor {
         setFourstate(nodep, false, m_fourstateInSubtree);
     }
 
+    void visit(AstCountBits* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, false, m_fourstateInSubtree);
+    }
+
     void visit(AstSFormatArg* const nodep) override {
         iterateChildrenSeparately(nodep);
         setFourstate(nodep, isFourstate(nodep->exprp()), m_fourstateInSubtree);
@@ -267,6 +285,16 @@ class FourstateLogicTypePropagator final : public VNVisitor {
     void visit(AstSel* const nodep) override {
         iterateChildrenSeparately(nodep);
         setFourstate(nodep, isFourstate(nodep->fromp()), m_fourstateInSubtree);
+    }
+
+    void visit(AstArraySel* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, needsSplitting(nodep->fromp()->dtypep()), m_fourstateInSubtree);
+    }
+
+    void visit(AstSliceSel* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, needsSplitting(nodep->fromp()->dtypep()), m_fourstateInSubtree);
     }
 
     void visit(AstCExprUser* const nodep) override {
@@ -295,10 +323,21 @@ class FourstateLogicTypePropagator final : public VNVisitor {
         setFourstate(nodep, false, m_fourstateInSubtree);
     }
 
-    // void visit(AstCMethodHard* const nodep) override {
-    //     iterateChildrenSeparately(nodep);
-    //     setFourstate(nodep, false, m_fourstateInSubtree);
-    // }
+    void visit(AstCMethodHard* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        switch (nodep->method()) {
+        case VCMethod::ARRAY_AT:
+        case VCMethod::ARRAY_AT_WRITE:
+        case VCMethod::DYN_CLEAR:
+        case VCMethod::DYN_RENEW:
+        case VCMethod::DYN_RENEW_COPY:
+        case VCMethod::DYN_SIZE: break;
+        default:
+            nodep->v3warn(E_UNSUPPORTED, "Unsupported CMethod hard: " << nodep->method().ascii());
+            break;
+        }
+        setFourstate(nodep, needsSplitting(nodep->fromp()->dtypep()), m_fourstateInSubtree);
+    }
 
     void visit(AstCExpr* const nodep) override {
         iterateChildrenSeparately(nodep);
@@ -388,8 +427,14 @@ class FourstateLogicTypePropagator final : public VNVisitor {
         setFourstate(nodep, false, m_fourstateInSubtree);
     }
 
+    void visit(AstInsideRange* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, false, m_fourstateInSubtree);
+    }
+
     void visit(AstNodeExpr* const nodep) override {
         iterateChildrenSeparately(nodep);
+        UASSERT_OBJ(nodep->dtypep(), nodep, "Expression has no dtype");
         if (AstBasicDType* const basicp = VN_CAST(nodep->dtypep()->skipRefOrNullp(), BasicDType)) {
             if (basicp->keyword().isIntNumeric()) {
                 nodep->v3warn(E_UNSUPPORTED, "Unsupported: Operator "
@@ -431,8 +476,8 @@ class FourstateVisitor final : public VNVisitor {
         varp->user1p(valuep);
     }
     static AstVar* getValuePartVarp(AstVar* const varp) { return VN_AS(varp->user1p(), Var); }
-    static void setSelpHandled(AstSel* const selp) { selp->user3(1); }
-    static bool isSelpHandled(AstSel* const selp) { return selp->user3(); }
+    static void setSelpHandled(AstNodeExpr* const selp) { selp->user3(1); }
+    static bool isSelpHandled(AstNodeExpr* const selp) { return selp->user3(); }
     static void setFTaskRefHandled(AstNodeFTaskRef* const ftaskRefp) { ftaskRefp->user3(1); }
     static bool isFTaskRefHandled(AstNodeFTaskRef* const ftaskRefp) { return ftaskRefp->user3(); }
     static void setExprValuep(AstNodeExpr* const fourstateExprp, AstNode* const valuep) {
@@ -449,12 +494,15 @@ class FourstateVisitor final : public VNVisitor {
     }
 
     V3UniqueNames m_tmpNames;  // Unique names generator for temporary variables
+    V3UniqueNames m_pinHelpersNames;
 
     AstNode* m_currentTmpSpotp = nullptr;  // Node after which put AstVar* for temporary variable
     bool m_tmpFuncLocal
         = false;  // Whether temporary variables shall be created as function locals
     AstNodeStmt* m_currentStmtp = nullptr;  // Current statement
     std::vector<AstVar*> m_varpsToRemove;  // Vars to unlink and remove in destructor
+    AstNodeModule* m_currentModp = nullptr;
+    AstNodeExpr* m_caseMaskp = nullptr;
 
     std::vector<FTaskPortsHelper> m_ftaskPortHelpers;  // Cache of FTaskPortsHelpers
 
@@ -605,6 +653,9 @@ class FourstateVisitor final : public VNVisitor {
         if (const AstBasicDType* const basicp = VN_CAST(dtypep, BasicDType)) {
             return {true, basicp->isFourstate()};
         }
+        if (const AstStructDType* const structDtypep = VN_CAST(dtypep, StructDType)) {
+            return {true, structDtypep->isFourstate()};
+        }
         if (const AstNodeUOrStructDType* const containerDTypep
             = VN_CAST(dtypep, NodeUOrStructDType)) {
             return {!containerDTypep->isFourstate(), containerDTypep->isFourstate()};
@@ -624,15 +675,16 @@ class FourstateVisitor final : public VNVisitor {
                 = isDTypepSupported(containerDTypep->subDTypep()->skipRefp());
             return {subDtype.first && !subDtype.second, false};
         }
-        if (const AstUnpackArrayDType* const containerDTypep = VN_CAST(dtypep, UnpackArrayDType)) {
-            std::pair<bool, bool> subDtype
-                = isDTypepSupported(containerDTypep->subDTypep()->skipRefp());
-            return {subDtype.first && !subDtype.second, false};
-        }
+        // if (const AstUnpackArrayDType* const containerDTypep = VN_CAST(dtypep,
+        // UnpackArrayDType)) {
+        //     std::pair<bool, bool> subDtype
+        //         = isDTypepSupported(containerDTypep->subDTypep()->skipRefp());
+        //     return {subDtype.first && !subDtype.second, false};
+        // }
         if (const AstPackArrayDType* const containerDTypep = VN_CAST(dtypep, PackArrayDType)) {
             std::pair<bool, bool> subDtype
                 = isDTypepSupported(containerDTypep->subDTypep()->skipRefp());
-            return {subDtype.first && !subDtype.second, false};
+            return subDtype;
         }
         return {true, false};
     }
@@ -729,6 +781,35 @@ class FourstateVisitor final : public VNVisitor {
         return varp;
     }
 
+    static AstNodeDType* getTwoStateDtype(AstNodeDType* dtypepp) {
+        AstNodeDType* const dtypep = dtypepp->skipRefp();
+        AstNodeDType* resultp = VN_AS(dtypep->user1p(), NodeDType);
+        if (resultp) return resultp;
+        if (AstUnpackArrayDType* const arrayDtypep = VN_CAST(dtypep, UnpackArrayDType)) {
+            AstUnpackArrayDType* const newp = arrayDtypep->cloneTree(false);
+            newp->refDTypep(getTwoStateDtype(arrayDtypep->virtRefDTypep()));
+            resultp = newp;
+        } else if (AstPackArrayDType* const packArrayDtypep = VN_CAST(dtypep, PackArrayDType)) {
+            AstPackArrayDType* const newp = packArrayDtypep->cloneTree(false);
+            newp->refDTypep(getTwoStateDtype(packArrayDtypep->subDTypep()));
+            resultp = newp;
+        } else if (AstDynArrayDType* const dynArrayDTypep = VN_CAST(dtypep, DynArrayDType)) {
+            AstDynArrayDType* const newp = dynArrayDTypep->cloneTree(false);
+            newp->refDTypep(getTwoStateDtype(dynArrayDTypep->subDTypep()));
+            resultp = newp;
+        } else if (const AstBasicDType* const basicp = VN_CAST(dtypep, BasicDType)) {
+            return dtypep->findBitDType(basicp->width(), basicp->widthMin(), basicp->numeric());
+        } else if (const AstStructDType* const structDtypep = VN_CAST(dtypep, StructDType)) {
+            // Packed structs are bit vectors; two-state equivalent is a basic bit type
+            return dtypep->findBitDType(structDtypep->width(), structDtypep->widthMin(),
+                                        structDtypep->numeric());
+        }
+        UASSERT_OBJ(resultp, dtypep, "Failed to split dtype");
+        v3Global.rootp()->typeTablep()->addTypesp(resultp);
+        dtypep->user1p(resultp);
+        return resultp;
+    }
+
     void splitVar(AstVar* const varp) {
         UASSERT_OBJ(needsSplitting(varp->dtypep()), varp,
                     "Split shall be called only on four-state variables");
@@ -739,10 +820,10 @@ class FourstateVisitor final : public VNVisitor {
                 AstVar* const portEndp = getFTaskPortHelper(ftaskp).lastp();
                 AstVar* const returnValuep
                     = new AstVar{varp->fileline(), VVarType::PORT, varp->name() + VALUE_SUFFIX,
-                                 VFlagBitPacked{}, varp->width()};
+                                 getTwoStateDtype(varp->dtypep())};
                 AstVar* const returnXzp
                     = new AstVar{varp->fileline(), VVarType::PORT, varp->name() + XZ_SUFFIX,
-                                 VFlagBitPacked{}, varp->width()};
+                                 getTwoStateDtype(varp->dtypep())};
                 returnValuep->direction(VDirection::OUTPUT);
                 returnXzp->direction(VDirection::OUTPUT);
                 returnValuep->funcLocal(true);
@@ -750,8 +831,10 @@ class FourstateVisitor final : public VNVisitor {
                 returnValuep->lifetime(VLifetime::AUTOMATIC_IMPLICIT);
                 returnXzp->lifetime(VLifetime::AUTOMATIC_IMPLICIT);
                 returnValuep->trace(varp->isTrace());
-                returnValuep->fourstateOriginalDTypeKwd(varp->dtypep()->basicp()->keyword());
-                returnXzp->fourstateOriginalDTypeKwd(varp->dtypep()->basicp()->keyword());
+                if (const AstBasicDType* const basicp = varp->dtypep()->basicp()) {
+                    returnValuep->fourstateOriginalDTypeKwd(basicp->keyword());
+                    returnXzp->fourstateOriginalDTypeKwd(basicp->keyword());
+                }
                 if (portEndp) {
                     portEndp->addNextHere(returnXzp);
                     portEndp->addNextHere(returnValuep);
@@ -770,8 +853,10 @@ class FourstateVisitor final : public VNVisitor {
         }
         AstVar* const newXzp = varp->cloneTree(false);
         newXzp->name(newXzp->name() + XZ_SUFFIX);
-        newXzp->fourstateOriginalDTypeKwd(varp->dtypep()->basicp()->keyword());
-        newXzp->dtypeSetBitUnsized(varp->width(), varp->widthMin(), varp->dtypep()->numeric());
+        if (const AstBasicDType* const basicp = varp->dtypep()->basicp()) {
+            newXzp->fourstateOriginalDTypeKwd(basicp->keyword());
+        }
+        newXzp->dtypep(getTwoStateDtype(varp->dtypep()));
         if (AstNodeExpr* const valuep = VN_CAST(newXzp->valuep(), NodeExpr)) {
             valuep->unlinkFrBack();
             newXzp->valuep(getFourstateExpressionXZ(valuep));
@@ -781,8 +866,10 @@ class FourstateVisitor final : public VNVisitor {
         AstVar* const newValuep = varp->cloneTree(false);
         newValuep->name(newValuep->name() + VALUE_SUFFIX);
         newValuep->trace(varp->isTrace());
-        newValuep->fourstateOriginalDTypeKwd(varp->dtypep()->basicp()->keyword());
-        newValuep->dtypeSetBitUnsized(varp->width(), varp->widthMin(), varp->dtypep()->numeric());
+        if (const AstBasicDType* const basicp = varp->dtypep()->basicp()) {
+            newValuep->fourstateOriginalDTypeKwd(basicp->keyword());
+        }
+        newValuep->dtypep(getTwoStateDtype(varp->dtypep()));
         if (AstNodeExpr* const valuep = VN_CAST(newValuep->valuep(), NodeExpr)) {
             valuep->unlinkFrBack();
             newValuep->valuep(getFourstateExpressionValue(valuep));
@@ -828,7 +915,7 @@ class FourstateVisitor final : public VNVisitor {
                 selp->lsbp(lsbp);
                 selp->fromp(fromp);
                 if (isFourstate(lsbp)) {
-                    auto assureWidth = [flp, minWidth = std::min(64, lsbp->width())](
+                    auto assureWidth = [flp, minWidth = std::max(64, lsbp->width())](
                                            AstNodeExpr* const exprp) -> AstNodeExpr* {
                         UASSERT_OBJ(exprp->width() <= minWidth, exprp,
                                     "This function shall only expand values");
@@ -837,11 +924,13 @@ class FourstateVisitor final : public VNVisitor {
                     };
                     // The assumption is that no signal/array will ever have 2^64 indexes so,
                     // V3Unknown will handle x/z
+                    AstConst* const constp = new AstConst{flp, 0};
+                    constp->dtypeSetBitSized(64, VSigning::UNSIGNED);
+                    constp->num().setAllBits1();
                     newp->lsbp(new AstCond{
                         flp,
                         new AstNeq{flp, getFourstateExpressionXZ(lsbp), createZeroOrOnesp(lsbp)},
-                        assureWidth(new AstConst{flp, AstConst::SizedEData{}, ~(0ull)}),
-                        assureWidth(getFourstateExpressionValue(lsbp))});
+                        assureWidth(constp), assureWidth(getFourstateExpressionValue(lsbp))});
                 } else {
                     newp->lsbp(lsbp->cloneTree(false));
                 }
@@ -923,6 +1012,20 @@ class FourstateVisitor final : public VNVisitor {
         void addPrecalculation(AstNodeStmt* const nodep) {
             FourstateLogicTypePropagator{nodep};
             m_fourstateVisitor.m_currentStmtp->addHereThisAsNext(nodep);
+        }
+
+        void liftExprStmtStatements(AstExprStmt* const exprStmtp) {
+            AstNode* stmtsp = exprStmtp->stmtsp();
+            if (!stmtsp) return;
+            stmtsp = stmtsp->unlinkFrBackWithNext();
+            while (stmtsp) {
+                AstNode* const nextp = stmtsp->nextp();
+                if (nextp) nextp->unlinkFrBack();
+                AstNodeStmt* const stmtp = VN_AS(stmtsp, NodeStmt);
+                m_fourstateVisitor.m_currentStmtp->addHereThisAsNext(stmtp);
+                m_fourstateVisitor.iterate(stmtp);
+                stmtsp = nextp;
+            }
         }
 
         void fourstateExpressionFuncRefHandler(AstNodeFTaskRef* const funcRefp) {
@@ -1144,6 +1247,93 @@ class FourstateVisitor final : public VNVisitor {
             setExprXZp(logOrp, resultXZTmpVarRefp);
         }
 
+        AstConsDynArray*
+        fourstateExpressionConsDynArrayHandler(AstConsDynArray* const consDynArrayp, bool xz) {
+            AstNodeExpr* const lhsp
+                = consDynArrayp->lhsp() ? consDynArrayp->lhsp()->unlinkFrBack() : nullptr;
+            AstNodeExpr* const rhsp
+                = consDynArrayp->rhsp() ? consDynArrayp->rhsp()->unlinkFrBack() : nullptr;
+            AstConsDynArray* const newp = consDynArrayp->cloneTree(false);
+            consDynArrayp->lhsp(lhsp);
+            consDynArrayp->rhsp(rhsp);
+            if (AstConsDynArray* const cp = VN_CAST(lhsp, ConsDynArray)) {
+                newp->lhsp(fourstateExpressionConsDynArrayHandler(cp, xz));
+            } else if (lhsp) {
+                newp->lhsp(xz ? getFourstateExpressionXZ(lhsp)
+                              : getFourstateExpressionValue(lhsp));
+            }
+            if (AstConsDynArray* const cp = VN_CAST(rhsp, ConsDynArray)) {
+                newp->rhsp(fourstateExpressionConsDynArrayHandler(cp, xz));
+            } else if (rhsp) {
+                newp->rhsp(xz ? getFourstateExpressionXZ(rhsp)
+                              : getFourstateExpressionValue(rhsp));
+            }
+            { FourstateLogicTypePropagator{newp}; }
+            return newp;
+        }
+
+        void fourstateExpressionCMethodHardHandler(AstCMethodHard* const cMethodHardp) {
+            if (cMethodHardp->withp()) {
+                cMethodHardp->withp()->v3warn(E_UNSUPPORTED,
+                                              "With clausule is unsupported with --fourstate");
+            }
+            AstNodeExpr* const fromp = cMethodHardp->fromp()->unlinkFrBack();
+            AstNodeExpr* pinsp = nullptr;
+            if (cMethodHardp->pinsp()) pinsp = cMethodHardp->pinsp()->unlinkFrBackWithNext();
+            AstCMethodHard* const valuep = cMethodHardp->cloneTree(false);
+            AstCMethodHard* xzp = cMethodHardp->cloneTree(false);
+            cMethodHardp->fromp(fromp);
+            cMethodHardp->addPinsp(pinsp);
+            valuep->fromp(getFourstateExpressionValue(fromp, false));
+            xzp->fromp(getFourstateExpressionXZ(fromp, false));
+            switch (cMethodHardp->method()) {
+            case VCMethod::DYN_RENEW:
+            case VCMethod::ARRAY_AT_WRITE:
+            case VCMethod::ARRAY_AT: {
+                pinsp->purityCheck();
+                if (isFourstate(pinsp)) {
+                    valuep->addPinsp(m_fourstateVisitor.getTwoStateCast(pinsp));  // FIXME
+                    xzp->addPinsp(m_fourstateVisitor.getTwoStateCast(pinsp));  // FIXME
+                } else {
+                    valuep->addPinsp(pinsp->cloneTree(false));
+                    xzp->addPinsp(pinsp->cloneTree(false));
+                }
+            } break;
+            case VCMethod::DYN_RENEW_COPY: {
+                pinsp->purityCheck();
+                if (isFourstate(pinsp)) {
+                    valuep->addPinsp(m_fourstateVisitor.getTwoStateCast(pinsp));  // FIXME
+                    xzp->addPinsp(m_fourstateVisitor.getTwoStateCast(pinsp));  // FIXME
+                } else {
+                    valuep->addPinsp(pinsp->cloneTree(false));
+                    xzp->addPinsp(pinsp->cloneTree(false));
+                }
+                AstNodeExpr* const sourcep = VN_AS(pinsp->nextp(), NodeExpr);
+                if (isFourstate(sourcep)) {
+                    valuep->addPinsp(getFourstateExpressionValue(sourcep));
+                    xzp->addPinsp(getFourstateExpressionXZ(sourcep));
+                } else if (AstConsDynArray* const consDynArrayp = VN_CAST(sourcep, ConsDynArray)) {
+                    valuep->addPinsp(fourstateExpressionConsDynArrayHandler(consDynArrayp, false));
+                    xzp->addPinsp(fourstateExpressionConsDynArrayHandler(consDynArrayp, true));
+                } else {
+                    sourcep->v3warn(E_UNSUPPORTED, "Copying to 4-state from 2-state");
+                    break;
+                }
+            } break;
+            case VCMethod::DYN_CLEAR: break;
+            case VCMethod::DYN_SIZE: {
+                VL_DO_DANGLING(xzp->deleteTree(), xzp);
+                setExprXZp(cMethodHardp, createZeroOrOnesp(cMethodHardp));
+            } break;
+            default:
+                cMethodHardp->v3warn(
+                    E_UNSUPPORTED, "Unsupported CMethod hard: " << cMethodHardp->method().ascii());
+                break;
+            }
+            setExprValuep(cMethodHardp, valuep);
+            if (xzp) setExprXZp(cMethodHardp, xzp);
+        }
+
         AstNodeExpr* get(AstNodeExpr* const exprp, bool putIntoTmp = true) {
             // VN_AS is expected to be here (instead of VN_CAST)
             if (AstNodeExpr* result = getCache(exprp)) return result->cloneTree(false);
@@ -1229,6 +1419,49 @@ class FourstateVisitor final : public VNVisitor {
                                  getFourstateExpressionXZ(notp->lhsp())};
         }
 
+        void visit(AstLogNot* const logNotp) override {
+            FileLine* const flp = logNotp->fileline();
+            AstNodeExpr* const knownOnep
+                = new AstRedOr{flp, m_fourstateVisitor.getTwoStateCast(logNotp->lhsp())};
+            m_result = new AstLogNot{flp, knownOnep};
+        }
+
+        void visit(AstOneHot* const nodep) override {
+            FileLine* const flp = nodep->fileline();
+
+            m_result = new AstOneHot{
+                flp, new AstAnd{flp, getFourstateExpressionValue(nodep->lhsp(), false),
+                                new AstNot{flp, getFourstateExpressionXZ(nodep->lhsp(), false)}}};
+        }
+
+        void visit(AstOneHot0* const nodep) override {
+            FileLine* const flp = nodep->fileline();
+
+            m_result = new AstOneHot0{
+                flp, new AstAnd{flp, getFourstateExpressionValue(nodep->lhsp(), false),
+                                new AstNot{flp, getFourstateExpressionXZ(nodep->lhsp(), false)}}};
+        }
+
+        void visit(AstCountBits* const nodep) override {
+            FileLine* const flp = nodep->fileline();
+            AstCountBits* const newp
+                = new AstCountBits{flp, getFourstateExpressionValue(nodep->lhsp(), false),
+                                   getFourstateExpressionValue(nodep->rhsp(), false),
+                                   getFourstateExpressionValue(nodep->thsp(), false),
+                                   getFourstateExpressionValue(nodep->fhsp(), false)};
+            newp->dtypeSetLogicUnsized(32, V3Number::log2b(newp->lhsp()->width()) + 1,
+                                       VSigning::SIGNED);
+            m_result = newp;
+        }
+
+        void visit(AstCLog2* const nodep) override {
+            FileLine* const flp = nodep->fileline();
+            AstCLog2* const clog2p
+                = new AstCLog2{flp, getFourstateExpressionValue(nodep->lhsp(), true)};
+            m_result = new AstCond{flp, new AstRedOr{flp, getFourstateExpressionXZ(nodep->lhsp())},
+                                   createZeroOrOnesp(nodep, true), clog2p};
+        }
+
         template <typename CompoarisonOp_T>
         void visitCompare(CompoarisonOp_T* const cmpp) {
             // |(a.xz | b.xz) | (a.value op b.value)
@@ -1277,6 +1510,17 @@ class FourstateVisitor final : public VNVisitor {
                 getFourstateExpressionXZ(neqWildp)};
         }
 
+        void visit(AstInsideRange* const insideRangep) override {
+            AstNodeExpr* const lhsp = VN_IS(insideRangep->lhsp(), Unbounded)
+                                          ? insideRangep->lhsp()->cloneTree(false)
+                                          : getFourstateExpressionValue(insideRangep->lhsp());
+            AstNodeExpr* const rhsp = VN_IS(insideRangep->rhsp(), Unbounded)
+                                          ? insideRangep->rhsp()->cloneTree(false)
+                                          : getFourstateExpressionValue(insideRangep->rhsp());
+            m_result = new AstInsideRange{insideRangep->fileline(), lhsp, rhsp};
+            m_result->dtypep(getTwoStateDtype(insideRangep->dtypep()));
+        }
+
         void visit(AstShiftL* const shiftlp) override {
             // |b.xz ? '1 : (a.value << b.value)
             FileLine* const flp = shiftlp->fileline();
@@ -1317,7 +1561,7 @@ class FourstateVisitor final : public VNVisitor {
 
         void visit(AstCReset* const cresetp) override {
             m_result = cresetp->cloneTree(false);
-            m_result->dtypeSetBitSized(cresetp->width(), cresetp->dtypep()->numeric());
+            m_result->dtypep(getTwoStateDtype(cresetp->dtypep()));
         }
 
         void visit(AstConst* const constp) override {
@@ -1353,9 +1597,34 @@ class FourstateVisitor final : public VNVisitor {
             m_result = getExprValuep(logOrp)->cloneTree(false);
         }
 
+        void visit(AstExprStmt* const exprStmtp) override {
+            liftExprStmtStatements(exprStmtp);
+            noTmp();
+            m_result = getFourstateExpressionValue(exprStmtp->resultp());
+        }
+
         void visit(AstSel* const selp) override {
             m_result = m_fourstateVisitor.getFourstateExpressionSelHandler(
                 selp, getFourstateExpressionValue(selp->fromp(), false), false);
+        }
+
+        void visit(AstArraySel* const arraySelp) override {
+            arraySelp->bitp()->purityCheck();
+            m_result = new AstArraySel{arraySelp->fileline(),
+                                       getFourstateExpressionValue(arraySelp->fromp(), false),
+                                       isFourstate(arraySelp->bitp())
+                                           ? m_fourstateVisitor.getTwoStateCast(arraySelp->bitp())
+                                           : arraySelp->bitp()->cloneTree(false)};
+            m_result->dtypep(getTwoStateDtype(arraySelp->dtypep()));
+            setSelpHandled(m_result);
+        }
+
+        void visit(AstSliceSel* const sliceSelp) override {
+            m_result = new AstSliceSel{sliceSelp->fileline(),
+                                       getFourstateExpressionValue(sliceSelp->fromp()),
+                                       sliceSelp->declRange()};
+            m_result->dtypep(getTwoStateDtype(sliceSelp->dtypep()));
+            setSelpHandled(m_result);
         }
 
         void visit(AstRedAnd* const redAndp) override {
@@ -1453,6 +1722,20 @@ class FourstateVisitor final : public VNVisitor {
                                          replicatep->dtypep()->numeric());
         }
 
+        void visit(AstStreamL* const streamlp) override {
+            m_result = new AstStreamL{streamlp->fileline(),
+                                      getFourstateExpressionValue(streamlp->lhsp(), false),
+                                      streamlp->rhsp()->cloneTree(false)};
+            m_result->dtypep(getTwoStateDtype(streamlp->dtypep()));
+        }
+
+        void visit(AstStreamR* const streamrp) override {
+            m_result = new AstStreamR{streamrp->fileline(),
+                                      getFourstateExpressionValue(streamrp->lhsp(), false),
+                                      streamrp->rhsp()->cloneTree(false)};
+            m_result->dtypep(getTwoStateDtype(streamrp->dtypep()));
+        }
+
         void visit(AstMemberSel* const memberSelp) override {
             // This may potentially be called twice - for value and xz.
             // To fix it it simple need to be added to precalculations
@@ -1476,6 +1759,14 @@ class FourstateVisitor final : public VNVisitor {
         //                            structSelp->name() + VALUE_SUFFIX};
         // }
 
+        void visit(AstCastWrap* const castp) override {
+            noTmp();
+            AstCastWrap* const newp
+                = new AstCastWrap{castp->fileline(), getFourstateExpressionValue(castp->lhsp())};
+            newp->dtypep(getTwoStateDtype(castp->dtypep()));
+            m_result = newp;
+        }
+
         void visit(AstNodeVarRef* const varRefp) override {
             noTmp();
             if (needsSplitting(varRefp->varp()->dtypep())) {
@@ -1483,14 +1774,18 @@ class FourstateVisitor final : public VNVisitor {
                 AstNodeVarRef* const newp = varRefp->cloneTree(false);
                 if (!newp->name().empty()) newp->name(newp->name() + VALUE_SUFFIX);
                 newp->varp(getSplittedValue(varRefp->varp()));
-                newp->dtypeSetBitSized(varRefp->varp()->width(),
-                                       varRefp->varp()->dtypep()->numeric());
+                newp->dtypep(getTwoStateDtype(varRefp->varp()->dtypep()));
                 m_result = newp;
             } else {
                 AstNodeVarRef* const newp = varRefp->cloneTree(false);
-                varRefp->dtypeSetBitSized(varRefp->width(), varRefp->dtypep()->numeric());
+                varRefp->dtypep(getTwoStateDtype(varRefp->varp()->dtypep()));
                 m_result = newp;
             }
+        }
+
+        void visit(AstCMethodHard* const cMethodHardp) override {
+            fourstateExpressionCMethodHardHandler(cMethodHardp);
+            m_result = getExprValuep(cMethodHardp);
         }
 
         void visit(AstNodeExpr* const nodep) override {
@@ -1613,6 +1908,17 @@ class FourstateVisitor final : public VNVisitor {
                                 new AstNot{flp, getFourstateExpressionXZ(neqWildp->rhsp())}}};
         }
 
+        void visit(AstInsideRange* const insideRangep) override {
+            AstNodeExpr* const lhsp = VN_IS(insideRangep->lhsp(), Unbounded)
+                                          ? insideRangep->lhsp()->cloneTree(false)
+                                          : getFourstateExpressionXZ(insideRangep->lhsp());
+            AstNodeExpr* const rhsp = VN_IS(insideRangep->rhsp(), Unbounded)
+                                          ? insideRangep->rhsp()->cloneTree(false)
+                                          : getFourstateExpressionXZ(insideRangep->rhsp());
+            m_result = new AstInsideRange{insideRangep->fileline(), lhsp, rhsp};
+            m_result->dtypep(getTwoStateDtype(insideRangep->dtypep()));
+        }
+
         void visit(AstShiftL* const shiftlp) override {
             // |b.xz ? '1 : (a.xz << b.value)
             FileLine* const flp = shiftlp->fileline();
@@ -1647,7 +1953,7 @@ class FourstateVisitor final : public VNVisitor {
 
         void visit(AstCReset* const cresetp) override {
             m_result = cresetp->cloneTree(false);
-            m_result->dtypeSetBitSized(cresetp->width(), cresetp->dtypep()->numeric());
+            m_result->dtypep(getTwoStateDtype(cresetp->dtypep()));
         }
 
         void visit(AstConst* const constp) override {
@@ -1739,6 +2045,20 @@ class FourstateVisitor final : public VNVisitor {
                                          replicatep->dtypep()->numeric());
         }
 
+        void visit(AstStreamL* const streamlp) override {
+            m_result = new AstStreamL{streamlp->fileline(),
+                                      getFourstateExpressionXZ(streamlp->lhsp(), false),
+                                      streamlp->rhsp()->cloneTree(false)};
+            m_result->dtypep(getTwoStateDtype(streamlp->dtypep()));
+        }
+
+        void visit(AstStreamR* const streamrp) override {
+            m_result = new AstStreamR{streamrp->fileline(),
+                                      getFourstateExpressionXZ(streamrp->lhsp(), false),
+                                      streamrp->rhsp()->cloneTree(false)};
+            m_result->dtypep(getTwoStateDtype(streamrp->dtypep()));
+        }
+
         void visit(AstMemberSel* const memberSelp) override {
             // This may potentially be called twice - for value and xz.
             // To fix it it simple need to be added to precalculations
@@ -1761,6 +2081,14 @@ class FourstateVisitor final : public VNVisitor {
         //         structSelp->fromp()->cloneTree(false),
         //                            structSelp->name() + XZ_SUFFIX};
         // }
+
+        void visit(AstCastWrap* const castp) override {
+            noTmp();
+            AstCastWrap* const newp
+                = new AstCastWrap{castp->fileline(), getFourstateExpressionXZ(castp->lhsp())};
+            newp->dtypep(getTwoStateDtype(castp->dtypep()));
+            m_result = newp;
+        }
 
         void visit(AstNodeFTaskRef* const funcp) override {
             fourstateExpressionFuncRefHandler(funcp);
@@ -1786,9 +2114,34 @@ class FourstateVisitor final : public VNVisitor {
             m_result = getExprXZp(logOrp)->cloneTree(false);
         }
 
+        void visit(AstExprStmt* const exprStmtp) override {
+            liftExprStmtStatements(exprStmtp);
+            noTmp();
+            m_result = getFourstateExpressionXZ(exprStmtp->resultp());
+        }
+
         void visit(AstSel* const selp) override {
             m_result = m_fourstateVisitor.getFourstateExpressionSelHandler(
                 selp, getFourstateExpressionXZ(selp->fromp(), false), false);
+        }
+
+        void visit(AstArraySel* const arraySelp) override {
+            arraySelp->bitp()->purityCheck();
+            m_result = new AstArraySel{arraySelp->fileline(),
+                                       getFourstateExpressionXZ(arraySelp->fromp(), false),
+                                       isFourstate(arraySelp->bitp())
+                                           ? m_fourstateVisitor.getTwoStateCast(arraySelp->bitp())
+                                           : arraySelp->bitp()->cloneTree(false)};
+            m_result->dtypep(getTwoStateDtype(arraySelp->dtypep()));
+            setSelpHandled(m_result);
+        }
+
+        void visit(AstSliceSel* const sliceSelp) override {
+            m_result = new AstSliceSel{sliceSelp->fileline(),
+                                       getFourstateExpressionXZ(sliceSelp->fromp()),
+                                       sliceSelp->declRange()};
+            m_result->dtypep(getTwoStateDtype(sliceSelp->dtypep()));
+            setSelpHandled(m_result);
         }
 
         void visit(AstNodeVarRef* const varRefp) override {
@@ -1798,14 +2151,46 @@ class FourstateVisitor final : public VNVisitor {
                 AstNodeVarRef* const newp = varRefp->cloneTree(false);
                 if (!newp->name().empty()) newp->name(newp->name() + XZ_SUFFIX);
                 newp->varp(getSplittedXZ(varRefp->varp()));
-                newp->dtypeSetBitSized(varRefp->varp()->width(),
-                                       varRefp->varp()->dtypep()->numeric());
+                newp->dtypep(getTwoStateDtype(varRefp->varp()->dtypep()));
                 m_result = newp;
             } else {
                 AstConst* const newp = new AstConst{varRefp->fileline(), AstConst::WidthedValue{},
                                                     varRefp->width(), 0};
                 m_result = newp;
             }
+        }
+
+        void visit(AstCMethodHard* const cMethodHardp) override {
+            fourstateExpressionCMethodHardHandler(cMethodHardp);
+            m_result = getExprXZp(cMethodHardp);
+        }
+
+        void visit(AstLogNot* const logNotp) override {
+            FileLine* const flp = logNotp->fileline();
+            AstNodeExpr* const knownOnep
+                = new AstRedOr{flp, m_fourstateVisitor.getTwoStateCast(logNotp->lhsp())};
+            m_result
+                = new AstLogAnd{flp, new AstRedOr{flp, getFourstateExpressionXZ(logNotp->lhsp())},
+                                new AstLogNot{flp, knownOnep}};
+        }
+
+        void visit(AstOneHot* const nodep) override {
+            m_result = new AstConst{nodep->fileline(), AstConst::BitFalse{}};
+        }
+
+        void visit(AstOneHot0* const nodep) override {
+            m_result = new AstConst{nodep->fileline(), AstConst::BitFalse{}};
+        }
+
+        void visit(AstCountBits* const nodep) override {
+            m_result
+                = new AstConst{nodep->fileline(), AstConst::WidthedValue{}, nodep->width(), 0U};
+        }
+
+        void visit(AstCLog2* const nodep) override {
+            FileLine* const flp = nodep->fileline();
+            m_result = new AstCond{flp, new AstRedOr{flp, getFourstateExpressionXZ(nodep->lhsp())},
+                                   createZeroOrOnesp(nodep, true), createZeroOrOnesp(nodep)};
         }
 
         void visit(AstNodeExpr* const nodep) override {
@@ -1846,7 +2231,7 @@ class FourstateVisitor final : public VNVisitor {
             // This is here instead in the visitor because CReset shall never be nested into
             // the expression and also it is a very special case
             AstCReset* const resultp = cresetp->cloneTree(false);
-            resultp->dtypeSetBitSized(cresetp->width(), cresetp->dtypep()->numeric());
+            resultp->dtypep(getTwoStateDtype(cresetp->dtypep()));
             FourstateLogicTypePropagator{resultp};
             return resultp;
         }
@@ -1860,10 +2245,10 @@ class FourstateVisitor final : public VNVisitor {
         if (AstCReset* const cresetp = VN_CAST(exprp, CReset)) {
             // This is here instead in the visitor because CReset shall never be nested into
             // the expression and also it is a very special case
-            AstCReset* const result = cresetp->cloneTree(false);
-            result->dtypeSetBitSized(cresetp->width(), cresetp->dtypep()->numeric());
-            FourstateLogicTypePropagator{result};
-            return result;
+            AstCReset* const resultp = cresetp->cloneTree(false);
+            resultp->dtypep(getTwoStateDtype(cresetp->dtypep()));
+            FourstateLogicTypePropagator{resultp};
+            return resultp;
         }
         AstNodeExpr* const result
             = m_fourstateGeneratorXZVisitor.getFourstateExpressionXZ(exprp, putIntoTmp);
@@ -1887,13 +2272,51 @@ class FourstateVisitor final : public VNVisitor {
     AstNodeExpr* getTwoStateCast(AstNodeExpr* const exprp) {
         UASSERT_OBJ(isFourstate(exprp), exprp,
                     "This function is ment to be called on four-state expressions");
+        return getTwoStateCast(getFourstateExpressionValue(exprp),
+                               getFourstateExpressionXZ(exprp));
+    }
+
+    AstNodeExpr* getTwoStateCast(AstNodeExpr* const exprValuep, AstNodeExpr* const exprXZp) {
         // (a.value & (~a.xz))
-        FileLine* const flp = exprp->fileline();
-        AstAnd* const result = new AstAnd{flp, getFourstateExpressionValue(exprp),
-                                          new AstNot{flp, getFourstateExpressionXZ(exprp)}};
+        FileLine* const flp = exprValuep->fileline();
+        AstAnd* const result = new AstAnd{flp, exprValuep, new AstNot{flp, exprXZp}};
         setFourstate(result, false);
         setFourstate(result->rhsp(), false);
         return result;
+    }
+
+    AstNodeExpr* getCoverToggleChangeXZ(AstNodeExpr* const exprp) {
+        if (isFourstate(exprp)) return getFourstateExpressionXZ(exprp);
+        if (AstNodeVarRef* const varRefp = VN_CAST(exprp, NodeVarRef)) {
+            if (needsSplitting(varRefp->varp()->dtypep())) splitVar(varRefp->varp());
+            if (getValuePartVarp(varRefp->varp())) {
+                AstNodeVarRef* const newp = varRefp->cloneTree(false);
+                if (!newp->name().empty()) newp->name(newp->name() + XZ_SUFFIX);
+                newp->varp(getSplittedXZ(varRefp->varp()));
+                newp->dtypep(getTwoStateDtype(varRefp->varp()->dtypep()));
+                setFourstate(newp, false);
+                return newp;
+            }
+        } else if (AstArraySel* const arraySelp = VN_CAST(exprp, ArraySel)) {
+            AstArraySel* const newp = new AstArraySel{
+                arraySelp->fileline(), getCoverToggleChangeXZ(arraySelp->fromp()),
+                isFourstate(arraySelp->bitp()) ? getTwoStateCast(arraySelp->bitp())
+                                               : arraySelp->bitp()->cloneTree(false)};
+            newp->dtypep(getTwoStateDtype(arraySelp->dtypep()));
+            setFourstate(newp, false);
+            setSelpHandled(newp);
+            return newp;
+        } else if (AstSel* const selp = VN_CAST(exprp, Sel)) {
+            AstSel* const newp = selp->cloneTree(false);
+            newp->fromp(getCoverToggleChangeXZ(selp->fromp()));
+            newp->lsbp(selp->lsbp()->cloneTree(false));
+            newp->dtypep(getTwoStateDtype(selp->dtypep()));
+            setFourstate(newp, false);
+            setSelpHandled(newp);
+            return newp;
+        }
+        exprp->v3fatalSrc("Unable to build X/Z toggle coverage lvalue");
+        return nullptr;
     }
 
     void visit(AstNodeAssign* const nodep) override {
@@ -1901,7 +2324,7 @@ class FourstateVisitor final : public VNVisitor {
         m_currentStmtp = nodep;
         TmpVarsReleaser tmpVarsReleaser{*this};
         if (isFourstate(nodep->lhsp())) {
-            AstNodeExpr* const lhsp = nodep->lhsp()->unlinkFrBack();
+            AstNodeExpr* lhsp = nodep->lhsp()->unlinkFrBack();
             pushDeletep(lhsp);
             AstNodeAssign* const assignXZp = nodep->cloneTree(false);
             {
@@ -1920,21 +2343,32 @@ class FourstateVisitor final : public VNVisitor {
                 nodep->rhsp(newRhsp);
                 nodep->dtypeFrom(newLhsp);
             }
-            if (AstAssignW* const assignWValuep = VN_CAST(nodep, AssignW)) {
-                if (const AstNodeVarRef* const lhsVarRefp = VN_CAST(lhsp, NodeVarRef)) {
-                    assignWConflictResolution(lhsVarRefp->varp(), assignWValuep,
-                                              VN_AS(assignXZp, AssignW));
-                    if (const AstNode* const timingControlp = assignWValuep->timingControlp()) {
-                        timingControlp->v3warn(
-                            E_UNSUPPORTED,
-                            "Continuous assignment delays are unsupported with --fourstate");
-                    }
-                } else {
-                    nodep->v3warn(E_UNSUPPORTED,
-                                  "Fourstate LHS other than a simple variable "
-                                  "reference is not supported with continuous assignment");
-                }
-            }
+            // if (AstAssignW* const assignWValuep = VN_CAST(nodep, AssignW)) {
+            //     while (lhsp) {
+            //         if (const AstSel* const selp = VN_CAST(lhsp, Sel)) {
+            //             lhsp = selp->fromp();
+            //         } else if (const AstArraySel* const aselp = VN_CAST(lhsp, ArraySel)) {
+            //             lhsp = aselp->fromp();
+            //         } else if (const AstSliceSel* const sselp = VN_CAST(lhsp, SliceSel)) {
+            //             lhsp = sselp->fromp();
+            //         } else {
+            //             break;
+            //         }
+            //     }
+            //     if (const AstNodeVarRef* const lhsVarRefp = VN_CAST(lhsp, NodeVarRef)) {
+            //         assignWConflictResolution(lhsVarRefp->varp(), assignWValuep,
+            //                                   VN_AS(assignXZp, AssignW));
+            //         if (const AstNode* const timingControlp = assignWValuep->timingControlp()) {
+            //             timingControlp->v3warn(
+            //                 E_UNSUPPORTED,
+            //                 "Continuous assignment delays are unsupported with --fourstate");
+            //         }
+            //     } else {
+            //         nodep->v3warn(E_UNSUPPORTED,
+            //                       "Fourstate LHS other than a simple variable or select "
+            //                       "reference is not supported with continuous assignment");
+            //     }
+            // }
         } else if (isFourstate(nodep->rhsp())) {
             AstNodeExpr* const newRhsp = getTwoStateCast(nodep->rhsp());
             pushDeletep(nodep->rhsp()->unlinkFrBack());
@@ -1961,6 +2395,32 @@ class FourstateVisitor final : public VNVisitor {
             AstStmtExpr* const newStmtExprp = new AstStmtExpr{nodep->fileline(), newXzp};
             nodep->addNextHere(newStmtExprp);
             exprp->deleteTree();
+        }
+        iterateChildren(nodep);
+    }
+
+    void visit(AstCoverToggle* const nodep) override {
+        VL_RESTORER(m_currentStmtp);
+        m_currentStmtp = nodep;
+        TmpVarsReleaser tmpVarsReleaser{*this};
+        const bool origFourstate = isFourstate(nodep->origp());
+        const bool changeFourstate = isFourstate(nodep->changep());
+        if (origFourstate || changeFourstate) {
+            AstNodeExpr* const origp = nodep->origp()->unlinkFrBack();
+            AstNodeExpr* const changep = nodep->changep()->unlinkFrBack();
+            // Count changes in the value and X/Z halves separately while sharing the original
+            // coverpoint bucket.
+            AstCoverToggle* const xzp = nodep->cloneTree(false);
+            xzp->incp(nodep->incp()->cloneTree(false));
+            xzp->origp(origFourstate ? getFourstateExpressionXZ(origp) : createZeroOrOnesp(origp));
+            xzp->changep(getCoverToggleChangeXZ(changep));
+            nodep->origp(getFourstateExpressionValue(origp));
+            nodep->changep(getFourstateExpressionValue(changep));
+            nodep->addNextHere(xzp);
+            origp->deleteTree();
+            changep->deleteTree();
+            FourstateLogicTypePropagator{nodep};
+            FourstateLogicTypePropagator{xzp};
         }
         iterateChildren(nodep);
     }
@@ -1993,30 +2453,156 @@ class FourstateVisitor final : public VNVisitor {
         iterateAndNextNull(nodep->elsesp());
     }
 
+    void visit(AstWait* const nodep) override {
+        VL_RESTORER(m_currentStmtp);
+        TmpVarsReleaser tmpVarsReleaser{*this};
+        m_currentStmtp = nodep;
+        if (AstNodeExpr* const condp = nodep->condp()) {
+            if (isFourstate(condp)) {
+                nodep->condp(getTwoStateCast(condp->unlinkFrBack()));
+                condp->deleteTree();
+            }
+        }
+        iterateChildren(nodep);
+    }
+
     void visit(AstCase* const nodep) override {
         VL_RESTORER(m_currentStmtp);
+        VL_RESTORER(m_caseMaskp);
+        VL_RESTORER(m_tmpVarpsInUse);
+        m_caseMaskp = nullptr;
         m_currentStmtp = nodep;
-        if (isFourstate(nodep->exprp())) {
-            nodep->v3warn(E_UNSUPPORTED, "All case statements with four-state value as an "
-                                         "expression are unsupported with --fourstate");
-        } else {
-            iterate(nodep->exprp());
+        FileLine* const flp = nodep->exprp()->fileline();
+        if (nodep->caseInside()) {
+            for (AstCaseItem* itemp = nodep->itemsp(); itemp;
+                 itemp = VN_AS(itemp->nextp(), CaseItem)) {
+                for (AstNodeExpr *nextp, *condp = itemp->condsp(); condp; condp = nextp) {
+                    nextp = VN_AS(condp->nextp(), NodeExpr);
+                    AstNodeExpr* newp = nullptr;
+                    if (AstInsideRange* const insideRangep = VN_CAST(condp, InsideRange)) {
+                        newp = insideRangep->newAndFromInside(
+                            nodep->exprp()->cloneTreePure(false),
+                            insideRangep->lhsp()->cloneTreePure(false),
+                            insideRangep->rhsp()->cloneTreePure(false));
+                    } else {
+                        newp = AstEqWild::newTyped(condp->fileline(),
+                                                   nodep->exprp()->cloneTreePure(false),
+                                                   condp->cloneTreePure(false));
+                    }
+                    FourstateLogicTypePropagator{newp};
+                    if (isFourstate(newp)) {
+                        AstNodeExpr* const oldp = newp;
+                        newp = getTruthExpr(oldp);
+                        oldp->deleteTree();
+                    }
+                    VNRelinker relinker;
+                    condp->unlinkFrBack(&relinker);
+                    relinker.relink(newp);
+                    condp->deleteTree();
+                }
+            }
+            nodep->exprp()->unlinkFrBack()->deleteTree();
+            nodep->exprp(new AstConst{flp, AstConst::BitTrue{}});
+            FourstateLogicTypePropagator{nodep->exprp()};
         }
-        iterateAndNextNull(nodep->itemsp());
-        iterateAndNextNull(nodep->notParallelp());
+        if (isFourstate(nodep->exprp())) {
+            switch (nodep->caseType()) {
+            case VCaseType::CT_CASE: {
+                AstNodeExpr* const newp
+                    = new AstConcat{flp, getFourstateExpressionValue(nodep->exprp()),
+                                    getFourstateExpressionXZ(nodep->exprp())};
+                nodep->exprp()->unlinkFrBack()->deleteTree();
+                nodep->exprp(newp);
+                m_caseMaskp = createZeroOrOnesp(newp);
+                break;
+            }
+            case VCaseType::CT_CASEX: {
+                AstNodeExpr* const valuep = getFourstateExpressionValue(nodep->exprp(), true);
+                AstNodeExpr* const xzp = getFourstateExpressionXZ(nodep->exprp(), true);
+                AstNodeExpr* const newp
+                    = new AstConcat{flp, new AstOr{flp, valuep, xzp->cloneTree(false)}, xzp};
+                m_caseMaskp = new AstConcat{flp, xzp->cloneTree(false), xzp->cloneTree(false)};
+                AstVar* const maskTmpVarp = createTmp(m_caseMaskp);
+                addPrecalculation(new AstAssign{
+                    flp, new AstVarRef{flp, maskTmpVarp, VAccess::WRITE}, m_caseMaskp});
+                m_caseMaskp = new AstVarRef{flp, maskTmpVarp, VAccess::READ};
+                AstNodeExpr* const oldp = nodep->exprp();
+                oldp->replaceWith(newp);
+                oldp->deleteTree();
+                break;
+            }
+            case VCaseType::CT_CASEZ: {
+                AstNodeExpr* const valuep = getFourstateExpressionValue(nodep->exprp(), true);
+                AstNodeExpr* const xzp = getFourstateExpressionXZ(nodep->exprp(), true);
+                AstNodeExpr* const newp
+                    = new AstConcat{flp, new AstOr{flp, valuep, xzp->cloneTree(false)}, xzp};
+                m_caseMaskp
+                    = new AstConcat{flp,
+                                    new AstAnd{flp, new AstNot{flp, valuep->cloneTree(false)},
+                                               xzp->cloneTree(false)},
+                                    new AstAnd{flp, new AstNot{flp, valuep->cloneTree(false)},
+                                               xzp->cloneTree(false)}};
+                AstVar* const maskTmpVarp = createTmp(m_caseMaskp);
+                addPrecalculation(new AstAssign{
+                    flp, new AstVarRef{flp, maskTmpVarp, VAccess::WRITE}, m_caseMaskp});
+                m_caseMaskp = new AstVarRef{flp, maskTmpVarp, VAccess::READ};
+                AstNodeExpr* const oldp = nodep->exprp();
+                oldp->replaceWith(newp);
+                oldp->deleteTree();
+                break;
+            }
+            case VCaseType::CT_CASEINSIDE: break;
+            default: nodep->v3warn(E_UNSUPPORTED, "Unsupported: case type"); break;
+            }
+            FourstateLogicTypePropagator{nodep->exprp()};
+        }
+        if (!m_caseMaskp) {
+            // Hack lets treat every case as four-state - in order to not treat case as fourstate
+            // we would have to check if every AstCaseItems condp is not a four-state
+            VNRelinker relinker;
+            AstNodeExpr* const oldp = nodep->exprp();
+            oldp->unlinkFrBack(&relinker);
+            AstNodeExpr* const newp = new AstConcat{flp, oldp, createZeroOrOnesp(oldp)};
+            relinker.relink(newp);
+            m_caseMaskp = createZeroOrOnesp(newp);
+        }
+        iterateChildren(nodep);
+        VL_DO_DANGLING(m_caseMaskp->deleteTree(), m_caseMaskp);
     }
 
     void visit(AstCaseItem* const nodep) override {
         for (AstNodeExpr* condp = nodep->condsp(); condp;
              condp = VN_AS(condp->nextp(), NodeExpr)) {
+            FileLine* const flp = condp->fileline();
             if (isFourstate(condp)) {
-                nodep->v3warn(E_UNSUPPORTED,
-                              "Four-state case items values are unsupported with --fourstate");
+                condp->v3warn(E_UNSUPPORTED, "Four-state values in case items are unsupported");
+                UASSERT_OBJ(m_caseMaskp, condp, "Fourstate caseItem but case is not four-state");
+                AstNodeExpr* newp
+                    = new AstOr{flp,
+                                new AstConcat{flp, getFourstateExpressionValue(condp),
+                                              getFourstateExpressionXZ(condp)},
+                                m_caseMaskp->cloneTreePure(false)};
+                condp->replaceWith(newp);
+                condp->deleteTree();
+                condp = newp;
+            } else if (m_caseMaskp) {
+                VNRelinker relinker;
+                condp->unlinkFrBack(&relinker);
+                AstNodeExpr* const newp
+                    = new AstOr{flp, new AstConcat{flp, condp, createZeroOrOnesp(condp)},
+                                m_caseMaskp->cloneTreePure(false)};
+                relinker.relink(newp);
+                condp = newp;
             } else {
-                iterate(condp);
+                condp->v3fatalSrc("Right now we want everything to be four-state here");
             }
         }
-        iterateAndNextNull(nodep->stmtsp());
+
+        for (AstNodeExpr* condp = nodep->condsp(); condp;
+             condp = VN_AS(condp->nextp(), NodeExpr)) {
+            FourstateLogicTypePropagator{condp};
+        }
+        iterateChildren(nodep);
     }
 
     void visit(AstSenItem* const nodep) override {
@@ -2141,37 +2727,52 @@ class FourstateVisitor final : public VNVisitor {
         AstVar* const varp = nodep->modVarp();
         if (!(varp->fourstateComplementp() || varp->isFourstateComplement())) {
             if (AstNodeExpr* const exprp = VN_CAST(nodep->exprp(), NodeExpr)) {
-                if (VL_UNLIKELY(!(VN_IS(exprp, NodeVarRef) || VN_IS(exprp, Const)))) {
-                    // The issue lays in need for precalculations, potential side effects and lack
-                    // of arguments order evaluation guarantees. The idea to support it is to do
-                    // something like:
-                    //   Pin(foo())
-                    // will turn into:
-                    //   func helper()
-                    //     if (called) return;
-                    //     called = true;
-                    //     foo(tmpValue, tmpXZ)
-                    //   Pin((helper(), tmpValue), (helper(), tmpXZ))
-                    exprp->v3warn(E_UNSUPPORTED,
-                                  "Cells with pins that are not a variable reference or a "
-                                  "constant are not supported with  --fourstate");
+                if (!(needsSplitting(varp->dtypep()) || isFourstate(exprp))) {
+                    iterateChildren(nodep);
                     return;
-                } else if (needsSplitting(varp->dtypep())) {
-                    AstPin* const newp
-                        = new AstPin{nodep->fileline(), nodep->pinNum(),
-                                     nodep->name().empty() ? "" : nodep->name() + XZ_SUFFIX,
-                                     getFourstateExpressionXZ(exprp)};
+                }
+                AstNodeExpr* exprValuep;
+                AstNodeExpr* exprXZp;
+                if (!(VN_IS(exprp, NodeVarRef) || VN_IS(exprp, Const))
+                    && nodep->modVarp()->direction().isNonOutput()) {
+                    // FIXME - this shall be completly refactored to sth like:
+                    // form:
+                    //   Pin(foo())
+                    // to:
+                    //  assign v = foo();
+                    //  Pin(v)
+                    FileLine* const flp = nodep->fileline();
+                    AstVar* const varp = new AstVar{flp, VVarType::PORT, m_tmpNames.get(nodep),
+                                                    nodep->modVarp()->dtypep()};
+                    varp->noReset(true);
+                    varp->lifetime(VLifetime::STATIC_EXPLICIT);
+                    m_currentModp->addStmtsp(varp);
+                    splitVar(varp);
+
+                    AstAlways* const alwaysp = new AstAlways{
+                        flp, VAlwaysKwd::ALWAYS_COMB, nullptr,
+                        new AstAssignW{flp, new AstVarRef{flp, varp, VAccess::WRITE},
+                                       exprp->unlinkFrBack()}};
+                    { FourstateLogicTypePropagator{alwaysp}; }
+                    m_currentModp->addStmtsp(alwaysp);
+                    exprValuep = new AstVarRef{flp, getSplittedValue(varp), VAccess::READ};
+                    exprXZp = new AstVarRef{flp, getSplittedXZ(varp), VAccess::READ};
+                } else {
+                    exprValuep = getFourstateExpressionValue(exprp);
+                    exprXZp = getFourstateExpressionXZ(exprp);
+                    exprp->unlinkFrBack()->deleteTree();
+                }
+                if (needsSplitting(varp->dtypep())) {
+                    AstPin* const newp = new AstPin{
+                        nodep->fileline(), nodep->pinNum(),
+                        nodep->name().empty() ? "" : nodep->name() + XZ_SUFFIX, exprXZp};
                     nodep->addNextHere(newp);
-                    AstNodeExpr* const oldp = exprp->unlinkFrBack();
-                    nodep->exprp(getFourstateExpressionValue(oldp));
-                    oldp->deleteTree();
+                    nodep->exprp(exprValuep);
                     splitVar(varp);  // Ensure that variable is splitted
                     nodep->modVarp(getSplittedValue(varp));
                     newp->modVarp(getSplittedXZ(varp));
                 } else if (isFourstate(exprp)) {
-                    AstNodeExpr* const oldp = exprp->unlinkFrBack();
-                    nodep->exprp(getTwoStateCast(oldp));
-                    oldp->deleteTree();
+                    nodep->exprp(getTwoStateCast(exprValuep, exprXZp));
                 }
             } else if (!nodep->exprp() && needsSplitting(varp->dtypep())) {
                 AstPin* const newp
@@ -2298,6 +2899,17 @@ class FourstateVisitor final : public VNVisitor {
         }
     }
 
+    void visit(AstArraySel* const nodep) override {
+        UASSERT_OBJ(!isFourstate(nodep), nodep,
+                    "This visitor shall never be reached for four-state AstArraySel");
+        if (isFourstate(nodep->bitp())) {
+            AstNodeExpr* const newp = getTwoStateCast(nodep->bitp());
+            nodep->bitp()->unlinkFrBack()->deleteTree();
+            nodep->bitp(newp);
+        }
+        iterateChildren(nodep);
+    }
+
     void visit(AstLogOr* const nodep) override {
         if (!hasFourstateInSubtree(nodep->rhsp())) {
             iterateChildren(nodep);
@@ -2379,9 +2991,6 @@ class FourstateVisitor final : public VNVisitor {
     void visit(AstFOpenMcd* const) override {
         // Skip this tree since this expr is not supported anyway
     }
-    void visit(AstCMethodHard* const) override {
-        // Skip this tree since this expr is not supported anyway
-    }
     void visit(AstConsPackUOrStruct* const) override {
         // Skip this tree since this expr is not supported anyway
     }
@@ -2414,18 +3023,34 @@ class FourstateVisitor final : public VNVisitor {
         nodep->v3warn(E_UNSUPPORTED, "Pullups and pulldowns are unsupported with --fourstate");
     }
 
-    void visit(AstModportVarRef* const nodep) override {
-        if ((nodep->exprp() && isFourstate(nodep->exprp()))
-            || (nodep->varp() && needsSplitting(nodep->varp()->dtypep()))) {
-            nodep->v3warn(E_UNSUPPORTED, "modports are not supported with --fourstate");
-        } else {
-            iterateChildren(nodep);
+    void visit(AstModport* const nodep) override {
+        for (AstNode* modportVarp = nodep->varsp(); modportVarp;
+             modportVarp = modportVarp->nextp()) {
+            AstModportVarRef* const varrefp = VN_AS(modportVarp, ModportVarRef);
+            if (AstVar* const varp = varrefp->varp()) {
+                if (needsSplitting(varp->dtypep())) {
+                    splitVar(varp);
+                    AstVar* const valueVarp = getValuePartVarp(varp);
+                    AstVar* const xzVarp = getSplittedXZ(varp);
+                    varrefp->varp(valueVarp);
+                    varrefp->name(valueVarp->name());
+                    AstModportVarRef* const xzp = new AstModportVarRef{
+                        varrefp->fileline(), xzVarp->name(), varrefp->direction()};
+                    xzp->varp(xzVarp);
+                    varrefp->addNextHere(xzp);
+                    modportVarp = xzp;
+                }
+            }
         }
     }
+
+    void visit(AstModportVarRef* const nodep) override { iterateChildren(nodep); }
 
     void visit(AstNodeModule* const nodep) override {
         VL_RESTORER(m_currentTmpSpotp);
         VL_RESTORER(m_tmpUnusedVarps);
+        VL_RESTORER(m_currentModp);
+        m_currentModp = nodep;
         m_currentTmpSpotp = nodep->stmtsp();
         iterateChildren(nodep);
     }
@@ -2442,10 +3067,12 @@ class FourstateVisitor final : public VNVisitor {
 public:
     explicit FourstateVisitor(AstNetlist* const netlistp)
         : m_tmpNames{"__VfourstateTmp"}
+        , m_pinHelpersNames{"__VpinHelper"}
         , m_fourstateGeneratorValueVisitor{*this}
         , m_fourstateGeneratorXZVisitor{*this} {
         { FourstateLogicTypePropagator{netlistp}; }
         iterate(netlistp);
+        V3Error::abortIfErrors();
         triorTriandReduce(m_assignWToTriand, triandReducer);
         triorTriandReduce(m_assignWToTrior, triorReducer);
         triorTriandReduce(m_assignWToWire, triReducer);

@@ -4,13 +4,15 @@
 // SPDX-FileCopyrightText: 2026 Antmicro
 // SPDX-License-Identifier: CC0-1.0
 
-module t;
-  logic a, b;
-  logic [1:0] c = 2'b1x;
-  assign {>>{a, b}} = c;
-
-  initial begin
+module y(input x);
+  initial #1 begin
+    if (x !== 1) $stop;
     $write("*-* All Finished *-*\n");
-    $finish;
-  end
+    $finish;end
+endmodule
+
+module t;
+  logic [2:0] x;
+  y h(x[0]);
+  initial x = 3;
 endmodule

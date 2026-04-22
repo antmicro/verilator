@@ -4,13 +4,12 @@
 // SPDX-FileCopyrightText: 2026 Antmicro
 // SPDX-License-Identifier: CC0-1.0
 
-module t;
-  logic a, b;
-  logic [1:0] c = 2'b1x;
-  assign {>>{a, b}} = c;
+module t(
+    input logic [31:0] priv_ids_i[4],
+    input logic [31:0] priv_ids_2d_i[2][4]
+);
+    localparam int C_LAT = 0;
+    localparam int DW = 32;
 
-  initial begin
-    $write("*-* All Finished *-*\n");
-    $finish;
-  end
+    logic [C_LAT+1:0] [DW-1:0] dp_rdata;
 endmodule

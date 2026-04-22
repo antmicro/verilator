@@ -133,7 +133,9 @@ class EmitCSyms final : EmitCBaseVisitorConst {
         if (nodep->name().empty()) return;
         const AstCFunc* const cfuncp = VN_CAST(nodep, CFunc);
         if (!cfuncp || (!cfuncp->isConstructor() && !cfuncp->isDestructor())) {
-            const std::string rsvd = V3LanguageWords::isKeyword(nodep->name());
+            const std::string emittedName
+                = VN_IS(nodep, NodeModule) ? EmitCUtil::prefixNameProtect(nodep) : nodep->name();
+            const std::string rsvd = V3LanguageWords::isKeyword(emittedName);
             if (rsvd != "") {
                 // Generally V3Name should find all of these and throw SYMRSVDWORD.
                 // We'll still check here because the compiler errors
@@ -235,19 +237,37 @@ class EmitCSyms final : EmitCBaseVisitorConst {
         const std::string varName = VIdProtect::protectIf(scopep->nameDotless(), scopep->protect())
                                     + "." + protect(varp->name());
 
+        auto emitComplement
+            = [&stmt, varp, scopep](const std::string& prefix, const std::string& suffix) {
+                  if (const AstVar* const complement = varp->fourstateComplementp()) {
+                      stmt += prefix;
+                      stmt += VIdProtect::protectIf(scopep->nameDotless(), scopep->protect()) + "."
+                              + protect(complement->name());
+                      stmt += suffix;
+                  } else {
+                      stmt += "nullptr, ";
+                  }
+              };
+
         if (!varp->isParam()) {
             stmt += ", &(";
             stmt += varName;
-            stmt += "), false, ";
+            stmt += "), ";
+            emitComplement("&(", "), ");
+            stmt += "false, ";
         } else if (varp->vlEnumType() == "VLVT_STRING"
                    && !VN_IS(varp->subDTypep(), UnpackArrayDType)) {
             stmt += ", const_cast<void*>(static_cast<const void*>(";
             stmt += varName;
-            stmt += ".c_str())), true, ";
+            stmt += ".c_str())), ";
+            emitComplement("const_cast<void*>(static_cast<const void*>(", ".c_str())), ");
+            stmt += "true, ";
         } else {
             stmt += ", const_cast<void*>(static_cast<const void*>(&(";
             stmt += varName;
-            stmt += "))), true, ";
+            stmt += "))), ";
+            emitComplement("const_cast<void*>(static_cast<const void*>(&(", "))), ");
+            stmt += "true, ";
         }
 
         stmt += varp->vlEnumType();  // VLVT_UINT32 etc

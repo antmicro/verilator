@@ -424,6 +424,7 @@ public:
     bool caseSimple() const { return m_casex == VCaseType::CT_CASE; }
     void caseInsideSet() { m_casex = VCaseType::CT_CASEINSIDE; }
     void caseMatchesSet() { m_casex = VCaseType::CT_CASEMATCHES; }
+    VCaseType caseType() const { return m_casex; }
     bool fullPragma() const { return m_fullPragma; }
     void fullPragma(bool flag) { m_fullPragma = flag; }
     bool parallelPragma() const { return m_parallelPragma; }

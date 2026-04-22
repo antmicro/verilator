@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: CC0-1.0
 
 module t;
-  logic a, b;
-  logic [1:0] c = 2'b1x;
-  assign {>>{a, b}} = c;
+  logic [1:0] a;
 
-  initial begin
-    $write("*-* All Finished *-*\n");
-    $finish;
+  always @* begin
+    case (a) inside
+      2'b00: ;
+      default: ;
+    endcase
   end
 endmodule

@@ -9,12 +9,12 @@
 
 import vltest_bootstrap
 
-test.scenarios('linter')
+test.scenarios('simulator')
 
-test.top_filename = "t/t_case_x.v"
+test.top_filename = 't/t_dynarray.v'
 
-test.lint(verilator_flags2=['--fourstate', '-Wno-FUTURE'],
-          fails=True,
-          expect_filename=test.golden_filename)
+test.compile(verilator_flags2=['--binary', '--fourstate', '-Wno-FUTURE'])
+
+test.execute()
 
 test.passes()

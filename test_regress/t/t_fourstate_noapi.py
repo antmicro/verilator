@@ -9,12 +9,10 @@
 
 import vltest_bootstrap
 
-test.scenarios('linter')
+test.scenarios('simulator')
 
-test.top_filename = 't/t_lint_unused_iface.v'
+test.compile(verilator_flags2=['--binary', '--fourstate', '-Wno-FUTURE', '-no-fourstate-api'])
 
-test.lint(verilator_flags2=['--fourstate', '-Wno-FUTURE', '--Wall', '-Wno-DECLFILENAME'],
-          fails=True,
-          expect_filename=test.golden_filename)
+test.execute()
 
 test.passes()

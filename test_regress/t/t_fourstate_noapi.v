@@ -4,12 +4,14 @@
 // SPDX-FileCopyrightText: 2026 Antmicro
 // SPDX-License-Identifier: CC0-1.0
 
-module t;
-  logic a, b;
-  logic [1:0] c = 2'b1x;
-  assign {>>{a, b}} = c;
+`define EXPECT(x, e) if (x !== e) begin $write("Expected: %b, but got: %b\n", e, x); $stop; end
 
+module t (
+  input clk
+);
   initial begin
+    `EXPECT(clk, 'z);
+    #100 `EXPECT(clk, 'z);
     $write("*-* All Finished *-*\n");
     $finish;
   end

@@ -1443,12 +1443,20 @@ V3Number& V3Number::opIsUnknown(const V3Number& lhs) {
 }
 V3Number& V3Number::opOneHot(const V3Number& lhs) {
     NUM_ASSERT_OP_ARGS1(lhs);
-    if (lhs.isFourState()) return setAllBitsX();
+    if (lhs.isFourState()) {
+        V3Number knownOne{this, lhs.width()};
+        knownOne.opBitsOne(lhs);
+        return setSingleBits(knownOne.countOnes() == 1);
+    }
     return setSingleBits(lhs.countOnes() == 1);
 }
 V3Number& V3Number::opOneHot0(const V3Number& lhs) {
     NUM_ASSERT_OP_ARGS1(lhs);
-    if (lhs.isFourState()) return setAllBitsX();
+    if (lhs.isFourState()) {
+        V3Number knownOne{this, lhs.width()};
+        knownOne.opBitsOne(lhs);
+        return setSingleBits(knownOne.countOnes() <= 1);
+    }
     return setSingleBits(lhs.countOnes() <= 1);
 }
 V3Number& V3Number::opCLog2(const V3Number& lhs) {

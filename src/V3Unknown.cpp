@@ -207,7 +207,11 @@ class UnknownVisitor final : public VNVisitor {
     }
     void visit(AstVar* nodep) override {
         VL_RESTORER(m_allowXUnique);
-        if (nodep->isParam()) m_allowXUnique = false;
+        if (nodep->isParam()) {
+            m_allowXUnique = false;
+        } else if (m_modp && m_modp->isTop() && nodep->varType() == VVarType::PORT) {
+            nodep->setIsTopLevelPort();
+        }
         iterateChildren(nodep);
     }
     void visitEqNeqCase(AstNodeBiop* nodep) {

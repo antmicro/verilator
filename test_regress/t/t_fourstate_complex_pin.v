@@ -5,7 +5,10 @@
 // SPDX-License-Identifier: CC0-1.0
 
 module y(input x);
-  initial $write("%d\n", bit'(x));
+  initial #1 begin
+    if (x !== 1) $stop;
+    $write("*-* All Finished *-*\n");
+    $finish;end
 endmodule
 
 module t;

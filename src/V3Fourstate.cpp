@@ -470,6 +470,7 @@ class FourstateVisitor final : public VNVisitor {
     AstNodeStmt* m_currentStmtp = nullptr;  // Current statement
     std::vector<AstVar*> m_varpsToRemove;  // Vars to unlink and remove in destructor
     AstNodeModule* m_currentModp = nullptr;
+    AstNodeExpr* m_caseMaskp = nullptr;
 
     std::vector<FTaskPortsHelper> m_ftaskPortHelpers;  // Cache of FTaskPortsHelpers
 
@@ -2074,28 +2075,108 @@ class FourstateVisitor final : public VNVisitor {
 
     void visit(AstCase* const nodep) override {
         VL_RESTORER(m_currentStmtp);
+        VL_RESTORER(m_caseMaskp);
+        VL_RESTORER(m_tmpVarpsInUse);
+        m_caseMaskp = nullptr;
         m_currentStmtp = nodep;
+        FileLine* const flp = nodep->exprp()->fileline();
         if (isFourstate(nodep->exprp())) {
-            nodep->v3warn(E_UNSUPPORTED, "All case statements with four-state value as an "
-                                         "expression are unsupported with --fourstate");
-        } else {
-            iterate(nodep->exprp());
+            switch (nodep->caseType()) {
+            case VCaseType::CT_CASE: {
+                AstNodeExpr* const newp
+                    = new AstConcat{flp, getFourstateExpressionValue(nodep->exprp()),
+                                    getFourstateExpressionXZ(nodep->exprp())};
+                nodep->exprp()->unlinkFrBack()->deleteTree();
+                nodep->exprp(newp);
+                m_caseMaskp = createZeroOrOnesp(newp);
+                break;
+            }
+            case VCaseType::CT_CASEX: {
+                AstNodeExpr* const valuep = getFourstateExpressionValue(nodep->exprp(), true);
+                AstNodeExpr* const xzp = getFourstateExpressionXZ(nodep->exprp(), true);
+                AstNodeExpr* const newp
+                    = new AstConcat{flp, new AstOr{flp, valuep, xzp->cloneTree(false)}, xzp};
+                m_caseMaskp = new AstConcat{flp, xzp->cloneTree(false), xzp->cloneTree(false)};
+                AstVar* const maskTmpVarp = createTmp(m_caseMaskp);
+                addPrecalculation(new AstAssign{
+                    flp, new AstVarRef{flp, maskTmpVarp, VAccess::WRITE}, m_caseMaskp});
+                m_caseMaskp = new AstVarRef{flp, maskTmpVarp, VAccess::READ};
+                AstNodeExpr* const oldp = nodep->exprp();
+                oldp->replaceWith(newp);
+                oldp->deleteTree();
+                break;
+            }
+            case VCaseType::CT_CASEZ: {
+                AstNodeExpr* const valuep = getFourstateExpressionValue(nodep->exprp(), true);
+                AstNodeExpr* const xzp = getFourstateExpressionXZ(nodep->exprp(), true);
+                AstNodeExpr* const newp
+                    = new AstConcat{flp, new AstOr{flp, valuep, xzp->cloneTree(false)}, xzp};
+                m_caseMaskp
+                    = new AstConcat{flp,
+                                    new AstAnd{flp, new AstNot{flp, valuep->cloneTree(false)},
+                                               xzp->cloneTree(false)},
+                                    new AstAnd{flp, new AstNot{flp, valuep->cloneTree(false)},
+                                               xzp->cloneTree(false)}};
+                AstVar* const maskTmpVarp = createTmp(m_caseMaskp);
+                addPrecalculation(new AstAssign{
+                    flp, new AstVarRef{flp, maskTmpVarp, VAccess::WRITE}, m_caseMaskp});
+                m_caseMaskp = new AstVarRef{flp, maskTmpVarp, VAccess::READ};
+                AstNodeExpr* const oldp = nodep->exprp();
+                oldp->replaceWith(newp);
+                oldp->deleteTree();
+                break;
+            }
+            default: nodep->v3warn(E_UNSUPPORTED, "Unsupported: case type"); break;
+            }
+            FourstateLogicTypePropagator{nodep->exprp()};
         }
-        iterateAndNextNull(nodep->itemsp());
-        iterateAndNextNull(nodep->notParallelp());
+        if (!m_caseMaskp) {
+            // Hack lets treat every case as four-state - in order to not treat case as fourstate
+            // we would have to check if every AstCaseItems condp is not a four-state
+            VNRelinker relinker;
+            AstNodeExpr* const oldp = nodep->exprp();
+            oldp->unlinkFrBack(&relinker);
+            AstNodeExpr* const newp = new AstConcat{flp, oldp, createZeroOrOnesp(oldp)};
+            relinker.relink(newp);
+            m_caseMaskp = createZeroOrOnesp(newp);
+        }
+        iterateChildren(nodep);
+        VL_DO_DANGLING(m_caseMaskp->deleteTree(), m_caseMaskp);
     }
 
     void visit(AstCaseItem* const nodep) override {
         for (AstNodeExpr* condp = nodep->condsp(); condp;
              condp = VN_AS(condp->nextp(), NodeExpr)) {
+            FileLine* const flp = condp->fileline();
             if (isFourstate(condp)) {
-                nodep->v3warn(E_UNSUPPORTED,
-                              "Four-state case items values are unsupported with --fourstate");
+                condp->v3warn(E_UNSUPPORTED, "Four-state values in case items are unsupported");
+                UASSERT_OBJ(m_caseMaskp, condp, "Fourstate caseItem but case is not four-state");
+                AstNodeExpr* newp
+                    = new AstOr{flp,
+                                new AstConcat{flp, getFourstateExpressionValue(condp),
+                                              getFourstateExpressionXZ(condp)},
+                                m_caseMaskp->cloneTreePure(false)};
+                condp->replaceWith(newp);
+                condp->deleteTree();
+                condp = newp;
+            } else if (m_caseMaskp) {
+                VNRelinker relinker;
+                condp->unlinkFrBack(&relinker);
+                AstNodeExpr* const newp
+                    = new AstOr{flp, new AstConcat{flp, condp, createZeroOrOnesp(condp)},
+                                m_caseMaskp->cloneTreePure(false)};
+                relinker.relink(newp);
+                condp = newp;
             } else {
-                iterate(condp);
+                condp->v3fatalSrc("Right now we want everything to be four-state here");
             }
         }
-        iterateAndNextNull(nodep->stmtsp());
+
+        for (AstNodeExpr* condp = nodep->condsp(); condp;
+             condp = VN_AS(condp->nextp(), NodeExpr)) {
+            FourstateLogicTypePropagator{condp};
+        }
+        iterateChildren(nodep);
     }
 
     void visit(AstSenItem* const nodep) override {

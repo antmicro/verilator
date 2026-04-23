@@ -126,6 +126,9 @@ static bool needsSplitting(const AstNodeDType* const dtypep) {
     if (const AstBasicDType* const basicp = VN_CAST(dtypep->skipRefp(), BasicDType)) {
         return basicp->isFourstate();
     }
+    if (const AstStructDType* const structDtypep = VN_CAST(dtypep->skipRefp(), StructDType)) {
+        return structDtypep->isFourstate();
+    }
     if (const AstUnpackArrayDType* const containerDTypep = VN_CAST(dtypep, UnpackArrayDType)) {
         return needsSplitting(containerDTypep->subDTypep()->skipRefp());
     }
@@ -627,6 +630,9 @@ class FourstateVisitor final : public VNVisitor {
         if (const AstBasicDType* const basicp = VN_CAST(dtypep, BasicDType)) {
             return {true, basicp->isFourstate()};
         }
+        if (const AstStructDType* const structDtypep = VN_CAST(dtypep, StructDType)) {
+            return {true, structDtypep->isFourstate()};
+        }
         if (const AstNodeUOrStructDType* const containerDTypep
             = VN_CAST(dtypep, NodeUOrStructDType)) {
             return {!containerDTypep->isFourstate(), containerDTypep->isFourstate()};
@@ -762,6 +768,10 @@ class FourstateVisitor final : public VNVisitor {
             resultp = newp;
         } else if (const AstBasicDType* const basicp = VN_CAST(dtypep, BasicDType)) {
             return dtypep->findBitDType(basicp->width(), basicp->widthMin(), basicp->numeric());
+        } else if (const AstStructDType* const structDtypep = VN_CAST(dtypep, StructDType)) {
+            // Packed structs are bit vectors; two-state equivalent is a basic bit type
+            return dtypep->findBitDType(structDtypep->width(), structDtypep->widthMin(),
+                                        structDtypep->numeric());
         }
         UASSERT_OBJ(resultp, dtypep, "Failed to split dtype");
         v3Global.rootp()->typeTablep()->addTypesp(resultp);
@@ -825,7 +835,9 @@ class FourstateVisitor final : public VNVisitor {
         AstVar* const newValuep = varp->cloneTree(false);
         newValuep->name(newValuep->name() + VALUE_SUFFIX);
         newValuep->trace(varp->isTrace());
-        newValuep->fourstateOriginalDTypeKwd(varp->dtypep()->basicp()->keyword());
+        if (const AstBasicDType* const basicp = varp->dtypep()->basicp()) {
+            newValuep->fourstateOriginalDTypeKwd(basicp->keyword());
+        }
         newValuep->dtypep(getTwoStateDtype(varp->dtypep()));
         if (AstNodeExpr* const valuep = VN_CAST(newValuep->valuep(), NodeExpr)) {
             valuep->unlinkFrBack();
@@ -2064,7 +2076,7 @@ class FourstateVisitor final : public VNVisitor {
         m_currentStmtp = nodep;
         TmpVarsReleaser tmpVarsReleaser{*this};
         if (isFourstate(nodep->lhsp())) {
-            AstNodeExpr* const lhsp = nodep->lhsp()->unlinkFrBack();
+            AstNodeExpr* lhsp = nodep->lhsp()->unlinkFrBack();
             pushDeletep(lhsp);
             AstNodeAssign* const assignXZp = nodep->cloneTree(false);
             {
@@ -2084,6 +2096,17 @@ class FourstateVisitor final : public VNVisitor {
                 nodep->dtypeFrom(newLhsp);
             }
             if (AstAssignW* const assignWValuep = VN_CAST(nodep, AssignW)) {
+                while (lhsp) {
+                    if (const AstSel* const selp = VN_CAST(lhsp, Sel)) {
+                        lhsp = selp->fromp();
+                    } else if (const AstArraySel* const aselp = VN_CAST(lhsp, ArraySel)) {
+                        lhsp = aselp->fromp();
+                    } else if (const AstSliceSel* const sselp = VN_CAST(lhsp, SliceSel)) {
+                        lhsp = sselp->fromp();
+                    } else {
+                        break;
+                    }
+                }
                 if (const AstNodeVarRef* const lhsVarRefp = VN_CAST(lhsp, NodeVarRef)) {
                     assignWConflictResolution(lhsVarRefp->varp(), assignWValuep,
                                               VN_AS(assignXZp, AssignW));
@@ -2094,7 +2117,7 @@ class FourstateVisitor final : public VNVisitor {
                     }
                 } else {
                     nodep->v3warn(E_UNSUPPORTED,
-                                  "Fourstate LHS other than a simple variable "
+                                  "Fourstate LHS other than a simple variable or select "
                                   "reference is not supported with continuous assignment");
                 }
             }

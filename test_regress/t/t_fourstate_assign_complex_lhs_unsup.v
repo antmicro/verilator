@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: CC0-1.0
 
 module t;
-  logic [15:0] x = 2;
-  logic y;
-  assign x[1] = y;
+  logic a, b;
+  logic [1:0] c = 2'b1x;
+  assign {>>{a, b}} = c;
 
   initial begin
     $write("*-* All Finished *-*\n");

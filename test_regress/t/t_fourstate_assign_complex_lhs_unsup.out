@@ -1,6 +1,6 @@
-%Error-UNSUPPORTED: t/t_fourstate_assign_complex_lhs_unsup.v:10:15: Fourstate LHS other than a simple variable reference is not supported with continuous assignment
+%Error-UNSUPPORTED: t/t_fourstate_assign_complex_lhs_unsup.v:10:21: Fourstate LHS other than a simple variable or select reference is not supported with continuous assignment
                                                                   : ... note: In instance 't'
-   10 |   assign x[1] = y;
-      |               ^
+   10 |   assign {>>{a, b}} = c;
+      |                     ^
                     ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
 %Error: Exiting due to

@@ -1269,6 +1269,13 @@ class FourstateVisitor final : public VNVisitor {
                                  getFourstateExpressionXZ(notp->lhsp())};
         }
 
+        void visit(AstLogNot* const logNotp) override {
+            FileLine* const flp = logNotp->fileline();
+            AstNodeExpr* const knownOnep
+                = new AstRedOr{flp, m_fourstateVisitor.getTwoStateCast(logNotp->lhsp())};
+            m_result = new AstLogNot{flp, knownOnep};
+        }
+
         template <typename CompoarisonOp_T>
         void visitCompare(CompoarisonOp_T* const cmpp) {
             // |(a.xz | b.xz) | (a.value op b.value)
@@ -1882,6 +1889,15 @@ class FourstateVisitor final : public VNVisitor {
                                                     varRefp->width(), 0};
                 m_result = newp;
             }
+        }
+
+        void visit(AstLogNot* const logNotp) override {
+            FileLine* const flp = logNotp->fileline();
+            AstNodeExpr* const knownOnep
+                = new AstRedOr{flp, m_fourstateVisitor.getTwoStateCast(logNotp->lhsp())};
+            m_result
+                = new AstLogAnd{flp, new AstRedOr{flp, getFourstateExpressionXZ(logNotp->lhsp())},
+                                new AstLogNot{flp, knownOnep}};
         }
 
         void visit(AstNodeExpr* const nodep) override {

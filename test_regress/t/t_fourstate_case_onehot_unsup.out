@@ -14,7 +14,4 @@
 %Error-UNSUPPORTED: t/t_case_onehot.v:87:5: Unsupported: Operator ONEHOT not supported in the four-state mode
    87 |     case (1'b1)  /*verilator parallel_case*/
       |     ^~~~
-%Error-UNSUPPORTED: t/t_case_onehot.v:87:5: Unsupported: Operator LOGNOT not supported in the four-state mode
-   87 |     case (1'b1)  /*verilator parallel_case*/
-      |     ^~~~
 %Error: Exiting due to

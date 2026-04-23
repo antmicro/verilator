@@ -262,6 +262,11 @@ class FourstateLogicTypePropagator final : public VNVisitor {
         setFourstate(nodep, false, m_fourstateInSubtree);
     }
 
+    void visit(AstCountBits* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, false, m_fourstateInSubtree);
+    }
+
     void visit(AstSFormatArg* const nodep) override {
         iterateChildrenSeparately(nodep);
         setFourstate(nodep, isFourstate(nodep->exprp()), m_fourstateInSubtree);
@@ -403,6 +408,7 @@ class FourstateLogicTypePropagator final : public VNVisitor {
 
     void visit(AstNodeExpr* const nodep) override {
         iterateChildrenSeparately(nodep);
+        UASSERT_OBJ(nodep->dtypep(), nodep, "Expression has no dtype");
         if (AstBasicDType* const basicp = VN_CAST(nodep->dtypep()->skipRefOrNullp(), BasicDType)) {
             if (basicp->keyword().isIntNumeric()) {
                 nodep->v3warn(E_UNSUPPORTED, "Unsupported: Operator "
@@ -1276,6 +1282,38 @@ class FourstateVisitor final : public VNVisitor {
             m_result = new AstLogNot{flp, knownOnep};
         }
 
+        void visit(AstOneHot* const nodep) override {
+            FileLine* const flp = nodep->fileline();
+            AstCountBits* const countBitsp
+                = new AstCountBits{flp, getFourstateExpressionValue(nodep->lhsp()),
+                                   new AstConst{flp, AstConst::BitTrue{}}};
+            countBitsp->dtypeSetLogicUnsized(32, V3Number::log2b(countBitsp->lhsp()->width()) + 1,
+                                             VSigning::SIGNED);
+            m_result = new AstEq{flp, countBitsp, new AstConst{flp, 1}};
+        }
+
+        void visit(AstOneHot0* const nodep) override {
+            FileLine* const flp = nodep->fileline();
+            AstCountBits* const countBitsp
+                = new AstCountBits{flp, getFourstateExpressionValue(nodep->lhsp()),
+                                   new AstConst{flp, AstConst::BitTrue{}}};
+            countBitsp->dtypeSetLogicUnsized(32, V3Number::log2b(countBitsp->lhsp()->width()) + 1,
+                                             VSigning::SIGNED);
+            m_result = new AstLte{flp, countBitsp, new AstConst{flp, 1}};
+        }
+
+        void visit(AstCountBits* const nodep) override {
+            FileLine* const flp = nodep->fileline();
+            AstCountBits* const newp
+                = new AstCountBits{flp, getFourstateExpressionValue(nodep->lhsp(), false),
+                                   getFourstateExpressionValue(nodep->rhsp(), false),
+                                   getFourstateExpressionValue(nodep->thsp(), false),
+                                   getFourstateExpressionValue(nodep->fhsp(), false)};
+            newp->dtypeSetLogicUnsized(32, V3Number::log2b(newp->lhsp()->width()) + 1,
+                                       VSigning::SIGNED);
+            m_result = newp;
+        }
+
         template <typename CompoarisonOp_T>
         void visitCompare(CompoarisonOp_T* const cmpp) {
             // |(a.xz | b.xz) | (a.value op b.value)
@@ -1898,6 +1936,19 @@ class FourstateVisitor final : public VNVisitor {
             m_result
                 = new AstLogAnd{flp, new AstRedOr{flp, getFourstateExpressionXZ(logNotp->lhsp())},
                                 new AstLogNot{flp, knownOnep}};
+        }
+
+        void visit(AstOneHot* const nodep) override {
+            m_result = new AstConst{nodep->fileline(), AstConst::BitFalse{}};
+        }
+
+        void visit(AstOneHot0* const nodep) override {
+            m_result = new AstConst{nodep->fileline(), AstConst::BitFalse{}};
+        }
+
+        void visit(AstCountBits* const nodep) override {
+            m_result
+                = new AstConst{nodep->fileline(), AstConst::WidthedValue{}, nodep->width(), 0U};
         }
 
         void visit(AstNodeExpr* const nodep) override {

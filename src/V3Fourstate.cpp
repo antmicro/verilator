@@ -1580,6 +1580,14 @@ class FourstateVisitor final : public VNVisitor {
         //                            structSelp->name() + VALUE_SUFFIX};
         // }
 
+        void visit(AstCastWrap* const castp) override {
+            noTmp();
+            AstCastWrap* const newp
+                = new AstCastWrap{castp->fileline(), getFourstateExpressionValue(castp->lhsp())};
+            newp->dtypep(getTwoStateDtype(castp->dtypep()));
+            m_result = newp;
+        }
+
         void visit(AstNodeVarRef* const varRefp) override {
             noTmp();
             if (needsSplitting(varRefp->varp()->dtypep())) {
@@ -1864,6 +1872,14 @@ class FourstateVisitor final : public VNVisitor {
         //         structSelp->fromp()->cloneTree(false),
         //                            structSelp->name() + XZ_SUFFIX};
         // }
+
+        void visit(AstCastWrap* const castp) override {
+            noTmp();
+            AstCastWrap* const newp
+                = new AstCastWrap{castp->fileline(), getFourstateExpressionXZ(castp->lhsp())};
+            newp->dtypep(getTwoStateDtype(castp->dtypep()));
+            m_result = newp;
+        }
 
         void visit(AstNodeFTaskRef* const funcp) override {
             fourstateExpressionFuncRefHandler(funcp);

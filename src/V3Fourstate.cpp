@@ -813,7 +813,7 @@ class FourstateVisitor final : public VNVisitor {
         AstVar* const newXzp = varp->cloneTree(false);
         newXzp->name(newXzp->name() + XZ_SUFFIX);
         if (const AstBasicDType* const basicp = varp->dtypep()->basicp()) {
-            newXzp->fourstateOriginalDTypeKwd(varp->dtypep()->basicp()->keyword());
+            newXzp->fourstateOriginalDTypeKwd(basicp->keyword());
         }
         newXzp->dtypep(getTwoStateDtype(varp->dtypep()));
         if (AstNodeExpr* const valuep = VN_CAST(newXzp->valuep(), NodeExpr)) {

@@ -142,6 +142,7 @@ class TraceDeclVisitor final : public VNVisitor {
     uint32_t m_offset = std::numeric_limits<uint32_t>::max();  // Offset for types
     int m_topFuncSize = 0;  // Size of the top function currently being built
     int m_subFuncSize = 0;  // Size of the sub function currently being built
+    bool m_forceNewFunc = false;
     size_t m_topScopeRootFuncCount = 0;  // Top-scope init functions used only for wrapper IOs
     bool m_topScopeRootPhase = false;  // Emitting top-scope wrapper IO declarations
     const int m_funcSizeLimit  // Maximum size of a function
@@ -304,7 +305,7 @@ class TraceDeclVisitor final : public VNVisitor {
             return;
         }
         // Defer trace splitting until V3Trace
-        if (m_subFuncps.empty()) {
+        if (m_subFuncps.empty() || m_forceNewFunc) {
             FileLine* const flp = m_currScopep->fileline();
             const string n = cvtToStr(m_subFuncps.size());
             const string name
@@ -315,6 +316,8 @@ class TraceDeclVisitor final : public VNVisitor {
             AstCFunc* const funcp = newCFunc(flp, name);
             funcp->addStmtsp(new AstCStmt{flp, "const int c = vlSymsp->__Vm_baseCode;"});
             m_subFuncps.push_back(funcp);
+            m_forceNewFunc = false;
+            m_subFuncSize = 0;
         }
         m_subFuncps.back()->addStmtsp(stmtp);
         m_subFuncSize += stmtp->nodeCount();
@@ -713,7 +716,7 @@ class TraceDeclVisitor final : public VNVisitor {
                 m_topScopeRootPhase = false;
                 pathAdjustor.unwind();
                 m_topScopeRootFuncCount = m_subFuncps.size();
-                if (m_topScopeRootFuncCount) m_subFuncSize = m_funcSizeLimit + 1;
+                if (m_topScopeRootFuncCount) m_forceNewFunc = true;
             }
             for (const TraceEntry& entry : m_entries) {
                 AstVarScope* const vscp = entry.vscp();

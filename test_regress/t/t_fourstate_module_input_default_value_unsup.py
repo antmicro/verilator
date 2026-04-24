@@ -13,8 +13,6 @@ test.scenarios('linter')
 
 test.top_filename = 't/t_module_input_default_value.v'
 
-test.top_filename = 't/t_lint_unused_iface.v'
-
 test.lint(verilator_flags2=['--fourstate', '-Wno-FUTURE'],
           fails=True,
           expect_filename=test.golden_filename)

@@ -2407,7 +2407,7 @@ class FourstateVisitor final : public VNVisitor {
         AstVar* const varp = nodep->modVarp();
         if (!(varp->fourstateComplementp() || varp->isFourstateComplement())) {
             if (AstNodeExpr* const exprp = VN_CAST(nodep->exprp(), NodeExpr)) {
-                if (!needsSplitting(varp->dtypep()) || !isFourstate(exprp)) {
+                if (!(needsSplitting(varp->dtypep()) || isFourstate(exprp))) {
                     iterateChildren(nodep);
                     return;
                 }
@@ -2740,6 +2740,36 @@ class FourstateVisitor final : public VNVisitor {
 
     void visit(AstPull* const nodep) override {
         nodep->v3warn(E_UNSUPPORTED, "Pullups and pulldowns are unsupported with --fourstate");
+    }
+
+    void visit(AstModport* const nodep) override {
+        for (AstNode* modportVarp = nodep->varsp(); modportVarp;
+             modportVarp = modportVarp->nextp()) {
+            if (AstModportVarRef* const varrefp = VN_CAST(modportVarp, ModportVarRef)) {
+                if (varrefp->exprp()) {
+                    varrefp->exprp()->v3warn(
+                        E_UNSUPPORTED,
+                        "Unsupported: modport var ref with expression in fourstate mode");
+                }
+                if (AstVar* const varp = varrefp->varp()) {
+                    if (needsSplitting(varp->dtypep())) {
+                        splitVar(varp);
+                        AstVar* const valueVarp = getValuePartVarp(varp);
+                        AstVar* const xzVarp = getSplittedXZ(varp);
+                        varrefp->varp(valueVarp);
+                        varrefp->name(valueVarp->name());
+                        AstModportVarRef* const xzp = new AstModportVarRef{
+                            varrefp->fileline(), xzVarp->name(), varrefp->direction()};
+                        xzp->varp(xzVarp);
+                        varrefp->addNextHere(xzp);
+                        modportVarp = xzp;
+                    }
+                }
+            } else {
+                modportVarp->v3warn(E_UNSUPPORTED,
+                                    "Unsupported: modport type is unsupported with --fourstate");
+            }
+        }
     }
 
     void visit(AstModportVarRef* const nodep) override {

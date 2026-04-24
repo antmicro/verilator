@@ -1,6 +1,0 @@
-%Error-UNSUPPORTED: t/t_module_input_default_value.v:150:9: Unsupported: Nontrivial pin connection with --fourstate
-                                                          : ... note: In instance 't'
-  150 |     (.i(logic0_from_some_function()),   
-      |         ^~~~~~~~~~~~~~~~~~~~~~~~~
-                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
-%Error: Exiting due to

@@ -2647,7 +2647,8 @@ class FourstateVisitor final : public VNVisitor {
                 }
                 AstNodeExpr* exprValuep;
                 AstNodeExpr* exprXZp;
-                if (!(VN_IS(exprp, NodeVarRef) || VN_IS(exprp, Const))) {
+                if (!(VN_IS(exprp, NodeVarRef) || VN_IS(exprp, Const))
+                    && nodep->modVarp()->direction().isNonOutput()) {
                     // FIXME - this shall be completly refactored to sth like:
                     // form:
                     //   Pin(foo())
@@ -2655,67 +2656,26 @@ class FourstateVisitor final : public VNVisitor {
                     //  assign v = foo();
                     //  Pin(v)
                     FileLine* const flp = nodep->fileline();
-                    AstVar* const fvarValuep
-                        = new AstVar{flp, VVarType::PORT, m_tmpNames.get(nodep),
-                                     getTwoStateDtype(exprp->dtypep())};
-                    AstVar* const fvarXZp = new AstVar{flp, VVarType::PORT, m_tmpNames.get(nodep),
-                                                       getTwoStateDtype(exprp->dtypep())};
-                    fvarValuep->funcReturn(true);
-                    fvarXZp->funcReturn(true);
-                    fvarValuep->noReset(true);
-                    fvarXZp->noReset(true);
-                    fvarValuep->direction(VDirection::OUTPUT);
-                    fvarXZp->direction(VDirection::OUTPUT);
-                    fvarValuep->lifetime(VLifetime::AUTOMATIC_IMPLICIT);
-                    fvarXZp->lifetime(VLifetime::AUTOMATIC_IMPLICIT);
-                    AstFunc* funcValuep;
-                    {
-                        VL_RESTORER(m_tmpUnusedVarps);
-                        VL_RESTORER(m_currentStmtp);
-                        VL_RESTORER(m_currentTmpSpotp);
-                        VL_RESTORER(m_tmpFuncLocal);
-                        m_tmpFuncLocal = true;
-                        for (auto& it : m_tmpUnusedVarps) it.clear();
-                        StatementPlaceHolder stmt{*this, flp};
-                        funcValuep = new AstFunc{flp, m_pinHelpersNames.get(nodep) + "Value",
-                                                 stmt.stmtp(), fvarValuep};
-                        m_currentTmpSpotp = stmt.stmtp();
-                        m_currentStmtp = stmt.stmtp();
+                    AstVar* const varp = new AstVar{flp, VVarType::PORT, m_tmpNames.get(nodep),
+                                                    nodep->modVarp()->dtypep()};
+                    varp->noReset(true);
+                    varp->lifetime(VLifetime::STATIC_EXPLICIT);
+                    m_currentModp->addStmtsp(varp);
+                    splitVar(varp);
 
-                        funcValuep->addStmtsp(
-                            new AstAssign{flp, new AstVarRef{flp, fvarValuep, VAccess::WRITE},
-                                          getFourstateExpressionValue(exprp)});
-                        { FourstateLogicTypePropagator{funcValuep}; }
-                    }
-                    AstFunc* funcXZp;
-                    {
-                        VL_RESTORER(m_tmpUnusedVarps);
-                        VL_RESTORER(m_currentStmtp);
-                        VL_RESTORER(m_currentTmpSpotp);
-                        VL_RESTORER(m_tmpFuncLocal);
-                        m_tmpFuncLocal = true;
-                        for (auto& it : m_tmpUnusedVarps) it.clear();
-                        StatementPlaceHolder stmt{*this, flp};
-                        funcXZp = new AstFunc{flp, m_pinHelpersNames.get(nodep) + "XZ",
-                                              stmt.stmtp(), fvarXZp};
-                        m_currentStmtp = stmt.stmtp();
-                        m_currentTmpSpotp = stmt.stmtp();
-                        funcXZp->addStmtsp(
-                            new AstAssign{flp, new AstVarRef{flp, fvarXZp, VAccess::WRITE},
-                                          getFourstateExpressionXZ(exprp)});
-                        { FourstateLogicTypePropagator{funcXZp}; }
-                    }
-                    m_currentModp->addStmtsp(funcValuep);
-                    m_currentModp->addStmtsp(funcXZp);
-                    exprValuep = new AstFuncRef{flp, funcValuep};
-                    exprXZp = new AstFuncRef{flp, funcXZp};
+                    AstAlways* const alwaysp = new AstAlways{
+                        flp, VAlwaysKwd::ALWAYS_COMB, nullptr,
+                        new AstAssignW{flp, new AstVarRef{flp, varp, VAccess::WRITE},
+                                       exprp->unlinkFrBack()}};
+                    { FourstateLogicTypePropagator{alwaysp}; }
+                    m_currentModp->addStmtsp(alwaysp);
+                    exprValuep = new AstVarRef{flp, getSplittedValue(varp), VAccess::READ};
+                    exprXZp = new AstVarRef{flp, getSplittedXZ(varp), VAccess::READ};
                 } else {
                     exprValuep = getFourstateExpressionValue(exprp);
                     exprXZp = getFourstateExpressionXZ(exprp);
+                    exprp->unlinkFrBack()->deleteTree();
                 }
-                exprValuep = getFourstateExpressionValue(exprp);
-                exprXZp = getFourstateExpressionXZ(exprp);
-                exprp->unlinkFrBack()->deleteTree();
                 if (needsSplitting(varp->dtypep())) {
                     AstPin* const newp = new AstPin{
                         nodep->fileline(), nodep->pinNum(),

@@ -803,13 +803,19 @@ class EmitCTrace final : public EmitCFunc {
             if (AstVarRef* const varrefp = VN_CAST(exprp->valuep(), VarRef)) {
                 putVarRef(varrefp);
             } else {
+                puts("(");
                 iterateConst(exprp->valuep());
+                emitTraceIndex(nodep, arrayindex);
+                puts(")");
             }
             puts("), (");
             if (AstVarRef* const varrefp = VN_CAST(exprp->xzp(), VarRef)) {
                 putVarRef(varrefp);
             } else {
+                puts("(");
                 iterateConst(exprp->xzp());
+                emitTraceIndex(nodep, arrayindex);
+                puts(")");
             }
         } else if (AstVarRef* const varrefp = VN_CAST(nodep->valuep(), VarRef)) {
             putVarRef(varrefp);

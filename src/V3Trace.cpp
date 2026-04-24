@@ -665,11 +665,16 @@ class TraceVisitor final : public VNVisitor {
         funcp->isStatic(isTopFunc);
         // Add it to top scope
         m_topScopep->addBlocksp(funcp);
-        const std::string bufArg
-            = v3Global.opt.traceClassBase() + "::Buffer* bufp"
-              + (declp ? (", uint32_t offset, const " + declp->dtypep()->cType("", true, true)
-                          + " __VdtypeVar")
-                       : "");
+        const AstFourstateExpr* const fourstateExprp
+            = declp ? VN_CAST(declp->valuep(), FourstateExpr) : nullptr;
+        std::string bufArg = v3Global.opt.traceClassBase() + "::Buffer* bufp";
+        if (declp) {
+            const AstNodeDType* const dtypep
+                = fourstateExprp ? fourstateExprp->valuep()->dtypep() : declp->dtypep();
+            const std::string dtypeCType = dtypep->cType("", true, true);
+            bufArg += ", uint32_t offset, const " + dtypeCType + " __VdtypeVar";
+            if (fourstateExprp) bufArg += ", const " + dtypeCType + " __VdtypeVar__Vxz";
+        }
         if (isTopFunc) {
             // Top functions
             funcp->argTypes("void* voidSelf, " + bufArg);
@@ -735,12 +740,17 @@ class TraceVisitor final : public VNVisitor {
         AstCCall* const callp = new AstCCall{flp, funcp};
         callp->dtypeSetVoid();
         callp->argTypes("bufp, offset, __VdtypeVar");
+        if (VN_IS(declp->valuep(), FourstateExpr)) {
+            callp->argTypes(callp->argTypes() + ", __VdtypeVar__Vxz");
+        }
         parentp->addStmtsp(callp->makeStmt());
         return funcp;
     }
 
     AstCFunc* createConstDtypeTraceFunctions(const AstTraceDecl* declp) {
-        const AstNodeDType* const dtypep = declp->dtypep()->skipRefp();
+        const AstFourstateExpr* const fourstateExprp = VN_CAST(declp->valuep(), FourstateExpr);
+        const AstNodeDType* const dtypep
+            = (fourstateExprp ? fourstateExprp->valuep()->dtypep() : declp->dtypep())->skipRefp();
         auto pair = m_dtypeConstFuncs.emplace(dtypep, nullptr);
         if (pair.second) {
             FileLine* const flp = declp->fileline();
@@ -768,6 +778,18 @@ class TraceVisitor final : public VNVisitor {
         }
 
         return pair.first->second;
+    }
+
+    AstNodeExpr* dtypeTraceArgs(const AstTraceDecl* const declp) {
+        AstNodeExpr* argsp = nullptr;
+        if (const AstFourstateExpr* const fourstateExprp
+            = VN_CAST(declp->valuep(), FourstateExpr)) {
+            argsp = AstNode::addNext(argsp, fourstateExprp->valuep()->cloneTree(false));
+            argsp = AstNode::addNext(argsp, fourstateExprp->xzp()->cloneTree(false));
+        } else {
+            argsp = AstNode::addNext(argsp, declp->valuep()->cloneTree(false));
+        }
+        return argsp;
     }
 
     void createConstTraceFunctions(const TraceVec& traces) {
@@ -807,8 +829,7 @@ class TraceVisitor final : public VNVisitor {
                 FileLine* const flp = declp->fileline();
                 if (declp->dtypeCallp()) {
                     AstCFunc* const funcp = createConstDtypeTraceFunctions(declp);
-                    AstNodeExpr* argsp = nullptr;
-                    argsp = AstNode::addNext(argsp, declp->valuep()->cloneTree(false));
+                    AstNodeExpr* const argsp = dtypeTraceArgs(declp);
                     AstCCall* const callp = new AstCCall{flp, funcp, argsp};
                     callp->dtypeSetVoid();
                     callp->argTypes(callp->argTypes() + "bufp, " + std::to_string(declp->code()));
@@ -836,7 +857,9 @@ class TraceVisitor final : public VNVisitor {
     }
 
     DtypeFuncs createNonConstDtypeTraceFunctions(const AstTraceDecl* declp) {
-        AstNodeDType* dtypep = declp->dtypep()->skipRefp();
+        const AstFourstateExpr* const fourstateExprp = VN_CAST(declp->valuep(), FourstateExpr);
+        AstNodeDType* const dtypep
+            = (fourstateExprp ? fourstateExprp->valuep()->dtypep() : declp->dtypep())->skipRefp();
         auto pair = m_dtypeNonConstFuncs.emplace(dtypep, DtypeFuncs{});
         if (pair.second) {
             FileLine* const flp = declp->fileline();
@@ -949,15 +972,13 @@ class TraceVisitor final : public VNVisitor {
                 FileLine* const flp = declp->fileline();
                 if (declp->dtypeCallp()) {
                     DtypeFuncs funcs = createNonConstDtypeTraceFunctions(declp);
-                    AstNodeExpr* argsp = nullptr;
-                    argsp = AstNode::addNext(argsp, declp->valuep()->cloneTree(false));
+                    AstNodeExpr* argsp = dtypeTraceArgs(declp);
                     AstCCall* const callFullp = new AstCCall{flp, funcs.fullFuncp, argsp};
                     callFullp->dtypeSetVoid();
                     callFullp->argTypes(callFullp->argTypes() + "bufp, "
                                         + std::to_string(declp->code()));
                     subFulFuncp->addStmtsp(callFullp->makeStmt());
-                    argsp = nullptr;
-                    argsp = AstNode::addNext(argsp, declp->valuep()->cloneTree(false));
+                    argsp = dtypeTraceArgs(declp);
                     AstCCall* const callChgp = new AstCCall{flp, funcs.chgFuncp, argsp};
                     callChgp->dtypeSetVoid();
                     callChgp->argTypes(callChgp->argTypes() + "bufp, "

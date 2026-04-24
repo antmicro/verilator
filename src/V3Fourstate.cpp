@@ -89,6 +89,23 @@ static bool hasFourstateInSubtree(const AstNodeExpr* const exprp) {
     return getLogicType(exprp) == TWO_STATE_WITH_FOUR_STATE_IN_SUBTREE;
 }
 
+class ContainsFTaskRefVisitor final : public VNVisitor {
+    bool m_result = false;
+
+    void visit(AstNodeFTaskRef* const) override { m_result = true; }
+    void visit(AstNode* const nodep) override {
+        if (!m_result) iterateChildren(nodep);
+    }
+
+public:
+    explicit ContainsFTaskRefVisitor(AstNodeExpr* const exprp) { iterate(exprp); }
+    bool result() const { return m_result; }
+};
+
+static bool containsFTaskRef(AstNodeExpr* const exprp) {
+    return ContainsFTaskRefVisitor{exprp}.result();
+}
+
 template <typename T, typename = void>
 struct ReducerTrait final : std::false_type {};
 template <typename T>
@@ -123,13 +140,17 @@ static bool isStaticallyNGte(const V3Number& msb, const AstNodeExpr* const exprp
     return false;
 }
 static bool needsSplitting(const AstNodeDType* const dtypep) {
-    if (const AstBasicDType* const basicp = VN_CAST(dtypep->skipRefp(), BasicDType)) {
+    const AstNodeDType* const skipDTypep = dtypep->skipRefp();
+    if (const AstBasicDType* const basicp = VN_CAST(skipDTypep, BasicDType)) {
         return basicp->isFourstate();
     }
-    if (const AstStructDType* const structDtypep = VN_CAST(dtypep->skipRefp(), StructDType)) {
+    if (const AstStructDType* const structDtypep = VN_CAST(skipDTypep, StructDType)) {
         return structDtypep->isFourstate();
     }
-    if (const AstUnpackArrayDType* const containerDTypep = VN_CAST(dtypep, UnpackArrayDType)) {
+    if (const AstPackArrayDType* const containerDTypep = VN_CAST(skipDTypep, PackArrayDType)) {
+        return needsSplitting(containerDTypep->subDTypep()->skipRefp());
+    }
+    if (const AstUnpackArrayDType* const containerDTypep = VN_CAST(skipDTypep, UnpackArrayDType)) {
         return needsSplitting(containerDTypep->subDTypep()->skipRefp());
     }
     return false;
@@ -661,7 +682,7 @@ class FourstateVisitor final : public VNVisitor {
         if (const AstPackArrayDType* const containerDTypep = VN_CAST(dtypep, PackArrayDType)) {
             std::pair<bool, bool> subDtype
                 = isDTypepSupported(containerDTypep->subDTypep()->skipRefp());
-            return {subDtype.first && !subDtype.second, false};
+            return subDtype;
         }
         return {true, false};
     }
@@ -764,6 +785,10 @@ class FourstateVisitor final : public VNVisitor {
         if (resultp) return resultp;
         if (AstUnpackArrayDType* const arrayDtypep = VN_CAST(dtypep, UnpackArrayDType)) {
             AstUnpackArrayDType* const newp = arrayDtypep->cloneTree(false);
+            newp->refDTypep(getTwoStateDtype(arrayDtypep->virtRefDTypep()));
+            resultp = newp;
+        } else if (AstPackArrayDType* const arrayDtypep = VN_CAST(dtypep, PackArrayDType)) {
+            AstPackArrayDType* const newp = arrayDtypep->cloneTree(false);
             newp->refDTypep(getTwoStateDtype(arrayDtypep->virtRefDTypep()));
             resultp = newp;
         } else if (const AstBasicDType* const basicp = VN_CAST(dtypep, BasicDType)) {
@@ -2455,70 +2480,13 @@ class FourstateVisitor final : public VNVisitor {
                 }
                 AstNodeExpr* exprValuep;
                 AstNodeExpr* exprXZp;
-                if (!(VN_IS(exprp, NodeVarRef) || VN_IS(exprp, Const))) {
-                    // The issue lays in need for precalculations, potential side effects and lack
-                    // of arguments order evaluation guarantees. The idea to support it is to do
-                    // something like:
-                    //   Pin(foo())
-                    // will turn into:
-                    //   func helper()
-                    //     if (called) return;
-                    //     called = true;
-                    //     foo(tmpValue, tmpXZ)
-                    //   Pin((helper(), tmpValue), (helper(), tmpXZ))
-                    FileLine* const flp = nodep->fileline();
-                    AstVar* const fvarValuep
-                        = new AstVar{flp, VVarType::PORT, m_tmpNames.get(nodep),
-                                     getTwoStateDtype(exprp->dtypep())};
-                    AstVar* const fvarXZp = new AstVar{flp, VVarType::PORT, m_tmpNames.get(nodep),
-                                                       getTwoStateDtype(exprp->dtypep())};
-                    fvarValuep->direction(VDirection::OUTPUT);
-                    fvarXZp->direction(VDirection::OUTPUT);
-                    fvarValuep->lifetime(VLifetime::AUTOMATIC_IMPLICIT);
-                    fvarXZp->lifetime(VLifetime::AUTOMATIC_IMPLICIT);
-                    AstFunc* funcValuep;
-                    {
-                        VL_RESTORER(m_tmpUnusedVarps);
-                        VL_RESTORER(m_currentStmtp);
-                        VL_RESTORER(m_currentTmpSpotp);
-                        VL_RESTORER(m_tmpFuncLocal);
-                        m_tmpFuncLocal = true;
-                        StatementPlaceHolder stmt{*this, flp};
-                        funcValuep = new AstFunc{flp, m_pinHelpersNames.get(nodep) + "Value",
-                                                 stmt.stmtp(), fvarValuep};
-                        m_currentTmpSpotp = stmt.stmtp();
-                        m_currentStmtp = stmt.stmtp();
-
-                        funcValuep->addStmtsp(
-                            new AstAssign{flp, new AstVarRef{flp, fvarValuep, VAccess::WRITE},
-                                          getFourstateExpressionValue(exprp)});
-                        { FourstateLogicTypePropagator{funcValuep}; }
-                    }
-                    AstFunc* funcXZp;
-                    {
-                        VL_RESTORER(m_tmpUnusedVarps);
-                        VL_RESTORER(m_currentStmtp);
-                        VL_RESTORER(m_currentTmpSpotp);
-                        VL_RESTORER(m_tmpFuncLocal);
-                        m_tmpFuncLocal = true;
-                        StatementPlaceHolder stmt{*this, flp};
-                        funcXZp = new AstFunc{flp, m_pinHelpersNames.get(nodep) + "XZ",
-                                              stmt.stmtp(), fvarXZp};
-                        m_currentStmtp = stmt.stmtp();
-                        m_currentTmpSpotp = stmt.stmtp();
-                        funcXZp->addStmtsp(
-                            new AstAssign{flp, new AstVarRef{flp, fvarXZp, VAccess::WRITE},
-                                          getFourstateExpressionXZ(exprp)});
-                        { FourstateLogicTypePropagator{funcXZp}; }
-                    }
-                    m_currentModp->addStmtsp(funcValuep);
-                    m_currentModp->addStmtsp(funcXZp);
-                    exprValuep = new AstFuncRef{flp, funcValuep};
-                    exprXZp = new AstFuncRef{flp, funcXZp};
-                } else {
-                    exprValuep = getFourstateExpressionValue(exprp);
-                    exprXZp = getFourstateExpressionXZ(exprp);
+                if (!exprp->isPure() || containsFTaskRef(exprp)) {
+                    exprp->v3warn(E_UNSUPPORTED,
+                                  "Unsupported: Nontrivial pin connection with --fourstate");
+                    return;
                 }
+                exprValuep = getFourstateExpressionValue(exprp);
+                exprXZp = getFourstateExpressionXZ(exprp);
                 exprp->unlinkFrBack()->deleteTree();
                 if (needsSplitting(varp->dtypep())) {
                     AstPin* const newp = new AstPin{
@@ -2787,41 +2755,25 @@ class FourstateVisitor final : public VNVisitor {
     void visit(AstModport* const nodep) override {
         for (AstNode* modportVarp = nodep->varsp(); modportVarp;
              modportVarp = modportVarp->nextp()) {
-            if (AstModportVarRef* const varrefp = VN_CAST(modportVarp, ModportVarRef)) {
-                if (varrefp->exprp()) {
-                    varrefp->exprp()->v3warn(
-                        E_UNSUPPORTED,
-                        "Unsupported: modport var ref with expression in fourstate mode");
+            AstModportVarRef* const varrefp = VN_AS(modportVarp, ModportVarRef);
+            if (AstVar* const varp = varrefp->varp()) {
+                if (needsSplitting(varp->dtypep())) {
+                    splitVar(varp);
+                    AstVar* const valueVarp = getValuePartVarp(varp);
+                    AstVar* const xzVarp = getSplittedXZ(varp);
+                    varrefp->varp(valueVarp);
+                    varrefp->name(valueVarp->name());
+                    AstModportVarRef* const xzp = new AstModportVarRef{
+                        varrefp->fileline(), xzVarp->name(), varrefp->direction()};
+                    xzp->varp(xzVarp);
+                    varrefp->addNextHere(xzp);
+                    modportVarp = xzp;
                 }
-                if (AstVar* const varp = varrefp->varp()) {
-                    if (needsSplitting(varp->dtypep())) {
-                        splitVar(varp);
-                        AstVar* const valueVarp = getValuePartVarp(varp);
-                        AstVar* const xzVarp = getSplittedXZ(varp);
-                        varrefp->varp(valueVarp);
-                        varrefp->name(valueVarp->name());
-                        AstModportVarRef* const xzp = new AstModportVarRef{
-                            varrefp->fileline(), xzVarp->name(), varrefp->direction()};
-                        xzp->varp(xzVarp);
-                        varrefp->addNextHere(xzp);
-                        modportVarp = xzp;
-                    }
-                }
-            } else {
-                modportVarp->v3warn(E_UNSUPPORTED,
-                                    "Unsupported: modport type is unsupported with --fourstate");
             }
         }
     }
 
-    void visit(AstModportVarRef* const nodep) override {
-        if ((nodep->exprp() && isFourstate(nodep->exprp()))
-            || (nodep->varp() && needsSplitting(nodep->varp()->dtypep()))) {
-            nodep->v3warn(E_UNSUPPORTED, "modports are not supported with --fourstate");
-        } else {
-            iterateChildren(nodep);
-        }
-    }
+    void visit(AstModportVarRef* const nodep) override { iterateChildren(nodep); }
 
     void visit(AstNodeModule* const nodep) override {
         VL_RESTORER(m_currentTmpSpotp);

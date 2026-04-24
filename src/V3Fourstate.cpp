@@ -1271,11 +1271,12 @@ class FourstateVisitor final : public VNVisitor {
                 }
                 AstNodeExpr* const sourcep = VN_AS(pinsp->nextp(), NodeExpr);
                 if (!isFourstate(sourcep)) {
-                    sourcep->v3warn(E_UNSUPPORTED, "Copying to 4-state from 2-state");
-                    break;
+                    valuep->addPinsp(sourcep->cloneTree(false));
+                    xzp->addPinsp(createZeroOrOnesp(sourcep));
+                } else {
+                    valuep->addPinsp(getFourstateExpressionValue(sourcep));
+                    xzp->addPinsp(getFourstateExpressionXZ(sourcep));
                 }
-                valuep->addPinsp(getFourstateExpressionValue(sourcep));
-                xzp->addPinsp(getFourstateExpressionXZ(sourcep));
             } break;
             case VCMethod::DYN_CLEAR: break;
             case VCMethod::DYN_SIZE: {

@@ -1,0 +1,70 @@
+== Many jobs; redirecting STDIN
+==SUMMARY: Left 3773  Passed 0  Failed 0  Time 0:00
+driver.py: Found 8 cores, using -j 8
+==SUMMARY: Left 3759  Passed 4  Failed 9  Skipped 1  Running 8  Eta 83:34  Time 0:15
+vlt/t_trace_lib_default_fst: FAILED: Exec of verilator failed: %Warning-PINMISSING: t/t_trace_lib.v:18:8: Instance has missing pin: 'clk__Vxz'
+vlt/t_trace_lib_default_vcd: FAILED: Exec of verilator failed: %Warning-PINMISSING: t/t_trace_lib.v:18:8: Instance has missing pin: 'clk__Vxz'
+vlt/t_trace_lib_default_saif: FAILED: Exec of verilator failed: %Warning-PINMISSING: t/t_trace_lib.v:18:8: Instance has missing pin: 'clk__Vxz'
+vlt/t_trace_lib_notop_fst: FAILED: Exec of verilator failed: %Warning-PINMISSING: t/t_trace_lib.v:18:8: Instance has missing pin: 'clk__Vxz'
+vlt/t_trace_lib_notop_saif: FAILED: Exec of verilator failed: %Warning-PINMISSING: t/t_trace_lib.v:18:8: Instance has missing pin: 'clk__Vxz'
+vlt/t_trace_lib_notop_vcd: FAILED: Exec of verilator failed: %Warning-PINMISSING: t/t_trace_lib.v:18:8: Instance has missing pin: 'clk__Vxz'
+==SUMMARY: Left 3704  Passed 20  Failed 45  Skipped 4  Running 8  Eta 32:53  Time 0:30
+==SUMMARY: Left 3596  Passed 62  Failed 110  Skipped 5  Running 8  Eta 18:34  Time 0:45
+==SUMMARY: Left 3501  Passed 88  Failed 179  Skipped 5  Running 8  Eta 15:38  Time 1:00
+==SUMMARY: Left 3414  Passed 160  Failed 194  Skipped 5  Running 8  Eta 14:25  Time 1:15
+vlt/t_clk_inp_init: FAILED: Exec of obj_vlt/t_clk_inp_init/Vt_clk_inp_init failed: %Error: ../../t/t_clk_inp_init.cpp:44: %Error: Timeout; never got a $finish
+==SUMMARY: Left 3223  Passed 304  Failed 241  Skipped 5  Running 8  Eta 10:38  Time 1:30
+vlt/t_const_bitoptree_bug3096: FAILED: Exec of obj_vlt/t_const_bitoptree_bug3096/Vt_const_bitoptree_bug3096 failed: tb->illegal_instr_o: 1
+==SUMMARY: Left 3158  Passed 354  Failed 256  Skipped 5  Running 8  Eta 10:52  Time 1:45
+==SUMMARY: Left 3107  Passed 386  Failed 275  Skipped 5  Running 8  Eta 11:17  Time 2:01
+vlt/t_covergroup_unsup_ign2: FAILED: Exec of verilator failed: %Warning-COVERIGN: t/t_covergroup_unsup.v:38:3: Ignoring unsupported: covergroup
+==SUMMARY: Left 2999  Passed 446  Failed 321  Skipped 7  Running 8  Eta 10:32  Time 2:16
+==SUMMARY: Left 2930  Passed 490  Failed 346  Skipped 7  Running 8  Eta 10:30  Time 2:31
+dist/t_dist_untracked: FAILED: Files untracked in git or .gitignore: test_regress/test_results.txt
+vlt/t_dpi_export_noopt: FAILED: Exec of make failed: ../../t/t_dpi_export_c.cpp:193:22: error: cannot convert ‘svLogicVecVal*’ {aka ‘t_vpi_vecval*’} to ‘const svBitVecVal*’ {aka ‘const unsigned int*’}
+vlt/t_dpi_export: FAILED: Exec of make failed: ../../t/t_dpi_export_c.cpp:193:22: error: cannot convert ‘svLogicVecVal*’ {aka ‘t_vpi_vecval*’} to ‘const svBitVecVal*’ {aka ‘const unsigned int*’}
+vlt/t_dpi_if_cond: FAILED: Exec of make failed: Vt_dpi_if_cond___024root__0.cpp:66:32: error: lvalue required as left operand of assignment
+vlt/t_dpi_import: FAILED: Exec of make failed: mold: error: undefined symbol: dpii_v_reg
+==SUMMARY: Left 2886  Passed 519  Failed 361  Skipped 7  Running 8  Eta 10:48  Time 2:46
+vlt/t_dpi_result_type: FAILED: Exec of make failed: ../../t/t_dpi_result_type.cpp:311:16: error: too few arguments to function ‘void e_logic(svBit*, svBit*)’
+==SUMMARY: Left 2841  Passed 551  Failed 374  Skipped 7  Running 8  Eta 11:03  Time 3:01
+vlt/t_eq_wild_unsup: FAILED: Exec of verilator ok, but expected to fail
+==SUMMARY: Left 2796  Passed 582  Failed 388  Skipped 7  Running 8  Eta 11:14  Time 3:16
+==SUMMARY: Left 2715  Passed 649  Failed 401  Skipped 8  Running 8  Eta 10:50  Time 3:31
+vlt/t_flag_xinitial_unique: FAILED: file_grep_any: Regexp 'VL_SCOPED_RAND_RESET' not found in any of the following files:
+==SUMMARY: Left 2611  Passed 735  Failed 418  Skipped 9  Running 8  Eta 10:10  Time 3:46
+vlt/t_force_tri: FAILED: Exec of verilator ok, but expected to fail
+vlt/t_fourstate_format_unsup: FAILED: Exec of verilator ok, but expected to fail
+vlt/t_fourstate_fourstate_unsup: FAILED: Exec of verilator ok, but expected to fail
+==SUMMARY: Left 2476  Passed 829  Failed 458  Skipped 10  Running 8  Eta 9:13  Time 4:01
+vlt/t_dfg_bin_to_one_hot: FAILED: Exec of verilator failed: %Error: Verilator threw signal 15. Suggest trying --debug --gdbbt
+vlt/t_gate_primitives_implicit_net: FAILED: Exec of verilator failed: %Warning-IMPLICIT: t/t_gate_primitives_implicit_net.v:19:20: Signal definition not found, creating implicitly: 'i_and1'
+==SUMMARY: Left 2329  Passed 926  Failed 508  Skipped 10  Running 8  Eta 8:16  Time 4:16
+vlt/t_initial_edge_bad: FAILED: Exec of obj_vlt/t_initial_edge_bad/Vt_initial_edge_bad ok, but expected to fail
+==SUMMARY: Left 2151  Passed 1028  Failed 583  Skipped 11  Running 8  Eta 7:12  Time 4:31
+vlt/t_interface_tristate_hier: FAILED: Exec of obj_vlt/t_interface_tristate_hier/Vt_interface_tristate_hier failed: %Error: t/t_interface_tristate_hier.v:127:  got='h0000 exp='hzzzz
+==SUMMARY: Left 1959  Passed 1148  Failed 655  Skipped 11  Running 8  Eta 6:11  Time 4:46
+vlt/t_lib_prot_comb: FAILED: Exec of obj_vlt/t_lib_prot_comb/Vt_lib_prot_comb failed:
+==SUMMARY: Left 1878  Passed 1198  Failed 686  Skipped 11  Running 8  Eta 5:58  Time 5:01
+==SUMMARY: Left 1766  Passed 1283  Failed 713  Skipped 11  Running 8  Eta 5:34  Time 5:16
+==SUMMARY: Left 1597  Passed 1357  Failed 806  Skipped 13  Running 8  Eta 4:52  Time 5:31
+vlt/t_multidriven_simple: FAILED: Exec of obj_vlt/t_multidriven_simple/Vt_multidriven_simple failed: %Error: t/t_multidriven_simple.v:142:  got=0 exp=1 (v0 !== 1)
+vlt/t_no_trace_top: FAILED: VCD miscompares t/t_no_trace_top.out obj_vlt/t_no_trace_top/simno_trace_top.vcd
+==SUMMARY: Left 1409  Passed 1450  Failed 897  Skipped 17  Running 8  Eta 4:08  Time 5:46
+==SUMMARY: Left 1180  Passed 1632  Failed 944  Skipped 17  Running 8  Eta 3:17  Time 6:01
+vlt/t_public_clk: FAILED: Exec of obj_vlt/t_public_clk/Vt_public_clk failed: %Error: ../../t/t_public_clk.cpp:35: %Error: Timeout; never got a $finish
+vlt/t_protect_ids_key: FAILED: Exec of make failed: Vt_protect_ids_key_PSS3Gk__0.cpp:75:13: error: lvalue required as left operand of assignment
+==SUMMARY: Left 1049  Passed 1685  Failed 1022  Skipped 17  Running 8  Eta 2:54  Time 6:16
+vlt/t_select_ascending: FAILED: Exec of verilator failed: %Error: Internal Error: t/t_select_ascending.v:19:20: ../V3Dfg.cpp:687: Dfg type error for vertex OR in netlist: RHS should be same type
+==SUMMARY: Left 936  Passed 1755  Failed 1063  Skipped 19  Running 8  Eta 2:35  Time 6:31
+vlt/t_select_little: FAILED: Exec of verilator failed: %Error: Internal Error: t/t_select_little.v:19:20: ../V3Dfg.cpp:687: Dfg type error for vertex OR in netlist: RHS should be same type
+vlt/t_select_negative: FAILED: Exec of verilator failed: %Error: Internal Error: t/t_select_negative.v:23:26: ../V3Dfg.cpp:687: Dfg type error for vertex OR in netlist: RHS should be same type
+vlt/t_strength_2_uneq_assign: FAILED: Exec of verilator ok, but expected to fail
+vlt/t_strength_equal_strength: FAILED: Exec of obj_vlt/t_strength_equal_strength/Vt_strength_equal_strength failed: Error: a = 0, b = 001, c = 0, d = 0expected: a = 0, b = 011, c = 00000000000000000000000000000000, d = 00000000000000000000000000000000
+vlt/t_strength_strongest_constant: FAILED: Exec of obj_vlt/t_strength_strongest_constant/Vt_strength_strongest_constant failed: Error: a = 0, b = 00, c = 0 expected: a = 0, b = 11, c = 1
+vlt/t_strength_strongest_non_tristate: FAILED: Exec of obj_vlt/t_strength_strongest_non_tristate/Vt_strength_strongest_non_tristate failed: Error: a = 0, b = 0, c[0] = 0, expected: a = 0, b = 0, c[0] = 0
+==SUMMARY: Left 785  Passed 1823  Failed 1146  Skipped 19  Running 8  Eta 2:08  Time 6:46
+vlt/t_timing_clkgen1: FAILED: Exec of verilator failed: Vt_timing_clkgen1___024root__0.cpp:78:28: error: lvalue required as left operand of assignment
+==SUMMARY: Left 590  Passed 1933  Failed 1222  Skipped 28  Running 8  Eta 1:33  Time 7:01
+vlt/t_trace_ascendingrange_cc_fst: FAILED: Exec of obj_vlt/t_trace_ascendingrange_cc_fst/Vt_trace_ascendingrange_cc_fst failed:
+vlt/t_trace_ascendingrange_cc_vcd: FAILED: VCD miscompares t/t_trace_ascendingrange_cc_vcd.

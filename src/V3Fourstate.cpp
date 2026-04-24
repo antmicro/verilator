@@ -1233,6 +1233,31 @@ class FourstateVisitor final : public VNVisitor {
             setExprXZp(logOrp, resultXZTmpVarRefp);
         }
 
+        AstConsDynArray*
+        fourstateExpressionConsDynArrayHandler(AstConsDynArray* const consDynArrayp, bool xz) {
+            AstNodeExpr* const lhsp
+                = consDynArrayp->lhsp() ? consDynArrayp->lhsp()->unlinkFrBack() : nullptr;
+            AstNodeExpr* const rhsp
+                = consDynArrayp->rhsp() ? consDynArrayp->rhsp()->unlinkFrBack() : nullptr;
+            AstConsDynArray* const newp = consDynArrayp->cloneTree(false);
+            consDynArrayp->lhsp(lhsp);
+            consDynArrayp->rhsp(rhsp);
+            if (AstConsDynArray* const cp = VN_CAST(lhsp, ConsDynArray)) {
+                newp->lhsp(fourstateExpressionConsDynArrayHandler(cp, xz));
+            } else if (lhsp) {
+                newp->lhsp(xz ? getFourstateExpressionXZ(lhsp)
+                              : getFourstateExpressionValue(lhsp));
+            }
+            if (AstConsDynArray* const cp = VN_CAST(rhsp, ConsDynArray)) {
+                newp->rhsp(fourstateExpressionConsDynArrayHandler(cp, xz));
+            } else if (rhsp) {
+                newp->rhsp(xz ? getFourstateExpressionXZ(rhsp)
+                              : getFourstateExpressionValue(rhsp));
+            }
+            { FourstateLogicTypePropagator{newp}; }
+            return newp;
+        }
+
         void fourstateExpressionCMethodHardHandler(AstCMethodHard* const cMethodHardp) {
             if (cMethodHardp->withp()) {
                 cMethodHardp->withp()->v3warn(E_UNSUPPORTED,
@@ -1270,12 +1295,15 @@ class FourstateVisitor final : public VNVisitor {
                     xzp->addPinsp(pinsp->cloneTree(false));
                 }
                 AstNodeExpr* const sourcep = VN_AS(pinsp->nextp(), NodeExpr);
-                if (!isFourstate(sourcep)) {
-                    valuep->addPinsp(sourcep->cloneTree(false));
-                    xzp->addPinsp(createZeroOrOnesp(sourcep));
-                } else {
+                if (isFourstate(sourcep)) {
                     valuep->addPinsp(getFourstateExpressionValue(sourcep));
                     xzp->addPinsp(getFourstateExpressionXZ(sourcep));
+                } else if (AstConsDynArray* const consDynArrayp = VN_CAST(sourcep, ConsDynArray)) {
+                    valuep->addPinsp(fourstateExpressionConsDynArrayHandler(consDynArrayp, false));
+                    xzp->addPinsp(fourstateExpressionConsDynArrayHandler(consDynArrayp, true));
+                } else {
+                    sourcep->v3warn(E_UNSUPPORTED, "Copying to 4-state from 2-state");
+                    break;
                 }
             } break;
             case VCMethod::DYN_CLEAR: break;
@@ -2341,6 +2369,19 @@ class FourstateVisitor final : public VNVisitor {
         }
         iterateAndNextNull(nodep->thensp());
         iterateAndNextNull(nodep->elsesp());
+    }
+
+    void visit(AstWait* const nodep) override {
+        VL_RESTORER(m_currentStmtp);
+        TmpVarsReleaser tmpVarsReleaser{*this};
+        m_currentStmtp = nodep;
+        if (AstNodeExpr* const condp = nodep->condp()) {
+            if (isFourstate(condp)) {
+                nodep->condp(getTwoStateCast(condp->unlinkFrBack()));
+                condp->deleteTree();
+            }
+        }
+        iterateChildren(nodep);
     }
 
     void visit(AstCase* const nodep) override {

@@ -1577,6 +1577,20 @@ class FourstateVisitor final : public VNVisitor {
                                          replicatep->dtypep()->numeric());
         }
 
+        void visit(AstStreamL* const streamlp) override {
+            m_result = new AstStreamL{streamlp->fileline(),
+                                      getFourstateExpressionValue(streamlp->lhsp(), false),
+                                      streamlp->rhsp()->cloneTree(false)};
+            m_result->dtypep(getTwoStateDtype(streamlp->dtypep()));
+        }
+
+        void visit(AstStreamR* const streamrp) override {
+            m_result = new AstStreamR{streamrp->fileline(),
+                                      getFourstateExpressionValue(streamrp->lhsp(), false),
+                                      streamrp->rhsp()->cloneTree(false)};
+            m_result->dtypep(getTwoStateDtype(streamrp->dtypep()));
+        }
+
         void visit(AstMemberSel* const memberSelp) override {
             // This may potentially be called twice - for value and xz.
             // To fix it it simple need to be added to precalculations
@@ -1868,6 +1882,20 @@ class FourstateVisitor final : public VNVisitor {
                                         replicatep->countp()->cloneTree(false)};
             m_result->dtypeSetBitUnsized(replicatep->width(), replicatep->dtypep()->widthMin(),
                                          replicatep->dtypep()->numeric());
+        }
+
+        void visit(AstStreamL* const streamlp) override {
+            m_result = new AstStreamL{streamlp->fileline(),
+                                      getFourstateExpressionXZ(streamlp->lhsp(), false),
+                                      streamlp->rhsp()->cloneTree(false)};
+            m_result->dtypep(getTwoStateDtype(streamlp->dtypep()));
+        }
+
+        void visit(AstStreamR* const streamrp) override {
+            m_result = new AstStreamR{streamrp->fileline(),
+                                      getFourstateExpressionXZ(streamrp->lhsp(), false),
+                                      streamrp->rhsp()->cloneTree(false)};
+            m_result->dtypep(getTwoStateDtype(streamrp->dtypep()));
         }
 
         void visit(AstMemberSel* const memberSelp) override {

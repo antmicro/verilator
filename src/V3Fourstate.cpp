@@ -1414,22 +1414,18 @@ class FourstateVisitor final : public VNVisitor {
 
         void visit(AstOneHot* const nodep) override {
             FileLine* const flp = nodep->fileline();
-            AstCountBits* const countBitsp
-                = new AstCountBits{flp, getFourstateExpressionValue(nodep->lhsp()),
-                                   new AstConst{flp, AstConst::BitTrue{}}};
-            countBitsp->dtypeSetLogicUnsized(32, V3Number::log2b(countBitsp->lhsp()->width()) + 1,
-                                             VSigning::SIGNED);
-            m_result = new AstEq{flp, countBitsp, new AstConst{flp, 1}};
+
+            m_result = new AstOneHot{
+                flp, new AstAnd{flp, getFourstateExpressionValue(nodep->lhsp(), false),
+                                new AstNot{flp, getFourstateExpressionXZ(nodep->lhsp(), false)}}};
         }
 
         void visit(AstOneHot0* const nodep) override {
             FileLine* const flp = nodep->fileline();
-            AstCountBits* const countBitsp
-                = new AstCountBits{flp, getFourstateExpressionValue(nodep->lhsp()),
-                                   new AstConst{flp, AstConst::BitTrue{}}};
-            countBitsp->dtypeSetLogicUnsized(32, V3Number::log2b(countBitsp->lhsp()->width()) + 1,
-                                             VSigning::SIGNED);
-            m_result = new AstLte{flp, countBitsp, new AstConst{flp, 1}};
+
+            m_result = new AstOneHot0{
+                flp, new AstAnd{flp, getFourstateExpressionValue(nodep->lhsp(), false),
+                                new AstNot{flp, getFourstateExpressionXZ(nodep->lhsp(), false)}}};
         }
 
         void visit(AstCountBits* const nodep) override {

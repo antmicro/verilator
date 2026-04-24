@@ -2660,6 +2660,10 @@ class FourstateVisitor final : public VNVisitor {
                                      getTwoStateDtype(exprp->dtypep())};
                     AstVar* const fvarXZp = new AstVar{flp, VVarType::PORT, m_tmpNames.get(nodep),
                                                        getTwoStateDtype(exprp->dtypep())};
+                    fvarValuep->funcReturn(true);
+                    fvarXZp->funcReturn(true);
+                    fvarValuep->noReset(true);
+                    fvarXZp->noReset(true);
                     fvarValuep->direction(VDirection::OUTPUT);
                     fvarXZp->direction(VDirection::OUTPUT);
                     fvarValuep->lifetime(VLifetime::AUTOMATIC_IMPLICIT);

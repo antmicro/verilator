@@ -1326,6 +1326,14 @@ class FourstateVisitor final : public VNVisitor {
             m_result = newp;
         }
 
+        void visit(AstCLog2* const nodep) override {
+            FileLine* const flp = nodep->fileline();
+            AstCLog2* const clog2p
+                = new AstCLog2{flp, getFourstateExpressionValue(nodep->lhsp(), true)};
+            m_result = new AstCond{flp, new AstRedOr{flp, getFourstateExpressionXZ(nodep->lhsp())},
+                                   createZeroOrOnesp(nodep, true), clog2p};
+        }
+
         template <typename CompoarisonOp_T>
         void visitCompare(CompoarisonOp_T* const cmpp) {
             // |(a.xz | b.xz) | (a.value op b.value)
@@ -1977,6 +1985,12 @@ class FourstateVisitor final : public VNVisitor {
         void visit(AstCountBits* const nodep) override {
             m_result
                 = new AstConst{nodep->fileline(), AstConst::WidthedValue{}, nodep->width(), 0U};
+        }
+
+        void visit(AstCLog2* const nodep) override {
+            FileLine* const flp = nodep->fileline();
+            m_result = new AstCond{flp, new AstRedOr{flp, getFourstateExpressionXZ(nodep->lhsp())},
+                                   createZeroOrOnesp(nodep, true), createZeroOrOnesp(nodep)};
         }
 
         void visit(AstNodeExpr* const nodep) override {

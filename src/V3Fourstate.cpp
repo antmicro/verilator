@@ -89,23 +89,6 @@ static bool hasFourstateInSubtree(const AstNodeExpr* const exprp) {
     return getLogicType(exprp) == TWO_STATE_WITH_FOUR_STATE_IN_SUBTREE;
 }
 
-class ContainsFTaskRefVisitor final : public VNVisitor {
-    bool m_result = false;
-
-    void visit(AstNodeFTaskRef* const) override { m_result = true; }
-    void visit(AstNode* const nodep) override {
-        if (!m_result) iterateChildren(nodep);
-    }
-
-public:
-    explicit ContainsFTaskRefVisitor(AstNodeExpr* const exprp) { iterate(exprp); }
-    bool result() const { return m_result; }
-};
-
-static bool containsFTaskRef(AstNodeExpr* const exprp) {
-    return ContainsFTaskRefVisitor{exprp}.result();
-}
-
 template <typename T, typename = void>
 struct ReducerTrait final : std::false_type {};
 template <typename T>
@@ -151,6 +134,9 @@ static bool needsSplitting(const AstNodeDType* const dtypep) {
         return needsSplitting(containerDTypep->subDTypep()->skipRefp());
     }
     if (const AstUnpackArrayDType* const containerDTypep = VN_CAST(skipDTypep, UnpackArrayDType)) {
+        return needsSplitting(containerDTypep->subDTypep()->skipRefp());
+    }
+    if (const AstDynArrayDType* const containerDTypep = VN_CAST(dtypep, DynArrayDType)) {
         return needsSplitting(containerDTypep->subDTypep()->skipRefp());
     }
     return false;
@@ -337,10 +323,21 @@ class FourstateLogicTypePropagator final : public VNVisitor {
         setFourstate(nodep, false, m_fourstateInSubtree);
     }
 
-    // void visit(AstCMethodHard* const nodep) override {
-    //     iterateChildrenSeparately(nodep);
-    //     setFourstate(nodep, false, m_fourstateInSubtree);
-    // }
+    void visit(AstCMethodHard* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        switch (nodep->method()) {
+        case VCMethod::ARRAY_AT:
+        case VCMethod::ARRAY_AT_WRITE:
+        case VCMethod::DYN_CLEAR:
+        case VCMethod::DYN_RENEW:
+        case VCMethod::DYN_RENEW_COPY:
+        case VCMethod::DYN_SIZE: break;
+        default:
+            nodep->v3warn(E_UNSUPPORTED, "Unsupported CMethod hard: " << nodep->method().ascii());
+            break;
+        }
+        setFourstate(nodep, needsSplitting(nodep->fromp()->dtypep()), m_fourstateInSubtree);
+    }
 
     void visit(AstCExpr* const nodep) override {
         iterateChildrenSeparately(nodep);
@@ -787,9 +784,13 @@ class FourstateVisitor final : public VNVisitor {
             AstUnpackArrayDType* const newp = arrayDtypep->cloneTree(false);
             newp->refDTypep(getTwoStateDtype(arrayDtypep->virtRefDTypep()));
             resultp = newp;
-        } else if (AstPackArrayDType* const arrayDtypep = VN_CAST(dtypep, PackArrayDType)) {
-            AstPackArrayDType* const newp = arrayDtypep->cloneTree(false);
-            newp->refDTypep(getTwoStateDtype(arrayDtypep->virtRefDTypep()));
+        } else if (AstPackArrayDType* const packArrayDtypep = VN_CAST(dtypep, PackArrayDType)) {
+            AstPackArrayDType* const newp = packArrayDtypep->cloneTree(false);
+            newp->refDTypep(getTwoStateDtype(packArrayDtypep->subDTypep()));
+            resultp = newp;
+        } else if (AstDynArrayDType* const dynArrayDTypep = VN_CAST(dtypep, DynArrayDType)) {
+            AstDynArrayDType* const newp = dynArrayDTypep->cloneTree(false);
+            newp->refDTypep(getTwoStateDtype(dynArrayDTypep->subDTypep()));
             resultp = newp;
         } else if (const AstBasicDType* const basicp = VN_CAST(dtypep, BasicDType)) {
             return dtypep->findBitDType(basicp->width(), basicp->widthMin(), basicp->numeric());
@@ -1227,6 +1228,64 @@ class FourstateVisitor final : public VNVisitor {
             setExprXZp(logOrp, resultXZTmpVarRefp);
         }
 
+        void fourstateExpressionCMethodHardHandler(AstCMethodHard* const cMethodHardp) {
+            if (cMethodHardp->withp()) {
+                cMethodHardp->withp()->v3warn(E_UNSUPPORTED,
+                                              "With clausule is unsupported with --fourstate");
+            }
+            AstNodeExpr* const fromp = cMethodHardp->fromp()->unlinkFrBack();
+            AstNodeExpr* pinsp = nullptr;
+            if (cMethodHardp->pinsp()) pinsp = cMethodHardp->pinsp()->unlinkFrBackWithNext();
+            AstCMethodHard* const valuep = cMethodHardp->cloneTree(false);
+            AstCMethodHard* xzp = cMethodHardp->cloneTree(false);
+            cMethodHardp->fromp(fromp);
+            cMethodHardp->addPinsp(pinsp);
+            valuep->fromp(getFourstateExpressionValue(fromp, false));
+            xzp->fromp(getFourstateExpressionXZ(fromp, false));
+            switch (cMethodHardp->method()) {
+            case VCMethod::DYN_RENEW:
+            case VCMethod::ARRAY_AT_WRITE:
+            case VCMethod::ARRAY_AT: {
+                pinsp->purityCheck();
+                if (isFourstate(pinsp)) {
+                    valuep->addPinsp(m_fourstateVisitor.getTwoStateCast(pinsp));  // FIXME
+                    xzp->addPinsp(m_fourstateVisitor.getTwoStateCast(pinsp));  // FIXME
+                } else {
+                    valuep->addPinsp(pinsp->cloneTree(false));
+                    xzp->addPinsp(pinsp->cloneTree(false));
+                }
+            } break;
+            case VCMethod::DYN_RENEW_COPY: {
+                pinsp->purityCheck();
+                if (isFourstate(pinsp)) {
+                    valuep->addPinsp(m_fourstateVisitor.getTwoStateCast(pinsp));  // FIXME
+                    xzp->addPinsp(m_fourstateVisitor.getTwoStateCast(pinsp));  // FIXME
+                } else {
+                    valuep->addPinsp(pinsp->cloneTree(false));
+                    xzp->addPinsp(pinsp->cloneTree(false));
+                }
+                AstNodeExpr* const sourcep = VN_AS(pinsp->nextp(), NodeExpr);
+                if (!isFourstate(sourcep)) {
+                    sourcep->v3warn(E_UNSUPPORTED, "Copying to 4-state from 2-state");
+                    break;
+                }
+                valuep->addPinsp(getFourstateExpressionValue(sourcep));
+                xzp->addPinsp(getFourstateExpressionXZ(sourcep));
+            } break;
+            case VCMethod::DYN_CLEAR: break;
+            case VCMethod::DYN_SIZE: {
+                VL_DO_DANGLING(xzp->deleteTree(), xzp);
+                setExprXZp(cMethodHardp, createZeroOrOnesp(cMethodHardp));
+            } break;
+            default:
+                cMethodHardp->v3warn(
+                    E_UNSUPPORTED, "Unsupported CMethod hard: " << cMethodHardp->method().ascii());
+                break;
+            }
+            setExprValuep(cMethodHardp, valuep);
+            if (xzp) setExprXZp(cMethodHardp, xzp);
+        }
+
         AstNodeExpr* get(AstNodeExpr* const exprp, bool putIntoTmp = true) {
             // VN_AS is expected to be here (instead of VN_CAST)
             if (AstNodeExpr* result = getCache(exprp)) return result->cloneTree(false);
@@ -1491,7 +1550,7 @@ class FourstateVisitor final : public VNVisitor {
         void visit(AstArraySel* const arraySelp) override {
             arraySelp->bitp()->purityCheck();
             m_result = new AstArraySel{arraySelp->fileline(),
-                                       getFourstateExpressionValue(arraySelp->fromp()),
+                                       getFourstateExpressionValue(arraySelp->fromp(), false),
                                        isFourstate(arraySelp->bitp())
                                            ? m_fourstateVisitor.getTwoStateCast(arraySelp->bitp())
                                            : arraySelp->bitp()->cloneTree(false)};
@@ -1661,6 +1720,11 @@ class FourstateVisitor final : public VNVisitor {
                 varRefp->dtypep(getTwoStateDtype(varRefp->varp()->dtypep()));
                 m_result = newp;
             }
+        }
+
+        void visit(AstCMethodHard* const cMethodHardp) override {
+            fourstateExpressionCMethodHardHandler(cMethodHardp);
+            m_result = getExprValuep(cMethodHardp);
         }
 
         void visit(AstNodeExpr* const nodep) override {
@@ -2016,6 +2080,11 @@ class FourstateVisitor final : public VNVisitor {
                                                     varRefp->width(), 0};
                 m_result = newp;
             }
+        }
+
+        void visit(AstCMethodHard* const cMethodHardp) override {
+            fourstateExpressionCMethodHardHandler(cMethodHardp);
+            m_result = getExprXZp(cMethodHardp);
         }
 
         void visit(AstLogNot* const logNotp) override {
@@ -2480,10 +2549,67 @@ class FourstateVisitor final : public VNVisitor {
                 }
                 AstNodeExpr* exprValuep;
                 AstNodeExpr* exprXZp;
-                if (!exprp->isPure() || containsFTaskRef(exprp)) {
-                    exprp->v3warn(E_UNSUPPORTED,
-                                  "Unsupported: Nontrivial pin connection with --fourstate");
-                    return;
+                if (!(VN_IS(exprp, NodeVarRef) || VN_IS(exprp, Const))) {
+                    // FIXME - this shall be completly refactored to sth like:
+                    // form:
+                    //   Pin(foo())
+                    // to:
+                    //  assign v = foo();
+                    //  Pin(v)
+                    FileLine* const flp = nodep->fileline();
+                    AstVar* const fvarValuep
+                        = new AstVar{flp, VVarType::PORT, m_tmpNames.get(nodep),
+                                     getTwoStateDtype(exprp->dtypep())};
+                    AstVar* const fvarXZp = new AstVar{flp, VVarType::PORT, m_tmpNames.get(nodep),
+                                                       getTwoStateDtype(exprp->dtypep())};
+                    fvarValuep->direction(VDirection::OUTPUT);
+                    fvarXZp->direction(VDirection::OUTPUT);
+                    fvarValuep->lifetime(VLifetime::AUTOMATIC_IMPLICIT);
+                    fvarXZp->lifetime(VLifetime::AUTOMATIC_IMPLICIT);
+                    AstFunc* funcValuep;
+                    {
+                        VL_RESTORER(m_tmpUnusedVarps);
+                        VL_RESTORER(m_currentStmtp);
+                        VL_RESTORER(m_currentTmpSpotp);
+                        VL_RESTORER(m_tmpFuncLocal);
+                        m_tmpFuncLocal = true;
+                        for (auto& it : m_tmpUnusedVarps) it.clear();
+                        StatementPlaceHolder stmt{*this, flp};
+                        funcValuep = new AstFunc{flp, m_pinHelpersNames.get(nodep) + "Value",
+                                                 stmt.stmtp(), fvarValuep};
+                        m_currentTmpSpotp = stmt.stmtp();
+                        m_currentStmtp = stmt.stmtp();
+
+                        funcValuep->addStmtsp(
+                            new AstAssign{flp, new AstVarRef{flp, fvarValuep, VAccess::WRITE},
+                                          getFourstateExpressionValue(exprp)});
+                        { FourstateLogicTypePropagator{funcValuep}; }
+                    }
+                    AstFunc* funcXZp;
+                    {
+                        VL_RESTORER(m_tmpUnusedVarps);
+                        VL_RESTORER(m_currentStmtp);
+                        VL_RESTORER(m_currentTmpSpotp);
+                        VL_RESTORER(m_tmpFuncLocal);
+                        m_tmpFuncLocal = true;
+                        for (auto& it : m_tmpUnusedVarps) it.clear();
+                        StatementPlaceHolder stmt{*this, flp};
+                        funcXZp = new AstFunc{flp, m_pinHelpersNames.get(nodep) + "XZ",
+                                              stmt.stmtp(), fvarXZp};
+                        m_currentStmtp = stmt.stmtp();
+                        m_currentTmpSpotp = stmt.stmtp();
+                        funcXZp->addStmtsp(
+                            new AstAssign{flp, new AstVarRef{flp, fvarXZp, VAccess::WRITE},
+                                          getFourstateExpressionXZ(exprp)});
+                        { FourstateLogicTypePropagator{funcXZp}; }
+                    }
+                    m_currentModp->addStmtsp(funcValuep);
+                    m_currentModp->addStmtsp(funcXZp);
+                    exprValuep = new AstFuncRef{flp, funcValuep};
+                    exprXZp = new AstFuncRef{flp, funcXZp};
+                } else {
+                    exprValuep = getFourstateExpressionValue(exprp);
+                    exprXZp = getFourstateExpressionXZ(exprp);
                 }
                 exprValuep = getFourstateExpressionValue(exprp);
                 exprXZp = getFourstateExpressionXZ(exprp);

@@ -427,6 +427,11 @@ class FourstateLogicTypePropagator final : public VNVisitor {
         setFourstate(nodep, false, m_fourstateInSubtree);
     }
 
+    void visit(AstInsideRange* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, false, m_fourstateInSubtree);
+    }
+
     void visit(AstNodeExpr* const nodep) override {
         iterateChildrenSeparately(nodep);
         UASSERT_OBJ(nodep->dtypep(), nodep, "Expression has no dtype");
@@ -1466,6 +1471,17 @@ class FourstateVisitor final : public VNVisitor {
                 getFourstateExpressionXZ(neqWildp)};
         }
 
+        void visit(AstInsideRange* const insideRangep) override {
+            AstNodeExpr* const lhsp = VN_IS(insideRangep->lhsp(), Unbounded)
+                                          ? insideRangep->lhsp()->cloneTree(false)
+                                          : getFourstateExpressionValue(insideRangep->lhsp());
+            AstNodeExpr* const rhsp = VN_IS(insideRangep->rhsp(), Unbounded)
+                                          ? insideRangep->rhsp()->cloneTree(false)
+                                          : getFourstateExpressionValue(insideRangep->rhsp());
+            m_result = new AstInsideRange{insideRangep->fileline(), lhsp, rhsp};
+            m_result->dtypep(getTwoStateDtype(insideRangep->dtypep()));
+        }
+
         void visit(AstShiftL* const shiftlp) override {
             // |b.xz ? '1 : (a.value << b.value)
             FileLine* const flp = shiftlp->fileline();
@@ -1845,6 +1861,17 @@ class FourstateVisitor final : public VNVisitor {
             m_result = new AstRedOr{
                 flp, new AstAnd{flp, getFourstateExpressionXZ(neqWildp->lhsp(), false),
                                 new AstNot{flp, getFourstateExpressionXZ(neqWildp->rhsp())}}};
+        }
+
+        void visit(AstInsideRange* const insideRangep) override {
+            AstNodeExpr* const lhsp = VN_IS(insideRangep->lhsp(), Unbounded)
+                                          ? insideRangep->lhsp()->cloneTree(false)
+                                          : getFourstateExpressionXZ(insideRangep->lhsp());
+            AstNodeExpr* const rhsp = VN_IS(insideRangep->rhsp(), Unbounded)
+                                          ? insideRangep->rhsp()->cloneTree(false)
+                                          : getFourstateExpressionXZ(insideRangep->rhsp());
+            m_result = new AstInsideRange{insideRangep->fileline(), lhsp, rhsp};
+            m_result->dtypep(getTwoStateDtype(insideRangep->dtypep()));
         }
 
         void visit(AstShiftL* const shiftlp) override {
@@ -2322,6 +2349,38 @@ class FourstateVisitor final : public VNVisitor {
         m_caseMaskp = nullptr;
         m_currentStmtp = nodep;
         FileLine* const flp = nodep->exprp()->fileline();
+        if (nodep->caseInside()) {
+            for (AstCaseItem* itemp = nodep->itemsp(); itemp;
+                 itemp = VN_AS(itemp->nextp(), CaseItem)) {
+                for (AstNodeExpr *nextp, *condp = itemp->condsp(); condp; condp = nextp) {
+                    nextp = VN_AS(condp->nextp(), NodeExpr);
+                    AstNodeExpr* newp = nullptr;
+                    if (AstInsideRange* const insideRangep = VN_CAST(condp, InsideRange)) {
+                        newp = insideRangep->newAndFromInside(
+                            nodep->exprp()->cloneTreePure(false),
+                            insideRangep->lhsp()->cloneTreePure(false),
+                            insideRangep->rhsp()->cloneTreePure(false));
+                    } else {
+                        newp = AstEqWild::newTyped(condp->fileline(),
+                                                   nodep->exprp()->cloneTreePure(false),
+                                                   condp->cloneTreePure(false));
+                    }
+                    FourstateLogicTypePropagator{newp};
+                    if (isFourstate(newp)) {
+                        AstNodeExpr* const oldp = newp;
+                        newp = getTruthExpr(oldp);
+                        oldp->deleteTree();
+                    }
+                    VNRelinker relinker;
+                    condp->unlinkFrBack(&relinker);
+                    relinker.relink(newp);
+                    condp->deleteTree();
+                }
+            }
+            nodep->exprp()->unlinkFrBack()->deleteTree();
+            nodep->exprp(new AstConst{flp, AstConst::BitTrue{}});
+            FourstateLogicTypePropagator{nodep->exprp()};
+        }
         if (isFourstate(nodep->exprp())) {
             switch (nodep->caseType()) {
             case VCaseType::CT_CASE: {
@@ -2368,6 +2427,7 @@ class FourstateVisitor final : public VNVisitor {
                 oldp->deleteTree();
                 break;
             }
+            case VCaseType::CT_CASEINSIDE: break;
             default: nodep->v3warn(E_UNSUPPORTED, "Unsupported: case type"); break;
             }
             FourstateLogicTypePropagator{nodep->exprp()};
@@ -2924,6 +2984,7 @@ public:
         , m_fourstateGeneratorXZVisitor{*this} {
         { FourstateLogicTypePropagator{netlistp}; }
         iterate(netlistp);
+        V3Error::abortIfErrors();
         triorTriandReduce(m_assignWToTriand, triandReducer);
         triorTriandReduce(m_assignWToTrior, triorReducer);
         triorTriandReduce(m_assignWToWire, triReducer);

@@ -2231,32 +2231,32 @@ class FourstateVisitor final : public VNVisitor {
                 nodep->rhsp(newRhsp);
                 nodep->dtypeFrom(newLhsp);
             }
-            if (AstAssignW* const assignWValuep = VN_CAST(nodep, AssignW)) {
-                while (lhsp) {
-                    if (const AstSel* const selp = VN_CAST(lhsp, Sel)) {
-                        lhsp = selp->fromp();
-                    } else if (const AstArraySel* const aselp = VN_CAST(lhsp, ArraySel)) {
-                        lhsp = aselp->fromp();
-                    } else if (const AstSliceSel* const sselp = VN_CAST(lhsp, SliceSel)) {
-                        lhsp = sselp->fromp();
-                    } else {
-                        break;
-                    }
-                }
-                if (const AstNodeVarRef* const lhsVarRefp = VN_CAST(lhsp, NodeVarRef)) {
-                    assignWConflictResolution(lhsVarRefp->varp(), assignWValuep,
-                                              VN_AS(assignXZp, AssignW));
-                    if (const AstNode* const timingControlp = assignWValuep->timingControlp()) {
-                        timingControlp->v3warn(
-                            E_UNSUPPORTED,
-                            "Continuous assignment delays are unsupported with --fourstate");
-                    }
-                } else {
-                    nodep->v3warn(E_UNSUPPORTED,
-                                  "Fourstate LHS other than a simple variable or select "
-                                  "reference is not supported with continuous assignment");
-                }
-            }
+            // if (AstAssignW* const assignWValuep = VN_CAST(nodep, AssignW)) {
+            //     while (lhsp) {
+            //         if (const AstSel* const selp = VN_CAST(lhsp, Sel)) {
+            //             lhsp = selp->fromp();
+            //         } else if (const AstArraySel* const aselp = VN_CAST(lhsp, ArraySel)) {
+            //             lhsp = aselp->fromp();
+            //         } else if (const AstSliceSel* const sselp = VN_CAST(lhsp, SliceSel)) {
+            //             lhsp = sselp->fromp();
+            //         } else {
+            //             break;
+            //         }
+            //     }
+            //     if (const AstNodeVarRef* const lhsVarRefp = VN_CAST(lhsp, NodeVarRef)) {
+            //         assignWConflictResolution(lhsVarRefp->varp(), assignWValuep,
+            //                                   VN_AS(assignXZp, AssignW));
+            //         if (const AstNode* const timingControlp = assignWValuep->timingControlp()) {
+            //             timingControlp->v3warn(
+            //                 E_UNSUPPORTED,
+            //                 "Continuous assignment delays are unsupported with --fourstate");
+            //         }
+            //     } else {
+            //         nodep->v3warn(E_UNSUPPORTED,
+            //                       "Fourstate LHS other than a simple variable or select "
+            //                       "reference is not supported with continuous assignment");
+            //     }
+            // }
         } else if (isFourstate(nodep->rhsp())) {
             AstNodeExpr* const newRhsp = getTwoStateCast(nodep->rhsp());
             pushDeletep(nodep->rhsp()->unlinkFrBack());
@@ -2841,9 +2841,6 @@ class FourstateVisitor final : public VNVisitor {
         // Skip this tree since this expr is not supported anyway
     }
     void visit(AstFOpenMcd* const) override {
-        // Skip this tree since this expr is not supported anyway
-    }
-    void visit(AstCMethodHard* const) override {
         // Skip this tree since this expr is not supported anyway
     }
     void visit(AstConsPackUOrStruct* const) override {

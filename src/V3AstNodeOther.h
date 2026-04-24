@@ -1245,7 +1245,7 @@ public:
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
     string name() const override VL_MT_STABLE { return m_name; }
-    void name(string str) { m_name = std::move(str); }
+    void name(const string& str) override { m_name = str; }
     VDirection direction() const { return m_direction; }
     AstVar* varp() const VL_MT_STABLE { return m_varp; }  // [After Link] Pointer to variable
     void varp(AstVar* varp) { m_varp = varp; }

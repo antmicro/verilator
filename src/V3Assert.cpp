@@ -151,7 +151,6 @@ class AssertVisitor final : public VNVisitor {
     AstNode* m_passsp = nullptr;  // Current pass statement
     AstNode* m_failsp = nullptr;  // Current fail statement
     AstFinal* m_finalp = nullptr;  // Current final block
-    bool m_underAssert = false;  // Visited from assert
     // Map from (expression, senTree) to AstAlways that computes delayed values of the expression
     std::unordered_map<VNRef<AstNodeExpr>, std::unordered_map<VNRef<AstSenTree>, AstAlways*>>
         m_modExpr2Sen2DelayedAlwaysp;

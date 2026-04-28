@@ -645,15 +645,21 @@ string EmitCFunc::emitVarResetRecurse(const AstVar* varp, bool constructing,
             } else if (v3Global.opt.fourstate()
                        && (varp->fourstateComplementp() || varp->isFourstateComplement())) {
                 V3Number xNum{varp->fileline(), varp->width(), 0};
-                bool setTozero = false;
+                bool isTop = false;
+                bool moduleLevel = false;
                 if (varp->varType() == VVarType::PORT) {
                     const AstNode* iter = varp;
                     while (!iter->firstAbovep()) iter = iter->backp();
                     if (AstModule* const modep = VN_CAST(iter->firstAbovep(), Module)) {
-                        setTozero = modep->isTop();
+                        moduleLevel = true;
+                        isTop = modep->isTop();
                     }
                 }
-                if (!setTozero && (varp->isFourstateComplement() || !varp->varType().isNet())) {
+                std::cout << varp->name() << ": " << varp->varType() << '\n';
+                if ((!v3Global.opt.fourstateApi() || !isTop)
+                    && (varp->isFourstateComplement()
+                        || !(varp->varType().isNet()
+                             || (moduleLevel && varp->varType() == VVarType::PORT)))) {
                     xNum.setAllBits1();
                 }
                 out += " = ";

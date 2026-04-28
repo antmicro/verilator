@@ -11,10 +11,7 @@ import vltest_bootstrap
 
 test.scenarios('simulator')
 
-test.top_filename = 't/t_lint_unused_iface.v'
-
-test.compile(
-    verilator_flags2=['--binary', '--fourstate', '-Wno-FUTURE', '--Wall', '-Wno-DECLFILENAME'])
+test.compile(verilator_flags2=['--binary', '--fourstate', '-Wno-FUTURE', '-no-fourstate-api'])
 
 test.execute()
 

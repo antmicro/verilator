@@ -1150,10 +1150,14 @@ class TaskVisitor final : public VNVisitor {
                         // point to this task & thread's data, in addition
                         // to static info about the variable
                         const string name = portp->name() + "__Vopenarray";
-                        const string varCode
+                        string varCode
                             = ("VerilatedDpiOpenVar "
                                // NOLINTNEXTLINE(performance-inefficient-string-concatenation)
-                               + name + " (&" + propName + ", &" + portp->name() + ");\n");
+                               + name + " (&" + propName + ", &" + portp->name());
+                        if (const AstVar* const complementp = portp->fourstateComplementp()) {
+                            varCode += ", &" + complementp->name();
+                        }
+                        varCode += ");\n";
                         cfuncp->addStmtsp(new AstCStmt{portp->fileline(), varCode});
                         args += "&" + name;
                     } else {

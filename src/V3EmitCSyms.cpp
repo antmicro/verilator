@@ -231,19 +231,37 @@ class EmitCSyms final : EmitCBaseVisitorConst {
         const std::string varName = VIdProtect::protectIf(scopep->nameDotless(), scopep->protect())
                                     + "." + protect(varp->name());
 
+        auto emitComplement
+            = [&stmt, varp, scopep](const std::string& prefix, const std::string& suffix) {
+                  if (const AstVar* const complement = varp->fourstateComplementp()) {
+                      stmt += prefix;
+                      stmt += VIdProtect::protectIf(scopep->nameDotless(), scopep->protect()) + "."
+                              + protect(complement->name());
+                      stmt += suffix;
+                  } else {
+                      stmt += "nullptr, ";
+                  }
+              };
+
         if (!varp->isParam()) {
             stmt += ", &(";
             stmt += varName;
-            stmt += "), false, ";
+            stmt += "), ";
+            emitComplement("&(", "), ");
+            stmt += "false, ";
         } else if (varp->vlEnumType() == "VLVT_STRING"
                    && !VN_IS(varp->subDTypep(), UnpackArrayDType)) {
             stmt += ", const_cast<void*>(static_cast<const void*>(";
             stmt += varName;
-            stmt += ".c_str())), true, ";
+            stmt += ".c_str())), ";
+            emitComplement("const_cast<void*>(static_cast<const void*>(", ".c_str())), ");
+            stmt += "true, ";
         } else {
             stmt += ", const_cast<void*>(static_cast<const void*>(&(";
             stmt += varName;
-            stmt += "))), true, ";
+            stmt += "))), ";
+            emitComplement("const_cast<void*>(static_cast<const void*>(&(", "))), ");
+            stmt += "true, ";
         }
 
         stmt += varp->vlEnumType();  // VLVT_UINT32 etc

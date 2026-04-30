@@ -742,8 +742,9 @@ public:  // But internals only - called from verilated modules, VerilatedSyms
     ~VerilatedScope();
 
     void exportInsert(int finalize, const char* namep, void* cb) VL_MT_UNSAFE;
-    VerilatedVar* varInsert(const char* namep, void* datap, bool isParam, VerilatedVarType vltype,
-                            int vlflags, int udims, int pdims, ...) VL_MT_UNSAFE;
+    VerilatedVar* varInsert(const char* namep, void* datap, void* dataxzp, bool isParam,
+                            VerilatedVarType vltype, int vlflags, int udims, int pdims,
+                            ...) VL_MT_UNSAFE;
     VerilatedVar* forceableVarInsert(const char* namep, void* datap, bool isParam,
                                      VerilatedVarType vltype, int vlflags,
                                      void* forceReadSignalData, const char* forceReadSignalName,

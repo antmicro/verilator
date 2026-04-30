@@ -231,6 +231,7 @@ public:
         return m_fullname.c_str();
     }
     virtual void* varDatap() const { return m_varp->datap(); }
+    virtual void* varDataxzp() const { return m_varp->dataxzp(); }
     CData* varCDatap() const {
         VL_DEBUG_IFDEF(assert(varp()->vltype() == VLVT_UINT8););
         return reinterpret_cast<CData*>(varDatap());
@@ -360,12 +361,14 @@ public:
 
 class VerilatedVpioVar VL_NOT_FINAL : public VerilatedVpioVarBase {
     uint8_t* m_prevDatap = nullptr;  // Previous value of data, for cbValueChange
+    uint8_t* m_prevDataxzp = nullptr;  // Previous value of dataxz, for cbValueChange
     uint32_t m_entSize = 0;  // memoized variable size
     uint32_t m_bitOffset = 0;
     int32_t m_partselBits = -1;  // Part-select width, -1 means no part-select active
 
 protected:
     void* m_varDatap = nullptr;  // varp()->datap() adjusted for array entries
+    void* m_varDataxzp = nullptr;  // varp()->datap() adjusted for array entries
     std::vector<int32_t> m_index;
 
 public:
@@ -373,12 +376,14 @@ public:
         : VerilatedVpioVarBase{varp, scopep} {
         m_entSize = varp->entSize();
         m_varDatap = varp->datap();
+        m_varDataxzp = varp->dataxzp();
     }
     explicit VerilatedVpioVar(const VerilatedVpioVar* vop)
         : VerilatedVpioVarBase{vop} {
         if (vop) {
             m_entSize = vop->m_entSize;
             m_varDatap = vop->m_varDatap;
+            m_varDataxzp = vop->m_varDataxzp;
             m_index = vop->m_index;
             m_partselBits = vop->m_partselBits;
             m_bitOffset = vop->m_bitOffset;
@@ -387,6 +392,7 @@ public:
     }
     ~VerilatedVpioVar() override {
         if (m_prevDatap) VL_DO_CLEAR(delete[] m_prevDatap, m_prevDatap = nullptr);
+        if (m_prevDataxzp) VL_DO_CLEAR(delete[] m_prevDataxzp, m_prevDataxzp = nullptr);
     }
     // cppcheck-suppress duplInheritedMember
     static VerilatedVpioVar* castp(vpiHandle h) {
@@ -447,12 +453,16 @@ public:
         for (int dim = maxDim(isIndexedDimUnpacked()); dim > indexedDim() + 1; dim--)
             chunkSize *= varp()->range(dim)->elements();
 
-        if (isIndexedDimUnpacked())
-            ret->m_varDatap = (static_cast<uint8_t*>(ret->m_varDatap))
-                              + entSize() * chunkSize * (index - get_range()->low());
-        else
+        if (isIndexedDimUnpacked()) {
+            auto offset = entSize() * chunkSize * (index - get_range()->low());
+            ret->m_varDatap = (static_cast<uint8_t*>(ret->m_varDatap)) + offset;
+            if (ret->m_varDataxzp != nullptr) {
+                ret->m_varDataxzp = (static_cast<uint8_t*>(ret->m_varDataxzp)) + offset;
+            }
+        } else {
             // Packed arrays are stored left-to-right, not high index to low index
             ret->m_bitOffset += chunkSize * std::abs(index - get_range()->right());
+        }
 
         return ret;
     }
@@ -474,11 +484,19 @@ public:
         return t_out.c_str();
     }
     void* prevDatap() const { return m_prevDatap; }
+    void* prevDataxzp() const { return m_prevDataxzp; }
     void* varDatap() const override { return m_varDatap; }
+    void* varDataxzp() const override { return m_varDataxzp; }
     void createPrevDatap() {
         if (VL_UNLIKELY(!m_prevDatap)) {
             m_prevDatap = new uint8_t[entSize()];
             std::memcpy(prevDatap(), m_varDatap, entSize());
+        }
+    }
+    void createPrevDataxzp() {
+        if (m_varDataxzp && VL_UNLIKELY(!m_prevDataxzp)) {
+            m_prevDataxzp = new uint8_t[entSize()];
+            std::memcpy(prevDataxzp(), m_varDataxzp, entSize());
         }
     }
 };
@@ -754,6 +772,7 @@ public:
         if (varop) {
             m_cbData.obj = m_varo.castVpiHandle();
             m_varo.createPrevDatap();
+            m_varo.createPrevDataxzp();
         } else {
             m_cbData.obj = nullptr;
         }
@@ -921,7 +940,8 @@ struct VerilatedVpiTimedCbsCmp final {
 };
 
 class VerilatedVpiError;
-void vl_vpi_put_word(const VerilatedVpioVar* vop, QData word, size_t bitCount, size_t addOffset);
+void vl_vpi_put_word(const VerilatedVpioVar* vop, QData word, QData wordxz, size_t bitCount,
+                     size_t addOffset);
 
 class VerilatedVpiImp final {
     enum { CB_ENUM_MAX_VALUE = cbAtEndOfSimTime + 1 };  // Maximum callback reason
@@ -1084,14 +1104,30 @@ public:
             VerilatedVpioVar* const varop
                 = reinterpret_cast<VerilatedVpioVar*>(ho.cb_datap()->obj);
             void* const newDatap = varop->varDatap();
+            void* const newDataxzp = varop->varDataxzp();
             void* const prevDatap = varop->prevDatap();  // Was malloced when we added the callback
+            void* const prevDataxzp
+                = varop->prevDataxzp();  // Was malloced when we added the callback
             VL_DEBUG_IF_PLI(VL_DBG_MSGF("- vpi: value_test %s v[0]=%d/%d %p %p\n",
                                         varop->fullname(), *(static_cast<CData*>(newDatap)),
                                         *(static_cast<CData*>(prevDatap)), newDatap, prevDatap););
-            if (std::memcmp(prevDatap, newDatap, varop->entSize()) != 0) {
+            if (newDataxzp) {
+                VL_DEBUG_IF_PLI(VL_DBG_MSGF("- vpi: value_test %s xz v[0]=%d/%d %p %p\n",
+                                            varop->fullname(), *(static_cast<CData*>(newDataxzp)),
+                                            *(static_cast<CData*>(prevDataxzp)), newDataxzp,
+                                            prevDataxzp););
+            }
+            if (std::memcmp(prevDatap, newDatap, varop->entSize()) != 0
+                || (newDataxzp != nullptr
+                    && std::memcmp(prevDataxzp, newDataxzp, varop->entSize()) != 0)) {
                 VL_DEBUG_IF_PLI(VL_DBG_MSGF("- vpi: value_callback %" PRId64 " %s v[0]=%d\n",
                                             ho.id(), varop->fullname(),
                                             *(static_cast<CData*>(newDatap))););
+                if (newDataxzp != nullptr) {
+                    VL_DEBUG_IF_PLI(
+                        VL_DBG_MSGF("- vpi: value_callback %" PRId64 " %s xz v[0]=%d\n", ho.id(),
+                                    varop->fullname(), *(static_cast<CData*>(newDataxzp))););
+                }
                 update.insert(varop);
                 vpi_get_value(ho.cb_datap()->obj, ho.cb_datap()->value);
                 (ho.cb_rtnp())(ho.cb_datap());
@@ -1101,6 +1137,9 @@ public:
         }
         for (const VerilatedVpioVar* const ip : update) {
             std::memcpy(ip->prevDatap(), ip->varDatap(), ip->entSize());
+            if (ip->varDataxzp() != nullptr) {
+                std::memcpy(ip->prevDataxzp(), ip->varDataxzp(), ip->entSize());
+            }
         }
         return called;
     }
@@ -1125,10 +1164,10 @@ public:
     static ForceControlSignalVops getForceControlSignals(const VerilatedVpioVar* vop);
 
     template <typename T>
-    static T getReadDataWord(const VerilatedVpioVar* baseSignalVop,
-                             const VerilatedVpioVar* forceEnableSignalVop,
-                             const VerilatedVpioVar* forceValueSignalVop, size_t bitCount,
-                             size_t bitOffset);
+    static std::pair<T, T> getReadDataWord(const VerilatedVpioVar* baseSignalVop,
+                                           const VerilatedVpioVar* forceEnableSignalVop,
+                                           const VerilatedVpioVar* forceValueSignalVop,
+                                           size_t bitCount, size_t bitOffset);
 
     static std::size_t vlTypeSize(VerilatedVarType vltype);
     static void setAllBitsToValue(const VerilatedVpioVar* vop, uint8_t bitValue) {
@@ -1139,12 +1178,12 @@ public:
         const uint32_t varBits = vop->bitSize();
         const std::size_t numChunks = (varBits / wordSize);
         for (std::size_t i{0}; i < numChunks; ++i) {
-            vl_vpi_put_word(vop, word, wordSize, i * wordSize);
+            vl_vpi_put_word(vop, word, 0, wordSize, i * wordSize);
         }
         // addOffset == varBits would trigger assertion in vl_vpi_var_access_info even if
         // bitCount == 0, so first check if there is a remainder
         if (varBits % wordSize != 0)
-            vl_vpi_put_word(vop, word, varBits % wordSize, numChunks * wordSize);
+            vl_vpi_put_word(vop, word, 0, varBits % wordSize, numChunks * wordSize);
     }
 };
 
@@ -1455,32 +1494,34 @@ VerilatedVpiImp::getForceControlSignals(const VerilatedVpioVar* const baseSignal
         .forceRead{std::unique_ptr<VerilatedVpioVar>{forceReadSignalVop}}};
 }
 
-QData vl_vpi_get_word(const VerilatedVpioVarBase* vop, size_t bitCount, size_t addOffset);
+std::pair<QData, QData> vl_vpi_get_word(const VerilatedVpioVarBase* vop, size_t bitCount,
+                                        size_t addOffset);
 template <typename T>
-T VerilatedVpiImp::getReadDataWord(const VerilatedVpioVar* baseSignalVop,
-                                   const VerilatedVpioVar* forceEnableSignalVop,
-                                   const VerilatedVpioVar* forceValueSignalVop, size_t bitCount,
-                                   size_t bitOffset) {
+std::pair<T, T> VerilatedVpiImp::getReadDataWord(const VerilatedVpioVar* baseSignalVop,
+                                                 const VerilatedVpioVar* forceEnableSignalVop,
+                                                 const VerilatedVpioVar* forceValueSignalVop,
+                                                 size_t bitCount, size_t bitOffset) {
     // variables are QData, even though signals may have different representation, because any
     // extraneous bits are simply truncated upon implicit casting when this function is called.
-    const QData baseSignalData = vl_vpi_get_word(baseSignalVop, bitCount, bitOffset);
-    const QData forceEnableData = vl_vpi_get_word(forceEnableSignalVop, bitCount, bitOffset);
-    const QData forceValueData = vl_vpi_get_word(forceValueSignalVop, bitCount, bitOffset);
-    const QData readData
-        = (forceEnableData & forceValueData) | (~forceEnableData & baseSignalData);
-    return static_cast<T>(readData);
+    const auto baseSignalData = vl_vpi_get_word(baseSignalVop, bitCount, bitOffset);
+    const auto forceEnableData = vl_vpi_get_word(forceEnableSignalVop, bitCount, bitOffset);
+    const auto forceValueData = vl_vpi_get_word(forceValueSignalVop, bitCount, bitOffset);
+    const std::pair<QData, QData> readData{(forceEnableData.first & forceValueData.first)
+                                               | (~forceEnableData.first & baseSignalData.first),
+                                           (forceEnableData.first & forceValueData.second)
+                                               | (~forceEnableData.first & baseSignalData.second)};
+    return static_cast<std::pair<T, T>>(readData);
 }
 
 template <>
-double VerilatedVpiImp::getReadDataWord(const VerilatedVpioVar* baseSignalVop,
-                                        const VerilatedVpioVar* forceEnableSignalVop,
-                                        const VerilatedVpioVar* forceValueSignalVop,
-                                        size_t /*bitCount*/, size_t /*bitOffset*/) {
+std::pair<double, double> VerilatedVpiImp::getReadDataWord(
+    const VerilatedVpioVar* baseSignalVop, const VerilatedVpioVar* forceEnableSignalVop,
+    const VerilatedVpioVar* forceValueSignalVop, size_t /*bitCount*/, size_t /*bitOffset*/) {
     const double baseSignalData = *baseSignalVop->varRealDatap();
     const bool forceEnableData = *forceEnableSignalVop->varCDatap();
     const double forceValueData = *forceValueSignalVop->varRealDatap();
     const double readData = forceEnableData ? forceValueData : baseSignalData;
-    return readData;
+    return {readData, 0.0};
 }
 
 std::size_t VerilatedVpiImp::vlTypeSize(const VerilatedVarType vltype) {
@@ -2905,6 +2946,7 @@ static void vl_strprintf(std::string& buffer, char const* fmt, ...) {
 template <typename T>
 struct VarAccessInfo final {
     T* m_datap;  // Typed pointer to packed array base address
+    T* m_dataxzp;  // Typed pointer to packed array base address
     size_t m_bitOffset;  // Data start location (bit offset)
     size_t m_wordOffset;  // Data start location (word offset, VLVT_WDATA only)
     T m_maskLo;  // Access mask for m_datap[m_wordOffset]
@@ -2931,6 +2973,7 @@ VarAccessInfo<T> vl_vpi_var_access_info(const VerilatedVpioVarBase* vop, size_t 
 
     VarAccessInfo<T> info;
     info.m_datap = reinterpret_cast<T*>(vop->varDatap());
+    info.m_dataxzp = reinterpret_cast<T*>(vop->varDataxzp());
     if (vop->varp()->vltype() == VLVT_WDATA) {
         assert(sizeof(T) == sizeof(EData));
         assert(bitCount <= wordBits);
@@ -2966,34 +3009,63 @@ VarAccessInfo<T> vl_vpi_var_access_info(const VerilatedVpioVarBase* vop, size_t 
 }
 
 template <typename T>
-T vl_vpi_get_word_gen(const VerilatedVpioVarBase* vop, size_t bitCount, size_t addOffset) {
+std::pair<T, T> vl_vpi_get_word_gen(const VerilatedVpioVarBase* vop, size_t bitCount,
+                                    size_t addOffset) {
     const size_t wordBits = sizeof(T) * 8;
     const VarAccessInfo<T> info = vl_vpi_var_access_info<T>(vop, bitCount, addOffset);
-    if (info.m_maskHi)
-        return ((info.m_datap[info.m_wordOffset] & info.m_maskLo) >> info.m_bitOffset)
-               | ((info.m_datap[info.m_wordOffset + 1] & info.m_maskHi)
-                  << (wordBits - info.m_bitOffset));
-    return (info.m_datap[info.m_wordOffset] & info.m_maskLo) >> info.m_bitOffset;
+    if (info.m_maskHi) {
+        return {((info.m_datap[info.m_wordOffset] & info.m_maskLo) >> info.m_bitOffset)
+                    | ((info.m_datap[info.m_wordOffset + 1] & info.m_maskHi)
+                       << (wordBits - info.m_bitOffset)),
+                info.m_dataxzp != nullptr
+                    ? (((info.m_dataxzp[info.m_wordOffset] & info.m_maskLo) >> info.m_bitOffset)
+                       | ((info.m_dataxzp[info.m_wordOffset + 1] & info.m_maskHi)
+                          << (wordBits - info.m_bitOffset)))
+                    : 0};
+    }
+    return {(info.m_datap[info.m_wordOffset] & info.m_maskLo) >> info.m_bitOffset,
+            info.m_dataxzp != nullptr
+                ? ((info.m_dataxzp[info.m_wordOffset] & info.m_maskLo) >> info.m_bitOffset)
+                : 0};
 }
 
 template <typename T>
-void vl_vpi_put_word_gen(const VerilatedVpioVar* vop, T word, size_t bitCount, size_t addOffset) {
+void vl_vpi_put_word_gen(const VerilatedVpioVar* vop, T word, T wordxz, size_t bitCount,
+                         size_t addOffset) {
     const size_t wordBits = sizeof(T) * 8;
     const VarAccessInfo<T> info = vl_vpi_var_access_info<T>(vop, bitCount, addOffset);
 
-    if (info.m_maskHi) {
-        info.m_datap[info.m_wordOffset + 1]
-            = (info.m_datap[info.m_wordOffset + 1] & ~info.m_maskHi)
-              | ((word >> (wordBits - info.m_bitOffset)) & info.m_maskHi);
+    if (info.m_dataxzp != nullptr) {
+        if (info.m_maskHi) {
+            info.m_datap[info.m_wordOffset + 1]
+                = (info.m_datap[info.m_wordOffset + 1] & ~info.m_maskHi)
+                  | ((word >> (wordBits - info.m_bitOffset)) & info.m_maskHi);
+            info.m_dataxzp[info.m_wordOffset + 1]
+                = (info.m_dataxzp[info.m_wordOffset + 1] & ~info.m_maskHi)
+                  | ((wordxz >> (wordBits - info.m_bitOffset)) & info.m_maskHi);
+        }
+        // cppcheck-suppress unreadVariable
+        info.m_datap[info.m_wordOffset] = (info.m_datap[info.m_wordOffset] & ~info.m_maskLo)
+                                          | ((word << info.m_bitOffset) & info.m_maskLo);
+        info.m_dataxzp[info.m_wordOffset] = (info.m_dataxzp[info.m_wordOffset] & ~info.m_maskLo)
+                                            | ((wordxz << info.m_bitOffset) & info.m_maskLo);
+    } else {
+        word &= ~wordxz;
+        if (info.m_maskHi) {
+            info.m_datap[info.m_wordOffset + 1]
+                = ((info.m_datap[info.m_wordOffset + 1] & ~info.m_maskHi)
+                   | ((word >> (wordBits - info.m_bitOffset)) & info.m_maskHi));
+        }
+        // cppcheck-suppress unreadVariable
+        info.m_datap[info.m_wordOffset] = ((info.m_datap[info.m_wordOffset] & ~info.m_maskLo)
+                                           | ((word << info.m_bitOffset) & info.m_maskLo));
     }
-    // cppcheck-suppress unreadVariable
-    info.m_datap[info.m_wordOffset] = (info.m_datap[info.m_wordOffset] & ~info.m_maskLo)
-                                      | ((word << info.m_bitOffset) & info.m_maskLo);
 }
 
 // bitCount: maximum number of bits to read, will stop earlier if it reaches the var bounds
 // addOffset: additional read bitoffset
-QData vl_vpi_get_word(const VerilatedVpioVarBase* vop, size_t bitCount, size_t addOffset) {
+std::pair<QData, QData> vl_vpi_get_word(const VerilatedVpioVarBase* vop, size_t bitCount,
+                                        size_t addOffset) {
     switch (vop->varp()->vltype()) {
     case VLVT_UINT8: return vl_vpi_get_word_gen<CData>(vop, bitCount, addOffset);
     case VLVT_UINT16: return vl_vpi_get_word_gen<SData>(vop, bitCount, addOffset);
@@ -3003,20 +3075,21 @@ QData vl_vpi_get_word(const VerilatedVpioVarBase* vop, size_t bitCount, size_t a
     default:
         VL_VPI_ERROR_(__FILE__, __LINE__, "%s: Unsupported vltype (%d)", __func__,
                       vop->varp()->vltype());
-        return 0;
+        return {0, 0};
     }
 }
 
 // word: data to be written
 // bitCount: maximum number of bits to write, will stop earlier if it reaches the var bounds
 // addOffset: additional write bitoffset
-void vl_vpi_put_word(const VerilatedVpioVar* vop, QData word, size_t bitCount, size_t addOffset) {
+void vl_vpi_put_word(const VerilatedVpioVar* vop, QData word, QData wordxz, size_t bitCount,
+                     size_t addOffset) {
     switch (vop->varp()->vltype()) {
-    case VLVT_UINT8: vl_vpi_put_word_gen<CData>(vop, word, bitCount, addOffset); break;
-    case VLVT_UINT16: vl_vpi_put_word_gen<SData>(vop, word, bitCount, addOffset); break;
-    case VLVT_UINT32: vl_vpi_put_word_gen<IData>(vop, word, bitCount, addOffset); break;
-    case VLVT_UINT64: vl_vpi_put_word_gen<QData>(vop, word, bitCount, addOffset); break;
-    case VLVT_WDATA: vl_vpi_put_word_gen<EData>(vop, word, bitCount, addOffset); break;
+    case VLVT_UINT8: vl_vpi_put_word_gen<CData>(vop, word, wordxz, bitCount, addOffset); break;
+    case VLVT_UINT16: vl_vpi_put_word_gen<SData>(vop, word, wordxz, bitCount, addOffset); break;
+    case VLVT_UINT32: vl_vpi_put_word_gen<IData>(vop, word, wordxz, bitCount, addOffset); break;
+    case VLVT_UINT64: vl_vpi_put_word_gen<QData>(vop, word, wordxz, bitCount, addOffset); break;
+    case VLVT_WDATA: vl_vpi_put_word_gen<EData>(vop, word, wordxz, bitCount, addOffset); break;
     default:
         VL_VPI_ERROR_(__FILE__, __LINE__, "%s: Unsupported vltype (%d)", __func__,
                       vop->varp()->vltype());
@@ -3026,6 +3099,7 @@ void vl_vpi_put_word(const VerilatedVpioVar* vop, QData word, size_t bitCount, s
 void vl_vpi_get_value(const VerilatedVpioVarBase* vop, p_vpi_value valuep) {
     const VerilatedVar* const varp = vop->varp();
     void* const varDatap = vop->varDatap();
+    void* const varDataxzp = vop->varDataxzp();
 
     if (!vl_check_format(vop, valuep, true)) return;
     // string data type is dynamic and may vary in size during simulation
@@ -3044,33 +3118,37 @@ void vl_vpi_get_value(const VerilatedVpioVarBase* vop, p_vpi_value valuep) {
             t_out.resize(words);
             valuep->value.vector = t_out.data();
             for (int i = 0; i < words; ++i) {
-                t_out[i].aval = vl_vpi_get_word(vop, 32, i * 32);
-                t_out[i].bval = 0;
+                auto data = vl_vpi_get_word(vop, 32, i * 32);
+                t_out[i].aval = data.first;
+                t_out[i].bval = data.second;
             }
             return;
         }
         if (varp->vltype() == VLVT_UINT64 && varBits > 32) {
             t_out.resize(2);
             valuep->value.vector = t_out.data();
-            const QData data = vl_vpi_get_word(vop, 64, 0);
-            t_out[1].aval = static_cast<IData>(data >> 32ULL);
-            t_out[1].bval = 0;
-            t_out[0].aval = static_cast<IData>(data);
-            t_out[0].bval = 0;
+            const std::pair<QData, QData> data = vl_vpi_get_word(vop, 64, 0);
+            t_out[1].aval = static_cast<IData>(data.first >> 32ULL);
+            t_out[1].bval = static_cast<IData>(data.second >> 32ULL);
+            t_out[0].aval = static_cast<IData>(data.first);
+            t_out[0].bval = static_cast<IData>(data.second);
             return;
         }
         t_out.resize(1);
         valuep->value.vector = t_out.data();
-        t_out[0].aval = vl_vpi_get_word(vop, 32, 0);
-        t_out[0].bval = 0;
+        auto data = vl_vpi_get_word(vop, 32, 0);
+        t_out[0].aval = data.first;
+        t_out[0].bval = data.second;
         return;
     } else if (valuep->format == vpiBinStrVal) {
         t_outDynamicStr.resize(varBits);
         const CData* datap = reinterpret_cast<CData*>(varDatap);
+        const CData* dataxzp = reinterpret_cast<CData*>(varDataxzp);
         for (size_t i = 0; i < varBits; ++i) {
             const size_t pos = i + vop->bitOffset();
             const char val = (datap[pos >> 3] >> (pos & 7)) & 1;
-            t_outDynamicStr[varBits - i - 1] = val ? '1' : '0';
+            const bool xz = dataxzp != nullptr && ((dataxzp[pos >> 3] >> (pos & 7)) & 1) != 0;
+            t_outDynamicStr[varBits - i - 1] = xz ? (val ? 'x' : 'z') : (val ? '1' : '0');
         }
         valuep->value.str = const_cast<PLI_BYTE8*>(t_outDynamicStr.c_str());
         return;
@@ -3078,24 +3156,100 @@ void vl_vpi_get_value(const VerilatedVpioVarBase* vop, p_vpi_value valuep) {
         const int chars = (varBits + 2) / 3;
         t_outDynamicStr.resize(chars);
         for (size_t i = 0; i < chars; ++i) {
-            const char val = vl_vpi_get_word(vop, 3, i * 3);
-            t_outDynamicStr[chars - i - 1] = '0' + val;
+            const auto val = vl_vpi_get_word(vop, 3, i * 3);
+            if (val.second) {
+                if (val.second == 7) {
+                    if (val.first == 0) {
+                        t_outDynamicStr[chars - i - 1] = 'z';
+                    } else {
+                        t_outDynamicStr[chars - i - 1] = val.first == 7 ? 'x' : 'X';
+                    }
+                } else {
+                    t_outDynamicStr[chars - i - 1] = val.first & val.second ? 'X' : 'Z';
+                }
+            } else {
+                t_outDynamicStr[chars - i - 1] = '0' + val.first;
+            }
         }
         valuep->value.str = const_cast<PLI_BYTE8*>(t_outDynamicStr.c_str());
         return;
     } else if (valuep->format == vpiDecStrVal) {
         if (varp->vltype() == VLVT_UINT8) {
-            vl_strprintf(t_outDynamicStr, "%hhu",
-                         static_cast<unsigned char>(vl_vpi_get_word(vop, 8, 0)));
+            auto data = vl_vpi_get_word(vop, 8, 0);
+            if (data.second) {
+                if (data.second == 0xff) {
+                    if ((data.second & data.first) == 0xff) {
+                        t_outDynamicStr = "x";
+                    } else {
+                        if ((data.second & data.first) == 0) {
+                            t_outDynamicStr = "z";
+                        } else {
+                            t_outDynamicStr = "X";
+                        }
+                    }
+                } else {
+                    t_outDynamicStr = (data.second & data.first) != 0 ? "X" : "Z";
+                }
+            } else {
+                vl_strprintf(t_outDynamicStr, "%hhu", static_cast<unsigned char>(data.first));
+            }
         } else if (varp->vltype() == VLVT_UINT16) {
-            vl_strprintf(t_outDynamicStr, "%hu",
-                         static_cast<unsigned short>(vl_vpi_get_word(vop, 16, 0)));
+            auto data = vl_vpi_get_word(vop, 16, 0);
+            if (data.second) {
+                if (data.second == 0xffff) {
+                    if ((data.second & data.first) == 0xffff) {
+                        t_outDynamicStr = "x";
+                    } else {
+                        if ((data.second & data.first) == 0) {
+                            t_outDynamicStr = "z";
+                        } else {
+                            t_outDynamicStr = "X";
+                        }
+                    }
+                } else {
+                    t_outDynamicStr = (data.second & data.first) != 0 ? "X" : "Z";
+                }
+            } else {
+                vl_strprintf(t_outDynamicStr, "%hu", static_cast<unsigned short>(data.first));
+            }
         } else if (varp->vltype() == VLVT_UINT32) {
-            vl_strprintf(t_outDynamicStr, "%u",
-                         static_cast<unsigned int>(vl_vpi_get_word(vop, 32, 0)));
+            auto data = vl_vpi_get_word(vop, 32, 0);
+            if (data.second) {
+                if (data.second == 0xffffffff) {
+                    if ((data.second & data.first) == 0xffffffff) {
+                        t_outDynamicStr = "x";
+                    } else {
+                        if ((data.second & data.first) == 0) {
+                            t_outDynamicStr = "z";
+                        } else {
+                            t_outDynamicStr = "X";
+                        }
+                    }
+                } else {
+                    t_outDynamicStr = (data.second & data.first) != 0 ? "X" : "Z";
+                }
+            } else {
+                vl_strprintf(t_outDynamicStr, "%u", static_cast<unsigned int>(data.first));
+            }
         } else if (varp->vltype() == VLVT_UINT64) {
-            vl_strprintf(t_outDynamicStr, "%llu",  // lintok-format-ll
-                         static_cast<unsigned long long>(vl_vpi_get_word(vop, 64, 0)));
+            auto data = vl_vpi_get_word(vop, 64, 0);
+            if (data.second) {
+                if (data.second == 0xffffffffffffffffull) {
+                    if ((data.second & data.first) == 0xffffffffffffffffull) {
+                        t_outDynamicStr = "x";
+                    } else {
+                        if ((data.second & data.first) == 0) {
+                            t_outDynamicStr = "z";
+                        } else {
+                            t_outDynamicStr = "X";
+                        }
+                    }
+                } else {
+                    t_outDynamicStr = (data.second & data.first) != 0 ? "X" : "Z";
+                }
+            } else {
+                vl_strprintf(t_outDynamicStr, "%llu", static_cast<unsigned long long>(data.first));
+            }
         }
         valuep->value.str = const_cast<PLI_BYTE8*>(t_outDynamicStr.c_str());
         return;
@@ -3103,8 +3257,24 @@ void vl_vpi_get_value(const VerilatedVpioVarBase* vop, p_vpi_value valuep) {
         const int chars = (varBits + 3) >> 2;
         t_outDynamicStr.resize(chars);
         for (size_t i = 0; i < chars; ++i) {
-            const char val = vl_vpi_get_word(vop, 4, i * 4);
-            t_outDynamicStr[chars - i - 1] = "0123456789abcdef"[static_cast<int>(val)];
+            const auto val = vl_vpi_get_word(vop, 4, i * 4);
+            if (val.second) {
+                if (val.second == 0xf) {
+                    if ((val.second & val.first) == 0xf) {
+                        t_outDynamicStr[chars - i - 1] = 'x';
+                    } else {
+                        if ((val.second & val.first) == 0) {
+                            t_outDynamicStr[chars - i - 1] = 'z';
+                        } else {
+                            t_outDynamicStr[chars - i - 1] = 'X';
+                        }
+                    }
+                } else {
+                    t_outDynamicStr[chars - i - 1] = (val.second & val.first) != 0 ? 'X' : 'Z';
+                }
+            } else {
+                t_outDynamicStr[chars - i - 1] = "0123456789abcdef"[static_cast<int>(val.first)];
+            }
         }
         valuep->value.str = const_cast<PLI_BYTE8*>(t_outDynamicStr.c_str());
         return;
@@ -3121,21 +3291,44 @@ void vl_vpi_get_value(const VerilatedVpioVarBase* vop, p_vpi_value valuep) {
             const int chars = VL_BYTES_I(varBits);
             t_outDynamicStr.resize(chars);
             for (size_t i = 0; i < chars; ++i) {
-                const char val = vl_vpi_get_word(vop, 8, i * 8);
+                const auto val = vl_vpi_get_word(vop, 8, i * 8);
                 // other simulators replace [leading?] zero chars with spaces, replicate here.
-                t_outDynamicStr[chars - i - 1] = val ? val : ' ';
+                if (val.second) {
+                    if (val.second == 0xf) {
+                        if ((val.second & val.first) == 0xf) {
+                            t_outDynamicStr[chars - i - 1] = 'x';
+                        } else {
+                            if ((val.second & val.first) == 0) {
+                                t_outDynamicStr[chars - i - 1] = 'z';
+                            } else {
+                                t_outDynamicStr[chars - i - 1] = 'X';
+                            }
+                        }
+                    } else {
+                        t_outDynamicStr[chars - i - 1]
+                            = "0123456789abcdef"[static_cast<int>(val.first)];
+                    }
+                } else {
+                    t_outDynamicStr[chars - i - 1] = val.first ? val.first : ' ';
+                }
             }
             valuep->value.str = const_cast<PLI_BYTE8*>(t_outDynamicStr.c_str());
             return;
         }
     } else if (valuep->format == vpiIntVal) {
-        valuep->value.integer = vl_vpi_get_word(vop, 32, 0);
+        auto data = vl_vpi_get_word(vop, 32, 0);
+        valuep->value.integer = data.first & ~data.second;
         return;
     } else if (valuep->format == vpiRealVal) {
         valuep->value.real = *(vop->varRealDatap());
         return;
     } else if (valuep->format == vpiScalarVal) {
-        valuep->value.scalar = vl_vpi_get_word(vop, 32, 0) ? vpi1 : vpi0;
+        const auto data = vl_vpi_get_word(vop, 32, 0);
+        if (data.second) {
+            valuep->value.scalar = data.first ? vpiX : vpiZ;
+        } else {
+            valuep->value.scalar = data.first ? vpi1 : vpi0;
+        }
         return;
     } else if (valuep->format == vpiSuppressVal) {
         return;
@@ -3296,50 +3489,54 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
         const VerilatedVpioVar* const valueVop
             = (forceFlag == vpiForceFlag) ? forceValueSignalVop : baseSignalVop;
 
-        const auto updateVforceRd
-            = [forceEnableSignalVop, forceValueSignalVop, forceReadSignalVop, baseSignalVop]() {
-                  if (baseSignalVop->varp()->vltype() == VLVT_REAL) {
-                      const double readData = VerilatedVpiImp::getReadDataWord<double>(
-                          baseSignalVop, forceEnableSignalVop, forceValueSignalVop, 64, 0);
-                      *forceReadSignalVop->varRealDatap() = readData;
-                      return;
-                  }
+        const auto updateVforceRd = [forceEnableSignalVop, forceValueSignalVop, forceReadSignalVop,
+                                     baseSignalVop]() {
+            if (baseSignalVop->varp()->vltype() == VLVT_REAL) {
+                const double readData
+                    = VerilatedVpiImp::getReadDataWord<double>(baseSignalVop, forceEnableSignalVop,
+                                                               forceValueSignalVop, 64, 0)
+                          .first;
+                *forceReadSignalVop->varRealDatap() = readData;
+                return;
+            }
 
-                  const std::size_t wordSize
-                      = 8ULL * VerilatedVpiImp::vlTypeSize(forceReadSignalVop->varp()->vltype());
-                  assert(wordSize > 0);
-                  const uint32_t varBits = baseSignalVop->bitSize();
-                  const std::size_t numChunks = (varBits / wordSize);
-                  for (std::size_t i{0}; i < numChunks; ++i) {
-                      const QData readData = VerilatedVpiImp::getReadDataWord<QData>(
-                          baseSignalVop, forceEnableSignalVop, forceValueSignalVop, wordSize,
-                          i * wordSize);
-                      vl_vpi_put_word(forceReadSignalVop, readData, wordSize, i * wordSize);
-                  }
-                  // addOffset == varBits would trigger assertion in vl_vpi_var_access_info even if
-                  // bitCount == 0, so first check if there is a remainder
-                  if (varBits % wordSize != 0) {
-                      const QData readData = VerilatedVpiImp::getReadDataWord<QData>(
-                          baseSignalVop, forceEnableSignalVop, forceValueSignalVop,
-                          varBits % wordSize, numChunks * wordSize);
-                      vl_vpi_put_word(forceReadSignalVop, readData, varBits % wordSize,
-                                      numChunks * wordSize);
-                  }
-              };
+            const std::size_t wordSize
+                = 8ULL * VerilatedVpiImp::vlTypeSize(forceReadSignalVop->varp()->vltype());
+            assert(wordSize > 0);
+            const uint32_t varBits = baseSignalVop->bitSize();
+            const std::size_t numChunks = (varBits / wordSize);
+            for (std::size_t i{0}; i < numChunks; ++i) {
+                const std::pair<QData, QData> readData = VerilatedVpiImp::getReadDataWord<QData>(
+                    baseSignalVop, forceEnableSignalVop, forceValueSignalVop, wordSize,
+                    i * wordSize);
+                vl_vpi_put_word(forceReadSignalVop, readData.first, readData.second, wordSize,
+                                i * wordSize);
+            }
+            // addOffset == varBits would trigger assertion in vl_vpi_var_access_info even if
+            // bitCount == 0, so first check if there is a remainder
+            if (varBits % wordSize != 0) {
+                const std::pair<QData, QData> readData = VerilatedVpiImp::getReadDataWord<QData>(
+                    baseSignalVop, forceEnableSignalVop, forceValueSignalVop, varBits % wordSize,
+                    numChunks * wordSize);
+                vl_vpi_put_word(forceReadSignalVop, readData.first, readData.second,
+                                varBits % wordSize, numChunks * wordSize);
+            }
+        };
 
-        const std::function<void(const VerilatedVpioVar*, QData, size_t, size_t)>
+        const std::function<void(const VerilatedVpioVar*, QData, QData, size_t, size_t)>
             putForceableSignalWord
             = [forceEnableSignalVop, forceValueSignalVop, forceReadSignalVop,
-               baseSignalVop](const VerilatedVpioVar* valueVop, QData word, size_t bitCount,
-                              size_t addOffset) -> void {
-            vl_vpi_put_word(valueVop, word, bitCount, addOffset);
-            const QData readData = VerilatedVpiImp::getReadDataWord<QData>(
+               baseSignalVop](const VerilatedVpioVar* valueVop, QData word, QData wordxz,
+                              size_t bitCount, size_t addOffset) -> void {
+            vl_vpi_put_word(valueVop, word, wordxz, bitCount, addOffset);
+            const std::pair<QData, QData> readData = VerilatedVpiImp::getReadDataWord<QData>(
                 baseSignalVop, forceEnableSignalVop, forceValueSignalVop, bitCount, addOffset);
-            vl_vpi_put_word(forceReadSignalVop, readData, bitCount, addOffset);
+            vl_vpi_put_word(forceReadSignalVop, readData.first, readData.second, bitCount,
+                            addOffset);
             return;
         };
 
-        const std::function<void(const VerilatedVpioVar*, QData, size_t, size_t)> put_word
+        const std::function<void(const VerilatedVpioVar*, QData, QData, size_t, size_t)> put_word
             = baseSignalVop->varp()->isForceable() ? putForceableSignalWord : vl_vpi_put_word;
 
         if (forceFlag == vpiForceFlag) {
@@ -3410,32 +3607,65 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
             if (valueVop->varp()->vltype() == VLVT_WDATA) {
                 const int words = VL_WORDS_I(varBits);
                 for (int i = 0; i < words; ++i)
-                    put_word(valueVop, valuep->value.vector[i].aval, 32, i * 32);
+                    put_word(valueVop, valuep->value.vector[i].aval, valuep->value.vector[i].bval,
+                             32, i * 32);
                 return object;
             } else if (valueVop->varp()->vltype() == VLVT_UINT64 && varBits > 32) {
                 const QData val = (static_cast<QData>(valuep->value.vector[1].aval) << 32)
                                   | static_cast<QData>(valuep->value.vector[0].aval);
-                put_word(valueVop, val, 64, 0);
+                const QData xz = (static_cast<QData>(valuep->value.vector[1].bval) << 32)
+                                 | static_cast<QData>(valuep->value.vector[0].bval);
+                put_word(valueVop, val, xz, 64, 0);
                 return object;
             } else {
-                put_word(valueVop, valuep->value.vector[0].aval, 32, 0);
+                put_word(valueVop, valuep->value.vector[0].aval, valuep->value.vector[0].bval, 32,
+                         0);
                 return object;
             }
         } else if (valuep->format == vpiBinStrVal) {
             const int len = std::strlen(valuep->value.str);
             CData* const datap = reinterpret_cast<CData*>(valueVop->varDatap());
+            CData* const dataxzp = reinterpret_cast<CData*>(valueVop->varDataxzp());
             for (int i = 0; i < varBits; ++i) {
-                const bool set = (i < len) && (valuep->value.str[len - i - 1] == '1');
+                bool value = false;
+                bool xz = false;
+                if (i < len) {
+                    switch (valuep->value.str[len - i - 1]) {
+                    case 'x': value = true;
+                    // fallthrough
+                    case 'z': xz = true;
+                    // fallthrough
+                    case '0': break;
+                    case '1': value = true; break;
+                    default:
+                        VL_VPI_WARNING_(
+                            __FILE__, __LINE__,
+                            "%s: Non binary character '%c' in '%s' as value %s for '%s'", __func__,
+                            valuep->value.str[len - i - 1], valuep->value.str,
+                            VerilatedVpiError::strFromVpiVal(valuep->format),
+                            valueVop->fullname());
+                        break;
+                    }
+                }
                 const size_t pos = valueVop->bitOffset() + i;
 
-                if (set)
-                    datap[pos >> 3] |= 1 << (pos & 7);
-                else
-                    datap[pos >> 3] &= ~(1 << (pos & 7));
+                const auto idx = pos >> 3;
+                if (dataxzp != nullptr) {
+                    if (xz) {
+                        dataxzp[idx] |= 1 << (pos & 7);
+                    } else {
+                        dataxzp[idx] &= ~(1 << (pos & 7));
+                    }
+                } else if (value && !xz) {
+                    datap[idx] |= 1 << (pos & 7);
+                } else {
+                    datap[idx] &= ~(1 << (pos & 7));
+                }
             }
             if (baseSignalVop->varp()->isForceable()) updateVforceRd();
             return object;
         } else if (valuep->format == vpiOctStrVal) {
+            // FIXME: x/z support
             const int len = std::strlen(valuep->value.str);
             for (int i = 0; i < len; ++i) {
                 unsigned char digit = valuep->value.str[len - i - 1] - '0';
@@ -3447,10 +3677,11 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
                                     valueVop->fullname());
                     digit = 0;
                 }
-                put_word(valueVop, digit, 3, i * 3);
+                put_word(valueVop, digit, 0, 3, i * 3);
             }
             return object;
         } else if (valuep->format == vpiDecStrVal) {
+            // FIXME: x/z support
             char remainder[16];
             unsigned long long val;
             const int success = std::sscanf(valuep->value.str, "%30llu%15s",  // lintok-format-ll
@@ -3468,9 +3699,10 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
                     __func__, remainder, valuep->value.str,
                     VerilatedVpiError::strFromVpiVal(valuep->format), valueVop->fullname());
             }
-            put_word(valueVop, val, 64, 0);
+            put_word(valueVop, val, 0, 64, 0);
             return object;
         } else if (valuep->format == vpiHexStrVal) {
+            // FIXME: x/z support
             const int chars = (varBits + 3) >> 2;
             const char* val = valuep->value.str;
             // skip hex ident if one is detected at the start of the string
@@ -3499,7 +3731,7 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
                     hex = 0;
                 }
                 // assign hex digit value to destination
-                put_word(valueVop, hex, 4, i * 4);
+                put_word(valueVop, hex, 0, 4, i * 4);
             }
             return object;
         } else if (valuep->format == vpiStringVal) {
@@ -3513,12 +3745,12 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
             for (int i = 0; i < chars; ++i) {
                 // prepend with 0 values before placing string the least significant bytes
                 const char c = (i < len) ? valuep->value.str[len - i - 1] : 0;
-                put_word(valueVop, c, 8, i * 8);
+                put_word(valueVop, c, 0, 8, i * 8);
             }
 
             return object;
         } else if (valuep->format == vpiIntVal) {
-            put_word(valueVop, valuep->value.integer, 64, 0);
+            put_word(valueVop, valuep->value.integer, 0, 64, 0);
             return object;
         } else if (valuep->format == vpiRealVal) {
             if (valueVop->varp()->vltype() == VLVT_REAL) {
@@ -3527,7 +3759,9 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
                 return object;
             }
         } else if (valuep->format == vpiScalarVal) {
-            put_word(valueVop, (valuep->value.scalar == vpi1 ? 1 : 0), 1, 0);
+            put_word(valueVop,
+                     (valuep->value.scalar == vpi1 || valuep->value.scalar == vpiX ? 1 : 0),
+                     (valuep->value.scalar == vpiZ || valuep->value.scalar == vpiX ? 1 : 0), 1, 0);
             return object;
         }
         VL_VPI_ERROR_(__FILE__, __LINE__, "%s: Unsupported format (%s) as requested for '%s'",

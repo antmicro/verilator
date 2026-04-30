@@ -3874,16 +3874,16 @@ void VerilatedScope::exportInsert(int finalize, const char* namep, void* cb) VL_
     }
 }
 
-VerilatedVar* VerilatedScope::varInsert(const char* namep, void* datap, bool isParam,
-                                        VerilatedVarType vltype, int vlflags, int udims,
-                                        int pdims...) VL_MT_UNSAFE {
+VerilatedVar* VerilatedScope::varInsert(const char* namep, void* datap, void* dataxzp,
+                                        bool isParam, VerilatedVarType vltype, int vlflags,
+                                        int udims, int pdims...) VL_MT_UNSAFE {
     // Grab dimensions
     // In the future we may just create a large table at emit time and
     // statically construct from that.
 
     if (!m_varsp) m_varsp = new VerilatedVarNameMap;
-    VerilatedVar var(namep, datap, vltype, static_cast<VerilatedVarFlags>(vlflags), udims, pdims,
-                     isParam);
+    VerilatedVar var(namep, datap, dataxzp, vltype, static_cast<VerilatedVarFlags>(vlflags), udims,
+                     pdims, isParam);
 
     va_list ap;
     va_start(ap, pdims);
@@ -3924,6 +3924,7 @@ VerilatedScope::forceableVarInsert(const char* namep, void* datap, bool isParam,
 
     VerilatedVar forceReadSignal{forceReadSignalName,
                                  forceReadSignalData,
+                                 nullptr,
                                  vltype,
                                  forceReadValueVlflags,
                                  udims,
@@ -3946,8 +3947,8 @@ VerilatedScope::forceableVarInsert(const char* namep, void* datap, bool isParam,
         = std::unique_ptr<VerilatedForceControlSignals>(new VerilatedForceControlSignals{
             forceControlSignals.first, forceControlSignals.second, std::move(forceReadSignal)});
 
-    VerilatedVar var(namep, datap, vltype, static_cast<VerilatedVarFlags>(vlflags), udims, pdims,
-                     isParam, std::move(verilatedForceControlSignalsp));
+    VerilatedVar var(namep, datap, nullptr, vltype, static_cast<VerilatedVarFlags>(vlflags), udims,
+                     pdims, isParam, std::move(verilatedForceControlSignalsp));
     verilatedForceControlSignalsp = nullptr;
 
     va_start(ap, pdims);

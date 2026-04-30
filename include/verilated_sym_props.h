@@ -218,17 +218,21 @@ class VerilatedDpiOpenVar final {
     // MEMBERS
     const VerilatedVarProps* const m_propsp;  // Variable properties
     void* const m_datap;  // Location of data (local to thread always, so safe)
+    void* const m_dataxzp;  // Location of data (local to thread always, so safe)
 public:
     // CONSTRUCTORS
-    VerilatedDpiOpenVar(const VerilatedVarProps* propsp, void* datap)
+    VerilatedDpiOpenVar(const VerilatedVarProps* propsp, void* datap, void* dataxzp)
         : m_propsp{propsp}
-        , m_datap{datap} {}
-    VerilatedDpiOpenVar(const VerilatedVarProps* propsp, const void* datap)
+        , m_datap{datap}
+        , m_dataxzp{dataxzp} {}
+    VerilatedDpiOpenVar(const VerilatedVarProps* propsp, const void* datap, const void* dataxzp)
         : m_propsp{propsp}
-        , m_datap{const_cast<void*>(datap)} {}
+        , m_datap{const_cast<void*>(datap)}
+        , m_dataxzp{const_cast<void*>(dataxzp)} {}
     ~VerilatedDpiOpenVar() = default;
     // METHODS
     void* datap() const VL_MT_SAFE { return m_datap; }
+    void* dataxzp() const VL_MT_SAFE { return m_dataxzp; }
     // METHODS - from VerilatedVarProps
     bool magicOk() const { return m_propsp->magicOk(); }
     VerilatedVarType vltype() const { return m_propsp->vltype(); }
@@ -255,6 +259,7 @@ struct VerilatedForceControlSignals;
 class VerilatedVar final : public VerilatedVarProps {
     // MEMBERS
     void* const m_datap;  // Location of data
+    void* const m_dataxzp;  // Location of data
     const char* const m_namep;  // Name - slowpath
     std::unique_ptr<const VerilatedForceControlSignals>
         m_forceControlSignals;  // Force control signals
@@ -263,17 +268,19 @@ protected:
     const bool m_isParam;
     friend class VerilatedScope;
     // CONSTRUCTORS
-    VerilatedVar(const char* namep, void* datap, VerilatedVarType vltype,
+    VerilatedVar(const char* namep, void* datap, void* dataxzp, VerilatedVarType vltype,
                  VerilatedVarFlags vlflags, int udims, int pdims, bool isParam)
         : VerilatedVarProps{vltype, vlflags, udims, pdims}
         , m_datap{datap}
+        , m_dataxzp{dataxzp}
         , m_namep{namep}
         , m_isParam{isParam} {}
-    VerilatedVar(const char* namep, void* datap, VerilatedVarType vltype,
+    VerilatedVar(const char* namep, void* datap, void* dataxzp, VerilatedVarType vltype,
                  VerilatedVarFlags vlflags, int udims, int pdims, bool isParam,
                  std::unique_ptr<const VerilatedForceControlSignals> forceControlSignals)
         : VerilatedVarProps{vltype, vlflags, udims, pdims}
         , m_datap{datap}
+        , m_dataxzp{dataxzp}
         , m_namep{namep}
         , m_forceControlSignals{std::move(forceControlSignals)}
         , m_isParam{isParam} {}
@@ -283,6 +290,7 @@ public:
     VerilatedVar(VerilatedVar&&) = default;
     // ACCESSORS
     void* datap() const { return m_datap; }
+    void* dataxzp() const { return m_dataxzp; }
     const char* name() const { return m_namep; }
     bool isParam() const { return m_isParam; }
     const VerilatedForceControlSignals* forceControlSignals() const {

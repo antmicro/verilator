@@ -129,7 +129,9 @@ class EmitCSyms final : EmitCBaseVisitorConst {
         if (nodep->name().empty()) return;
         const AstCFunc* const cfuncp = VN_CAST(nodep, CFunc);
         if (!cfuncp || (!cfuncp->isConstructor() && !cfuncp->isDestructor())) {
-            const std::string rsvd = V3LanguageWords::isKeyword(nodep->name());
+            const std::string emittedName
+                = VN_IS(nodep, NodeModule) ? EmitCUtil::prefixNameProtect(nodep) : nodep->name();
+            const std::string rsvd = V3LanguageWords::isKeyword(emittedName);
             if (rsvd != "") {
                 // Generally V3Name should find all of these and throw SYMRSVDWORD.
                 // We'll still check here because the compiler errors

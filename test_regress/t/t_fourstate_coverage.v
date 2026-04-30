@@ -18,4 +18,15 @@ module axi_adapter(
         exprstmt_lhs = 1;
         exprstmt_rhs = (exprstmt_lhs += 1);
     end
+
+    interrupt xintr5(.clk(unused_sig));
+endmodule
+
+module interrupt(
+    input logic clk
+);
+    /*verilator no_inline_module*/
+    logic unused_interrupt_sig;
+
+    assign unused_interrupt_sig = clk;
 endmodule

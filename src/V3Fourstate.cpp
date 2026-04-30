@@ -2259,6 +2259,40 @@ class FourstateVisitor final : public VNVisitor {
         return result;
     }
 
+    AstNodeExpr* getCoverToggleChangeXZ(AstNodeExpr* const exprp) {
+        if (isFourstate(exprp)) return getFourstateExpressionXZ(exprp);
+        if (AstNodeVarRef* const varRefp = VN_CAST(exprp, NodeVarRef)) {
+            if (needsSplitting(varRefp->varp()->dtypep())) splitVar(varRefp->varp());
+            if (getValuePartVarp(varRefp->varp())) {
+                AstNodeVarRef* const newp = varRefp->cloneTree(false);
+                if (!newp->name().empty()) newp->name(newp->name() + XZ_SUFFIX);
+                newp->varp(getSplittedXZ(varRefp->varp()));
+                newp->dtypep(getTwoStateDtype(varRefp->varp()->dtypep()));
+                setFourstate(newp, false);
+                return newp;
+            }
+        } else if (AstArraySel* const arraySelp = VN_CAST(exprp, ArraySel)) {
+            AstArraySel* const newp = new AstArraySel{
+                arraySelp->fileline(), getCoverToggleChangeXZ(arraySelp->fromp()),
+                isFourstate(arraySelp->bitp()) ? getTwoStateCast(arraySelp->bitp())
+                                               : arraySelp->bitp()->cloneTree(false)};
+            newp->dtypep(getTwoStateDtype(arraySelp->dtypep()));
+            setFourstate(newp, false);
+            setSelpHandled(newp);
+            return newp;
+        } else if (AstSel* const selp = VN_CAST(exprp, Sel)) {
+            AstSel* const newp = selp->cloneTree(false);
+            newp->fromp(getCoverToggleChangeXZ(selp->fromp()));
+            newp->lsbp(selp->lsbp()->cloneTree(false));
+            newp->dtypep(getTwoStateDtype(selp->dtypep()));
+            setFourstate(newp, false);
+            setSelpHandled(newp);
+            return newp;
+        }
+        exprp->v3fatalSrc("Unable to build X/Z toggle coverage lvalue");
+        return nullptr;
+    }
+
     void visit(AstNodeAssign* const nodep) override {
         VL_RESTORER(m_currentStmtp);
         m_currentStmtp = nodep;
@@ -2335,6 +2369,32 @@ class FourstateVisitor final : public VNVisitor {
             AstStmtExpr* const newStmtExprp = new AstStmtExpr{nodep->fileline(), newXzp};
             nodep->addNextHere(newStmtExprp);
             exprp->deleteTree();
+        }
+        iterateChildren(nodep);
+    }
+
+    void visit(AstCoverToggle* const nodep) override {
+        VL_RESTORER(m_currentStmtp);
+        m_currentStmtp = nodep;
+        TmpVarsReleaser tmpVarsReleaser{*this};
+        const bool origFourstate = isFourstate(nodep->origp());
+        const bool changeFourstate = isFourstate(nodep->changep());
+        if (origFourstate || changeFourstate) {
+            AstNodeExpr* const origp = nodep->origp()->unlinkFrBack();
+            AstNodeExpr* const changep = nodep->changep()->unlinkFrBack();
+            // Count changes in the value and X/Z halves separately while sharing the original
+            // coverpoint bucket.
+            AstCoverToggle* const xzp = nodep->cloneTree(false);
+            xzp->incp(nodep->incp()->cloneTree(false));
+            xzp->origp(origFourstate ? getFourstateExpressionXZ(origp) : createZeroOrOnesp(origp));
+            xzp->changep(getCoverToggleChangeXZ(changep));
+            nodep->origp(getFourstateExpressionValue(origp));
+            nodep->changep(getFourstateExpressionValue(changep));
+            nodep->addNextHere(xzp);
+            origp->deleteTree();
+            changep->deleteTree();
+            FourstateLogicTypePropagator{nodep};
+            FourstateLogicTypePropagator{xzp};
         }
         iterateChildren(nodep);
     }

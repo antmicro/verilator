@@ -3631,8 +3631,10 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
                 bool xz = false;
                 if (i < len) {
                     switch (valuep->value.str[len - i - 1]) {
+                    case 'X':
                     case 'x': value = true;
                     // fallthrough
+                    case 'Z':
                     case 'z': xz = true;
                     // fallthrough
                     case '0': break;
@@ -3665,44 +3667,65 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
             if (baseSignalVop->varp()->isForceable()) updateVforceRd();
             return object;
         } else if (valuep->format == vpiOctStrVal) {
-            // FIXME: x/z support
             const int len = std::strlen(valuep->value.str);
             for (int i = 0; i < len; ++i) {
-                unsigned char digit = valuep->value.str[len - i - 1] - '0';
-                if (digit > 7) {  // If str was < '0', then as unsigned, digit > 7
-                    VL_VPI_WARNING_(__FILE__, __LINE__,
-                                    "%s: Non octal character '%c' in '%s' as value %s for '%s'",
-                                    __func__, digit + '0', valuep->value.str,
-                                    VerilatedVpiError::strFromVpiVal(valuep->format),
-                                    valueVop->fullname());
-                    digit = 0;
+                const char c = valuep->value.str[len - i - 1];
+                char xzValue = 0;
+                switch (c) {
+                case 'X':
+                case 'x': xzValue = 7;
+                /* fallthrough */
+                case 'Z':
+                case 'z': put_word(valueVop, xzValue, 7, 3, i * 3); break;
+                default: {
+                    unsigned char digit = c - '0';
+                    if (digit > 7) {  // If str was < '0', then as unsigned, digit > 7
+                        VL_VPI_WARNING_(
+                            __FILE__, __LINE__,
+                            "%s: Non octal character '%c' in '%s' as value %s for '%s'", __func__,
+                            digit + '0', valuep->value.str,
+                            VerilatedVpiError::strFromVpiVal(valuep->format),
+                            valueVop->fullname());
+                        digit = 0;
+                    }
+                    put_word(valueVop, digit, 0, 3, i * 3);
+                } break;
                 }
-                put_word(valueVop, digit, 0, 3, i * 3);
             }
             return object;
         } else if (valuep->format == vpiDecStrVal) {
-            // FIXME: x/z support
             char remainder[16];
             unsigned long long val;
-            const int success = std::sscanf(valuep->value.str, "%30llu%15s",  // lintok-format-ll
-                                            &val, remainder);
-            if (success < 1) {
-                VL_VPI_ERROR_(__FILE__, __LINE__,
-                              "%s: Parsing failed for '%s' as value %s for '%s'", __func__,
-                              valuep->value.str, VerilatedVpiError::strFromVpiVal(valuep->format),
-                              valueVop->fullname());
-                return nullptr;
+            unsigned long long xz = 0;
+            switch (valuep->value.str[0]) {
+            case 'X':
+            case 'x': val = ~0ull;
+            /* fallthrough */
+            case 'Z':
+            case 'z': xz = ~0ull; break;
+            default: {
+                const int success
+                    = std::sscanf(valuep->value.str, "%30llu%15s",  // lintok-format-ll
+                                  &val, remainder);
+                if (success < 1) {
+                    VL_VPI_ERROR_(
+                        __FILE__, __LINE__, "%s: Parsing failed for '%s' as value %s for '%s'",
+                        __func__, valuep->value.str,
+                        VerilatedVpiError::strFromVpiVal(valuep->format), valueVop->fullname());
+                    return nullptr;
+                }
+                if (success > 1) {
+                    VL_VPI_WARNING_(__FILE__, __LINE__,
+                                    "%s: Trailing garbage '%s' in '%s' as value %s for '%s'",
+                                    __func__, remainder, valuep->value.str,
+                                    VerilatedVpiError::strFromVpiVal(valuep->format),
+                                    valueVop->fullname());
+                }
+            } break;
             }
-            if (success > 1) {
-                VL_VPI_WARNING_(
-                    __FILE__, __LINE__, "%s: Trailing garbage '%s' in '%s' as value %s for '%s'",
-                    __func__, remainder, valuep->value.str,
-                    VerilatedVpiError::strFromVpiVal(valuep->format), valueVop->fullname());
-            }
-            put_word(valueVop, val, 0, 64, 0);
+            put_word(valueVop, val, xz, 64, 0);
             return object;
         } else if (valuep->format == vpiHexStrVal) {
-            // FIXME: x/z support
             const int chars = (varBits + 3) >> 2;
             const char* val = valuep->value.str;
             // skip hex ident if one is detected at the start of the string
@@ -3710,28 +3733,39 @@ vpiHandle vpi_put_value(vpiHandle object, p_vpi_value valuep, p_vpi_time /*time_
             const int len = std::strlen(val);
             for (int i = 0; i < chars; ++i) {
                 char hex;
+                char xz = 0;
                 // compute hex digit value
                 if (i < len) {
                     const char digit = val[len - i - 1];
-                    if (digit >= '0' && digit <= '9') {
-                        hex = digit - '0';
-                    } else if (digit >= 'a' && digit <= 'f') {
-                        hex = digit - 'a' + 10;
-                    } else if (digit >= 'A' && digit <= 'F') {
-                        hex = digit - 'A' + 10;
-                    } else {
-                        VL_VPI_WARNING_(__FILE__, __LINE__,
-                                        "%s: Non hex character '%c' in '%s' as value %s for '%s'",
-                                        __func__, digit, valuep->value.str,
-                                        VerilatedVpiError::strFromVpiVal(valuep->format),
-                                        valueVop->fullname());
-                        hex = 0;
+                    switch (digit) {
+                    case 'X':
+                    case 'x': hex = 0xf;
+                    /* fallthrough */
+                    case 'Z':
+                    case 'z': xz = 0xf; break;
+                    default: {
+                        if (digit >= '0' && digit <= '9') {
+                            hex = digit - '0';
+                        } else if (digit >= 'a' && digit <= 'f') {
+                            hex = digit - 'a' + 10;
+                        } else if (digit >= 'A' && digit <= 'F') {
+                            hex = digit - 'A' + 10;
+                        } else {
+                            VL_VPI_WARNING_(
+                                __FILE__, __LINE__,
+                                "%s: Non hex character '%c' in '%s' as value %s for '%s'",
+                                __func__, digit, valuep->value.str,
+                                VerilatedVpiError::strFromVpiVal(valuep->format),
+                                valueVop->fullname());
+                            hex = 0;
+                        }
+                    } break;
                     }
                 } else {
                     hex = 0;
                 }
                 // assign hex digit value to destination
-                put_word(valueVop, hex, 0, 4, i * 4);
+                put_word(valueVop, hex, xz, 4, i * 4);
             }
             return object;
         } else if (valuep->format == vpiStringVal) {

@@ -1014,6 +1014,20 @@ class FourstateVisitor final : public VNVisitor {
             m_fourstateVisitor.m_currentStmtp->addHereThisAsNext(nodep);
         }
 
+        void liftExprStmtStatements(AstExprStmt* const exprStmtp) {
+            AstNode* stmtsp = exprStmtp->stmtsp();
+            if (!stmtsp) return;
+            stmtsp = stmtsp->unlinkFrBackWithNext();
+            while (stmtsp) {
+                AstNode* const nextp = stmtsp->nextp();
+                if (nextp) nextp->unlinkFrBack();
+                AstNodeStmt* const stmtp = VN_AS(stmtsp, NodeStmt);
+                m_fourstateVisitor.m_currentStmtp->addHereThisAsNext(stmtp);
+                m_fourstateVisitor.iterate(stmtp);
+                stmtsp = nextp;
+            }
+        }
+
         void fourstateExpressionFuncRefHandler(AstNodeFTaskRef* const funcRefp) {
             // Its ok to use this instead of output since we only need width which is the same
             AstVar* const functionReturnVarp = VN_AS(VN_AS(funcRefp->taskp(), Func)->fvarp(), Var);
@@ -1583,6 +1597,12 @@ class FourstateVisitor final : public VNVisitor {
             m_result = getExprValuep(logOrp)->cloneTree(false);
         }
 
+        void visit(AstExprStmt* const exprStmtp) override {
+            liftExprStmtStatements(exprStmtp);
+            noTmp();
+            m_result = getFourstateExpressionValue(exprStmtp->resultp());
+        }
+
         void visit(AstSel* const selp) override {
             m_result = m_fourstateVisitor.getFourstateExpressionSelHandler(
                 selp, getFourstateExpressionValue(selp->fromp(), false), false);
@@ -2094,6 +2114,12 @@ class FourstateVisitor final : public VNVisitor {
             m_result = getExprXZp(logOrp)->cloneTree(false);
         }
 
+        void visit(AstExprStmt* const exprStmtp) override {
+            liftExprStmtStatements(exprStmtp);
+            noTmp();
+            m_result = getFourstateExpressionXZ(exprStmtp->resultp());
+        }
+
         void visit(AstSel* const selp) override {
             m_result = m_fourstateVisitor.getFourstateExpressionSelHandler(
                 selp, getFourstateExpressionXZ(selp->fromp(), false), false);
@@ -2102,7 +2128,7 @@ class FourstateVisitor final : public VNVisitor {
         void visit(AstArraySel* const arraySelp) override {
             arraySelp->bitp()->purityCheck();
             m_result = new AstArraySel{arraySelp->fileline(),
-                                       getFourstateExpressionXZ(arraySelp->fromp()),
+                                       getFourstateExpressionXZ(arraySelp->fromp(), false),
                                        isFourstate(arraySelp->bitp())
                                            ? m_fourstateVisitor.getTwoStateCast(arraySelp->bitp())
                                            : arraySelp->bitp()->cloneTree(false)};

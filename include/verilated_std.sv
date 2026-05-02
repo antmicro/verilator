@@ -102,6 +102,8 @@ package std;
   // IEEE 1800-specified standard "semaphore"
   class semaphore;
     protected int m_keyCount;
+    protected int m_nextTicket = 0;
+    protected int m_servedTicket = 0;
 
     function new(int keyCount = 0);
       m_keyCount = keyCount;
@@ -113,15 +115,16 @@ package std;
 
     task get(int keyCount = 1);
 `ifdef VERILATOR_TIMING
-      while (m_keyCount < keyCount) begin
-        wait (m_keyCount >= keyCount);
-      end
+      int ticket;
+      ticket = m_nextTicket++;
+      wait (m_servedTicket == ticket && m_keyCount >= keyCount);
       m_keyCount -= keyCount;
+      m_servedTicket++;
 `endif
     endtask
 
     function int try_get(int keyCount = 1);
-      if (m_keyCount >= keyCount) begin
+      if (m_nextTicket == m_servedTicket && m_keyCount >= keyCount) begin
         m_keyCount -= keyCount;
         return 1;
       end

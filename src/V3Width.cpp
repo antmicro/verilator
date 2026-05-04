@@ -1604,6 +1604,45 @@ class WidthVisitor final : public VNVisitor {
             nodep->dtypeSetBit();
         }
     }
+    void visit(AstEventually* nodep) override {
+        // IEEE 1800-2023 16.12.13
+        assertAtExpr(nodep);
+        if (m_vup->prelim()) {
+            userIterateAndNext(nodep->exprp(), WidthVP{SELF, BOTH}.p());
+            nodep->dtypeSetBit();
+            if (VN_IS(nodep->loBoundp(), Unbounded) || VN_IS(nodep->hiBoundp(), Unbounded)) {
+                nodep->v3error(
+                    "The range for a weak eventually must be bounded (IEEE 1800-2023 16.12.13)");
+                return;
+            }
+            userIterateAndNext(nodep->loBoundp(), WidthVP{SELF, BOTH}.p());
+            V3Const::constifyParamsEdit(nodep->loBoundp());
+            userIterateAndNext(nodep->hiBoundp(), WidthVP{SELF, BOTH}.p());
+            V3Const::constifyParamsEdit(nodep->hiBoundp());
+            const AstConst* const loConstp = VN_CAST(nodep->loBoundp(), Const);
+            const AstConst* const hiConstp = VN_CAST(nodep->hiBoundp(), Const);
+            if (!loConstp) {
+                nodep->v3error("eventually range low bound must be a constant expression"
+                               " (IEEE 1800-2023 16.12.13)");
+            }
+            if (!hiConstp) {
+                nodep->v3error("eventually range high bound must be a constant expression"
+                               " (IEEE 1800-2023 16.12.13)");
+            }
+            bool hasPropertyOp = nodep->exprp()->isMultiCycleSva();
+            if (!hasPropertyOp) {
+                nodep->exprp()->foreach([&](const AstNode* np) {
+                    if (VN_IS(np, Implication) || VN_IS(np, Until) || VN_IS(np, PropSpec)) {
+                        hasPropertyOp = true;
+                    }
+                });
+            }
+            if (hasPropertyOp) {
+                nodep->v3warn(E_UNSUPPORTED,
+                              "Unsupported: property/sequence operator inside eventually");
+            }
+        }
+    }
     void visit(AstRising* nodep) override {
         assertAtExpr(nodep);
         if (m_vup->prelim()) {

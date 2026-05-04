@@ -1391,7 +1391,7 @@ public:
     void classOrPackagep(AstNodeModule* nodep) { m_classOrPackagep = nodep; }
 };
 class AstEventually final : public AstNodeExpr {
-    // eventually property expression
+    // eventually property expression (IEEE 1800-2023 16.12.13)
     // @astgen op1 := exprp : AstNodeExpr
     // @astgen op2 := loBoundp : AstNodeExpr
     // @astgen op3 := hiBoundp : AstNodeExpr

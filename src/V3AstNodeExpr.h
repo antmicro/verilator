@@ -1390,6 +1390,26 @@ public:
     AstNodeModule* classOrPackagep() const { return m_classOrPackagep; }
     void classOrPackagep(AstNodeModule* nodep) { m_classOrPackagep = nodep; }
 };
+class AstEventually final : public AstNodeExpr {
+    // eventually property expression
+    // @astgen op1 := exprp : AstNodeExpr
+    // @astgen op2 := loBoundp : AstNodeExpr
+    // @astgen op3 := hiBoundp : AstNodeExpr
+public:
+    AstEventually(FileLine* fl, AstNodeExpr* exprp, AstNodeExpr* loBoundp, AstNodeExpr* hiBoundp)
+        : ASTGEN_SUPER_Eventually(fl) {
+        this->exprp(exprp);
+        this->loBoundp(loBoundp);
+        this->hiBoundp(hiBoundp);
+    }
+    ASTGEN_MEMBERS_AstEventually;
+    string emitVerilog() override { V3ERROR_NA_RETURN(""); }
+    string emitC() override { V3ERROR_NA_RETURN(""); }
+    string emitSimpleOperator() override { V3ERROR_NA_RETURN(""); }
+    bool cleanOut() const override { V3ERROR_NA_RETURN(""); }
+    int instrCount() const override { return widthInstrs(); }
+    bool sameNode(const AstNode* /*samep*/) const override { return true; }
+};
 class AstExprStmt final : public AstNodeExpr {
     // Perform a statement, often assignment inside an expression node,
     // the parent gets passed the 'resultp()'.

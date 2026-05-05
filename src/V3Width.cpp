@@ -1608,9 +1608,11 @@ class WidthVisitor final : public VNVisitor {
         // IEEE 1800-2023 16.12.13
         assertAtExpr(nodep);
         if (m_vup->prelim()) {
-            if (nodep->isStrong() && (v3Global.opt.timing().isSetFalse() || !v3Global.opt.timing().isSetTrue())) {
+            if (nodep->isStrong()
+                && (v3Global.opt.timing().isSetFalse() || !v3Global.opt.timing().isSetTrue())) {
                 nodep->v3warn(E_NOTIMING, "s_eventually requires --timing");
-                nodep->replaceWith(new AstConst{nodep->fileline(), AstConst::WidthedValue{}, 1, 0});
+                nodep->replaceWith(
+                    new AstConst{nodep->fileline(), AstConst::WidthedValue{}, 1, 0});
                 VL_DO_DANGLING(nodep->deleteTree(), nodep);
                 return;
             }
@@ -1628,7 +1630,7 @@ class WidthVisitor final : public VNVisitor {
                 nodep->v3warn(E_UNSUPPORTED,
                               "Unsupported: property/sequence operator inside eventually");
             }
-            if (!nodep->loBoundp()) return; // s_eventually
+            if (!nodep->loBoundp()) return;  // s_eventually
             if (VN_IS(nodep->loBoundp(), Unbounded) || VN_IS(nodep->hiBoundp(), Unbounded)) {
                 nodep->v3error(
                     "The range for a weak eventually must be bounded (IEEE 1800-2023 16.12.13)");

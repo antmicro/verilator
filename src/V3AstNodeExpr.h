@@ -1397,7 +1397,8 @@ class AstEventually final : public AstNodeExpr {
     // @astgen op3 := hiBoundp : Optional[AstNodeExpr]
     const bool m_isStrong = false;  // s_ prefix
 public:
-    AstEventually(FileLine* fl, AstNodeExpr* exprp, AstNodeExpr* loBoundp, AstNodeExpr* hiBoundp, bool isStrong)
+    AstEventually(FileLine* fl, AstNodeExpr* exprp, AstNodeExpr* loBoundp, AstNodeExpr* hiBoundp,
+                  bool isStrong)
         : ASTGEN_SUPER_Eventually(fl)
         , m_isStrong(isStrong) {
         this->exprp(exprp);

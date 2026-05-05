@@ -1608,8 +1608,27 @@ class WidthVisitor final : public VNVisitor {
         // IEEE 1800-2023 16.12.13
         assertAtExpr(nodep);
         if (m_vup->prelim()) {
+            if (nodep->isStrong() && (v3Global.opt.timing().isSetFalse() || !v3Global.opt.timing().isSetTrue())) {
+                nodep->v3warn(E_NOTIMING, "s_eventually requires --timing");
+                nodep->replaceWith(new AstConst{nodep->fileline(), AstConst::WidthedValue{}, 1, 0});
+                VL_DO_DANGLING(nodep->deleteTree(), nodep);
+                return;
+            }
             userIterateAndNext(nodep->exprp(), WidthVP{SELF, BOTH}.p());
             nodep->dtypeSetBit();
+            bool hasPropertyOp = nodep->exprp()->isMultiCycleSva();
+            if (!hasPropertyOp) {
+                nodep->exprp()->foreach([&](const AstNode* np) {
+                    if (VN_IS(np, Implication) || VN_IS(np, Until) || VN_IS(np, PropSpec)) {
+                        hasPropertyOp = true;
+                    }
+                });
+            }
+            if (hasPropertyOp) {
+                nodep->v3warn(E_UNSUPPORTED,
+                              "Unsupported: property/sequence operator inside eventually");
+            }
+            if (!nodep->loBoundp()) return; // s_eventually
             if (VN_IS(nodep->loBoundp(), Unbounded) || VN_IS(nodep->hiBoundp(), Unbounded)) {
                 nodep->v3error(
                     "The range for a weak eventually must be bounded (IEEE 1800-2023 16.12.13)");
@@ -1628,18 +1647,6 @@ class WidthVisitor final : public VNVisitor {
             if (!hiConstp) {
                 nodep->v3error("eventually range high bound must be a constant expression"
                                " (IEEE 1800-2023 16.12.13)");
-            }
-            bool hasPropertyOp = nodep->exprp()->isMultiCycleSva();
-            if (!hasPropertyOp) {
-                nodep->exprp()->foreach([&](const AstNode* np) {
-                    if (VN_IS(np, Implication) || VN_IS(np, Until) || VN_IS(np, PropSpec)) {
-                        hasPropertyOp = true;
-                    }
-                });
-            }
-            if (hasPropertyOp) {
-                nodep->v3warn(E_UNSUPPORTED,
-                              "Unsupported: property/sequence operator inside eventually");
             }
         }
     }
@@ -1765,18 +1772,6 @@ class WidthVisitor final : public VNVisitor {
                 nodep->dtypeSetInt();  // Says the spec
             }
             if (nodep->seedp()) iterateCheckSigned32(nodep, "seed", nodep->seedp(), BOTH);
-        }
-    }
-    void visit(AstSEventually* nodep) override {
-        if (v3Global.opt.timing().isSetFalse() || !v3Global.opt.timing().isSetTrue()) {
-            nodep->v3warn(E_NOTIMING, "s_eventually requires --timing");
-            nodep->replaceWith(new AstConst{nodep->fileline(), AstConst::WidthedValue{}, 1, 0});
-            VL_DO_DANGLING(nodep->deleteTree(), nodep);
-            return;
-        }
-        if (m_vup->prelim()) {
-            iterateCheckBool(nodep, "exprp", nodep->exprp(), BOTH);
-            nodep->dtypeSetBit();
         }
     }
     void visit(AstSGotoRep* nodep) override {

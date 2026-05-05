@@ -825,8 +825,8 @@ private:
         sizep->dtypep(refp->findBasicDType(VBasicDTypeKwd::UINT32));
         return sizep;
     }
-    void visit(AstSEventually* nodep) override {
-        UASSERT(v3Global.rootp()->stdPackagep(), "Should be imported");
+    void visit(AstEventually* nodep) override {
+        UASSERT(!nodep->isStrong() || v3Global.rootp()->stdPackagep(), "Should be imported");
 
         AstSenTree* const sentreep = newSenTree(nodep);
         if (!sentreep->sensesp()) {

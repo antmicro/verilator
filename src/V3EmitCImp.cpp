@@ -761,13 +761,9 @@ class EmitCTrace final : public EmitCFunc {
         }
         if (fourstateExpr && stype != "Logic") {
             func += "Fourstate";
-            if (v3Global.opt.fshuffle()) {
-                if (const AstNodeVarRef* const valuep
-                    = VN_CAST(fourstateExpr->valuep(), NodeVarRef)) {
-                    if (const AstNodeVarRef* const xzp
-                        = VN_CAST(fourstateExpr->xzp(), NodeVarRef)) {
-                        if (valuep->varp() == xzp->varp()) func += "Shuffled";
-                    }
+            if (const AstNodeVarRef* const valuep = VN_CAST(fourstateExpr->valuep(), NodeVarRef)) {
+                if (const AstNodeVarRef* const xzp = VN_CAST(fourstateExpr->xzp(), NodeVarRef)) {
+                    if (valuep->varp() == xzp->varp()) func += "Shuffled";
                 }
             }
         }

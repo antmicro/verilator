@@ -558,8 +558,8 @@ static void process() {
             V3Expand::expandAll(v3Global.rootp());
         }
 
-        if (!v3Global.opt.lintOnly() && !v3Global.opt.serializeOnly() && v3Global.opt.fourstate()
-            && v3Global.opt.fshuffle()) {
+        if (!v3Global.opt.lintOnly() && !v3Global.opt.serializeOnly()
+            && v3Global.opt.fourstate()) {
             V3Fourstate::fourstateShuffleAll(v3Global.rootp());
         }
 

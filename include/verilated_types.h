@@ -396,7 +396,7 @@ public:
 /// zero in memory, but during intermediate operations in the Verilated
 /// internals is unpredictable.
 
-static int _vl_cmp_w(int words, WDataInP const lwp, WDataInP const rwp) VL_PURE;
+static int _vl_cmp_w_TT(int words, WDataInP const lwp, WDataInP const rwp) VL_PURE;
 
 template <std::size_t N_Words>
 struct VlWide;
@@ -439,7 +439,7 @@ struct VlWide final {
     WData* data() { return &m_storage[0]; }
     const WData* data() const { return &m_storage[0]; }
     bool operator<(const VlWide<N_Words>& rhs) const {
-        return _vl_cmp_w(N_Words, data(), rhs.data()) < 0;
+        return _vl_cmp_w_TT(N_Words, data(), rhs.data()) < 0;
     }
 };
 

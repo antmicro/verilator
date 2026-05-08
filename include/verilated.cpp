@@ -587,20 +587,39 @@ void _vl_debug_print_w(int lbits, const WDataInP iwp) VL_MT_SAFE {
 //===========================================================================
 // Slow expressions
 
-WDataOutP _vl_moddiv_w(int lbits, WDataOutP owp, const WDataInP lwp, const WDataInP rwp,
-                       bool is_modulus) VL_MT_SAFE {
+WDataOutP _vl_moddiv_w(int lbits, WDataOutP owp, WDataInP lwp, WDataInP rwp, bool is_modulus,
+                       const int outputOffset, int outputJump, const int lhsOffset, int lhsJump,
+                       const int rhsOffset, int rhsJump) VL_MT_SAFE {
     // See Knuth Algorithm D.  Computes u/v = q.r
     // This isn't massively tuned, as wide division is rare
     // for debug see V3Number version
     // Requires clean input
+    VL_DEBUG_IFDEF(assert((outputOffset == 0 && (outputJump == 1 || outputJump == 2))
+                          || (outputOffset == 1 && outputJump == 2)););
+    VL_DEBUG_IFDEF(assert((lhsOffset == 0 && (lhsJump == 1 || lhsJump == 2))
+                          || (lhsOffset == 1 && lhsJump == 2)););
+    VL_DEBUG_IFDEF(assert((rhsOffset == 0 && (rhsJump == 1 || rhsJump == 2))
+                          || (rhsOffset == 1 && rhsJump == 2)););
     const int words = VL_WORDS_I(lbits);
-    for (int i = 0; i < words; ++i) owp[i] = 0;
     // Find MSB and check for zero.
-    const int umsbp1 = VL_MOSTSETBITP1_W(words, lwp);  // dividend
-    const int vmsbp1 = VL_MOSTSETBITP1_W(words, rwp);  // divisor
+    const int umsbp1 = (lhsJump == 2) ? (lhsOffset ? VL_MOSTSETBITP1_W_X(words, lwp)
+                                                   : VL_MOSTSETBITP1_W_V(words, lwp))
+                                      : VL_MOSTSETBITP1_W_T(words, lwp);  // dividend
+    const int vmsbp1 = (rhsJump == 2) ? (rhsOffset ? VL_MOSTSETBITP1_W_X(words, rwp)
+                                                   : VL_MOSTSETBITP1_W_V(words, rwp))
+                                      : VL_MOSTSETBITP1_W_T(words, rwp);  // divisor
+    const WDataOutP resultp = owp;
+    owp += outputOffset;
+    lwp += lhsOffset;
+    rwp += rhsOffset;
+    // Since jump may be 1 or 2 we substract one to just use bit-shift left
+    --outputJump;
+    --lhsJump;
+    --rhsJump;
+    for (int i = 0; i < words; ++i) owp[i << outputJump] = 0;
     if (VL_UNLIKELY(vmsbp1 == 0)  // rwp==0 so division by zero.  Return 0.
         || VL_UNLIKELY(umsbp1 == 0)) {  // 0/x so short circuit and return 0
-        return owp;
+        return resultp;
     }
 
     const int uw = VL_WORDS_I(umsbp1);  // aka "m" in the algorithm
@@ -611,15 +630,16 @@ WDataOutP _vl_moddiv_w(int lbits, WDataOutP owp, const WDataInP lwp, const WData
     if (vw == 1) {  // Single divisor word breaks rest of algorithm
         uint64_t k = 0;
         for (int j = uw - 1; j >= 0; --j) {
-            const uint64_t unw64 = ((k << 32ULL) + static_cast<uint64_t>(lwp[j]));
-            owp[j] = unw64 / static_cast<uint64_t>(rwp[0]);
-            k = unw64 - static_cast<uint64_t>(owp[j]) * static_cast<uint64_t>(rwp[0]);
+            const uint64_t unw64 = ((k << 32ULL) + static_cast<uint64_t>(lwp[j << lhsJump]));
+            owp[j << outputJump] = unw64 / static_cast<uint64_t>(rwp[0]);
+            k = unw64
+                - static_cast<uint64_t>(owp[j << outputJump]) * static_cast<uint64_t>(rwp[0]);
         }
         if (is_modulus) {
             owp[0] = k;
-            for (int i = 1; i < words; ++i) owp[i] = 0;
+            for (int i = 1; i < words; ++i) owp[i << outputJump] = 0;
         }
-        return owp;
+        return resultp;
     }
 
     // +1 word as we may shift during normalization
@@ -635,16 +655,20 @@ WDataOutP _vl_moddiv_w(int lbits, WDataOutP owp, const WDataInP lwp, const WData
     const int s = 31 - VL_BITBIT_I(vmsbp1 - 1);  // shift amount (0...31)
     // Copy and shift dividend by same amount; may set new upper word
     if (s) {
-        for (int i = vw - 1; i > 0; --i) vn[i] = (rwp[i] << s) | (rwp[i - 1] >> (32 - s));
+        for (int i = vw - 1; i > 0; --i) {
+            vn[i] = (rwp[i << rhsJump] << s) | (rwp[(i - 1) << rhsJump] >> (32 - s));
+        }
         vn[0] = rwp[0] << s;
-        un[uw] = lwp[uw - 1] >> (32 - s);
-        for (int i = uw - 1; i > 0; --i) un[i] = (lwp[i] << s) | (lwp[i - 1] >> (32 - s));
+        un[uw] = lwp[(uw - 1) << lhsJump] >> (32 - s);
+        for (int i = uw - 1; i > 0; --i) {
+            un[i] = (lwp[i << lhsJump] << s) | (lwp[(i - 1) << lhsJump] >> (32 - s));
+        }
         un[0] = lwp[0] << s;
     } else {
-        for (int i = vw - 1; i > 0; --i) vn[i] = rwp[i];
+        for (int i = vw - 1; i > 0; --i) vn[i] = rwp[i << rhsJump];
         vn[0] = rwp[0];
         un[uw] = 0;
-        for (int i = uw - 1; i > 0; --i) un[i] = lwp[i];
+        for (int i = uw - 1; i > 0; --i) un[i] = lwp[i << lhsJump];
         un[0] = lwp[0];
     }
 
@@ -673,11 +697,11 @@ WDataOutP _vl_moddiv_w(int lbits, WDataOutP owp, const WDataInP lwp, const WData
         }
         t = un[j + vw] - k;
         un[j + vw] = t;
-        owp[j] = qhat;  // Save quotient digit
+        owp[j << outputJump] = qhat;  // Save quotient digit
 
         if (t < 0) {
             // Over subtracted; correct by adding back
-            owp[j]--;
+            owp[j << outputJump]--;
             k = 0;
             for (int i = 0; i < vw; ++i) {
                 t = static_cast<uint64_t>(un[i + j]) + static_cast<uint64_t>(vn[i]) + k;
@@ -691,15 +715,17 @@ WDataOutP _vl_moddiv_w(int lbits, WDataOutP owp, const WDataInP lwp, const WData
     if (is_modulus) {  // modulus
         // Need to reverse normalization on copy to output
         if (s) {
-            for (int i = 0; i < vw; ++i) owp[i] = (un[i] >> s) | (un[i + 1] << (32 - s));
+            for (int i = 0; i < vw; ++i) {
+                owp[i << outputJump] = (un[i] >> s) | (un[i + 1] << (32 - s));
+            }
         } else {
-            for (int i = 0; i < vw; ++i) owp[i] = un[i];
+            for (int i = 0; i < vw; ++i) owp[i << outputJump] = un[i];
         }
-        for (int i = vw; i < words; ++i) owp[i] = 0;
-        return owp;
+        for (int i = vw; i < words; ++i) owp[i << outputJump] = 0;
+        return resultp;
     }
     // division
-    return owp;
+    return resultp;
 }
 
 WDataOutP VL_POW_WWW(int obits, int, int rbits, WDataOutP owp, const WDataInP lwp,
@@ -749,7 +775,7 @@ QData VL_POW_QQW(int, int, int rbits, QData lhs, const WDataInP rwp) VL_MT_SAFE 
 WDataOutP VL_POWSS_WWW(int obits, int, int rbits, WDataOutP owp, const WDataInP lwp,
                        const WDataInP rwp, bool lsign, bool rsign) VL_MT_SAFE {
     // obits==lbits, rbits can be different
-    if (rsign && VL_SIGN_W(rbits, rwp)) {
+    if (rsign && VL_SIGN_W_T(rbits, rwp)) {
         const int words = VL_WORDS_I(obits);
         VL_ZERO_W(obits, owp);
         EData lor = 0;  // 0=all zeros, ~0=all ones, else mix
@@ -783,7 +809,7 @@ WDataOutP VL_POWSS_WWQ(int obits, int lbits, int rbits, WDataOutP owp, const WDa
 QData VL_POWSS_QQW(int obits, int, int rbits, QData lhs, const WDataInP rwp, bool lsign,
                    bool rsign) VL_MT_SAFE {
     // Skip check for rhs == 0, as short-circuit doesn't save time
-    if (rsign && VL_SIGN_W(rbits, rwp)) {
+    if (rsign && VL_SIGN_W_T(rbits, rwp)) {
         if (lhs == 0) return 0;  // "X"
         if (lhs == 1) return 1;
         if (lsign && lhs == VL_MASK_Q(obits)) {  // -1
@@ -812,11 +838,11 @@ double VL_ITOR_D_W(int lbits, const WDataInP lwp) VL_PURE {
     return d;
 }
 double VL_ISTOR_D_W(int lbits, const WDataInP lwp) VL_MT_SAFE {
-    if (!VL_SIGN_W(lbits, lwp)) return VL_ITOR_D_W(lbits, lwp);
+    if (!VL_SIGN_W_T(lbits, lwp)) return VL_ITOR_D_W(lbits, lwp);
     const int words = VL_WORDS_I(lbits);
     VL_DEBUG_IFDEF(assert(words <= VL_MULS_MAX_WORDS););
     uint32_t pos[VL_MULS_MAX_WORDS + 1];  // Fixed size, as MSVC++ doesn't allow [words] here
-    VL_NEGATE_W(words, pos, lwp);
+    VL_NEGATE_W_TT(words, pos, lwp);
     _vl_clean_inplace_w(lbits, pos);
     return -VL_ITOR_D_W(lbits, pos);
 }
@@ -883,18 +909,18 @@ std::string _vl_vsformat_time(std::string& tmp, T ld, int timeunit, bool left,
         WDataInP shifted = VL_EXTEND_WQ(b, 0, tmp0, static_cast<QData>(ld));
         if (shift < 0) {
             const WDataInP pow10 = VL_EXTEND_WQ(b, 0, tmp1, vl_time_pow10(-shift));
-            shifted = VL_DIV_WWW(b, tmp2, shifted, pow10);
+            shifted = VL_DIV_WWW_TTT(b, tmp2, shifted, pow10);
         } else {
             const WDataInP pow10 = VL_EXTEND_WQ(b, 0, tmp1, vl_time_pow10(shift));
             shifted = VL_MUL_W_TTT(w, tmp2, shifted, pow10);
         }
 
         const WDataInP fracDigitsPow10 = VL_EXTEND_WQ(b, 0, tmp3, vl_time_pow10(fracDigits));
-        const WDataInP integer = VL_DIV_WWW(b, tmp0, shifted, fracDigitsPow10);
-        const WDataInP frac = VL_MODDIV_WWW(b, tmp1, shifted, fracDigitsPow10);
+        const WDataInP integer = VL_DIV_WWW_TTT(b, tmp0, shifted, fracDigitsPow10);
+        const WDataInP frac = VL_MODDIV_WWW_TTT(b, tmp1, shifted, fracDigitsPow10);
         const WDataInP max64Bit
             = VL_EXTEND_WQ(b, 0, tmp2, std::numeric_limits<uint64_t>::max());  // breaks shifted
-        if (VL_GT_W(w, integer, max64Bit)) {
+        if (VL_GT_W_TT(w, integer, max64Bit)) {
             WDataOutP v = VL_ASSIGN_W_TT(b, tmp3, integer);  // breaks fracDigitsPow10
             VlWide<w> zero;
             VlWide<w> ten;
@@ -903,12 +929,12 @@ std::string _vl_vsformat_time(std::string& tmp, T ld, int timeunit, bool left,
             char buf[128];  // 128B is obviously long enough to represent 128bit integer in decimal
             char* ptr = buf + sizeof(buf) - 1;
             *ptr = '\0';
-            while (VL_GT_W(w, v, zero)) {
+            while (VL_GT_W_TT(w, v, zero)) {
                 --ptr;
-                const WDataInP mod = VL_MODDIV_WWW(b, tmp2, v, ten);  // breaks max64Bit
+                const WDataInP mod = VL_MODDIV_WWW_TTT(b, tmp2, v, ten);  // breaks max64Bit
                 *ptr = "0123456789"[VL_SET_QW(mod)];
                 VlWide<w> divided;
-                VL_DIV_WWW(b, divided, v, ten);
+                VL_DIV_WWW_TTT(b, divided, v, ten);
                 VL_ASSIGN_W_TT(b, v, divided);
             }
             if (!fracDigits) {
@@ -1192,9 +1218,9 @@ void _vl_vsformat(std::string& output, const std::string& format, int argc,
                             static_cast<int64_t>(VL_EXTENDS_QQ(lbits, lbits, ld)));
                         append = t_tmp;
                     } else {
-                        if (VL_SIGN_E(lbits, lwp[VL_WORDS_I(lbits) - 1])) {
+                        if (VL_SIGN_E_T(lbits, lwp[VL_WORDS_I(lbits) - 1])) {
                             std::vector<EData> neg(VL_WORDS_I(lbits));
-                            VL_NEGATE_W(VL_WORDS_I(lbits), neg.data(), lwp);
+                            VL_NEGATE_W_TT(VL_WORDS_I(lbits), neg.data(), lwp);
                             append = "-"s + VL_DECIMAL_NW(lbits, neg.data());
                         } else {
                             append = VL_DECIMAL_NW(lbits, lwp);
@@ -1268,7 +1294,7 @@ void _vl_vsformat(std::string& output, const std::string& format, int argc,
                 }
 
                 if (widthSet || left) {
-                    lsb = VL_MOSTSETBITP1_W(VL_WORDS_I(lbits), lwp);
+                    lsb = VL_MOSTSETBITP1_W_T(VL_WORDS_I(lbits), lwp);
                     lsb = (lsb < 1) ? 0 : (lsb - 1);
                 }
 

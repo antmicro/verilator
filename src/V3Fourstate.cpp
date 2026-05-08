@@ -2451,14 +2451,17 @@ class FourstateShuffleVisitor final : public VNVisitor {
         AstNodeExpr* exprp = nodep->argsp();
         for (AstVar* varp = nodep->funcp()->argsp(); varp; varp = VN_AS(varp->nextp(), Var)) {
             UASSERT_OBJ(exprp, varp, "Too little arguments");
-            UASSERT_OBJ(!varp->isFourstateComplement(), varp,
-                        "This loop shall never reach four-state complement");
-            if (AstVar* const complement = varp->fourstateComplementp()) {
-                getCreateShuffledVariantp(complement);
-                UASSERT_OBJ(VN_IS(exprp, NodeVarRef) && VN_IS(exprp->nextp(), NodeVarRef), exprp,
-                            "Wide four-state signals shall be passed only as lvalue references");
-                exprp->nextp()->unlinkFrBack()->deleteTree();
-                varp = VN_AS(varp->nextp()->nextp(), Var);
+            if (needsShuffle(varp)) {
+                UASSERT_OBJ(!varp->isFourstateComplement(), varp,
+                            "This loop shall never reach four-state complement");
+                if (AstVar* const complement = varp->fourstateComplementp()) {
+                    getCreateShuffledVariantp(complement);
+                    UASSERT_OBJ(
+                        VN_IS(exprp, NodeVarRef) && VN_IS(exprp->nextp(), NodeVarRef), exprp,
+                        "Wide four-state signals shall be passed only as lvalue references");
+                    exprp->nextp()->unlinkFrBack()->deleteTree();
+                    varp = VN_AS(varp->nextp()->nextp(), Var);
+                }
             }
             exprp = VN_AS(exprp->nextp(), NodeExpr);
         }

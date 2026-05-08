@@ -438,9 +438,9 @@ struct VlWide final {
     size_t size() const { return N_Words; }
     WData* data() { return &m_storage[0]; }
     const WData* data() const { return &m_storage[0]; }
-    bool operator<(const VlWide<N_Words>& rhs) const {
-        return _vl_cmp_w_TT(N_Words, data(), rhs.data()) < 0;
-    }
+    // bool operator<(const VlWide<N_Words>& rhs) const {
+    //     return _vl_cmp_w_TT(N_Words, data(), rhs.data()) < 0;
+    // }
 };
 
 // Convert a C array to std::array reference by pointer magic, without copy.

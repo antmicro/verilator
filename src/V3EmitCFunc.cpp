@@ -158,10 +158,10 @@ void EmitCFunc::emitOpName(AstNode* nodep, const string& format, AstNode* lhsp, 
                 case 'W':
                     if (detailp->isWide()) {
                         commaOut();
-                        const AstVarRef* const varRefp = VN_CAST(detailp, VarRef);
-                        out += cvtToStr(
-                            detailp->widthWords()
-                            / (varRefp && varRefp->varp()->isFourstateShuffle() ? 2 : 1));
+                        out += cvtToStr(VL_WORDS_I(
+                            detailp->width()));  // Even if signal is shuffled we want to emit
+                                                 // width that does not take into account the fact
+                                                 // that 4-states takes 2 bits
                         needComma = true;
                     }
                     break;

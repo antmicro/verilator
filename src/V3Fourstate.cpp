@@ -24,6 +24,7 @@
 #include "V3Fourstate.h"
 
 #include "V3Const.h"
+#include "V3Stats.h"
 #include "V3UniqueNames.h"
 
 #include <map>
@@ -2419,6 +2420,8 @@ class FourstateShuffleVisitor final : public VNVisitor {
     //                                  a pointer to a newly created wide four-state shuffled
     //                                  signal
 
+    VDouble0 m_shuffledVars;
+
     static bool needsShuffle(const AstVar* const varp) {
         return varp->isWide() && (varp->fourstateComplementp() || varp->isFourstateComplement());
     }
@@ -2435,14 +2438,16 @@ class FourstateShuffleVisitor final : public VNVisitor {
             "Four-state complementary value (xz part) shall have '__Vxz' suffix, but it is named: "
                 << varp->name());
         if (AstVar* resultp = VN_AS(varp->user1p(), Var)) return resultp;
+        UINFO(4, "SHUFFLED4STATE: " << varp);
+        ++m_shuffledVars;
         AstVar* const resultp = varp->cloneTree(false);
         resultp->unsetIsFourstateComplement();
         resultp->name(resultp->name().erase(resultp->name().size() + 1 - sizeof("__Vxz")));
-        resultp->dtypeSetBitUnsized(resultp->widthWords() * 2 * VL_IDATASIZE,
-                                    resultp->dtypep()->widthMin() * 2, varp->dtypep()->numeric());
-        resultp->setFourstateShuffle();
+        resultp->dtypep(resultp->findBitDType(resultp->width(), resultp->dtypep()->widthMin(),
+                                              varp->dtypep()->numeric(), true));
         varp->addNextHere(resultp);
         varp->user1p(resultp);
+        resultp->dumpTree();
         return resultp;
     }
 
@@ -2502,7 +2507,9 @@ class FourstateShuffleVisitor final : public VNVisitor {
 
 public:
     explicit FourstateShuffleVisitor(AstNetlist* const netlistp) { iterate(netlistp); }
-    ~FourstateShuffleVisitor() override = default;
+    ~FourstateShuffleVisitor() override {
+        V3Stats::addStat("Shuffled fourstate variables", m_shuffledVars);
+    }
 };
 
 void V3Fourstate::fourstateAll(AstNetlist* const netlistp) {

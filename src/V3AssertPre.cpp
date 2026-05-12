@@ -826,7 +826,8 @@ private:
         return sizep;
     }
     void visit(AstEventually* nodep) override {
-        UASSERT(!nodep->isStrong() || v3Global.rootp()->stdPackagep(), "Should be imported");
+        UASSERT_OBJ(nodep->isStrong(), nodep, "Weak eventually should be handled in V3AssertNfa");
+        UASSERT(v3Global.rootp()->stdPackagep(), "Should be imported");
 
         AstSenTree* const sentreep = newSenTree(nodep);
         if (!sentreep->sensesp()) {

@@ -885,17 +885,26 @@ static inline IData VL_CLOG2_W(int words, WDataInP const lwp) VL_PURE {
     return 0;
 }
 
+#define VL_TYPE_OFFSET_T (0)
+#define VL_TYPE_OFFSET_V (0)
+#define VL_TYPE_OFFSET_X (1)
+#define VL_GET_TYPE_OFFSET(c) (VL_TYPE_OFFSET_##c)
+#define VL_TYPE_JUMP_T (1)
+#define VL_TYPE_JUMP_V (2)
+#define VL_TYPE_JUMP_X (2)
+#define VL_GET_TYPE_JUMP(c) (VL_TYPE_JUMP_##c)
+
 // clang-format off
 #define VL_UNIOP_CONST_OUT_GEN_HELPER(macro) \
-    macro(T, 0, 1) \
-    macro(V, 0, 2) \
-    macro(X, 1, 2)
+    macro(T) \
+    macro(V) \
+    macro(X)
 // clang-format on
 
 // clang-format off
-#define VL_MOSTSETBITP1_W_GEN(suffix, lhsOffset, lhsJump) \
+#define VL_MOSTSETBITP1_W_GEN(suffix) \
 static inline IData VL_MOSTSETBITP1_W_##suffix(int words, WDataInP lwp) VL_PURE { \
-        lwp += (lhsOffset) + ((words << ((lhsJump) - 1)) - (lhsJump)); \
+        lwp += VL_GET_TYPE_OFFSET(suffix) + ((words << ((VL_GET_TYPE_JUMP(suffix)) - 1)) - (VL_GET_TYPE_JUMP(suffix))); \
         /* MSB set bit plus one; similar to FLS.  0=value is zero */ \
         for (int i = words - 1; i >= 0; --i) { \
             if (VL_UNLIKELY(*lwp)) {  /* Shorter worst case if predict not taken */ \
@@ -904,7 +913,7 @@ static inline IData VL_MOSTSETBITP1_W_##suffix(int words, WDataInP lwp) VL_PURE 
                 } \
                 /* Can't get here - one bit must be set */ \
             } \
-            lwp -= (lhsJump); \
+            lwp -= (VL_GET_TYPE_JUMP(suffix)); \
         } \
         return 0; \
     }
@@ -917,78 +926,77 @@ VL_UNIOP_CONST_OUT_GEN_HELPER(VL_MOSTSETBITP1_W_GEN)
 
 // clang-format off
 #define VL_UNIOP_GEN_HELPER(macro) \
-    macro(TT, 0, 1, 0, 1) \
-    macro(TV, 0, 1, 0, 2) \
-    macro(TX, 0, 1, 1, 2) \
-    macro(VT, 0, 2, 0, 1) \
-    macro(VV, 0, 2, 0, 2) \
-    macro(VX, 0, 2, 1, 2) \
-    macro(XT, 1, 2, 0, 1) \
-    macro(XV, 1, 2, 0, 2) \
-    macro(XX, 1, 2, 1, 2)
+    macro(T, T) \
+    macro(T, V) \
+    macro(T, X) \
+    macro(V, T) \
+    macro(V, V) \
+    macro(V, X) \
+    macro(X, T) \
+    macro(X, V) \
+    macro(X, X)
 
 #define VL_BIOP_GEN_HELPER(macro) \
-    macro(TTT, 0, 1, 0, 1, 0, 1) \
-    macro(TTV, 0, 1, 0, 1, 0, 2) \
-    macro(TTX, 0, 1, 0, 1, 1, 2) \
-    macro(TVT, 0, 1, 0, 2, 0, 1) \
-    macro(TVV, 0, 1, 0, 2, 0, 2) \
-    macro(TVX, 0, 1, 0, 2, 1, 2) \
-    macro(TXT, 0, 1, 1, 2, 0, 1) \
-    macro(TXV, 0, 1, 1, 2, 0, 2) \
-    macro(TXX, 0, 1, 1, 2, 1, 2) \
-    macro(VTT, 0, 2, 0, 1, 0, 1) \
-    macro(VTV, 0, 2, 0, 1, 0, 2) \
-    macro(VTX, 0, 2, 0, 1, 1, 2) \
-    macro(VVT, 0, 2, 0, 2, 0, 1) \
-    macro(VVV, 0, 2, 0, 2, 0, 2) \
-    macro(VVX, 0, 2, 0, 2, 1, 2) \
-    macro(VXT, 0, 2, 1, 2, 0, 1) \
-    macro(VXV, 0, 2, 1, 2, 0, 2) \
-    macro(VXX, 0, 2, 1, 2, 1, 2) \
-    macro(XTT, 1, 2, 0, 1, 0, 1) \
-    macro(XTV, 1, 2, 0, 1, 0, 2) \
-    macro(XTX, 1, 2, 0, 1, 1, 2) \
-    macro(XVT, 1, 2, 0, 2, 0, 1) \
-    macro(XVV, 1, 2, 0, 2, 0, 2) \
-    macro(XVX, 1, 2, 0, 2, 1, 2) \
-    macro(XXT, 1, 2, 1, 2, 0, 1) \
-    macro(XXV, 1, 2, 1, 2, 0, 2) \
-    macro(XXX, 1, 2, 1, 2, 1, 2)
+    macro(T, T, T) \
+    macro(T, T, V) \
+    macro(T, T, X) \
+    macro(T, V, T) \
+    macro(T, V, V) \
+    macro(T, V, X) \
+    macro(T, X, T) \
+    macro(T, X, V) \
+    macro(T, X, X) \
+    macro(V, T, T) \
+    macro(V, T, V) \
+    macro(V, T, X) \
+    macro(V, V, T) \
+    macro(V, V, V) \
+    macro(V, V, X) \
+    macro(V, X, T) \
+    macro(V, X, V) \
+    macro(V, X, X) \
+    macro(X, T, T) \
+    macro(X, T, V) \
+    macro(X, T, X) \
+    macro(X, V, T) \
+    macro(X, V, V) \
+    macro(X, V, X) \
+    macro(X, X, T) \
+    macro(X, X, V) \
+    macro(X, X, X)
 // clang-format on
 
 // clang-format off
-#define VL_BIOP_GEN(name, op, suffix, outputOffset, outputJump, lhsOffset, lhsJump, rhsOffset, \
-                    rhsJump) \
-static inline WDataOutP VL_##name##_W_##suffix(int words, WDataOutP owp, WDataInP lwp, \
+#define VL_BIOP_GEN(name, op, outputSuffix, lhsSuffix, rhsSuffix) \
+static inline WDataOutP VL_##name##_W_##outputSuffix##lhsSuffix##rhsSuffix(int words, WDataOutP owp, WDataInP lwp, \
                                                WDataInP rwp) VL_MT_SAFE { \
     const WDataOutP result = owp; \
-    owp += (outputOffset); \
-    lwp += (lhsOffset); \
-    rwp += (rhsOffset); \
+    owp += VL_GET_TYPE_OFFSET(outputSuffix); \
+    lwp += VL_GET_TYPE_OFFSET(lhsSuffix); \
+    rwp += VL_GET_TYPE_OFFSET(rhsSuffix); \
     for (int i = 0; (i < words); ++i) { \
         *owp = (*lwp op * rwp); \
-        owp += (outputJump); \
-        lwp += (lhsJump); \
-        rwp += (rhsJump); \
+        owp += VL_GET_TYPE_JUMP(outputSuffix); \
+        lwp += VL_GET_TYPE_JUMP(lhsSuffix); \
+        rwp += VL_GET_TYPE_JUMP(rhsSuffix); \
     } \
     return result; \
 }
 // clang-format on
 
 // EMIT_RULE: VL_AND:  oclean=lclean||rclean; obits=lbits; lbits==rbits;
-#define VL_AND_GEN(suffix, outputOffset, outputJump, lhsOffset, lhsJump, rhsOffset, rhsJump) \
-    VL_BIOP_GEN(AND, &, suffix, outputOffset, outputJump, lhsOffset, lhsJump, rhsOffset, rhsJump)
+#define VL_AND_GEN(outputSuffix, lhsSuffix, rhsSuffix) \
+    VL_BIOP_GEN(AND, &, outputSuffix, lhsSuffix, rhsSuffix)
 VL_BIOP_GEN_HELPER(VL_AND_GEN)
 #undef VL_AND_GEN
 // EMIT_RULE: VL_OR:   oclean=lclean&&rclean; obits=lbits; lbits==rbits;
-#define VL_OR_GEN(suffix, outputOffset, outputJump, lhsOffset, lhsJump, rhsOffset, rhsJump) \
-    VL_BIOP_GEN(OR, |, suffix, outputOffset, outputJump, lhsOffset, lhsJump, rhsOffset, rhsJump)
+#define VL_OR_GEN(outputSuffix, lhsSuffix, rhsSuffix) \
+    VL_BIOP_GEN(OR, |, outputSuffix, lhsSuffix, rhsSuffix)
 VL_BIOP_GEN_HELPER(VL_OR_GEN)
 #undef VL_OR_GEN
 // EMIT_RULE: VL_XOR:  oclean=lclean&&rclean; obits=lbits; lbits==rbits;
-#define VL_XOR_GEN(suffix, outputOffset, outputJump, lhsOffset, lhsJump, rhsOffset, rhsJump) \
-    VL_BIOP_GEN(XOR, ^, suffix, outputOffset, outputJump, lhsOffset, lhsJump, rhsOffset, rhsJump)
+#define VL_XOR_GEN(outputSuffix, lhsSuffix, rhsSuffix) \
+    VL_BIOP_GEN(XOR, ^, outputSuffix, lhsSuffix, rhsSuffix)
 VL_BIOP_GEN_HELPER(VL_XOR_GEN)
 #undef VL_XOR_GEN
 
@@ -1004,16 +1012,16 @@ static inline IData VL_CHANGEXOR_W(int words, WDataInP const lwp, WDataInP const
 
 // clang-format off
 
-#define VL_NOT_GEN(suffix, outputOffset, outputJump, lhsOffset, lhsJump) \
-static inline WDataOutP VL_NOT_W_##suffix(int words, WDataOutP owp, WDataInP lwp) \
+#define VL_NOT_GEN(outputSuffix, lhsSuffix) \
+static inline WDataOutP VL_NOT_W_##outputSuffix##lhsSuffix(int words, WDataOutP owp, WDataInP lwp) \
         VL_MT_SAFE { \
         const WDataOutP result = owp; \
-        owp += (outputOffset); \
-        lwp += (lhsOffset); \
+        owp += VL_GET_TYPE_OFFSET(outputSuffix); \
+        lwp += VL_GET_TYPE_OFFSET(lhsSuffix); \
         for (int i = 0; i < words; ++i) { \
             *owp = ~(*lwp); \
-            owp += (outputJump); \
-            lwp += (lhsJump); \
+            owp += VL_GET_TYPE_JUMP(outputSuffix); \
+            lwp += VL_GET_TYPE_JUMP(lhsSuffix); \
         } \
         return result; \
     }
@@ -1028,15 +1036,15 @@ VL_UNIOP_GEN_HELPER(VL_NOT_GEN)
 
 // clang-format off
 #define VL_BIOP_CONST_OUT_GEN_HELPER(macro) \
-    macro(T, T, 0, 1, 0, 1) \
-    macro(T, V, 0, 1, 0, 2) \
-    macro(T, X, 0, 1, 1, 2) \
-    macro(V, T, 0, 2, 0, 1) \
-    macro(V, V, 0, 2, 0, 2) \
-    macro(V, X, 0, 2, 1, 2) \
-    macro(X, T, 1, 2, 0, 1) \
-    macro(X, V, 1, 2, 0, 2) \
-    macro(X, X, 1, 2, 1, 2)
+    macro(T, T) \
+    macro(T, V) \
+    macro(T, X) \
+    macro(V, T) \
+    macro(V, V) \
+    macro(V, X) \
+    macro(X, T) \
+    macro(X, V) \
+    macro(X, X)
 // clang-format on
 
 // EMIT_RULE: VL_EQ:  oclean=clean; lclean==clean; rclean==clean; obits=1; lbits==rbits;
@@ -1120,15 +1128,15 @@ VL_UNIOP_GEN_HELPER(VL_NOT_GEN)
 
 // clang-format off
 // Output clean, <lhs> AND <rhs> MUST BE CLEAN
-#define VL_EQ_W_GEN(lhsSuffix, rhsSuffix, lhsOffset, lhsJump, rhsOffset, rhsJump) \
+#define VL_EQ_W_GEN(lhsSuffix, rhsSuffix) \
 static inline IData VL_EQ_W_##lhsSuffix##rhsSuffix(int words, WDataInP lwp, WDataInP rwp) VL_PURE { \
-        lwp += (lhsOffset); \
-        rwp += (rhsOffset); \
+        lwp += VL_GET_TYPE_OFFSET(lhsSuffix); \
+        rwp += VL_GET_TYPE_OFFSET(rhsSuffix); \
         EData nequal = 0; \
         for (int i = 0; (i < words); ++i) { \
             nequal |= (*lwp ^ *rwp); \
-            lwp += (lhsJump); \
-            rwp += (rhsJump); \
+            lwp += VL_GET_TYPE_JUMP(lhsSuffix); \
+            rwp += VL_GET_TYPE_JUMP(rhsSuffix); \
         } \
         return (nequal == 0); \
     }
@@ -1157,15 +1165,15 @@ VL_BIOP_CONST_OUT_GEN_HELPER(VL_EQ_W_GEN)
 
 // Internal usage
 // clang-format off
-#define _vl_cmp_w_GEN(lhsSuffix, rhsSuffix, lhsOffset, lhsJump, rhsOffset, rhsJump) \
+#define _vl_cmp_w_GEN(lhsSuffix, rhsSuffix) \
 static inline int _vl_cmp_w_##lhsSuffix##rhsSuffix(int words, WDataInP lwp, WDataInP rwp) VL_PURE { \
-        lwp += (lhsOffset); \
-        rwp += (rhsOffset); \
+        lwp += VL_GET_TYPE_OFFSET(lhsSuffix); \
+        rwp += VL_GET_TYPE_OFFSET(rhsSuffix); \
         for (int i = words - 1; i >= 0; --i) { \
             if (*lwp > *rwp) return 1; \
             if (*lwp < *rwp) return -1; \
-            lwp += (lhsJump); \
-            rwp += (rhsJump); \
+            lwp += VL_GET_TYPE_JUMP(lhsSuffix); \
+            rwp += VL_GET_TYPE_JUMP(rhsSuffix); \
         } \
         return 0;  /* == */ \
     }
@@ -1293,10 +1301,10 @@ static inline IData VL_LTES_IQQ_TT(int lbits, QData lhs, QData rhs) VL_PURE {
 }
 
 // clang-format off
-#define _vl_cmps_w_GEN(lhsSuffix, rhsSuffix, lhsOffset, lhsJump, rhsOffset, rhsJump) \
+#define _vl_cmps_w_GEN(lhsSuffix, rhsSuffix) \
 static inline int _vl_cmps_w_##lhsSuffix##rhsSuffix(int lbits, WDataInP lwp, WDataInP rwp) VL_PURE { \
-        lwp += (lhsOffset); \
-        rwp += (rhsOffset); \
+        lwp += VL_GET_TYPE_OFFSET(lhsSuffix); \
+        rwp += VL_GET_TYPE_OFFSET(rhsSuffix); \
         const int words = VL_WORDS_I(lbits); \
         int i = words - 1; \
         /* We need to flip sense if negative comparison */ \
@@ -1307,8 +1315,8 @@ static inline int _vl_cmps_w_##lhsSuffix##rhsSuffix(int lbits, WDataInP lwp, WDa
         for (; i >= 0; --i) { \
             if (*lwp > *rwp) return 1; \
             if (*lwp < *rwp) return -1; \
-            lwp += (lhsJump); \
-            rwp += (rhsJump); \
+            lwp += VL_GET_TYPE_JUMP(lhsSuffix); \
+            rwp += VL_GET_TYPE_JUMP(rhsSuffix); \
         } \
         return 0;  /* == */ \
     }
@@ -1322,17 +1330,17 @@ VL_BIOP_CONST_OUT_GEN_HELPER(_vl_cmps_w_GEN)
 
 // Output NOT clean
 // clang-format off
-#define VL_NEGATE_W_GEN(suffix, outputOffset, outputJump, lhsOffset, lhsJump) \
-static inline WDataOutP VL_NEGATE_W_##suffix(int words, WDataOutP owp, WDataInP lwp) VL_MT_SAFE { \
+#define VL_NEGATE_W_GEN(outputSuffix, lhsSuffix) \
+static inline WDataOutP VL_NEGATE_W_##outputSuffix##lhsSuffix(int words, WDataOutP owp, WDataInP lwp) VL_MT_SAFE { \
         const WDataOutP resultp = owp; \
-        owp += (outputOffset); \
-        lwp += (lhsOffset); \
+        owp += VL_GET_TYPE_OFFSET(outputSuffix); \
+        lwp += VL_GET_TYPE_OFFSET(lhsSuffix); \
         EData carry = 1; \
         for (int i = 0; i < words; ++i) { \
             *owp = ~(*lwp) + carry; \
             carry = (*owp < ~(*lwp)); \
-            owp += (outputJump); \
-            lwp += (lhsJump); \
+            owp += VL_GET_TYPE_JUMP(outputSuffix); \
+            lwp += VL_GET_TYPE_JUMP(lhsSuffix); \
         } \
         return resultp; \
     }
@@ -1342,15 +1350,15 @@ VL_UNIOP_GEN_HELPER(VL_NEGATE_W_GEN)
 #undef VL_UNIOP_GEN_HELPER
 
 // clang-format off
-#define VL_NEGATE_INPLACE_W_GEN(suffix, lhsOffset, lhsJump) \
+#define VL_NEGATE_INPLACE_W_GEN(suffix) \
 static inline void VL_NEGATE_INPLACE_W_##suffix(int words, WDataOutP owp_lwp) VL_MT_SAFE { \
-        owp_lwp += (lhsOffset); \
+        owp_lwp += VL_GET_TYPE_OFFSET(suffix); \
         EData carry = 1; \
         for (int i = 0; i < words; ++i) { \
             const EData word = ~(*owp_lwp) + carry; \
             carry = (word < ~(*owp_lwp)); \
             (*owp_lwp) = word; \
-            owp_lwp += (lhsJump); \
+            owp_lwp += VL_GET_TYPE_JUMP(suffix); \
         } \
     }
 // clang-format off
@@ -1432,21 +1440,21 @@ static inline QData VL_MODDIV_QQQ_TTT(int /*lbits*/, QData lhs, QData rhs) {
 #define VL_MODDIV_WWW_XXX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 1, 2, 1, 2, 1, 2))
 
 // clang-format off
-#define VL_ADD_GEN(suffix, outputOffset, outputJump, lhsOffset, lhsJump, rhsOffset, rhsJump) \
-static inline WDataOutP VL_ADD_W_##suffix(int words, WDataOutP owp, WDataInP lwp, \
+#define VL_ADD_GEN(outputSuffix, lhsSuffix, rhsSuffix) \
+static inline WDataOutP VL_ADD_W_##outputSuffix##lhsSuffix##rhsSuffix(int words, WDataOutP owp, WDataInP lwp, \
                                             WDataInP rwp) VL_MT_SAFE { \
     const WDataOutP result = owp; \
-    owp += (outputOffset); \
-    lwp += (lhsOffset); \
-    rwp += (rhsOffset); \
+    owp += VL_GET_TYPE_OFFSET(outputSuffix); \
+    lwp += VL_GET_TYPE_OFFSET(lhsSuffix); \
+    rwp += VL_GET_TYPE_OFFSET(rhsSuffix); \
     QData carry = 0; \
     for (int i = 0; i < words; ++i) { \
         carry = carry + static_cast<QData>(*lwp) + static_cast<QData>(*rwp); \
         *owp = (carry & 0xffffffffULL); \
         carry = (carry >> 32ULL) & 0xffffffffULL; \
-        owp += (outputJump); \
-        lwp += (lhsJump); \
-        rwp += (rhsJump); \
+        owp += VL_GET_TYPE_JUMP(outputSuffix); \
+        lwp += VL_GET_TYPE_JUMP(lhsSuffix); \
+        rwp += VL_GET_TYPE_JUMP(rhsSuffix); \
     } \
     /* Last output word is dirty */ \
     return result; \
@@ -1456,13 +1464,13 @@ VL_BIOP_GEN_HELPER(VL_ADD_GEN)
 #undef VL_ADD_GEN
 
 // clang-format off
-#define VL_SUB_GEN(suffix, outputOffset, outputJump, lhsOffset, lhsJump, rhsOffset, rhsJump) \
-static inline WDataOutP VL_SUB_W_##suffix(int words, WDataOutP owp, WDataInP lwp, \
+#define VL_SUB_GEN(outputSuffix, lhsSuffix, rhsSuffix) \
+static inline WDataOutP VL_SUB_W_##outputSuffix##lhsSuffix##rhsSuffix(int words, WDataOutP owp, WDataInP lwp, \
                                             WDataInP rwp) VL_MT_SAFE { \
     const WDataOutP result = owp; \
-    owp += (outputOffset); \
-    lwp += (lhsOffset); \
-    rwp += (rhsOffset); \
+    owp += VL_GET_TYPE_OFFSET(outputSuffix); \
+    lwp += VL_GET_TYPE_OFFSET(lhsSuffix); \
+    rwp += VL_GET_TYPE_OFFSET(rhsSuffix); \
     QData carry = 0; \
     for (int i = 0; i < words; ++i) { \
         carry = (carry + static_cast<QData>(*lwp) \
@@ -1470,9 +1478,9 @@ static inline WDataOutP VL_SUB_W_##suffix(int words, WDataOutP owp, WDataInP lwp
         if (i == 0) ++carry; /* Negation of rwp */ \
         *owp = (carry & 0xffffffffULL); \
         carry = (carry >> 32ULL) & 0xffffffffULL; \
-        owp += (outputJump); \
-        lwp += (lhsJump); \
-        rwp += (rhsJump); \
+        owp += VL_GET_TYPE_JUMP(outputSuffix); \
+        lwp += VL_GET_TYPE_JUMP(lhsSuffix); \
+        rwp += VL_GET_TYPE_JUMP(rhsSuffix); \
     } \
     /* Last output word is dirty */ \
     return result; \
@@ -1482,32 +1490,32 @@ VL_BIOP_GEN_HELPER(VL_SUB_GEN)
 #undef VL_SUB_GEN
 
 // clang-format off
-#define VL_MUL_GEN(suffix, outputOffset, outputJump, lhsOffset, lhsJump, rhsOffset, rhsJump) \
-static inline WDataOutP VL_MUL_W_##suffix(int words, WDataOutP owp, WDataInP lwp, \
+#define VL_MUL_GEN(outputSuffix, lhsSuffix, rhsSuffix) \
+static inline WDataOutP VL_MUL_W_##outputSuffix##lhsSuffix##rhsSuffix(int words, WDataOutP owp, WDataInP lwp, \
                                  WDataInP rwp) VL_MT_SAFE { \
     const WDataOutP result = owp; \
-    owp += (outputOffset); \
-    lwp += (lhsOffset); \
-    rwp += (rhsOffset); \
+    owp += VL_GET_TYPE_OFFSET(outputSuffix); \
+    lwp += VL_GET_TYPE_OFFSET(lhsSuffix); \
+    rwp += VL_GET_TYPE_OFFSET(rhsSuffix); \
     for (int i = 0; i < words; ++i) { \
         *owp = 0; \
-        owp += (outputJump); \
+        owp += VL_GET_TYPE_JUMP(outputSuffix); \
     } \
     for (int lword = 0; lword < words; ++lword) { \
         WDataInP currentRwp = rwp; \
         for (int rword = 0; rword < words; ++rword) { \
             QData mul = static_cast<QData>(*lwp) * static_cast<QData>(*currentRwp); \
             int qword = lword + rword; \
-            owp = result + (outputOffset) + qword * (outputJump); \
+            owp = result + VL_GET_TYPE_OFFSET(outputSuffix) + qword * VL_GET_TYPE_JUMP(outputSuffix); \
             for (; qword < words; ++qword) { \
                 mul += static_cast<QData>(*owp); \
                 *owp = (mul & 0xffffffffULL); \
                 mul = (mul >> 32ULL) & 0xffffffffULL; \
-                owp += (outputJump); \
+                owp += VL_GET_TYPE_JUMP(outputSuffix); \
             } \
-            currentRwp += (rhsJump); \
+            currentRwp += VL_GET_TYPE_JUMP(rhsSuffix); \
         } \
-        lwp += (lhsJump); \
+        lwp += VL_GET_TYPE_JUMP(lhsSuffix); \
     } \
     /* Last output word is dirty */ \
     return result; \
@@ -1515,7 +1523,6 @@ static inline WDataOutP VL_MUL_W_##suffix(int words, WDataOutP owp, WDataInP lwp
 // clang-format on
 VL_BIOP_GEN_HELPER(VL_MUL_GEN)
 #undef VL_MUL_GEN
-#undef VL_BIOP_GEN_HELPER
 
 static inline IData VL_MULS_III(int lbits, IData lhs, IData rhs) VL_PURE {
     const int32_t lhs_signed = VL_EXTENDS_II(32, lbits, lhs);
@@ -2419,6 +2426,7 @@ static inline QData VL_SHIFTL_QQW(int obits, int, int rbits, QData lhs,
     // Above checks rwp[1]==0 so not needed in below shift
     return VL_SHIFTL_QQI(obits, obits, 32, lhs, rwp[0]);
 }
+#undef VL_BIOP_GEN_HELPER
 
 // EMIT_RULE: VL_SHIFTR:  oclean=lclean; rclean==clean;
 // Important: Unlike most other funcs, the shift might well be a computed
@@ -3431,5 +3439,14 @@ extern IData VL_VALUEPLUSARGS_INN(int, const std::string& ld, std::string& rdr) 
 uint64_t VL_MURMUR64_HASH(const char* key) VL_PURE;
 
 //======================================================================
+
+#undef VL_TYPE_OFFSET_T
+#undef VL_TYPE_OFFSET_V
+#undef VL_TYPE_OFFSET_X
+#undef VL_GET_TYPE_OFFSET
+#undef VL_TYPE_JUMP_T
+#undef VL_TYPE_JUMP_V
+#undef VL_TYPE_JUMP_X
+#undef VL_GET_TYPE_JUMP
 
 #endif  // Guard

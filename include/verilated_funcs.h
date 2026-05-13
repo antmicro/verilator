@@ -449,6 +449,7 @@ static inline  WDataOutP VL_ASSIGN_W_##suffix(int obits, WDataOutP owp, WDataInP
 // T - two state value
 // V - value part
 // X - xz part
+#define VL_NONSENSE_OP static_assert(false, "This operation is a nonsense - internal error")
 VL_ASSIGN_W_GEN(VV, 0, 2, 0, 2)
 VL_ASSIGN_W_GEN(VX, 0, 2, 1, 2)
 VL_ASSIGN_W_GEN(VT, 0, 2, 0, 1)
@@ -1361,7 +1362,7 @@ static inline void VL_NEGATE_INPLACE_W_##suffix(int words, WDataOutP owp_lwp) VL
             owp_lwp += VL_GET_TYPE_JUMP(suffix); \
         } \
     }
-// clang-format off
+// clang-format on
 
 VL_UNIOP_CONST_OUT_GEN_HELPER(VL_NEGATE_INPLACE_W_GEN)
 #undef VL_NEGATE_INPLACE_W_GEN
@@ -1376,34 +1377,57 @@ static inline IData VL_DIV_III_TTT(int /*lbits*/, IData lhs, IData rhs) {
 static inline QData VL_DIV_QQQ_TTT(int /*lbits*/, QData lhs, QData rhs) {
     return (rhs == 0) ? 0 : lhs / rhs;
 }
-#define VL_DIV_WWW_TTT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 1, 0, 1, 0, 1))
-#define VL_DIV_WWW_TTV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 1, 0, 1, 0, 2))
-#define VL_DIV_WWW_TTX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 1, 0, 1, 1, 2))
-#define VL_DIV_WWW_TVT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 1, 0, 2, 0, 1))
-#define VL_DIV_WWW_TVV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 1, 0, 2, 0, 2))
-#define VL_DIV_WWW_TVX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 1, 0, 2, 1, 2))
-#define VL_DIV_WWW_TXT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 1, 1, 2, 0, 1))
-#define VL_DIV_WWW_TXV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 1, 1, 2, 0, 2))
-#define VL_DIV_WWW_TXX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 1, 1, 2, 1, 2))
-#define VL_DIV_WWW_VTT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 2, 0, 1, 0, 1))
-#define VL_DIV_WWW_VTV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 2, 0, 1, 0, 2))
-#define VL_DIV_WWW_VTX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 2, 0, 1, 1, 2))
-#define VL_DIV_WWW_VVT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 2, 0, 2, 0, 1))
-#define VL_DIV_WWW_VVV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 2, 0, 2, 0, 2))
-#define VL_DIV_WWW_VVX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 2, 0, 2, 1, 2))
-#define VL_DIV_WWW_VXT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 2, 1, 2, 0, 1))
-#define VL_DIV_WWW_VXV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 2, 1, 2, 0, 2))
-#define VL_DIV_WWW_VXX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 0, 2, 1, 2, 1, 2))
-#define VL_DIV_WWW_XTT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 1, 2, 0, 1, 0, 1))
-#define VL_DIV_WWW_XTV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 1, 2, 0, 1, 0, 2))
-#define VL_DIV_WWW_XTX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 1, 2, 0, 1, 1, 2))
-#define VL_DIV_WWW_XVT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 1, 2, 0, 2, 0, 1))
-#define VL_DIV_WWW_XVV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 1, 2, 0, 2, 0, 2))
-#define VL_DIV_WWW_XVX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 1, 2, 0, 2, 1, 2))
-#define VL_DIV_WWW_XXT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 1, 2, 1, 2, 0, 1))
-#define VL_DIV_WWW_XXV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 1, 2, 1, 2, 0, 2))
-#define VL_DIV_WWW_XXX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, 1, 2, 1, 2, 1, 2))
-
+#define VL_DIV_WWW_TTT(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), \
+                  VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), VL_GET_TYPE_OFFSET(T), \
+                  VL_GET_TYPE_JUMP(T)))
+#define VL_DIV_WWW_TTV(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), \
+                  VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), VL_GET_TYPE_OFFSET(V), \
+                  VL_GET_TYPE_JUMP(V)))
+#define VL_DIV_WWW_TTX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_TVT(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), \
+                  VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), VL_GET_TYPE_OFFSET(T), \
+                  VL_GET_TYPE_JUMP(T)))
+#define VL_DIV_WWW_TVV(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), \
+                  VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), VL_GET_TYPE_OFFSET(V), \
+                  VL_GET_TYPE_JUMP(V)))
+#define VL_DIV_WWW_TVX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_TXT(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_TXV(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_TXX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_VTT(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), \
+                  VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), VL_GET_TYPE_OFFSET(T), \
+                  VL_GET_TYPE_JUMP(T)))
+#define VL_DIV_WWW_VTV(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), \
+                  VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), VL_GET_TYPE_OFFSET(V), \
+                  VL_GET_TYPE_JUMP(V)))
+#define VL_DIV_WWW_VTX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_VVT(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), \
+                  VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), VL_GET_TYPE_OFFSET(T), \
+                  VL_GET_TYPE_JUMP(T)))
+#define VL_DIV_WWW_VVV(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 0, VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), \
+                  VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), VL_GET_TYPE_OFFSET(V), \
+                  VL_GET_TYPE_JUMP(V)))
+#define VL_DIV_WWW_VVX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_VXT(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_VXV(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_VXX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_XTT(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_XTV(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_XTX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_XVT(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_XVV(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_XVX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_XXT(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_XXV(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_DIV_WWW_XXX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
 
 static inline IData VL_MODDIV_III_TTT(int /*lbits*/, IData lhs, IData rhs) {
     return (rhs == 0) ? 0 : lhs % rhs;
@@ -1411,33 +1435,57 @@ static inline IData VL_MODDIV_III_TTT(int /*lbits*/, IData lhs, IData rhs) {
 static inline QData VL_MODDIV_QQQ_TTT(int /*lbits*/, QData lhs, QData rhs) {
     return (rhs == 0) ? 0 : lhs % rhs;
 }
-#define VL_MODDIV_WWW_TTT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 1, 0, 1, 0, 1))
-#define VL_MODDIV_WWW_TTV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 1, 0, 1, 0, 2))
-#define VL_MODDIV_WWW_TTX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 1, 0, 1, 1, 2))
-#define VL_MODDIV_WWW_TVT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 1, 0, 2, 0, 1))
-#define VL_MODDIV_WWW_TVV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 1, 0, 2, 0, 2))
-#define VL_MODDIV_WWW_TVX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 1, 0, 2, 1, 2))
-#define VL_MODDIV_WWW_TXT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 1, 1, 2, 0, 1))
-#define VL_MODDIV_WWW_TXV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 1, 1, 2, 0, 2))
-#define VL_MODDIV_WWW_TXX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 1, 1, 2, 1, 2))
-#define VL_MODDIV_WWW_VTT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 2, 0, 1, 0, 1))
-#define VL_MODDIV_WWW_VTV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 2, 0, 1, 0, 2))
-#define VL_MODDIV_WWW_VTX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 2, 0, 1, 1, 2))
-#define VL_MODDIV_WWW_VVT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 2, 0, 2, 0, 1))
-#define VL_MODDIV_WWW_VVV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 2, 0, 2, 0, 2))
-#define VL_MODDIV_WWW_VVX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 2, 0, 2, 1, 2))
-#define VL_MODDIV_WWW_VXT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 2, 1, 2, 0, 1))
-#define VL_MODDIV_WWW_VXV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 2, 1, 2, 0, 2))
-#define VL_MODDIV_WWW_VXX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 0, 2, 1, 2, 1, 2))
-#define VL_MODDIV_WWW_XTT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 1, 2, 0, 1, 0, 1))
-#define VL_MODDIV_WWW_XTV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 1, 2, 0, 1, 0, 2))
-#define VL_MODDIV_WWW_XTX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 1, 2, 0, 1, 1, 2))
-#define VL_MODDIV_WWW_XVT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 1, 2, 0, 2, 0, 1))
-#define VL_MODDIV_WWW_XVV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 1, 2, 0, 2, 0, 2))
-#define VL_MODDIV_WWW_XVX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 1, 2, 0, 2, 1, 2))
-#define VL_MODDIV_WWW_XXT(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 1, 2, 1, 2, 0, 1))
-#define VL_MODDIV_WWW_XXV(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 1, 2, 1, 2, 0, 2))
-#define VL_MODDIV_WWW_XXX(lbits, owp, lwp, rwp) (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, 1, 2, 1, 2, 1, 2))
+#define VL_MODDIV_WWW_TTT(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), \
+                  VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), VL_GET_TYPE_OFFSET(T), \
+                  VL_GET_TYPE_JUMP(T)))
+#define VL_MODDIV_WWW_TTV(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), \
+                  VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), VL_GET_TYPE_OFFSET(V), \
+                  VL_GET_TYPE_JUMP(V)))
+#define VL_MODDIV_WWW_TTX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_TVT(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), \
+                  VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), VL_GET_TYPE_OFFSET(T), \
+                  VL_GET_TYPE_JUMP(T)))
+#define VL_MODDIV_WWW_TVV(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), \
+                  VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), VL_GET_TYPE_OFFSET(V), \
+                  VL_GET_TYPE_JUMP(V)))
+#define VL_MODDIV_WWW_TVX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_TXT(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_TXV(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_TXX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_VTT(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), \
+                  VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), VL_GET_TYPE_OFFSET(T), \
+                  VL_GET_TYPE_JUMP(T)))
+#define VL_MODDIV_WWW_VTV(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), \
+                  VL_GET_TYPE_OFFSET(T), VL_GET_TYPE_JUMP(T), VL_GET_TYPE_OFFSET(V), \
+                  VL_GET_TYPE_JUMP(V)))
+#define VL_MODDIV_WWW_VTX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_VVT(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), \
+                  VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), VL_GET_TYPE_OFFSET(T), \
+                  VL_GET_TYPE_JUMP(T)))
+#define VL_MODDIV_WWW_VVV(lbits, owp, lwp, rwp) \
+    (_vl_moddiv_w(lbits, owp, lwp, rwp, 1, VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), \
+                  VL_GET_TYPE_OFFSET(V), VL_GET_TYPE_JUMP(V), VL_GET_TYPE_OFFSET(V), \
+                  VL_GET_TYPE_JUMP(V)))
+#define VL_MODDIV_WWW_VVX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_VXT(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_VXV(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_VXX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_XTT(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_XTV(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_XTX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_XVT(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_XVV(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_XVX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_XXT(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_XXV(lbits, owp, lwp, rwp) VL_NONSENSE_OP
+#define VL_MODDIV_WWW_XXX(lbits, owp, lwp, rwp) VL_NONSENSE_OP
 
 // clang-format off
 #define VL_ADD_GEN(outputSuffix, lhsSuffix, rhsSuffix) \
@@ -3439,14 +3487,5 @@ extern IData VL_VALUEPLUSARGS_INN(int, const std::string& ld, std::string& rdr) 
 uint64_t VL_MURMUR64_HASH(const char* key) VL_PURE;
 
 //======================================================================
-
-#undef VL_TYPE_OFFSET_T
-#undef VL_TYPE_OFFSET_V
-#undef VL_TYPE_OFFSET_X
-#undef VL_GET_TYPE_OFFSET
-#undef VL_TYPE_JUMP_T
-#undef VL_TYPE_JUMP_V
-#undef VL_TYPE_JUMP_X
-#undef VL_GET_TYPE_JUMP
 
 #endif  // Guard

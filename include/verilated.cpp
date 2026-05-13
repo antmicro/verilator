@@ -874,7 +874,7 @@ std::string VL_DECIMAL_NW(int width, const WDataInP lwp) VL_MT_SAFE {
         }
         // Shift; bcd = bcd << 1
         VL_ASSIGN_W_TT(maxdecwidth, tmp.data(), bcd.data());
-        VL_SHIFTL_WWI(maxdecwidth, maxdecwidth, 32, bcd.data(), tmp.data(), 1);
+        VL_SHIFTL_WWI_TTT(maxdecwidth, maxdecwidth, 32, bcd.data(), tmp.data(), 1);
         // bcd[0] = lwp[from_bit]
         if (VL_BITISSET_W(lwp, from_bit)) bcd[0] |= 1;
     }

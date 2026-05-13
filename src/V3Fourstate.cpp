@@ -2447,7 +2447,6 @@ class FourstateShuffleVisitor final : public VNVisitor {
                                               varp->dtypep()->numeric(), true));
         varp->addNextHere(resultp);
         varp->user1p(resultp);
-        resultp->dumpTree();
         return resultp;
     }
 

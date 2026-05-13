@@ -4119,7 +4119,7 @@ public:
         out.opShiftL(lhs, rhs);
     }
     string emitVerilog() override { return "%k(%l %f<< %r)"; }
-    string emitC() override { return "VL_SHIFTL_%nq%lq%rq(%nw,%lw,%rw, %P, %li, %ri)"; }
+    string emitC() override { return "VL_SHIFTL_%nq%lq%rq_%nf%lf%rf(%nw,%lw,%rw, %P, %li, %ri)"; }
     string emitSMT() const override { return "(bvshl %l %r)"; }
     string emitSimpleOperator() override {
         return (rhsp()->isWide() || rhsp()->isQuad()) ? "" : "<<";
@@ -4143,7 +4143,7 @@ public:
         out.opShiftL(lhs, rhs);
     }
     string emitVerilog() override { return "%k(%l %f<< %r)"; }
-    string emitC() override { return "VL_SHIFTL_%nq%lq%rq(%nw,%lw,%rw, %P, %li, %ri)"; }
+    string emitC() override { return "VL_SHIFTL_%nq%lq%rq_%nf%lf%rf(%nw,%lw,%rw, %P, %li, %ri)"; }
     string emitSimpleOperator() override { return ""; }
     bool cleanOut() const override { return false; }
     bool cleanLhs() const override { return false; }

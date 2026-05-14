@@ -221,9 +221,12 @@ private:
 public:
     VlForceVec() = default;
 
+    bool empty() const { return m_entries.empty(); }
+
     template <typename T>
     T read(const T& val) const {
         T result = val;
+        if (empty()) return result;
         if VL_CONSTEXPR_CXX17 (VlForceTypeInfo<T>::unpackedArray) {
             // Handling the case of a nested flattened array using recursion
             using ElemRef
@@ -248,7 +251,7 @@ public:
 
     template <typename T>
     T readIndex(T origVal, int index) const {
-        if (m_entries.empty()) return origVal;
+        if (empty()) return origVal;
 
         const auto it = std::lower_bound(m_entries.begin(), m_entries.end(), index,
                                          [](const Entry& e, int idx) { return e.m_msb < idx; });
@@ -261,6 +264,8 @@ public:
     }
 
     IData readSelI(int lbits, WDataInP valp, int lsb, int width) const {
+        if (empty()) { return VL_SEL_IWII(lbits, valp, lsb, width) & VL_MASK_I(width); }
+
         IData result;
         readSel(lbits, valp, &result, lsb, width);
         result &= VL_MASK_I(width);
@@ -268,6 +273,8 @@ public:
     }
 
     QData readSelQ(int lbits, WDataInP valp, int lsb, int width) const {
+        if (empty()) { return VL_SEL_QWII(lbits, valp, lsb, width) & VL_MASK_Q(width); }
+
         QData result;
         readSel(lbits, valp, reinterpret_cast<WDataOutP>(&result), lsb, width);
         result &= VL_MASK_Q(width);
@@ -278,6 +285,12 @@ public:
     VlWide<N_Words> readSelW(int lbits, WDataInP valp, int lsb, int width) const {
         VlWide<N_Words> result;
         WDataOutP const reswp = result.data();
+        if (empty()) {
+            VL_SEL_WWII(width, lbits, reswp, valp, lsb, width);
+            reswp[N_Words - 1] &= VL_MASK_E(width);
+            return result;
+        }
+
         readSel(lbits, valp, reswp, lsb, width);
         reswp[N_Words - 1] &= VL_MASK_E(width);
         return result;
@@ -294,6 +307,7 @@ public:
 
     void release(int lsb, int msb) {
         assert(lsb <= msb);
+        if (VL_LIKELY(empty())) return;
         trimEntries(lsb, msb);
     }
 

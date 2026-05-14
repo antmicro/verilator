@@ -209,6 +209,87 @@ public:
     string optionalProcArg(const T* const nodep) {
         return (nodep && constructorNeedsProcess(nodep)) ? "vlProcess, " : "";
     }
+    void emitForceEmptyCheck(AstCMethodHard* nodep) {
+        iterateConst(nodep->fromp());
+        putns(nodep, nodep->usePtr() ? "->empty()" : ".empty()");
+    }
+    void emitForceReadCall(AstCMethodHard* nodep) {
+        iterateConst(nodep->fromp());
+        putns(nodep, nodep->usePtr() ? "->" : ".");
+        putns(nodep, nodep->name());
+        if (nodep->method() == VCMethod::FORCE_READ_SEL) {
+            emitIQW(nodep);
+            if (nodep->isWide()) puts("<" + cvtToStr(nodep->dtypep()->widthWords()) + ">");
+        }
+        puts("(");
+        putCommaIterateNext(nodep->pinsp());
+        puts(")");
+    }
+    void emitForceReadSelRaw(AstCMethodHard* nodep, AstNode* lbitsp, AstNode* valp, AstNode* lsbp,
+                             AstNode* widthp) {
+        if (nodep->isWide()) {
+            const int words = nodep->dtypep()->widthWords();
+            puts("([&]() { VlWide<" + cvtToStr(words) + "> __VforceSel; ");
+            puts("WDataOutP const __VforceSelp = __VforceSel.data(); ");
+            puts("VL_SEL_WWII(");
+            iterateConst(widthp);
+            puts(", ");
+            iterateConst(lbitsp);
+            puts(", __VforceSelp, ");
+            iterateConst(valp);
+            puts(", ");
+            iterateConst(lsbp);
+            puts(", ");
+            iterateConst(widthp);
+            puts("); __VforceSelp[" + cvtToStr(words - 1) + "] &= VL_MASK_E(");
+            iterateConst(widthp);
+            puts("); return __VforceSel; }())");
+            return;
+        }
+
+        puts("(VL_SEL_");
+        emitIQW(nodep);
+        puts("WII(");
+        iterateConst(lbitsp);
+        puts(", ");
+        iterateConst(valp);
+        puts(", ");
+        iterateConst(lsbp);
+        puts(", ");
+        iterateConst(widthp);
+        puts(") & VL_MASK_");
+        emitIQW(nodep);
+        puts("(");
+        iterateConst(widthp);
+        puts("))");
+    }
+    void emitForceRead(AstCMethodHard* nodep) {
+        AstNode* const pinsp = nodep->pinsp();
+        UASSERT_OBJ(pinsp, nodep, "Force read has no original value argument");
+
+        puts("(VL_LIKELY(");
+        emitForceEmptyCheck(nodep);
+        puts(") ? ");
+        iterateConst(pinsp);
+        puts(" : ");
+        emitForceReadCall(nodep);
+        puts(")");
+    }
+    void emitForceReadSel(AstCMethodHard* nodep) {
+        AstNode* const lbitsp = nodep->pinsp();
+        AstNode* const valp = lbitsp ? lbitsp->nextp() : nullptr;
+        AstNode* const lsbp = valp ? valp->nextp() : nullptr;
+        AstNode* const widthp = lsbp ? lsbp->nextp() : nullptr;
+        UASSERT_OBJ(widthp && !widthp->nextp(), nodep, "Force readSel has unexpected arguments");
+
+        puts("(VL_LIKELY(");
+        emitForceEmptyCheck(nodep);
+        puts(") ? ");
+        emitForceReadSelRaw(nodep, lbitsp, valp, lsbp, widthp);
+        puts(" : ");
+        emitForceReadCall(nodep);
+        puts(")");
+    }
     const AstCNew* getSuperNewCallRecursep(AstNode* const nodep) {
         // Get the super.new call
         if (!nodep) return nullptr;
@@ -720,13 +801,18 @@ public:
         puts(")");
     }
     void visit(AstCMethodHard* nodep) override {
+        if (nodep->method() == VCMethod::FORCE_READ
+            || nodep->method() == VCMethod::FORCE_READ_INDEX) {
+            emitForceRead(nodep);
+            return;
+        }
+        if (nodep->method() == VCMethod::FORCE_READ_SEL) {
+            emitForceReadSel(nodep);
+            return;
+        }
         iterateConst(nodep->fromp());
         putns(nodep, nodep->usePtr() ? "->" : ".");
         putns(nodep, nodep->name());
-        if (nodep->method() == VCMethod::FORCE_READ_SEL) {
-            emitIQW(nodep);
-            if (nodep->isWide()) puts("<" + cvtToStr(nodep->dtypep()->widthWords()) + ">");
-        }
         puts("(");
         bool comma = false;
         int argNum = 0;

@@ -3,13 +3,19 @@
    47 |   assert property (@(posedge clk) val until val until val) $display("[%0t] nested until, fileline:%d", $time, 47);
       |                                                 ^~~~~
                     ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
-%Error-UNSUPPORTED: t/t_property_sexpr_unsup.v:51:39: Unsupported: s_until (in property expresion)
+%Error-UNSUPPORTED: t/t_property_sexpr_unsup.v:53:51: Unsupported: 's_until' in complex property expression
+   53 |   assert property (@(posedge clk) val s_until val s_until val) $display("[%0t] nested s_until, fileline:%d", $time, 53);
+      |                                                   ^~~~~~~
+%Error-UNSUPPORTED: t/t_property_sexpr_unsup.v:55:39: Unsupported: cycle delay in s_until
                                                     : ... note: In instance 't'
-   51 |   assert property (@(posedge clk) val s_until !val) $display("[%0t] s_until, fileline:%d", $time, 51);
+   55 |   assert property (@(posedge clk) val s_until (val ##1 val)) $display("[%0t] sequence in until_with, fileline:%d", $time, 55);
       |                                       ^~~~~~~
-%Error-UNSUPPORTED: t/t_property_sexpr_unsup.v:53:39: Unsupported: s_until_with (in property expresion)
+%Error-UNSUPPORTED: t/t_property_sexpr_unsup.v:59:56: Unsupported: 's_until_with' in complex property expression
+   59 |   assert property (@(posedge clk) val s_until_with val s_until_with val) $display("[%0t] nested s_until_with, fileline:%d", $time, 59);
+      |                                                        ^~~~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_sexpr_unsup.v:61:39: Unsupported: cycle delay in s_until_with
                                                     : ... note: In instance 't'
-   53 |   assert property (@(posedge clk) val s_until_with val) $display("[%0t] s_until_with, fileline:%d", $time, 53);
+   61 |   assert property (@(posedge clk) val s_until_with (val ##1 val)) $display("[%0t] sequence in until_with, fileline:%d", $time, 61);
       |                                       ^~~~~~~~~~~~
 %Error: t/t_property_sexpr_unsup.v:49:50: Duplicate declaration of block: '__VcycleDly_h########__2__block'
                                         : ... note: In instance 't'

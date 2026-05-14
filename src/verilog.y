@@ -6793,11 +6793,17 @@ pexpr<nodeExprp>:  // IEEE: property_expr  (The name pexpr is important as regex
         |       ~o~pexpr yUNTIL pexpr
                         { $$ = new AstUntil{$2, $1, $3, false, false}; }
         |       ~o~pexpr yS_UNTIL pexpr
-                        { $$ = new AstUntil{$2, $1, $3, true, false}; }
+                        {
+                          $$ = new AstUntil{$2, $1, $3, true, false};
+                          PARSEP->importIfInStd($2, "process", true);
+                        }
         |       ~o~pexpr yUNTIL_WITH pexpr
                         { $$ = new AstUntil{$2, $1, $3, false, true}; }
         |       ~o~pexpr yS_UNTIL_WITH pexpr
-                        { $$ = new AstUntil{$2, $1, $3, true, true}; }
+                        {
+                          $$ = new AstUntil{$2, $1, $3, true, true};
+                          PARSEP->importIfInStd($2, "process", true);
+                        }
         |       ~o~pexpr yIMPLIES pexpr
                         { $$ = new AstLogOr{$2, new AstLogNot{$2, $1}, $3}; }
         //                      // yIFF also used by event_expression

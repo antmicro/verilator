@@ -1256,6 +1256,10 @@ public:
         puts(")");
     }
     void visit(AstStmtExpr* nodep) override {
+        if (const AstCMethodHard* const methodp = VN_CAST(nodep->exprp(), CMethodHard)) {
+            if (methodp->method() == VCMethod::FORCE_TOUCH) return;
+        }
+
         if (VN_IS(nodep->exprp()->dtypep()->skipRefp(), VoidDType)) {
             putns(nodep, "");
         } else {

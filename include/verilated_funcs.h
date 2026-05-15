@@ -2492,7 +2492,6 @@ static inline WDataOutP VL_SHIFTL_WWW_##outputSuffix##lhsSuffix##rhsSuffix(int o
 // clang-format on
 VL_BIOP_GEN_HELPER(VL_SHIFTL_WWW_GEN)
 #undef VL_SHIFTL_WWW_GEN
-#undef VL_BIOP_GEN_HELPER
 
 // clang-format off
 #define VL_SHIFTL_WWQ_GEN(outputSuffix, lhsSuffix) \
@@ -2505,7 +2504,6 @@ static inline WDataOutP VL_SHIFTL_WWQ_##outputSuffix##lhsSuffix##T(int obits, in
 // clang-format on
 VL_BIOP_CONST_OUT_GEN_HELPER(VL_SHIFTL_WWQ_GEN)
 #undef VL_SHIFTL_WWQ_GEN
-#undef VL_BIOP_CONST_OUT_GEN_HELPER
 
 // clang-format off
 #define VL_SHIFTL_IIW_GEN(rhsSuffix) \
@@ -2545,81 +2543,142 @@ static inline QData VL_SHIFTL_QQW_TT##rhsSuffix(int obits, int, int rbits, QData
 // clang-format on
 VL_UNIOP_CONST_OUT_GEN_HELPER(VL_SHIFTL_QQW_GEN)
 #undef VL_SHIFTL_QQW_GEN
-#undef VL_UNIOP_CONST_OUT_GEN_HELPER
 
 // EMIT_RULE: VL_SHIFTR:  oclean=lclean; rclean==clean;
 // Important: Unlike most other funcs, the shift might well be a computed
 // expression.  Thus consider this when optimizing.  (And perhaps have 2 funcs?)
-static inline IData VL_SHIFTR_III(int /*obits*/, int, int, IData lhs, IData rhs) VL_PURE {
+static inline IData VL_SHIFTR_III_TTT(int /*obits*/, int, int, IData lhs, IData rhs) VL_PURE {
     if (VL_UNLIKELY(rhs >= VL_IDATASIZE)) return 0;
     return lhs >> rhs;
 }
-static inline IData VL_SHIFTR_IIQ(int /*obits*/, int, int, IData lhs, QData rhs) VL_PURE {
+static inline IData VL_SHIFTR_IIQ_TTT(int /*obits*/, int, int, IData lhs, QData rhs) VL_PURE {
     if (VL_UNLIKELY(rhs >= VL_IDATASIZE)) return 0;
     return lhs >> rhs;
 }
-static inline QData VL_SHIFTR_QQI(int /*obits*/, int, int, QData lhs, IData rhs) VL_PURE {
+static inline QData VL_SHIFTR_QQI_TTT(int /*obits*/, int, int, QData lhs, IData rhs) VL_PURE {
     if (VL_UNLIKELY(rhs >= VL_QUADSIZE)) return 0;
     return lhs >> rhs;
 }
-static inline QData VL_SHIFTR_QQQ(int /*obits*/, int, int, QData lhs, QData rhs) VL_PURE {
+static inline QData VL_SHIFTR_QQQ_TTT(int /*obits*/, int, int, QData lhs, QData rhs) VL_PURE {
     if (VL_UNLIKELY(rhs >= VL_QUADSIZE)) return 0;
     return lhs >> rhs;
-}
-static inline WDataOutP VL_SHIFTR_WWI(int obits, int, int, WDataOutP owp, WDataInP const lwp,
-                                      IData rd) VL_MT_SAFE {
-    const int word_shift = VL_BITWORD_E(rd);  // Maybe 0
-    const int bit_shift = VL_BITBIT_E(rd);
-    if (rd >= static_cast<IData>(obits)) {  // rd may be huge with MSB set
-        for (int i = 0; i < VL_WORDS_I(obits); ++i) owp[i] = 0;
-    } else if (bit_shift == 0) {  // Aligned word shift (>>0,>>32,>>64 etc)
-        const int copy_words = (VL_WORDS_I(obits) - word_shift);
-        for (int i = 0; i < copy_words; ++i) owp[i] = lwp[i + word_shift];
-        for (int i = copy_words; i < VL_WORDS_I(obits); ++i) owp[i] = 0;
-    } else {
-        const int loffset = rd & VL_SIZEBITS_E;
-        const int nbitsonright = VL_EDATASIZE - loffset;  // bits that end up in lword (know
-                                                          // loffset!=0) Middle words
-        const int words = VL_WORDS_I(obits - rd);
-        for (int i = 0; i < words; ++i) {
-            owp[i] = lwp[i + word_shift] >> loffset;
-            const int upperword = i + word_shift + 1;
-            if (upperword < VL_WORDS_I(obits)) owp[i] |= lwp[upperword] << nbitsonright;
-        }
-        for (int i = words; i < VL_WORDS_I(obits); ++i) owp[i] = 0;
-    }
-    return owp;
-}
-static inline WDataOutP VL_SHIFTR_WWW(int obits, int lbits, int rbits, WDataOutP owp,
-                                      WDataInP const lwp, WDataInP const rwp) VL_MT_SAFE {
-    for (int i = 1; i < VL_WORDS_I(rbits); ++i) {
-        if (VL_UNLIKELY(rwp[i])) {  // Huge shift 1>>32 or more
-            return VL_ZERO_W(obits, owp);
-        }
-    }
-    return VL_SHIFTR_WWI(obits, lbits, 32, owp, lwp, rwp[0]);
-}
-static inline WDataOutP VL_SHIFTR_WWQ(int obits, int lbits, int rbits, WDataOutP owp,
-                                      WDataInP const lwp, QData rd) VL_MT_SAFE {
-    VlWide<VL_WQ_WORDS_E> rwp;
-    VL_SET_WQ(rwp, rd);
-    return VL_SHIFTR_WWW(obits, lbits, rbits, owp, lwp, rwp);
 }
 
-static inline IData VL_SHIFTR_IIW(int obits, int, int rbits, IData lhs,
-                                  WDataInP const rwp) VL_PURE {
-    for (int i = 1; i < VL_WORDS_I(rbits); ++i) {
-        if (VL_UNLIKELY(rwp[i])) return 0;  // Huge shift 1>>32 or more
+// clang-format off
+#define VL_SHIFTR_WWI_GEN(outputSuffix, lhsSuffix) \
+static inline WDataOutP VL_SHIFTR_WWI_##outputSuffix##lhsSuffix##T( \
+        int obits, int, int, WDataOutP owp, WDataInP lwp, IData rd) VL_MT_SAFE { \
+        const WDataOutP resultp = owp; \
+        owp += VL_GET_TYPE_OFFSET(outputSuffix); \
+        const int word_shift = VL_BITWORD_E(rd); /* Maybe 0 */ \
+        const int bit_shift = VL_BITBIT_E(rd); \
+        if (rd >= static_cast<IData>(obits)) { /* rd may be huge with MSB set */ \
+            for (int i = 0; i < VL_WORDS_I(obits); ++i) { \
+                *owp = 0; \
+                owp += VL_GET_TYPE_JUMP(outputSuffix); \
+            } \
+        } else if (bit_shift == 0) { /* Aligned word shift (>>0,>>32,>>64 etc) */ \
+            const int copy_words = (VL_WORDS_I(obits) - word_shift); \
+            lwp += VL_GET_TYPE_OFFSET(lhsSuffix) + (word_shift * VL_GET_TYPE_JUMP(lhsSuffix)); \
+            for (int i = 0; i < copy_words; ++i) { \
+                *owp = *lwp; \
+                owp += VL_GET_TYPE_JUMP(outputSuffix); \
+                lwp += VL_GET_TYPE_JUMP(lhsSuffix); \
+            } \
+            for (int i = copy_words; i < VL_WORDS_I(obits); ++i) { \
+                *owp = 0; \
+                owp += VL_GET_TYPE_JUMP(outputSuffix); \
+            } \
+        } else { \
+            const int loffset = rd & VL_SIZEBITS_E; \
+            /* bits that end up in lword (know loffset!=0) Middle words */ \
+            const int nbitsonright = VL_EDATASIZE - loffset; \
+            const int words = VL_WORDS_I(obits - rd); \
+            lwp += VL_GET_TYPE_OFFSET(lhsSuffix) + (word_shift * VL_GET_TYPE_JUMP(lhsSuffix)); \
+            for (int i = 0; i < words; ++i) { \
+                *owp = *lwp >> loffset; \
+                const int upperword = i + word_shift + 1; \
+                lwp += VL_GET_TYPE_JUMP(lhsSuffix); \
+                if (upperword < VL_WORDS_I(obits)) *owp |= *lwp << nbitsonright; \
+                owp += VL_GET_TYPE_JUMP(outputSuffix); \
+            } \
+            for (int i = words; i < VL_WORDS_I(obits); ++i) { \
+                *owp = 0; \
+                owp += VL_GET_TYPE_JUMP(outputSuffix); \
+            } \
+        } \
+        return resultp; \
     }
-    return VL_SHIFTR_III(obits, obits, 32, lhs, rwp[0]);
-}
-static inline QData VL_SHIFTR_QQW(int obits, int, int rbits, QData lhs,
-                                  WDataInP const rwp) VL_PURE {
-    for (int i = 1; i < VL_WORDS_I(rbits); ++i) {
-        if (VL_UNLIKELY(rwp[i])) return 0;  // Huge shift 1>>32 or more
+// clang-format on
+VL_BIOP_CONST_OUT_GEN_HELPER(VL_SHIFTR_WWI_GEN)
+#undef VL_SHIFTR_WWI_GEN
+
+// clang-format off
+#define VL_SHIFTR_WWW_GEN(outputSuffix, lhsSuffix, rhsSuffix) \
+static inline WDataOutP VL_SHIFTR_WWW_##outputSuffix##lhsSuffix##rhsSuffix( \
+        int obits, int lbits, int rbits, WDataOutP owp, WDataInP const lwp, WDataInP rwp) \
+        VL_MT_SAFE { \
+        rwp += VL_GET_TYPE_OFFSET(rhsSuffix); \
+        const EData rwp0 = *rwp; \
+        rwp += VL_GET_TYPE_JUMP(rhsSuffix); \
+        for (int i = 1; i < VL_WORDS_I(rbits); ++i) { \
+            if (VL_UNLIKELY(*rwp)) { /* Huge shift 1>>32 or more */ \
+                return VL_ZERO_W(obits, owp); \
+            } \
+            rwp += VL_GET_TYPE_JUMP(rhsSuffix); \
+        } \
+        return VL_SHIFTR_WWI_##outputSuffix##lhsSuffix##T(obits, lbits, 32, owp, lwp, rwp0); \
     }
-    return VL_SHIFTR_QQI(obits, obits, 32, lhs, rwp[0]);
-}
+// clang-format on
+VL_BIOP_GEN_HELPER(VL_SHIFTR_WWW_GEN)
+#undef VL_SHIFTR_WWW_GEN
+
+// clang-format off
+#define VL_SHIFTR_WWQ_GEN(outputSuffix, lhsSuffix) \
+static inline WDataOutP VL_SHIFTR_WWQ_##outputSuffix##lhsSuffix##T( \
+        int obits, int lbits, int rbits, WDataOutP owp, WDataInP const lwp, QData rd) \
+        VL_MT_SAFE { \
+        VlWide<VL_WQ_WORDS_E> rwp; \
+        VL_SET_WQ(rwp, rd); \
+        return VL_SHIFTR_WWW_##outputSuffix##lhsSuffix##T(obits, lbits, rbits, owp, lwp, rwp); \
+    }
+// clang-format on
+VL_BIOP_CONST_OUT_GEN_HELPER(VL_SHIFTR_WWQ_GEN)
+#undef VL_SHIFTR_WWQ_GEN
+
+// clang-format off
+#define VL_SHIFTR_IIW_GEN(rhsSuffix) \
+static inline IData VL_SHIFTR_IIW_TT##rhsSuffix(int obits, int, int rbits, IData lhs, \
+                                                    WDataInP rwp) VL_PURE { \
+        rwp += VL_GET_TYPE_OFFSET(rhsSuffix); \
+        const EData rwp0 = *rwp; \
+        rwp += VL_GET_TYPE_JUMP(rhsSuffix); \
+        for (int i = 1; i < VL_WORDS_I(rbits); ++i) { \
+            if (VL_UNLIKELY(*rwp)) return 0; /* Huge shift 1>>32 or more */ \
+            rwp += VL_GET_TYPE_JUMP(rhsSuffix); \
+        } \
+        return VL_SHIFTR_III_TTT(obits, obits, 32, lhs, rwp0); \
+    }
+// clang-format on
+VL_UNIOP_CONST_OUT_GEN_HELPER(VL_SHIFTR_IIW_GEN)
+#undef VL_SHIFTR_IIW_GEN
+
+// clang-format off
+#define VL_SHIFTR_QQW_GEN(rhsSuffix) \
+static inline QData VL_SHIFTR_QQW_TT##rhsSuffix(int obits, int, int rbits, QData lhs, \
+                                                    WDataInP rwp) VL_PURE { \
+        rwp += VL_GET_TYPE_OFFSET(rhsSuffix); \
+        const EData rwp0 = *rwp; \
+        rwp += VL_GET_TYPE_JUMP(rhsSuffix); \
+        for (int i = 1; i < VL_WORDS_I(rbits); ++i) { \
+            if (VL_UNLIKELY(*rwp)) return 0; /* Huge shift 1>>32 or more */ \
+            rwp += VL_GET_TYPE_JUMP(rhsSuffix); \
+        } \
+        return VL_SHIFTR_QQI_TTT(obits, obits, 32, lhs, rwp0); \
+    }
+// clang-format on
+VL_UNIOP_CONST_OUT_GEN_HELPER(VL_SHIFTR_QQW_GEN)
+#undef VL_SHIFTR_QQW_GEN
 
 // EMIT_RULE: VL_SHIFTRS:  oclean=false; lclean=clean, rclean==clean;
 static inline IData VL_SHIFTRS_III(int obits, int lbits, int, IData lhs, IData rhs) VL_PURE {
@@ -2725,6 +2784,9 @@ static inline QData VL_SHIFTRS_QQQ(int obits, int lbits, int rbits, QData lhs, Q
     VL_SET_WQ(rwp, rhs);
     return VL_SHIFTRS_QQW(obits, lbits, rbits, lhs, rwp);
 }
+#undef VL_BIOP_GEN_HELPER
+#undef VL_BIOP_CONST_OUT_GEN_HELPER
+#undef VL_UNIOP_CONST_OUT_GEN_HELPER
 
 //===================================================================
 // Bit selection

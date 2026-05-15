@@ -583,7 +583,7 @@ class SvaNfaBuilder final {
 //        UASSERT_OBJ(lo >= 0 && hi >= lo, nodep, "PropAlways bounds invariant (V3Width)");
         AstVar* const hoistVarp = tryHoistSampled(exprp, flp, hi - lo + 1);
         SvaStateVertex* currentp = addDelayChain(entryVtxp, lo, flp);
-        SvaStateVertex* finishVertexp = scopedCreateVertex();
+//        SvaStateVertex* finishVertexp = scopedCreateVertex();
         for (int k = 0; k <= hi - lo; ++k) {
             if (k > 0) {
                 SvaStateVertex* const nextp = scopedCreateVertex();
@@ -592,7 +592,7 @@ class SvaNfaBuilder final {
             }
             SvaStateVertex* const checkp = scopedCreateVertex();
             SvaTransEdge* const linkp
-                = guardedLink(currentp, checkp, sampledRefOrClone(hoistVarp, exprp, flp), flp);
+                = guardedLink(currentp, checkp, sampledRefOrClone(hoistVarp, notExprp, flp), flp);
             if (isTopLevelStep && !m_inUnboundedScope) linkp->m_rejectOnFail = true;
             currentp = checkp;
         }
@@ -935,6 +935,11 @@ public:
         }
         if (AstPropAlways* const alwaysp = VN_CAST(nodep, PropAlways)) {
             return buildPropAlways(alwaysp, entryVtxp, isTopLevelStep);
+        }
+        if (AstEventually* const eventuallyp = VN_CAST(nodep, Eventually)) {
+            if (!eventuallyp->isStrong()) {
+                return buildWeakEventually(eventuallyp, entryVtxp, isTopLevelStep);
+            }
         }
         if (AstSGotoRep* const repp = VN_CAST(nodep, SGotoRep)) {
             return buildGotoRep(repp, entryVtxp);

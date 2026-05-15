@@ -20,8 +20,9 @@ module t (  /*AUTOARG*/
     int passs;
   } result_t;
 
-  result_t results[int];
-  result_t expected[int];
+  // Must not be assoc-array to avoid races
+  result_t results[14];
+  result_t expected[14];
 
   localparam MAX = 15;
   integer cyc = 1;

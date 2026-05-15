@@ -1881,14 +1881,14 @@ static inline void _vl_insert_WW_##outputSuffix##lhsSuffix(WDataOutP iowp, WData
 \
         if (hoffset == VL_SIZEBITS_E && loffset == 0) { \
             /* Fast and common case, word based insertion */ \
-            for (int i = 0; i < (words - 1); ++i) VL_GET_ELEM(outputSuffix, iowp, lword + i) = VL_GET_ELEM(outputSuffix, lwp, i); \
-            VL_GET_ELEM(outputSuffix, iowp, hword) = VL_GET_ELEM(outputSuffix, lwp, words - 1) & cleanmask; \
+            for (int i = 0; i < (words - 1); ++i) VL_GET_ELEM(outputSuffix, iowp, lword + i) = VL_GET_ELEM(lhsSuffix, lwp, i); \
+            VL_GET_ELEM(outputSuffix, iowp, hword) = VL_GET_ELEM(lhsSuffix, lwp, words - 1) & cleanmask; \
         } else if (loffset == 0) { \
             /* Non-32bit, but nicely aligned, so stuff all but the last word */ \
-            for (int i = 0; i < (words - 1); ++i) VL_GET_ELEM(outputSuffix, iowp, lword + i) = VL_GET_ELEM(outputSuffix, lwp, i); \
+            for (int i = 0; i < (words - 1); ++i) VL_GET_ELEM(outputSuffix, iowp, lword + i) = VL_GET_ELEM(lhsSuffix, lwp, i); \
             /* Know it's not a full word as above fast case handled it */ \
             const EData hinsmask = (VL_MASK_E(hoffset - 0 + 1)); \
-            VL_GET_ELEM(outputSuffix, iowp, hword) = (VL_GET_ELEM(outputSuffix, iowp, hword) & ~hinsmask) | (VL_GET_ELEM(outputSuffix, lwp, words - 1) & (hinsmask & cleanmask)); \
+            VL_GET_ELEM(outputSuffix, iowp, hword) = (VL_GET_ELEM(outputSuffix, iowp, hword) & ~hinsmask) | (VL_GET_ELEM(lhsSuffix, lwp, words - 1) & (hinsmask & cleanmask)); \
         } else { \
             const EData hinsmask = (VL_MASK_E(hoffset - 0 + 1)) << 0; \
             const EData linsmask = (VL_MASK_E((VL_EDATASIZE - 1) - loffset + 1)) << loffset; \
@@ -1898,7 +1898,7 @@ static inline void _vl_insert_WW_##outputSuffix##lhsSuffix(WDataOutP iowp, WData
             for (int i = 0; i < words; ++i) { \
                 { /* Lower word */ \
                     const int oword = lword + i; \
-                    const EData d = VL_GET_ELEM(outputSuffix, lwp, i) << loffset; \
+                    const EData d = VL_GET_ELEM(lhsSuffix, lwp, i) << loffset; \
                     const EData od = (VL_GET_ELEM(outputSuffix, iowp, oword) & ~linsmask) | (d & linsmask); \
                     if (oword == hword) { \
                         VL_GET_ELEM(outputSuffix, iowp, oword) = (VL_GET_ELEM(outputSuffix, iowp, oword) & ~hinsmask) | (od & (hinsmask & cleanmask)); \
@@ -1909,7 +1909,7 @@ static inline void _vl_insert_WW_##outputSuffix##lhsSuffix(WDataOutP iowp, WData
                 { /* Upper word */ \
                     const int oword = lword + i + 1; \
                     if (oword <= hword) { \
-                        const EData d = VL_GET_ELEM(outputSuffix, lwp, i) >> nbitsonright; \
+                        const EData d = VL_GET_ELEM(lhsSuffix, lwp, i) >> nbitsonright; \
                         const EData od = (d & ~linsmask) | (VL_GET_ELEM(outputSuffix, iowp, oword) & linsmask); \
                         if (oword == hword) { \
                             VL_GET_ELEM(outputSuffix, iowp, oword) \
@@ -2436,6 +2436,7 @@ static inline QData VL_SHIFTL_QQQ_TTT(int obits, int, int, QData lhs, QData rhs)
     if (VL_UNLIKELY(rhs >= VL_QUADSIZE)) return 0;
     return VL_CLEAN_QQ(obits, obits, lhs << rhs);
 }
+
 // clang-format off
 #define VL_SHIFTL_WWI_GEN(outputSuffix, lhsSuffix) \
 static inline WDataOutP VL_SHIFTL_WWI_##outputSuffix##lhsSuffix##T( \
@@ -2456,7 +2457,7 @@ static inline WDataOutP VL_SHIFTL_WWI_##outputSuffix##lhsSuffix##T( \
             } \
             lwp += VL_GET_TYPE_OFFSET(lhsSuffix); \
             for (int i = word_shift; i < VL_WORDS_I(obits); ++i) { \
-                owp[i] = lwp[i - word_shift]; \
+                *owp = *lwp; \
                 owp += VL_GET_TYPE_JUMP(outputSuffix); \
                 lwp += VL_GET_TYPE_JUMP(lhsSuffix); \
             } \

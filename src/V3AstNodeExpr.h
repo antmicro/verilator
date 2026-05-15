@@ -1452,6 +1452,7 @@ public:
     bool cleanOut() const override { V3ERROR_NA_RETURN(""); }
     int instrCount() const override { return widthInstrs(); }
     bool sameNode(const AstNode* /*samep*/) const override { return true; }
+    bool isMultiCycleSva() const override { return true; }
     bool isStrong() const { return m_isStrong; }
 };
 class AstExprStmt final : public AstNodeExpr {

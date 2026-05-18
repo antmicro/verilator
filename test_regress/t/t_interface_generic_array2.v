@@ -13,14 +13,14 @@ module GenericModule1D (interface a[4]);
     #1;
     if (a[0].v != 'hdead) $stop;
     if (a[1].v != 'hbeef) $stop;
-    if (a[2].v != 'hface) $stop;
-    if (a[3].v != 'hcafe) $stop;
+    a[2].v ='hface;
+    a[3].v ='hcafe;
   end
 endmodule
 
 module GenericModule2D (interface a[2][2]);
   initial begin
-    #2;
+    #3;
     if (a[0][0].v != 'hdead) $stop;
     if (a[0][1].v != 'hbeef) $stop;
     if (a[1][0].v != 'hface) $stop;
@@ -36,8 +36,9 @@ module t;
   initial begin
     inf1d[0].v ='hdead;
     inf1d[1].v ='hbeef;
-    inf1d[2].v ='hface;
-    inf1d[3].v ='hcafe;
+    #2;
+    if (inf1d[2].v != 'hface) $stop;
+    if (inf1d[3].v != 'hcafe) $stop;
     inf2d[0][0].v ='hdead;
     inf2d[0][1].v ='hbeef;
     inf2d[1][0].v ='hface;

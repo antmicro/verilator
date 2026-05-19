@@ -26,7 +26,7 @@ module t (  /*AUTOARG*/
   localparam MAX = 15;
   integer cyc = 1;
 
-  assert property (@(posedge clk) eventually [1:2] 0)
+  assert property (@(posedge clk) eventually [1:2] 1'b0)
     results[1].passs++;
   else results[1].fails++;
 

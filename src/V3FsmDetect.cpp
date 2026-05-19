@@ -960,7 +960,10 @@ class FsmDetectVisitor final : public VNVisitor {
                 // if lhsp is not AstVarRef, exctract var from within, we only need it for scoping
                 vrefp = VN_CAST(selExprp->fromp(), VarRef);
             } else if (AstNodeSel* nodeSelExprp = VN_CAST(eqp->rhsp(), NodeSel)) {
-                vrefp = VN_CAST(nodeSelExprp->fromp(), VarRef);
+                do {
+                    vrefp = VN_CAST(nodeSelExprp->fromp(), VarRef);
+                    // go down the dimensions
+                } while (nodeSelExprp = VN_CAST(nodeSelExprp->fromp(), NodeSel));
             } else {
                 vrefp = VN_CAST(eqp->rhsp(), VarRef);
             }

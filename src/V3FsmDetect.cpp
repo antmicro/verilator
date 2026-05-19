@@ -956,7 +956,17 @@ class FsmDetectVisitor final : public VNVisitor {
         AstVarRef* vrefp = VN_CAST(eqp->lhsp(), VarRef);
         AstNodeExpr* valuep = eqp->rhsp();
         if (!vrefp) {
-            vrefp = VN_AS(eqp->rhsp(), VarRef);
+            if (AstSel* selExprp = VN_CAST(eqp->rhsp(), Sel)) {
+                // if lhsp is not AstVarRef, exctract var from within, we only need it for scoping
+                vrefp = VN_CAST(selExprp->fromp(), VarRef);
+            } else if (AstNodeSel* nodeSelExprp = VN_CAST(eqp->rhsp(), NodeSel)) {
+                vrefp = VN_CAST(nodeSelExprp->fromp(), VarRef);
+            } else {
+                vrefp = VN_CAST(eqp->rhsp(), VarRef);
+            }
+
+            UASSERT_OBJ(vrefp, exprp, "Invalid operand type");
+
             valuep = eqp->lhsp();
         }
 

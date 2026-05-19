@@ -963,7 +963,8 @@ class FsmDetectVisitor final : public VNVisitor {
                 do {
                     vrefp = VN_CAST(nodeSelExprp->fromp(), VarRef);
                     // go down the dimensions
-                } while (nodeSelExprp = VN_CAST(nodeSelExprp->fromp(), NodeSel));
+                    nodeSelExprp = VN_CAST(nodeSelExprp->fromp(), NodeSel);
+                } while (nodeSelExprp);
             } else {
                 vrefp = VN_CAST(eqp->rhsp(), VarRef);
             }

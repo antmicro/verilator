@@ -1033,8 +1033,8 @@ class WidthVisitor final : public VNVisitor {
             const bool inParameterizedTemplate
                 = m_modep && (m_modep->dead() || m_modep->parameterizedTemplate());
             const bool inTypeTable = !m_modep;
-            const AstNode* basep = nodep->abovep();
-            while (VN_IS(basep, Range)) basep = basep->abovep();
+            const AstNode* basep = nodep->backp();
+            while (VN_IS(basep, Range)) basep = basep->backp();
             if (nodep->ascending() && !VN_IS(basep, UnpackArrayDType)
                 && !VN_IS(basep, Cell)  // For cells we warn in V3Inst
                 && !m_paramsOnly  // Skip during parameter evaluation

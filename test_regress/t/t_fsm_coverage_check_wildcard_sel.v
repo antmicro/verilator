@@ -6,13 +6,24 @@
 // SPDX-FileCopyrightText: 2026 Antmicro
 // SPDX-License-Identifier: CC0-1.0
 
-module controller ();
-  logic [7:0] value[*];
+package test_pkg;
+    typedef struct {
+        logic [7:0] value[*];
+    } struct_depth2;
+    typedef struct {
+        struct_depth2 a; int b;
+    } struct_depth1;
+    typedef struct {
+        struct_depth1 a;
+    } struct_depth0;
+endpackage
+module controller (
+    input test_pkg::struct_depth0 test_in,
+);
   localparam int unsigned RecoveryMode = 'h3;
-  assign recovery_mode = (value[0] == RecoveryMode);
+  assign recovery_mode = (test_in.a.a.value[0] == RecoveryMode);
 
   initial begin
-    $display("%d", recovery_mode);
     $write("*-* All Finished *-*\n");
     $finish;
   end

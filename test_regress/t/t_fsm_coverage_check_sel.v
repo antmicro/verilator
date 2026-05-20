@@ -6,22 +6,22 @@
 // SPDX-FileCopyrightText: 2026 Antmicro
 // SPDX-License-Identifier: CC0-1.0
 
-package I3CCSR_pkg;
+package test_pkg;
     typedef struct packed{
         logic [7:0] value;
-    } I3CCSR__I3C_EC__SecFwRecoveryIf__DEVICE_STATUS_0__DEV_STATUS__out_t;
+    } struct_depth2;
     typedef struct packed{
-        I3CCSR__I3C_EC__SecFwRecoveryIf__DEVICE_STATUS_0__DEV_STATUS__out_t DEV_STATUS; int REC_REASON_CODE;
-    } I3CCSR__I3C_EC__SecFwRecoveryIf__DEVICE_STATUS_0__out_t;
+        struct_depth2 a; int b;
+    } struct_depth1;
     typedef struct packed{
-        I3CCSR__I3C_EC__SecFwRecoveryIf__DEVICE_STATUS_0__out_t DEVICE_STATUS_0;
-    } I3CCSR__I3C_EC__SecFwRecoveryIf__out_t;
+        struct_depth1 a;
+    } struct_depth0;
 endpackage
 module controller (
-    input I3CCSR_pkg::I3CCSR__I3C_EC__SecFwRecoveryIf__out_t hwif_rec_i,
+    input test_pkg::struct_depth0 test_in,
 );
   localparam int unsigned RecoveryMode = 'h3;
-  assign recovery_mode = (hwif_rec_i.DEVICE_STATUS_0.DEV_STATUS.value == RecoveryMode);
+  assign recovery_mode = (test_in.a.a.value == RecoveryMode);
 
   initial begin
     $write("*-* All Finished *-*\n");

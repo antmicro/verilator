@@ -1,0 +1,7 @@
+%Warning-COVERIGN: t/t_cover_fsm_togglevar_wildcard_sel.v:8:15: Coverage ignored for type WILDCARDARRAYDTYPE
+                                                              : ... note: In instance 't'
+    8 |   logic [7:0] a[*];
+      |               ^
+                   ... For warning description see https://verilator.org/warn/COVERIGN?v=latest
+                   ... Use "/* verilator lint_off COVERIGN */" and lint_on around source to disable this message.
+%Error: Exiting due to

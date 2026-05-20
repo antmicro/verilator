@@ -956,8 +956,8 @@ class FsmDetectVisitor final : public VNVisitor {
         AstVarRef* vrefp = VN_CAST(eqp->lhsp(), VarRef);
         AstNodeExpr* valuep = eqp->rhsp();
         if (!vrefp) {
+            // if lhsp is not AstVarRef, exctract var from within, we only need it for scoping
             if (AstSel* selExprp = VN_CAST(eqp->rhsp(), Sel)) {
-                // if lhsp is not AstVarRef, exctract var from within, we only need it for scoping
                 vrefp = VN_CAST(selExprp->fromp(), VarRef);
             } else if (AstNodeSel* nodeSelExprp = VN_CAST(eqp->rhsp(), NodeSel)) {
                 do {

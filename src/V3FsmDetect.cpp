@@ -957,25 +957,10 @@ class FsmDetectVisitor final : public VNVisitor {
         AstNodeExpr* valuep = eqp->rhsp();
         if (!vrefp) {
             // if lhsp is not AstVarRef, exctract var from within, we only need it for scoping
-            if (AstNodeExpr* nodeExprp = eqp->rhsp()) {
-                do {
-                    if (AstNodeSel* const nodeSelp = VN_CAST(nodeExprp, NodeSel)) {
-                        nodeExprp = nodeSelp->fromp();
-                    } else if (AstStructSel* const nodeSelp = VN_CAST(nodeExprp, StructSel)) {
-                        nodeExprp = nodeSelp->fromp();
-                    } else if (AstMemberSel* const nodeSelp = VN_CAST(nodeExprp, MemberSel)) {
-                        nodeExprp = nodeSelp->fromp();
-                    } else if (AstSel* const nodeSelp = VN_CAST(nodeExprp, Sel)) {
-                        nodeExprp = nodeSelp->fromp();
-                    }
-                    vrefp = VN_CAST(nodeExprp, VarRef);
-                } while (!vrefp);
-            } else if (AstVarRef* const varp = VN_CAST(eqp->rhsp(), VarRef)) {
-                vrefp = varp;
-            } else {
+            vrefp = VN_CAST(AstArraySel::baseFromp(eqp->rhsp(), true), VarRef);
+            if (!vrefp) {
                 eqp->v3fatalSrc("Unexpected node data type in coverage: " << eqp->rhsp()->prettyTypeName());
             }
-
             valuep = eqp->lhsp();
         }
 

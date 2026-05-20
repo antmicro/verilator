@@ -579,7 +579,6 @@ class SvaNfaBuilder final {
                                     const bool isTopLevelStep = false) {
         FileLine* const flp = nodep->fileline();
         AstNodeExpr* const exprp = nodep->exprp();
-        AstLogNot* const notExprp = new AstLogNot{flp, nodep->exprp()->cloneTree(false)};
         const int lo = getConstInt(nodep->loBoundp());
         const int hi = getConstInt(nodep->hiBoundp());
 //        UASSERT_OBJ(lo >= 0 && hi >= lo, nodep, "PropAlways bounds invariant (V3Width)");
@@ -590,7 +589,8 @@ class SvaNfaBuilder final {
             guardedLink(currentp, passVertexp, sampledRefOrClone(hoistVarp, exprp, flp), flp);
 
             SvaStateVertex* const nextp = scopedCreateVertex();
-            guardedEdge(currentp, nextp, notExprp, flp);
+            AstLogNot* negCondp = new AstLogNot{flp, sampledRefOrClone(hoistVarp, exprp, flp)};
+            guardedEdge(currentp, nextp, negCondp, flp);
             currentp = nextp;
         }
         SvaTransEdge* const passlinkp

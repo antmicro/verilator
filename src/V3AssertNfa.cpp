@@ -682,7 +682,7 @@ class SvaNfaBuilder final {
         AstNodeExpr* const exprp = nodep->exprp();
         const int lo = getConstInt(nodep->loBoundp());
         const int hi = getConstInt(nodep->hiBoundp());
-//        UASSERT_OBJ(lo >= 0 && hi >= lo, nodep, "PropAlways bounds invariant (V3Width)");
+        // UASSERT_OBJ(lo >= 0 && hi >= lo, nodep, "PropAlways bounds invariant (V3Width)");
         AstVar* const hoistVarp = tryHoistSampled(exprp, flp, hi - lo + 1);
         SvaStateVertex* currentp = addDelayChain(entryVtxp, lo, flp);
         SvaStateVertex* const passVertexp = scopedCreateVertex();

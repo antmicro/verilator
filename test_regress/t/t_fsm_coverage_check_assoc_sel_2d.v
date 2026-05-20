@@ -1,27 +1,25 @@
-// DESCRIPTION: Verilator: Verilog Test module for SystemVerilog 'alias'
-//
-// Simple bi-directional transitive alias test.
+// DESCRIPTION: Verilator: Verilog Test module
 //
 // This file ONLY is placed under the Creative Commons Public Domain
 // SPDX-FileCopyrightText: 2026 Antmicro
 // SPDX-License-Identifier: CC0-1.0
 
-package test_pkg;
-    typedef struct {
-        logic [7:0] value[int][int];
-    } struct_depth2;
-    typedef struct {
-        struct_depth2 a; int b;
-    } struct_depth1;
-    typedef struct {
-        struct_depth1 a;
-    } struct_depth0;
+package P;
+  typedef struct {
+    logic [7:0] value[int][int];
+  } C;
+  typedef struct {
+    C a; int b;
+  } B;
+  typedef struct {
+    B a;
+  } A;
 endpackage
-module controller (
-    input test_pkg::struct_depth0 test_in,
+module t (
+  input P::A a
 );
-  localparam int unsigned RecoveryMode = 'h3;
-  assign recovery_mode = (test_in.a.a.value[0][0] == RecoveryMode);
+  localparam int unsigned cmp = 'h3;
+  assign recovery_mode = (a.a.a.value[0][0] == cmp);
 
   initial begin
     $write("*-* All Finished *-*\n");

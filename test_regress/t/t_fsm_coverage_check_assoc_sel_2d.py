@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# DESCRIPTION: Verilator: Verilog Test driver/expect definition
+# DESCRIPTION: Verilator: Verilog Test coverage internal error check definition
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of either the GNU Lesser General Public License Version 3
@@ -11,11 +11,7 @@ import vltest_bootstrap
 
 test.scenarios('simulator')
 
-test.compile(verilator_flags2=[
-    "-DCOCOTB_SIM=1 --timing +define+DIGITAL_IO_I3C \
-    -Wall -Wno-fatal --fourstate -Wno-FUTURE --timescale 1ns/1fs --vpi --public-flat-rw -LDFLAGS \"-Wl,-rpath\" --fourstate -Wno-FUTURE --coverage "
-    "-Wno-DECLFILENAME -Wno-TIMESCALEMOD"
-])
+test.compile(verilator_flags2=["--coverage -Wno-IMPLICIT -Wno-WIDTHEXPAND -Wno-COVERIGN"])
 
 test.execute()
 

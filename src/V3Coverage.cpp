@@ -520,6 +520,8 @@ class CoverageVisitor final : public VNVisitor {
             }
         } else if (VN_IS(dtypep, QueueDType)) {
             // Not covered
+        } else if (VN_IS(dtypep, WildcardArrayDType)) {
+            // Not covered
         } else {
             dtypep->v3fatalSrc("Unexpected node data type in toggle coverage generation: "
                                << dtypep->prettyTypeName());

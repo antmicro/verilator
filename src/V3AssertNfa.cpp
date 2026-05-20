@@ -575,30 +575,28 @@ class SvaNfaBuilder final {
     }
 
     // eventually[lo:hi] / (IEEE 1800-2023 16.12.13).
-    BuildResult buildWeakEventually(AstEventually* nodep, SvaStateVertex* entryVtxp,
-                                    bool isTopLevelStep = false) {
+    BuildResult buildWeakEventually(AstEventually* const nodep, SvaStateVertex* const entryVtxp,
+                                    const bool isTopLevelStep = false) {
         FileLine* const flp = nodep->fileline();
         AstNodeExpr* const exprp = nodep->exprp();
         AstLogNot* const notExprp = new AstLogNot{flp, nodep->exprp()->cloneTree(false)};
         const int lo = getConstInt(nodep->loBoundp());
         const int hi = getConstInt(nodep->hiBoundp());
 //        UASSERT_OBJ(lo >= 0 && hi >= lo, nodep, "PropAlways bounds invariant (V3Width)");
-        AstVar* const hoistVarp = tryHoistSampled(notExprp, flp, hi - lo + 1);
+        AstVar* const hoistVarp = tryHoistSampled(exprp, flp, hi - lo + 1);
         SvaStateVertex* currentp = addDelayChain(entryVtxp, lo, flp);
-//        SvaStateVertex* finishVertexp = scopedCreateVertex();
-        for (int k = 0; k <= hi - lo; ++k) {
-            if (k > 0) {
-                SvaStateVertex* const nextp = scopedCreateVertex();
-                guardedEdge(currentp, nextp, flp);
-                currentp = nextp;
-            }
-            SvaStateVertex* const checkp = scopedCreateVertex();
-            SvaTransEdge* const linkp
-                = guardedLink(currentp, checkp, sampledRefOrClone(hoistVarp, notExprp, flp), flp);
-            if (isTopLevelStep && !m_inUnboundedScope) linkp->m_rejectOnFail = true;
-            currentp = checkp;
+        SvaStateVertex* const passVertexp = scopedCreateVertex();
+        for (int k = 0; k < hi - lo; ++k) {
+            guardedLink(currentp, passVertexp, sampledRefOrClone(hoistVarp, exprp, flp), flp);
+
+            SvaStateVertex* const nextp = scopedCreateVertex();
+            guardedEdge(currentp, nextp, notExprp, flp);
+            currentp = nextp;
         }
-        return {currentp, nullptr, {}};
+        SvaTransEdge* const passlinkp
+            = guardedLink(currentp, passVertexp, sampledRefOrClone(hoistVarp, exprp, flp), flp);
+        if (isTopLevelStep && !m_inUnboundedScope) passlinkp->m_rejectOnFail = true;
+        return {passVertexp, nullptr, {}};
     }
 
     // always[lo:hi] / s_always[lo:hi] (IEEE 1800-2023 16.12.11).

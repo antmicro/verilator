@@ -26,14 +26,19 @@ module t (  /*AUTOARG*/
   localparam MAX = 15;
   integer cyc = 1;
 
-  assert property (@(posedge clk) eventually [1:2] 1'b0)
+  assert property (@(posedge clk) eventually [0:2] 1'b0)
     results[1].passs++;
   else results[1].fails++;
+
+  assert property (@(posedge clk) eventually [1:4] 1'b1)
+    results[2].passs++;
+  else results[2].fails++;
 
   always @(edge clk) begin
     ++cyc;
     if (cyc == MAX) begin
       expected[1] = '{5, 0};
+      expected[2] = '{0, 6};
       `checkh(results, expected);
       $write("*-* All Finished *-*\n");
       $finish;

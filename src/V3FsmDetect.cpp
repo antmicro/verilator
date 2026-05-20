@@ -957,19 +957,24 @@ class FsmDetectVisitor final : public VNVisitor {
         AstNodeExpr* valuep = eqp->rhsp();
         if (!vrefp) {
             // if lhsp is not AstVarRef, exctract var from within, we only need it for scoping
-            if (AstSel* selExprp = VN_CAST(eqp->rhsp(), Sel)) {
-                vrefp = VN_CAST(selExprp->fromp(), VarRef);
-            } else if (AstNodeSel* nodeSelExprp = VN_CAST(eqp->rhsp(), NodeSel)) {
+            if (AstNodeExpr* nodeExprp = eqp->rhsp()) {
                 do {
-                    vrefp = VN_CAST(nodeSelExprp->fromp(), VarRef);
-                    // go down the dimensions
-                    nodeSelExprp = VN_CAST(nodeSelExprp->fromp(), NodeSel);
-                } while (nodeSelExprp);
+                    if (AstNodeSel* const nodeSelp = VN_CAST(nodeExprp, NodeSel)) {
+                        nodeExprp = nodeSelp->fromp();
+                    } else if (AstStructSel* const nodeSelp = VN_CAST(nodeExprp, StructSel)) {
+                        nodeExprp = nodeSelp->fromp();
+                    } else if (AstMemberSel* const nodeSelp = VN_CAST(nodeExprp, MemberSel)) {
+                        nodeExprp = nodeSelp->fromp();
+                    } else if (AstSel* const nodeSelp = VN_CAST(nodeExprp, Sel)) {
+                        nodeExprp = nodeSelp->fromp();
+                    }
+                    vrefp = VN_CAST(nodeExprp, VarRef);
+                } while (!vrefp);
+            } else if (AstVarRef* const varp = VN_CAST(eqp->rhsp(), VarRef)) {
+                vrefp = varp;
             } else {
-                vrefp = VN_CAST(eqp->rhsp(), VarRef);
+                eqp->v3fatalSrc("Unexpected node data type in coverage: " << eqp->rhsp()->prettyTypeName());
             }
-
-            UASSERT_OBJ(vrefp, exprp, "Invalid operand type");
 
             valuep = eqp->lhsp();
         }

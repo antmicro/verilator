@@ -3275,6 +3275,10 @@ void AstVar::dump(std::ostream& str) const {
     } else if (isFuncLocal()) {
         str << " [FUNC]";
     }
+    if (const AstVar* const varp = fourstateComplementp()) {
+        str << " [COMPL=" << nodeAddr(varp) << "]";
+    }
+    if (isFourstateComplement()) str << " [4STATECOMPL]";
     if (hasUserInit()) str << " [UINIT]";
     if (icoMaybeWritten()) str << " [ICOMAYBEWRITTEN]";
     if (isDpiOpenArray()) str << " [DPIOPENA]";

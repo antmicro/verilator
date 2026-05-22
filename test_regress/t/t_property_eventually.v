@@ -34,11 +34,16 @@ module t (  /*AUTOARG*/
     results[2].passs++;
   else results[2].fails++;
 
+  assert property (@(posedge clk) eventually [0:1] cyc % 3 == 0)
+    results[3].passs++;
+  else results[3].fails++;
+
   always @(edge clk) begin
     ++cyc;
     if (cyc == MAX) begin
       expected[1] = '{5, 0};
       expected[2] = '{0, 6};
+      expected[3] = '{2, 4};
       `checkh(results, expected);
       $write("*-* All Finished *-*\n");
       $finish;

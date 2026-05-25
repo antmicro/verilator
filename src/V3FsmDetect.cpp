@@ -959,7 +959,8 @@ class FsmDetectVisitor final : public VNVisitor {
             // if lhsp is not AstVarRef, exctract var from within, we only need it for scoping
             vrefp = VN_CAST(AstArraySel::baseFromp(eqp->rhsp(), true), VarRef);
             if (!vrefp) {
-                eqp->v3fatalSrc("Unexpected node data type in coverage: " << eqp->rhsp()->prettyTypeName());
+                eqp->v3warn(COVERIGN, "Coverage ignored for type " << eqp->rhsp()->prettyTypeName());
+                return false;
             }
             valuep = eqp->lhsp();
         }

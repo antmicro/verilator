@@ -518,7 +518,8 @@ class CoverageVisitor final : public VNVisitor {
                     newent.cleanup();
                 }
             }
-        } else if (VN_IS(dtypep, QueueDType) || VN_IS(dtypep, AssocArrayDType) || VN_IS(dtypep, WildcardArrayDType)) {
+        } else if (VN_IS(dtypep, QueueDType) || VN_IS(dtypep, AssocArrayDType)
+                   || VN_IS(dtypep, WildcardArrayDType)) {
             // Not covered
             varp->v3warn(COVERIGN, "Coverage ignored for type " << dtypep->prettyTypeName());
         } else {

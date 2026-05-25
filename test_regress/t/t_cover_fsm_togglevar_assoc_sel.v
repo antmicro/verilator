@@ -15,11 +15,11 @@ package P;
       B a;
     } A;
 endpackage
-module controller (
+module t (
   input P::A a
 );
   localparam int unsigned cmp = 'h3;
-  assign recovery_mode = (a.a.a.value[0] == cmp);
+  assign b = (a.a.a.value[0] == cmp);
 
   initial begin
     $write("*-* All Finished *-*\n");

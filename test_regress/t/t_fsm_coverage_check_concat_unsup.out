@@ -1,5 +1,5 @@
-%Warning-COVERIGN: t/t_fsm_coverage_check_concat_unsup.v:7:22: Ignoring unsupported: FSM coverage on complex operation CONCAT
-    7 |   assign c = ({a, b} == 8'hFC);
+%Warning-COVERIGN: t/t_fsm_coverage_check_concat_unsup.v:13:22: Ignoring unsupported: FSM coverage on complex operation CONCAT
+   13 |   assign c = ({a, b} == 8'hFC);
       |                      ^~
                    ... For warning description see https://verilator.org/warn/COVERIGN?v=latest
                    ... Use "/* verilator lint_off COVERIGN */" and lint_on around source to disable this message.

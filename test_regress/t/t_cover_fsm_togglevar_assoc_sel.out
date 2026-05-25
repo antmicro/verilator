@@ -1,5 +1,5 @@
 %Warning-COVERIGN: t/t_cover_fsm_togglevar_assoc_sel.v:19:14: Coverage ignored for type ASSOCARRAYDTYPE
-                                                            : ... note: In instance 'controller'
+                                                            : ... note: In instance 't'
    19 |   input P::A a
       |              ^
                    ... For warning description see https://verilator.org/warn/COVERIGN?v=latest

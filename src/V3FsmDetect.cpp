@@ -956,10 +956,10 @@ class FsmDetectVisitor final : public VNVisitor {
         AstVarRef* vrefp = VN_CAST(eqp->lhsp(), VarRef);
         AstNodeExpr* valuep = eqp->rhsp();
         if (!vrefp) {
-            // if lhsp is not AstVarRef, extract var from within
             vrefp = VN_CAST(AstArraySel::baseFromp(eqp->rhsp(), true), VarRef);
             if (!vrefp) {
-                eqp->v3warn(COVERIGN, "Ignoring unsupported: FSM coverage on complex operation " << eqp->rhsp()->prettyTypeName());
+                eqp->v3warn(COVERIGN, "Ignoring unsupported: FSM coverage on complex operation "
+                                          << eqp->rhsp()->prettyTypeName());
                 return false;
             }
             valuep = eqp->lhsp();

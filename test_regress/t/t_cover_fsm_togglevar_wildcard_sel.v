@@ -7,7 +7,7 @@
 module t ();
   logic [7:0] a[*];
   localparam int unsigned b = 'h3;
-  assign recovery_mode = (a[0] == b);
+  assign c = (a[0] == b);
 
   initial begin
     $write("*-* All Finished *-*\n");

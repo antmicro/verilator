@@ -647,7 +647,7 @@ string EmitCFunc::emitVarResetRecurse(const AstVar* varp, bool constructing,
                 }
             } else if (v3Global.opt.fourstate() && dtypep->isShuffledFourstate()) {
                 const std::string& reset = slow ? "RESET_" : "";
-                if (varp->isTopLevelPort()) {
+                if (v3Global.opt.zeroTopPorts().isTrue() && varp->isTopLevelPort()) {
                     // Instead of using VL_ZERO_RESET_W V and X we just use T and pretend the
                     // signal is twice as wide. this way we resets whole thing and sets to zero at
                     // once. We can do that because of the four-state internal representation
@@ -714,7 +714,7 @@ string EmitCFunc::emitVarResetRecurse(const AstVar* varp, bool constructing,
                 out += ";\n";
             } else if (v3Global.opt.fourstate() && varp->isFourstateConstruct()) {
                 V3Number xNum{varp->fileline(), varp->width(), 0};
-                if (!varp->isTopLevelPort()
+                if (!(v3Global.opt.zeroTopPorts().isTrue() && varp->isTopLevelPort())
                     && (varp->isFourstateComplement()
                         || !(varp->varType().isNet() || isModulePort(varp)))) {
                     xNum.setAllBits1();

@@ -712,8 +712,7 @@ string EmitCFunc::emitVarResetRecurse(const AstVar* varp, bool constructing,
                 UASSERT_OBJ(constp, varp, "non-const initializer for variable");
                 out += cvtToStr(constp->num().edataWord(0)) + "U;\n";
                 out += ";\n";
-            } else if (v3Global.opt.fourstate()
-                       && (varp->fourstateComplementp() || varp->isFourstateComplement())) {
+            } else if (v3Global.opt.fourstate() && varp->isFourstateConstruct()) {
                 V3Number xNum{varp->fileline(), varp->width(), 0};
                 if (!varp->isTopLevelPort()
                     && (varp->isFourstateComplement()

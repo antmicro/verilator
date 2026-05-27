@@ -2390,6 +2390,10 @@ public:
     }
     bool isFourstateComplement() const { return m_isFourstateComplement; }
     void unsetIsFourstateComplement() { m_isFourstateComplement = false; }
+    bool isFourstateConstruct() const {
+        return m_isFourstateComplement || dtypep()->isShuffledFourstate()
+               || fourstateComplementp();
+    }
     bool isTopLevelPort() const { return m_isTopLevelPort; }
     void setIsTopLevelPort() { m_isTopLevelPort = true; }
     void attrFileDescr(bool flag) { m_fileDescr = flag; }
@@ -2602,8 +2606,7 @@ public:
     }
     static AstVar* scVarRecurse(AstNode* nodep);
     const char* broken() const override {
-        // TODO:
-        // BROKEN_RTN(v3Global.fourstateHandled() && dtypep()->isFourstate());
+        BROKEN_RTN(v3Global.fourstateHandled() && dtypep()->isFourstate());
         BROKEN_RTN(
             v3Global.fourstateShuffled() && dtypep()->isWide()
             && (isFourstateComplement()

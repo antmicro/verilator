@@ -3954,9 +3954,17 @@ public:
             if (const AstConst* const constp = VN_CAST(rhsp, Const)) {
                 if (constp->num().isFourState()
                     || (constp->dtypep()->isSigned() && constp->num().isNegative())) {
-                    dtypeSetLogicSized(lhsp->width(), VSigning::UNSIGNED);  // V3Width warns
+                    if (lhsp->dtypep() && !lhsp->dtypep()->isFourstate()) {
+                        dtypeSetBitSized(lhsp->width(), VSigning::UNSIGNED);  // V3Width warns
+                    } else {
+                        dtypeSetLogicSized(lhsp->width(), VSigning::UNSIGNED);  // V3Width warns
+                    }
                 } else {
-                    dtypeSetLogicSized(lhsp->width() * constp->toSInt(), VSigning::UNSIGNED);
+                    if (lhsp->dtypep() && !lhsp->dtypep()->isFourstate()) {
+                        dtypeSetBitSized(lhsp->width() * constp->toSInt(), VSigning::UNSIGNED);
+                    } else {
+                        dtypeSetLogicSized(lhsp->width() * constp->toSInt(), VSigning::UNSIGNED);
+                    }
                 }
             }
         }
@@ -4131,7 +4139,15 @@ public:
         : ASTGEN_SUPER_Sel(fl, fromp, lsbp)
         , m_declElWidth{1}
         , m_widthConst{bitwidth} {
-        dtypeSetLogicSized(bitwidth, VSigning::UNSIGNED);
+        if (const AstNodeDType* const dtypep = fromp->dtypep()) {
+            if (dtypep->isFourstate()) {
+                dtypeSetLogicSized(bitwidth, VSigning::UNSIGNED);
+            } else {
+                dtypeSetBitSized(bitwidth, VSigning::UNSIGNED);
+            }
+        } else {
+            dtypeSetLogicSized(bitwidth, VSigning::UNSIGNED);
+        }
     }
     AstSel(FileLine* fl, AstNodeExpr* fromp, int lsb, int bitwidth)
         : ASTGEN_SUPER_Sel(fl, fromp, new AstConst(fl, lsb))  // Need () constructor
@@ -4213,7 +4229,18 @@ class AstShiftLOvr final : public AstNodeBiop {
 public:
     AstShiftLOvr(FileLine* fl, AstNodeExpr* lhsp, AstNodeExpr* rhsp, int setwidth = 0)
         : ASTGEN_SUPER_ShiftLOvr(fl, lhsp, rhsp) {
-        if (setwidth) dtypeSetLogicSized(setwidth, VSigning::UNSIGNED);
+        if (lhsp->dtypep() && rhsp->dtypep() && !lhsp->dtypep()->isFourstate()
+            && !rhsp->dtypep()->isFourstate()) {
+            dtypeSetBitUnsized(setwidth ? setwidth : lhsp->width(),
+                               setwidth ? 0 : lhsp->dtypep()->widthMin(),
+                               lhsp->dtypep()->numeric());
+        } else if (lhsp->dtypep()) {
+            dtypeSetLogicUnsized(setwidth ? setwidth : lhsp->width(),
+                                 setwidth ? 0 : lhsp->dtypep()->widthMin(),
+                                 lhsp->dtypep()->numeric());
+        } else {
+            dtypeSetLogicSized(setwidth, VSigning::UNSIGNED);
+        }
     }
     ASTGEN_MEMBERS_AstShiftLOvr;
     void numberOperate(V3Number& out, const V3Number& lhs, const V3Number& rhs) override {
@@ -4269,7 +4296,18 @@ class AstShiftROvr final : public AstNodeBiop {
 public:
     AstShiftROvr(FileLine* fl, AstNodeExpr* lhsp, AstNodeExpr* rhsp, int setwidth = 0)
         : ASTGEN_SUPER_ShiftROvr(fl, lhsp, rhsp) {
-        if (setwidth) dtypeSetLogicSized(setwidth, VSigning::UNSIGNED);
+        if (lhsp->dtypep() && rhsp->dtypep() && !lhsp->dtypep()->isFourstate()
+            && !rhsp->dtypep()->isFourstate()) {
+            dtypeSetBitUnsized(setwidth ? setwidth : lhsp->width(),
+                               setwidth ? 0 : lhsp->dtypep()->widthMin(),
+                               lhsp->dtypep()->numeric());
+        } else if (lhsp->dtypep()) {
+            dtypeSetLogicUnsized(setwidth ? setwidth : lhsp->width(),
+                                 setwidth ? 0 : lhsp->dtypep()->widthMin(),
+                                 lhsp->dtypep()->numeric());
+        } else {
+            dtypeSetLogicSized(setwidth, VSigning::UNSIGNED);
+        }
     }
     ASTGEN_MEMBERS_AstShiftROvr;
     void numberOperate(V3Number& out, const V3Number& lhs, const V3Number& rhs) override {
@@ -4293,7 +4331,18 @@ public:
     AstShiftRS(FileLine* fl, AstNodeExpr* lhsp, AstNodeExpr* rhsp, int setwidth = 0)
         : ASTGEN_SUPER_ShiftRS(fl, lhsp, rhsp) {
         // Important that widthMin be correct, as opExtend requires it after V3Expand
-        if (setwidth) dtypeSetLogicSized(setwidth, VSigning::SIGNED);
+        if (lhsp->dtypep() && rhsp->dtypep() && !lhsp->dtypep()->isFourstate()
+            && !rhsp->dtypep()->isFourstate()) {
+            dtypeSetBitUnsized(setwidth ? setwidth : lhsp->width(),
+                               setwidth ? 0 : lhsp->dtypep()->widthMin(),
+                               lhsp->dtypep()->numeric());
+        } else if (lhsp->dtypep()) {
+            dtypeSetLogicUnsized(setwidth ? setwidth : lhsp->width(),
+                                 setwidth ? 0 : lhsp->dtypep()->widthMin(),
+                                 lhsp->dtypep()->numeric());
+        } else {
+            dtypeSetLogicSized(setwidth, VSigning::UNSIGNED);
+        }
     }
     ASTGEN_MEMBERS_AstShiftRS;
     void numberOperate(V3Number& out, const V3Number& lhs, const V3Number& rhs) override {
@@ -4318,7 +4367,18 @@ public:
     AstShiftRSOvr(FileLine* fl, AstNodeExpr* lhsp, AstNodeExpr* rhsp, int setwidth = 0)
         : ASTGEN_SUPER_ShiftRSOvr(fl, lhsp, rhsp) {
         // Important that widthMin be correct, as opExtend requires it after V3Expand
-        if (setwidth) dtypeSetLogicSized(setwidth, VSigning::SIGNED);
+        if (lhsp->dtypep() && rhsp->dtypep() && !lhsp->dtypep()->isFourstate()
+            && !rhsp->dtypep()->isFourstate()) {
+            dtypeSetBitUnsized(setwidth ? setwidth : lhsp->width(),
+                               setwidth ? 0 : lhsp->dtypep()->widthMin(),
+                               lhsp->dtypep()->numeric());
+        } else if (lhsp->dtypep()) {
+            dtypeSetLogicUnsized(setwidth ? setwidth : lhsp->width(),
+                                 setwidth ? 0 : lhsp->dtypep()->widthMin(),
+                                 lhsp->dtypep()->numeric());
+        } else {
+            dtypeSetLogicSized(setwidth, VSigning::UNSIGNED);
+        }
     }
     ASTGEN_MEMBERS_AstShiftRSOvr;
     void numberOperate(V3Number& out, const V3Number& lhs, const V3Number& rhs) override {
@@ -5223,7 +5283,7 @@ class AstInferredDisable final : public AstNodeTermop {
 public:
     explicit AstInferredDisable(FileLine* fl)
         : ASTGEN_SUPER_InferredDisable(fl) {
-        dtypeSetLogicSized(1, VSigning::UNSIGNED);
+        dtypeSetBitSized(1, VSigning::UNSIGNED);
     }
     ASTGEN_MEMBERS_AstInferredDisable;
     string emitVerilog() override { return "%f$inferred_disable"; }
@@ -5575,7 +5635,15 @@ public:
         : ASTGEN_SUPER_Extend(fl, lhsp) {}
     AstExtend(FileLine* fl, AstNodeExpr* lhsp, int width)
         : ASTGEN_SUPER_Extend(fl, lhsp) {
-        dtypeSetLogicSized(width, VSigning::UNSIGNED);
+        if (const AstNodeDType* const dtypep = lhsp->dtypep()) {
+            if (dtypep->isFourstate()) {
+                dtypeSetLogicSized(width, VSigning::UNSIGNED);
+            } else {
+                dtypeSetBitSized(width, VSigning::UNSIGNED);
+            }
+        } else {
+            dtypeSetLogicSized(width, VSigning::UNSIGNED);
+        }
     }
     ASTGEN_MEMBERS_AstExtend;
     void numberOperate(V3Number& out, const V3Number& lhs) override { out.opAssign(lhs); }
@@ -5600,7 +5668,15 @@ public:
     AstExtendS(FileLine* fl, AstNodeExpr* lhsp, int width)
         // Important that widthMin be correct, as opExtend requires it after V3Expand
         : ASTGEN_SUPER_ExtendS(fl, lhsp) {
-        dtypeSetLogicSized(width, VSigning::UNSIGNED);
+        if (const AstNodeDType* const dtypep = lhsp->dtypep()) {
+            if (dtypep->isFourstate()) {
+                dtypeSetLogicSized(width, VSigning::UNSIGNED);
+            } else {
+                dtypeSetBitSized(width, VSigning::UNSIGNED);
+            }
+        } else {
+            dtypeSetLogicSized(width, VSigning::UNSIGNED);
+        }
     }
     ASTGEN_MEMBERS_AstExtendS;
     void numberOperate(V3Number& out, const V3Number& lhs) override {

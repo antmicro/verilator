@@ -1057,6 +1057,9 @@ void V3Options::notify() VL_MT_DISABLED {
         if (traceEnabledFst()) {
             cmdfl->v3warn(E_UNSUPPORTED, "--fourstate is not supported with fst trace");
         }
+    } else if (!m_zero_top_ports.isDefault()) {
+        cmdfl->v3error(
+            "--zero-top-ports and --no-zero-top-ports shall be used only with --fourstate");
     }
 
     if (coverage() && savable()) {
@@ -1977,6 +1980,8 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc,
     DECL_OPTION("-y", CbVal, [this, &optdir](const char* valp) {
         addIncDirUser(parseFileArg(optdir, string{valp}));
     }).notForRerun();
+
+    DECL_OPTION("-zero-top-ports", OnOff, &m_zero_top_ports).undocumented();
 
     parser.finalize();
 

@@ -311,6 +311,7 @@ private:
     bool m_vpi = false;             // main switch: --vpi
     bool m_waiverMultiline = false;  // main switch: --waiver-multiline
     bool m_xInitialEdge = false;    // main switch: --x-initial-edge
+    VOptionBool m_zero_top_ports{VOptionBool::OPT_DEFAULT_TRUE};   // main switch --zero-top-ports
 
     int         m_assertUnrollLimit = 1024;  // main switch: --assert-unroll-limit
     int         m_buildJobs = -1;    // main switch: --build-jobs, -j
@@ -708,6 +709,7 @@ public:
     bool isWaiverOutput() const { return !m_waiverOutput.empty(); }
     string xAssign() const { return m_xAssign; }
     string xInitial() const { return m_xInitial; }
+    VOptionBool zeroTopPorts() const { return m_zero_top_ports; }
 
     const VStringSet& cppFiles() const { return m_cppFiles; }
     const VStringList& cFlags() const { return m_cFlags; }

@@ -13,7 +13,7 @@ test.scenarios('simulator')
 
 test.top_filename = 't_fourstate_zero_top_ports.v'
 
-test.compile(verilator_flags2=['--binary', '--fourstate', '-Wno-FUTURE', '-DINPUT_VAL=0'])
+test.compile(verilator_flags2=['--binary', '-DINPUT_VAL=0'])
 
 test.execute()
 

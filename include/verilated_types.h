@@ -121,11 +121,11 @@ struct VlWide final {
     }
 
     // METHODS
-    EData& at(size_t index) VL_MT_SAFE { return m_storage[index]; }
-    const EData& at(size_t index) const VL_MT_SAFE { return m_storage[index]; }
+    EData& at(size_t index) VL_MT_SAFE VL_PURE { return m_storage[index]; }
+    const EData& at(size_t index) const VL_MT_SAFE VL_PURE { return m_storage[index]; }
     size_t size() const VL_PURE { return N_Words; }
-    EData* data() VL_MT_SAFE { return &m_storage[0]; }
-    const EData* data() const VL_MT_SAFE { return &m_storage[0]; }
+    EData* data() VL_MT_SAFE VL_PURE { return &m_storage[0]; }
+    const EData* data() const VL_MT_SAFE VL_PURE { return &m_storage[0]; }
     inline bool operator<(const VlWide<N_Words>& rhs) const VL_PURE;
 };
 

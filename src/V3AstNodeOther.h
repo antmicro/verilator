@@ -2367,11 +2367,21 @@ public:
     void declTyped(bool flag) { m_declTyped = flag; }
     void sensIfacep(AstIface* nodep) { m_sensIfacep = nodep; }
     void fourstateComplementp(AstVar* const varp) {
-        UASSERT_OBJ(!isFourstateComplement(), this, "Varp is four-state complement i");
-        UASSERT_OBJ(!m_fourstateComplementp, this, "Varp already has a complement");
-        UASSERT_OBJ(!varp->isFourstateComplement(), varp, "It is already a four-state complement");
+        UASSERT_OBJ(!isFourstateComplement(), this,
+                    "The variable is a four-state complement itself");
+        UASSERT_OBJ(!m_fourstateComplementp, this, "Four-state complement is already added");
+        UASSERT_OBJ(!varp->isFourstateComplement(), varp,
+                    "Varp is already a four-state complement");
+        UASSERT_OBJ(!varp->fourstateComplementp(), varp,
+                    "Varp has a complement - it can't can be a complement at the same time");
         varp->m_isFourstateComplement = true;
         m_fourstateComplementp = varp;
+    }
+    AstVar* cloneWithFourstateComplementp() {
+        UASSERT_OBJ(fourstateComplementp(), this, "Variable has no complement");
+        AstVar* const newp = cloneTree(false);
+        newp->m_fourstateComplementp = fourstateComplementp()->cloneTree(false);
+        return newp;
     }
     AstVar* fourstateComplementp() const { return m_fourstateComplementp; }
     VBasicDTypeKwd fourstateOriginalDTypeKwd() const { return m_fourstateOriginalDTypeKwd; }

@@ -155,8 +155,7 @@ public:
                     "Tried to build a port map while another exists");
         for (AstNode* stmtp = ftaskp->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
             if (AstVar* const varp = VN_CAST(stmtp, Var)) {
-                if (varp->direction().isAny()
-                    && !(varp->fourstateComplementp() || varp->isFourstateComplement())) {
+                if (varp->direction().isAny() && !varp->isFourstateConstruct()) {
                     m_currentFTaskRefPortps.push_back(varp);
                     m_currentFTaskRefPortpsNamesToVarps[varp->name()] = varp;
                 }
@@ -1386,8 +1385,8 @@ class FourstateVisitor final : public VNVisitor {
                 new AstRedXor{flp, getFourstateExpressionValue(redXorp->lhsp(), false)}};
         }
 
-        template <typename CompoarisonOp_T>
-        void getFourstateExpressionArithmeticValue(CompoarisonOp_T* const biop) {
+        template <typename ComparisonOp_T>
+        void getFourstateExpressionArithmeticValue(ComparisonOp_T* const biop) {
             // |(a.xz | b.xz) ? '1 : (a op b)
             FileLine* const flp = biop->fileline();
             m_resultp = new AstCond{
@@ -1395,7 +1394,7 @@ class FourstateVisitor final : public VNVisitor {
                 new AstRedOr{flp, new AstOr{flp, getFourstateExpressionXZ(biop->lhsp()),
                                             getFourstateExpressionXZ(biop->rhsp())}},
                 createZeroOrOnesp(biop, true),
-                new CompoarisonOp_T{
+                new ComparisonOp_T{
                     flp,
                     getFourstateExpressionValue(
                         biop->lhsp(), true /*must be in tmp so it always gets evaluated*/),
@@ -1408,11 +1407,11 @@ class FourstateVisitor final : public VNVisitor {
         void visit(AstMul* const mulp) override { getFourstateExpressionArithmeticValue(mulp); }
         void visit(AstMulS* const mulsp) override { getFourstateExpressionArithmeticValue(mulsp); }
 
-        template <typename CompoarisonOp_T>
-        void getFourstateExpressionDivValue(CompoarisonOp_T* const biop) {
+        template <typename ModDivOp_T>
+        void getFourstateExpressionDivValue(ModDivOp_T* const biop) {
             // |(a.xz | b.xz) | ~|b.value ? '1 : (a op b)
             FileLine* const flp = biop->fileline();
-            CompoarisonOp_T* const resultp = new CompoarisonOp_T{
+            ModDivOp_T* const resultp = new ModDivOp_T{
                 flp,
                 getFourstateExpressionValue(biop->lhsp(),
                                             true /*must be in tmp so it always gets evaluated*/),
@@ -2077,7 +2076,7 @@ class FourstateVisitor final : public VNVisitor {
 
     void visit(AstPin* const nodep) override {
         AstVar* const varp = nodep->modVarp();
-        if (!(varp->fourstateComplementp() || varp->isFourstateComplement())) {
+        if (!varp->isFourstateConstruct()) {
             if (AstNodeExpr* const exprp = VN_CAST(nodep->exprp(), NodeExpr)) {
                 if (VL_UNLIKELY(!(VN_IS(exprp, NodeVarRef) || VN_IS(exprp, Const)))) {
                     // The issue lays in need for precalculations, potential side effects and lack
@@ -2388,13 +2387,19 @@ public:
         triorTriandReduce(m_assignWToWire, triReducer);
         V3Error::abortIfErrors();
         { FourstateLogicTypePropagator{netlistp}; }
-        netlistp->foreach([](const AstNodeExpr* const nodep) {
+        netlistp->foreach([](AstNodeExpr* const nodep) {
             if (VN_IS(nodep, NodeFTaskRef)) {
                 // Changing it in type propagador is unnecessary since those will be 100% handled
                 return;
             }
             if (isFourstate(nodep)) {
                 nodep->v3warn(E_UNSUPPORTED, "This four-state expression has not been handled");
+            }
+            if (nodep->dtypep()->isFourstate()) {
+                // If it is not a fourstate expression according to the
+                // `FourstateLogicTypePropagator` lets set the bit
+                nodep->dtypeSetBitUnsized(nodep->width(), nodep->widthMin(),
+                                          nodep->dtypep()->numeric());
             }
         });
         V3Error::abortIfErrors();

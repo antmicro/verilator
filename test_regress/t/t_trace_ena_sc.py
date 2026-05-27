@@ -15,6 +15,8 @@ test.top_filename = "t/t_trace_ena.v"
 if not test.have_sc:
     test.skip("No SystemC installed")
 
+test.fourstate_capable = False
+
 test.compile(verilator_flags2=['-trace -sc'])
 
 test.execute()

@@ -1,0 +1,37 @@
+//      // verilator_coverage annotation
+        // DESCRIPTION: Verilator: Verilog Test module
+        //
+        // This file ONLY is placed under the Creative Commons Public Domain
+        // SPDX-FileCopyrightText: 2026 Antmicro
+        // SPDX-License-Identifier: CC0-1.0
+        
+        package P;
+          typedef struct packed{
+            logic [7:0] vs;
+          } C;
+          typedef struct packed{
+            C a; int b;
+          } B;
+          typedef struct packed{
+            B a;
+          } A;
+        endpackage
+        module t (
+%000000   input P::A a,
+%000001   output logic b,
+%000001   output logic c,
+%000001   output logic d
+        );
+          logic [7:0] va[int];
+          logic [7:0] va2d[int][int];
+        
+          assign b = (a.a.a.vs == 8'h0);
+          assign c = (va[0] == 8'h0);
+          assign d = (va2d[0][0] == 8'h0);
+        
+%000001   initial begin
+%000001     $write("*-* All Finished *-*\n");
+%000001     $finish;
+          end
+        endmodule
+        

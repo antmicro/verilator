@@ -10,12 +10,11 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
+test.twostate_capable = False
 
 test.top_filename = 't_fourstate_zero_top_ports.v'
 
-test.compile(verilator_flags2=[
-    '--binary', '--fourstate', '-Wno-FUTURE', '--no-zero-top-ports', "-DINPUT_VAL=\"'z\""
-])
+test.compile(verilator_flags2=['--binary', '--no-zero-top-ports', "-DINPUT_VAL=\"'z\""])
 
 test.execute()
 

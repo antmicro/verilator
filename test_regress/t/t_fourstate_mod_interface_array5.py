@@ -10,10 +10,11 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
+test.twostate_capable = False
 
 test.top_filename = 't/t_mod_interface_array5.v'
 
-test.lint(verilator_flags2=['--fourstate', '-Wno-FUTURE', '-Wno-CASTFOURSTATE'],
+test.lint(verilator_flags2=['-Wno-CASTFOURSTATE'],
           fails=True,
           expect_filename=test.golden_filename)
 

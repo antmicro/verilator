@@ -10,11 +10,10 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
+test.twostate_capable = False
 
 test.top_filename = "t_trace_split_cfuncs.v"
 
-test.lint(verilator_flags2=['--fourstate', '--trace-fst'],
-          fails=True,
-          expect_filename=test.golden_filename)
+test.lint(verilator_flags2=['--trace-fst'], fails=True, expect_filename=test.golden_filename)
 
 test.passes()

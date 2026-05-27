@@ -888,6 +888,8 @@ class VlTest:
             self.top_filename = re.sub(r'\.py$', '', self.py_filename) + '.' + self.v_suffix
         self.pli_filename = re.sub(r'\.py$', '', self.py_filename) + '.cpp'
         self.top_shell_filename = self.obj_dir + "/" + self.vm_prefix + "__top.v"
+        self.twostate_capable = True
+        self.fourstate_capable = True
 
     def _define_opt_calc(self) -> str:
         return "--define " if self.xsim else "+define+"
@@ -1154,7 +1156,7 @@ class VlTest:
         if param['make_main'] and param['verilator_make_gmake']:
             verilator_flags += ["../" + self.main_filename]
         if param['vlt4'] or param['vltmt4']:
-            verilator_flags += ["--fourstate", "-Wno-FUTURE", "-Wno-CASTFOURSTATE"]
+            verilator_flags += ["--fourstate", "-Wno-FUTURE"]
 
         cmdargs = [
             "--prefix",
@@ -1197,7 +1199,6 @@ class VlTest:
             'tee': True,
             'timing_loop': False,
             'main_top_name': "top",
-            'fourstate_capable': True
         }
         param.update(vars(self))
         param.update(kwargs)
@@ -1354,7 +1355,11 @@ class VlTest:
                 self.skip("Test requires Coroutines; ignore error since not available\n")
                 return
 
-            if not param['fourstate_capable'] and (param['vlt4'] or param['vltmt4']):
+            if not self.twostate_capable and (param['vlt'] or param['vltmt']):
+                self.skip("Test is not twostate capable")
+                return
+
+            if not self.fourstate_capable and (param['vlt4'] or param['vltmt4']):
                 self.skip("Test is not fourstate capable - maybe verilator does not"
                           "support all used features")
                 return

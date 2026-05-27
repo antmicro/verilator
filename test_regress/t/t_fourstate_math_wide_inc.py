@@ -13,7 +13,7 @@ test.scenarios('simulator')
 
 test.top_filename = 't/t_math_wide_inc.v'
 
-test.compile(verilator_flags2=['--fourstate', '-Wno-FUTURE'])
+test.compile()
 
 test.execute()
 

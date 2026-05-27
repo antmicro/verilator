@@ -10,8 +10,9 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
+test.twostate_capable = False
 
-test.compile(verilator_flags2=['--fourstate', '-Wno-FUTURE', '-Wno-CASTFOURSTATE'])
+test.compile(verilator_flags2=['-Wno-CASTFOURSTATE'])
 
 test.execute()
 

@@ -12,7 +12,7 @@ import vltest_bootstrap
 test.scenarios('simulator')
 test.twostate_capable = False
 
-test.compile(verilator_flags2=['--binary', '-Wno-CASTFOURSTATE'])
+test.compile(verilator_flags2=['--binary'])
 
 test.execute(expect_filename=test.golden_filename)
 

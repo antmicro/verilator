@@ -14,8 +14,6 @@ test.twostate_capable = False
 
 test.top_filename = 't/t_case_onehot.v'
 
-test.lint(verilator_flags2=['-Wno-CASTFOURSTATE'],
-          fails=True,
-          expect_filename=test.golden_filename)
+test.lint(fails=True, expect_filename=test.golden_filename)
 
 test.passes()

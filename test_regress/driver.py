@@ -1165,7 +1165,7 @@ class VlTest:
         if param['make_main'] and param['verilator_make_gmake']:
             verilator_flags += ["../" + self.main_filename]
         if param['vlt4'] or param['vltmt4']:
-            verilator_flags += ["--fourstate", "-Wno-FUTURE"]
+            verilator_flags += ["--fourstate", "-Wno-FUTURE", "-Wno-CASTFOURSTATE"]
 
         cmdargs = [
             "--prefix",

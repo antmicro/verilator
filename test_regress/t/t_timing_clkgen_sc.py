@@ -11,6 +11,7 @@ import vltest_bootstrap
 
 test.scenarios('simulator')
 test.top_filename = "t/t_timing_clkgen2.v"
+test.fourstate_capable = False
 
 if re.search(r'clang', test.cxx_version):
     test.skip("Known clang bug on ubuntu-26.04")

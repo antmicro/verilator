@@ -26,6 +26,7 @@ def run(test, *, verilator_flags2=()):
                 "--cc",
             ])
         case "sc":
+            test.fourstate_capable = False
             verilator_common_flags.extend([  #
                 "--sc",
                 "--CFLAGS",

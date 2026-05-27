@@ -13,8 +13,9 @@ test.top_filename = 't_fourstate_zero_top_ports.v'
 
 test.scenarios('simulator')
 
-test.compile(verilator_flags2=['--binary', '--no-fourstate', '--no-zero-top-ports', '-DINPUT_VAL=0'],
-          fails=True,
-          expect_filename=test.golden_filename)
+test.compile(
+    verilator_flags2=['--binary', '--no-fourstate', '--no-zero-top-ports', '-DINPUT_VAL=0'],
+    fails=True,
+    expect_filename=test.golden_filename)
 
 test.passes()

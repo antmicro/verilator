@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_sys_file_basic.v"
 
 test.compile(v_flags2=['+incdir+../include', '+define+AUTOFLUSH'],

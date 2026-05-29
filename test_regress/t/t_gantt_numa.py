@@ -13,7 +13,6 @@ import vltest_bootstrap
 import sys
 
 test.scenarios('vltmt')
-test.fourstate_capable = False
 test.top_filename = "t/t_gantt.v"
 test.pli_filename = "t/t_gantt_c.cpp"
 

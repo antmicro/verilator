@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_module_input_default_value.v"
 
 test.compile(v_flags2=["-fno-inline"])

@@ -12,6 +12,5 @@ import trace_hier_block_common
 
 test.priority(30)
 test.scenarios('vlt_all')
-test.fourstate_capable = False
 
 trace_hier_block_common.run(test)

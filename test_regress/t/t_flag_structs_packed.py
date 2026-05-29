@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('linter')
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=['-Wno-fatal', '--structs-packed'],
              expect_filename=test.golden_filename)

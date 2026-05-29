@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 if not test.have_solver:
     test.skip("No constraint solver installed")

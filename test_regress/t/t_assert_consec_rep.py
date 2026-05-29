@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')  # UNOPTTHREADS in vltmt due to many small assertion states
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=['--assert', '--timing'])
 

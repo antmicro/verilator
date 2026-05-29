@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 if test.nc:
     # For NC, compile twice, first just to generate DPI headers

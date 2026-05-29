@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 # Note: need to run at a higher optimization level to reproduce the issue
 test.benchmark = True

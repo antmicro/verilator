@@ -11,7 +11,6 @@ import vltest_bootstrap
 import filecmp
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_dpi_import.v"
 
 tmp_dir = test.obj_dir + "/dpi-hdr"

@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_flag_compiler.v"
 
 test.compile(verilator_flags2=["--compiler gcc"])

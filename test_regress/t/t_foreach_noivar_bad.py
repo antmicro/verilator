@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 test.top_filename = 't/t_foreach_noivar.v'
 
 test.lint(fails=True, expect_filename=test.golden_filename)

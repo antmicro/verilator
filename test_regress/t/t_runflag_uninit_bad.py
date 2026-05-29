@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 test.compile(v_flags2=["--savable --exe", test.pli_filename], make_main=False)
 

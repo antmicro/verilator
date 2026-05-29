@@ -11,7 +11,6 @@ import vltest_bootstrap
 import glob
 
 test.scenarios("vlt")
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=["--x-initial unique"])
 

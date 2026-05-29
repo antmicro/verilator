@@ -11,6 +11,5 @@ import vltest_bootstrap
 import trace_split_struct_common
 
 test.scenarios('vlt_all')
-test.fourstate_capable = False
 
 trace_split_struct_common.run(test)

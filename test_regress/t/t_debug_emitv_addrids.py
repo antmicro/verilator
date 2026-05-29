@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 test.top_filename = "t/t_debug_emitv.v"
 
 test.lint(

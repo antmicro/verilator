@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 test.top_filename = "t/t_assert_inside_cond.v"
 
 test.compile(verilator_flags2=["-x-assign 0 --assert +define+T_ASSERT_INSIDE_COND_BAD"])

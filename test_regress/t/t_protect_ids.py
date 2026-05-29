@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt_all')
-test.fourstate_capable = False
 
 # Use --debug-protect to assist debug
 

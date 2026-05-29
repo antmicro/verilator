@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 # Issue #5597 makes this fail
 test.compile(fails=test.vlt_all,

@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 test.compile(make_top_shell=False,
              make_main=1,

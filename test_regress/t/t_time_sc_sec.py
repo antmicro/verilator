@@ -12,8 +12,6 @@ import vltest_bootstrap
 test.scenarios('vlt')
 test.top_filename = "t/t_time_sc.v"
 
-test.fourstate_capable = False
-
 test.sc_time_resolution = 'SC_SEC'
 
 test.compile(verilator_flags2=['-sc', '-timescale 1s/1s', '+define+TEST_EXPECT=20s'])

@@ -13,7 +13,6 @@ if not test.have_solver:
     test.skip("No constraint solver installed")
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile()
 

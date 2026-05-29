@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_struct_init.v"
 
 test.compile(verilator_flags2=['--cc --trace-vcd'])

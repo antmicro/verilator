@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=["--protect-lib", "secret", "--protect-key", "SECRET_FAKE_KEY"],
              verilator_make_gcc=False,

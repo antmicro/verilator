@@ -12,6 +12,5 @@ import vltest_bootstrap
 import runpy
 
 test.scenarios('vlt_all')
-test.fourstate_capable = False
 
 runpy.run_path("t/t_dfg_peephole.py", globals())

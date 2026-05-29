@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_interface_nested_port_type.v"
 
 # Type parameters in nested interfaces (no-inline mode)

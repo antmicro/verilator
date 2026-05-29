@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 test.top_filename = "t_assert_ctl_concurrent.v"
 
 test.compile(verilator_flags2=["--binary --assert --fno-inline"])

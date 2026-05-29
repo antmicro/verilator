@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=["-x-assign 0 --assert +define+T_ASSERT_INSIDE_COND"])
 

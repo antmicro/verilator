@@ -2435,16 +2435,16 @@ class FourstateShuffleVisitor final : public VNVisitor {
         UASSERT_OBJ(varp->isWide(), varp,
                     "This function is only ment to be called on wide wariables");
         if (AstVar* newp = varp->fourstateComplementp()) varp = newp;
-        UASSERT_OBJ(
-            VString::endsWith(varp->name(), "__Vxz"), varp,
-            "Four-state complementary value (xz part) shall have '__Vxz' suffix, but it is named: "
-                << varp->name());
+        const size_t pos = varp->name().rfind(XZ_SUFFIX);
+        UASSERT_OBJ(pos != std::string::npos, varp,
+                    "Four-state complementary value (xz part) shall have '"
+                        << XZ_SUFFIX << "', but it is named: " << varp->name());
         if (AstVar* resultp = VN_AS(varp->user1p(), Var)) return resultp;
         UINFO(4, "SHUFFLED4STATE: " << varp);
         ++m_shuffledVars;
         AstVar* const resultp = varp->cloneTree(false);
         resultp->unsetIsFourstateComplement();
-        resultp->name(resultp->name().erase(resultp->name().size() + 1 - sizeof("__Vxz")));
+        resultp->name(resultp->name().erase(pos, sizeof(XZ_SUFFIX)));
         resultp->dtypep(resultp->findBitDType(resultp->width(), resultp->dtypep()->widthMin(),
                                               varp->dtypep()->numeric(), true));
         varp->addNextHere(resultp);

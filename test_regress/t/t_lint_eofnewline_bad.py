@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 test.top_filename = test.obj_dir + "/t_lint_eofnewline_bad.v"
 
 

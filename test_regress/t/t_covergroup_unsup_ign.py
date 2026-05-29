@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 test.top_filename = "t/t_covergroup_unsup.v"
 
 test.lint(verilator_flags2=['--assert --coverage --Wno-COVERIGN +define+T_COVERGROUP_UNSUP_IGN'],

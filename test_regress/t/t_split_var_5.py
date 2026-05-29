@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_split_var_4.v"
 
 test.compile(verilator_flags2=['--stats', "-fno-dfg"])

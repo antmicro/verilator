@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt_all')
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=["--output-groups", "2"])
 

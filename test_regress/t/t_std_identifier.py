@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('linter')
-test.fourstate_capable = False
 
 test.lint(verilator_flags2=["-DTEST_DECLARE_STD"])
 

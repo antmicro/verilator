@@ -12,7 +12,6 @@ import vltest_bootstrap
 test.scenarios('simulator')
 test.top_filename = "t/t_net_delay.v"
 test.main_time_multiplier = 2
-test.fourstate_capable = False
 
 if re.search(r'clang', test.cxx_version):
     test.skip("Known clang bug on ubuntu-26.04")

@@ -14,8 +14,6 @@ test.scenarios('simulator')
 if not test.have_sc:
     test.skip("No SystemC installed")
 
-test.fourstate_capable = False
-
 test.compile(make_main=False, verilator_flags2=["-sc --exe", test.pli_filename])
 
 test.execute()

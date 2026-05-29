@@ -528,7 +528,7 @@ class DelayedVisitor final : public VNVisitor {
             newlyCreated = true;
         }
 
-        if (AstVar* const complementp = varp->fourstateComplementp()) {
+        if (varp->fourstateComplementp()) {
             if (AstVarScope* const complementVscp = getFourstateComplementScope(vscp)) {
                 std::string name
                     = getName(complementVscp, vscpInfo ? &m_vscpInfo(complementVscp) : nullptr);

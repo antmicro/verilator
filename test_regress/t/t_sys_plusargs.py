@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile(v_flags2=['-v', 't/t_flag_libinc.v'])
 

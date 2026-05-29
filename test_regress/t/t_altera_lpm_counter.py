@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt_all')
-test.fourstate_capable = False
 test.top_filename = "t/t_altera_lpm.v"
 module = re.sub(r'.*t_altera_', '', test.name)
 

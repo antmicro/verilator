@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt', 'xsim')
-test.fourstate_capable = False
 
 if test.benchmark:
     test.sim_time = test.benchmark * 100

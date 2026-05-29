@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 # 22-Mar-2012: Modifications for this test contributed by Jeremy Bennett,
 # Embecosm.

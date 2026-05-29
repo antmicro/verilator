@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile(
     verilator_flags2=["-unroll-count 1024", test.wno_unopthreads_for_few_cores, "--stats"])

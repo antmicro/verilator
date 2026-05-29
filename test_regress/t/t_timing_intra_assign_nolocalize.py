@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_timing_intra_assign.v"
 test.golden_filename = "t/t_timing_intra_assign.out"
 

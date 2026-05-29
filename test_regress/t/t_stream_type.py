@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 # Doesn't currently compile due to issue #6574
 test.compile(verilator_make_gmake=False)

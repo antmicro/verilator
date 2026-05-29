@@ -73,6 +73,10 @@ public:
     // Returns an error message if widthMin() is not correct otherwise returns nullptr like
     // broken()
     virtual const char* widthMismatch() const VL_MT_STABLE { return nullptr; }
+    const AstIfaceRefDType* dtypeIfVirtualIfacep() {
+        const AstIfaceRefDType* const dtypep = VN_CAST(this->dtypep()->skipRefp(), IfaceRefDType);
+        return dtypep && dtypep->isVirtual() ? dtypep : nullptr;
+    }
 };
 class AstNodeBiop VL_NOT_FINAL : public AstNodeExpr {
     // Binary expression

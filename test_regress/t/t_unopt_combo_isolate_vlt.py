@@ -15,7 +15,7 @@ import vltest_bootstrap
 
 test.scenarios('vlt')
 test.fourstate_capable = False
-test.top_filename = "t/t_unopt_combo.v"
+test.topgit_filename = "t/t_unopt_combo.v"
 
 test.compile(verilator_flags2=[test.t_dir + "/t_unopt_combo_isolate.vlt"])
 

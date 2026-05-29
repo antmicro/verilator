@@ -12,6 +12,7 @@ import sys
 import vltest_bootstrap
 
 test.scenarios('vltmt')
+test.fourstate_capable = False
 
 test.top_filename = "t/t_gantt.v"
 test.pli_filename = "t/t_gantt_numa_default_threads.cpp"

@@ -1145,7 +1145,8 @@ class VlTest:
             verilator_flags += ["--trace-vcd"]
         if Args.gdbsim or Args.rrsim:
             verilator_flags += ["-CFLAGS -ggdb -LDFLAGS -ggdb"]
-        verilator_flags += ["--x-assign unique"]  # More likely to be buggy
+        if not (param['vlt4'] or param['vltmt4']):
+            verilator_flags += ["--x-assign unique"]  # More likely to be buggy
 
         if param['vltmt'] or param['vltmt4']:
             verilator_flags += ["--debug-partition"]

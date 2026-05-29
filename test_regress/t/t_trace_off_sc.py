@@ -11,7 +11,6 @@ import vltest_bootstrap
 
 test.scenarios('simulator')
 test.top_filename = "t/t_trace_ena.v"
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=['-notrace -sc'])
 

@@ -11,7 +11,6 @@ import vltest_bootstrap
 
 test.scenarios('simulator')
 test.top_filename = "t/t_a1_first_cc.v"
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=["-sc --trace-vcd --pins-sc-uint-bool"])
 

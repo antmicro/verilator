@@ -10,6 +10,7 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
+test.fourstate_capable = False
 
 test.compile(v_flags2=["t/t_dpi_shortcircuit_c.cpp"], verilator_flags2=["-Wno-DECLFILENAME"])
 

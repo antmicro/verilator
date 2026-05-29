@@ -14,7 +14,6 @@ import vltest_bootstrap
 # so independent invocations are not deterministic.
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=['--binary'])
 

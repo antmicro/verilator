@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 test.lint(verilator_flags2=["--coverage-line"])
 test.file_grep_not(test.compile_log_filename, r"FSMMULTI")

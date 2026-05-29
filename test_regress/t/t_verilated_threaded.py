@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vltmt')
-test.fourstate_capable = False
 test.top_filename = "t/t_verilated_all.v"
 
 test.compile(

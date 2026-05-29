@@ -11,7 +11,6 @@ import vltest_bootstrap
 from pathlib import Path
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=['--cc', '--coverage-line'])
 

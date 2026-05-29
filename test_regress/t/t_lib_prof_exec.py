@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 test.top_filename = "t/t_lib_prot.v"
 if test.benchmark:
     test.sim_time = test.benchmark * 100

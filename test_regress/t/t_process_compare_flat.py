@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_process_compare.v"
 
 test.compile(verilator_flags2=['--binary --public-flat-rw'])

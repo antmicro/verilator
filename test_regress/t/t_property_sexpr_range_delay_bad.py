@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 test.lint(expect_filename=test.golden_filename,
           verilator_flags2=['--assert', '--timing', '--error-limit 1000'],

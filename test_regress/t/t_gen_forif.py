@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile(nc_flags2=['+access+r'], verilator_flags2=["--no-timing"])
 

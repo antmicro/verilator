@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_inst_array.v"
 
 test.compile(v_flags2=['+define+USE_INLINE'])

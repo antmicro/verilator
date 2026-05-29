@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')  # UNOPTTHREADS in vltmt
-test.fourstate_capable = False
 test.top_filename = "t/t_func_lib_sub.v"
 
 test.compile(verilator_flags2=["--binary"])

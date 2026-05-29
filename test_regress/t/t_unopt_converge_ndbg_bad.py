@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_unopt_converge.v"
 
 test.compile(v_flags2=['+define+ALLOW_UNOPT', "-fno-dfg"], make_flags=['CPPFLAGS_ADD=-UVL_DEBUG'])

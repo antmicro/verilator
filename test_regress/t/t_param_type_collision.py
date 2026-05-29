@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_param_type.v"
 
 test.compile(verilator_flags2=["--debug-collision"])

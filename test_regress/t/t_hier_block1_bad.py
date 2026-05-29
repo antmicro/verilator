@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 test.compile(fails=True, verilator_flags2=['--hierarchical'], expect_filename=test.golden_filename)
 

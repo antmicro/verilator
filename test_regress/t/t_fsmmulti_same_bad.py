@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 # Multiple supported case candidates on the same state variable in one
 # always_ff now warn and keep only the first candidate instrumented. Different-

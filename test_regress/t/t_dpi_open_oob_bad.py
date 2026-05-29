@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 test.compile(v_flags2=["t/t_dpi_open_oob_bad_c.cpp"],
              verilator_flags2=["-Wall -Wno-DECLFILENAME -unroll-count 1"])

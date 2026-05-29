@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 # Exercise both user and generated coverage in duplicated hierarchy instances;
 # the shared golden verifies inline and no-inline modules report the same

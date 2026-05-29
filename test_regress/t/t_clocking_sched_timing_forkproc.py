@@ -9,7 +9,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 test.top_filename = "t/t_clocking_sched.v"
 
 test.compile(timing_loop=True, verilator_flags2=["--timing"])

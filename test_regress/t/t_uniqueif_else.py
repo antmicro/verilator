@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator_st')
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=['--binary'])
 

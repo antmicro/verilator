@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 # This tests combining CFuncs, but Dfg would inline the submodule, disabling
 test.compile(verilator_flags2=["--stats", "-fno-dfg"])

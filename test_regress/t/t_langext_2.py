@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 # This is a compile only test.
 test.compile(v_flags2=["+systemverilogext+v"])

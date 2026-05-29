@@ -2454,6 +2454,7 @@ class FourstateShuffleVisitor final : public VNVisitor {
 
     void visit(AstNodeCCall* const nodep) override {
         iterateChildren(nodep);
+        if (nodep->funcp()->dpiImportPrototype()) return;
         AstNodeExpr* exprp = nodep->argsp();
         for (AstVar* varp = nodep->funcp()->argsp(); varp; varp = VN_AS(varp->nextp(), Var)) {
             UASSERT_OBJ(exprp, varp, "Too little arguments");

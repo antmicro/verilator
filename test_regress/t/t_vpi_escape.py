@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.pli_filename = "t/t_vpi_escape.cpp"
 
 test.compile(make_top_shell=False,

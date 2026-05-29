@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_opt_const.v"
 
 # Run the same design as t_opt_const.py without bitopt tree optimization to make sure that the result is same.

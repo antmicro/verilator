@@ -12,7 +12,6 @@ from pathlib import Path
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 test.lint(v_flags=["--coverage-fsm", "--dump-tree"])
 

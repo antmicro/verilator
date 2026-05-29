@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 test.top_filename = "t/t_lint_assigneqexpr.v"
 
 test.lint(verilator_flags2=['-Wall -Wno-DECLFILENAME'],

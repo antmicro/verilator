@@ -13,7 +13,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile(make_top_shell=False,
              make_main=False,

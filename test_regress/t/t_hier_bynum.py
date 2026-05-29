@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt_all')
-test.fourstate_capable = False
 
 test.compile(v_flags2=['t/t_hier_block.cpp'],
              verilator_flags2=['--hierarchical'],

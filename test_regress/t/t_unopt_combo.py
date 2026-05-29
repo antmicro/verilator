@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile(v_flags2=['+define+ALLOW_UNOPT', "-fno-dfg"])
 

@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_dpi_context.v"
 
 test.compile(v_flags2=["t/t_dpi_context_c.cpp"],

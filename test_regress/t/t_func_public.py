@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=['+define+VERILATOR_PUBLIC_TASKS'])
 

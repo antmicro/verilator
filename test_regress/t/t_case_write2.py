@@ -11,7 +11,6 @@ import vltest_bootstrap
 
 test.priority(50)
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=["--stats -O3 -x-assign fast"])
 

@@ -12,7 +12,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile(verilator_make_gmake=False, verilator_make_cmake=True, verilator_flags2=["-sc"])
 

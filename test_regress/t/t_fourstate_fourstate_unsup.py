@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.lint(verilator_flags2=['--fourstate'], fails=True, expect_filename=test.golden_filename)
 

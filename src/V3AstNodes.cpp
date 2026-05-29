@@ -993,6 +993,15 @@ AstVar* AstVar::scVarRecurse(AstNode* nodep) {
     return nullptr;
 }
 
+const char* AstVar::broken() const {
+    BROKEN_RTN(v3Global.fourstateHandled() && dtypep()->isFourstate());
+    BROKEN_RTN(v3Global.fourstateShuffled() && dtypep()->isWide()
+               && (isFourstateComplement()
+                   || name().rfind("__Vxz")  // TODO: make this not a hard coded value
+                          != std::string::npos));
+    return nullptr;
+}
+
 const AstNodeDType* AstNodeDType::skipRefIterp(bool skipConst, bool skipEnum,
                                                bool assertOn) const VL_MT_STABLE {
     static constexpr int MAX_TYPEDEF_DEPTH = 1000;

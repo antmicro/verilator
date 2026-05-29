@@ -1057,6 +1057,7 @@ void V3Options::notify() VL_MT_DISABLED {
         if (traceEnabledFst()) {
             cmdfl->v3warn(E_UNSUPPORTED, "--fourstate is not supported with fst trace");
         }
+        if (systemC()) cmdfl->v3warn(E_UNSUPPORTED, "--fourstate is not supported with --sc");
     } else if (!m_zero_top_ports.isDefault()) {
         cmdfl->v3error(
             "--zero-top-ports and --no-zero-top-ports shall be used only with --fourstate");

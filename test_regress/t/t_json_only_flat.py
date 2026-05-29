@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 test.top_filename = "t/t_json_only_first.v"
 
 out_filename = test.obj_dir + "/V" + test.name + ".tree.json"

@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=["--x-assign unique --x-initial unique -Wno-WIDTH -O0"])
 

@@ -12,7 +12,6 @@ import os
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 
 test.compile(top_filename="t/t_cover_per_instance.v",
              v_flags2=["+define+INLINE_CHILD"],

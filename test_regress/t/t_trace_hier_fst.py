@@ -11,6 +11,5 @@ import vltest_bootstrap
 import trace_hier_common
 
 test.scenarios('vlt_all')
-test.fourstate_capable = False
 
 trace_hier_common.run(test)

@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=[
     "--binary", "--unroll-count", "1024", "--inline-cfuncs", "100000000", "--output-split-cfuncs",

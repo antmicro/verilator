@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.fourstate_capable = False
 test.top_filename = "t/t_unopt_combo.v"
 
 test.compile(v_flags2=['+define+ATTRIBUTES', "-fno-dfg"],

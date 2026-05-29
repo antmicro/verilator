@@ -10,7 +10,6 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
-test.fourstate_capable = False
 
 test.compile(verilator_flags2=["--cc --trace-vcd -fno-inline t/" + test.name + ".vlt"])
 

@@ -14,6 +14,8 @@ test.twostate_capable = False
 
 test.top_filename = "t_fourstate_fourstate_unsup.v"
 
-test.lint(verilator_flags2=['--x-assign', '0', '--x-initial 0'], fails=True, expect_filename=test.golden_filename)
+test.lint(verilator_flags2=['--x-assign', '0', '--x-initial', '0'],
+          fails=True,
+          expect_filename=test.golden_filename)
 
 test.passes()

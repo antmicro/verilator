@@ -57,8 +57,6 @@ def run(test):
     if mode == "sc" and not test.have_sc:
         test.skip("No SystemC installed")
 
-    test.fourstate_capable = False
-
     test.top_filename = "t/t_trace_struct_array_multi_inst.v"
     test.golden_filename = test.py_filename.rpartition(fmt)[0] + fmt + ".out"
 

@@ -13,8 +13,6 @@ def run(test, *, verilator_flags2=()):
     if mode == "sc" and not test.have_sc:
         test.skip("No SystemC installed")
 
-    test.fourstate_capable = False
-
     # All test use the same SV file
     test.top_filename = "t/t_trace_primitive.v"
     # Any variations after the format name must yield the exact same trace

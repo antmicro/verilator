@@ -11,8 +11,6 @@ import vltest_bootstrap
 
 test.scenarios('vlt')
 
-test.fourstate_capable = False
-
 test.compile(verilator_flags2=["--sc"])
 
 test.passes()

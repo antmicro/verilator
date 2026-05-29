@@ -12,7 +12,6 @@ import vltest_bootstrap
 test.priority(30)
 test.scenarios('vlt_all')
 test.top_filename = "t/t_hier_block.v"
-test.fourstate_capable = False
 
 # CI environment offers 2 VCPUs, 2 thread setting causes the following warning.
 # %Warning-UNOPTTHREADS: Thread scheduler is unable to provide requested parallelism; consider asking for fewer threads.

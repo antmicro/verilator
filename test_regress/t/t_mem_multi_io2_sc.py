@@ -12,7 +12,6 @@ import vltest_bootstrap
 test.scenarios('vlt_all')
 test.pli_filename = "t/t_mem_multi_io2.cpp"
 test.top_filename = "t/t_mem_multi_io2.v"
-test.fourstate_capable = False
 
 test.compile(make_top_shell=False,
              make_main=False,

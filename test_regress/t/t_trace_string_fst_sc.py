@@ -11,7 +11,6 @@ import vltest_bootstrap
 
 test.scenarios('simulator')
 test.top_filename = "t/t_trace_string.v"
-test.fourstate_capable = False
 
 if not test.have_sc:
     test.skip("No SystemC installed")

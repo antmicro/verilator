@@ -16,7 +16,6 @@ import vltest_bootstrap
 test.priority(100)
 test.scenarios('vlt')
 test.top_filename = "t/t_a1_first_cc.v"
-test.fourstate_capable = False
 
 test.leak_check_disable()
 

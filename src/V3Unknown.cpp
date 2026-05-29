@@ -555,7 +555,8 @@ public:
     // CONSTRUCTORS
     explicit UnknownVisitor(AstNetlist* nodep)
         : m_lvboundNames{"__Vlvbound"}
-        , m_xrandNames{std::make_unique<V3UniqueNames>(s_xrandPrefix)} {
+        , m_xrandNames{std::make_unique<V3UniqueNames>(s_xrandPrefix)}
+        , m_allowXUnique{!v3Global.opt.fourstate()} {
         iterate(nodep);
     }
     ~UnknownVisitor() override {  //

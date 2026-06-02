@@ -10,6 +10,7 @@
 import vltest_bootstrap
 
 test.scenarios('vlt')
+test.fourstate_capable = False
 
 # Use --output-split-cfuncs to create small functions that can be inlined
 # Also test --inline-cfuncs-product option

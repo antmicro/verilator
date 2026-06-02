@@ -11,15 +11,12 @@ import vltest_bootstrap
 
 test.scenarios('simulator')
 
-# It actually is a four-state mode but we need to get a warning
-# which is disabled by default in four-state test suite -
-# it is a bit ugly workaround but it will be removed
-# once printing will be fully supported (soon)
-test.fourstate_capable = False
+test.twostate_capable = False
+test.fourstate_nowarn = False
 
 test.top_filename = "t/t_fourstate_format.v"
 
-test.lint(verilator_flags2=['--fourstate', '-Wno-FUTURE'],
+test.lint(verilator_flags2=['-Wno-FUTURE'],
           fails=True,
           expect_filename=test.golden_filename)
 

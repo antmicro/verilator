@@ -890,6 +890,7 @@ class VlTest:
         self.top_shell_filename = self.obj_dir + "/" + self.vm_prefix + "__top.v"
         self.twostate_capable = True
         self.fourstate_capable = True
+        self.fourstate_nowarn = True  # This is only a temporary workaround
 
     def _define_opt_calc(self) -> str:
         return "--define " if self.xsim else "+define+"
@@ -1157,7 +1158,9 @@ class VlTest:
         if param['make_main'] and param['verilator_make_gmake']:
             verilator_flags += ["../" + self.main_filename]
         if param['vlt4'] or param['vltmt4']:
-            verilator_flags += ["--fourstate", "-Wno-FUTURE", "-Wno-CASTFOURSTATE"]
+            verilator_flags += ["--fourstate"]
+            if self.fourstate_nowarn:
+                verilator_flags += ["-Wno-FUTURE", "-Wno-CASTFOURSTATE"]
 
         cmdargs = [
             "--prefix",

@@ -733,6 +733,8 @@ class VlTest:
         # Make e.g. self.vlt, self.vltmt etc
         self.vlt = False  # Set below also
         self.vltmt = False  # Set below also
+        self.vlt4 = False  # Set below also
+        self.vltmt4 = False  # Set below also
         self.xsim = False  # Set below also
         for ascenario in All_Scenarios:
             self.__dict__[ascenario] = False

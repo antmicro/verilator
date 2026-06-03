@@ -3498,6 +3498,16 @@ class ConstVisitor final : public VNVisitor {
         if (!m_doNConst) return;
         const AstBasicDType* const bdtypep = VN_CAST(nodep->dtypep()->skipRefp(), BasicDType);
         if (!bdtypep) return;
+        {
+            const AstNodeExpr* const lhsp = VN_AS(nodep->abovep(), NodeAssign)->lhsp();
+            const AstVar* varp;
+            if (const AstMemberSel* memberSel = VN_CAST(lhsp, MemberSel)) {
+                varp = memberSel->varp();
+            } else {
+                varp = VN_AS(lhsp, NodeVarRef)->varp();
+            }
+            if (varp->isFourstateComplement() || varp->fourstateComplementp()) return;
+        }
         if (!bdtypep->isZeroInit()) return;
         AstConst* const newp = new AstConst{nodep->fileline(), V3Number{nodep, bdtypep}};
         UINFO(9, "CRESET(0) => CONST(0) " << nodep);

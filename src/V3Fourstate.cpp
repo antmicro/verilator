@@ -432,6 +432,22 @@ class FourstateLogicTypePropagator final : public VNVisitor {
         setFourstate(nodep, false, m_fourstateInSubtree);
     }
 
+    void visit(AstSampled* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        if (const AstNodeExpr* const exprp = VN_CAST(nodep->exprp(), NodeExpr)) {
+            setFourstate(nodep, isFourstate(exprp), m_fourstateInSubtree);
+        } else {
+            setFourstate(nodep, false, m_fourstateInSubtree);
+            nodep->v3fatalSrc("$sampled with non-expressions argument in four-state mode is "
+                              "unsupported");  // probably unreachable
+        }
+    }
+
+    void visit(AstIsUnknown* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, false, m_fourstateInSubtree);
+    }
+
     void visit(AstNodeExpr* const nodep) override {
         iterateChildrenSeparately(nodep);
         UASSERT_OBJ(nodep->dtypep(), nodep, "Expression has no dtype");
@@ -1788,6 +1804,13 @@ class FourstateVisitor final : public VNVisitor {
             m_result = getExprValuep(cMethodHardp);
         }
 
+        void visit(AstSampled* const sampledp) override {
+            m_result = new AstSampled{
+                sampledp->fileline(),
+                getFourstateExpressionValue(VN_AS(sampledp->exprp(), NodeExpr), false)};
+            m_result->dtypeFrom(getTwoStateDtype(sampledp->dtypep()));
+        }
+
         void visit(AstNodeExpr* const nodep) override {
             nodep->v3warn(E_UNSUPPORTED, "Unsupported: Operator "
                                              << nodep->typeName()
@@ -2163,6 +2186,13 @@ class FourstateVisitor final : public VNVisitor {
         void visit(AstCMethodHard* const cMethodHardp) override {
             fourstateExpressionCMethodHardHandler(cMethodHardp);
             m_result = getExprXZp(cMethodHardp);
+        }
+
+        void visit(AstSampled* const sampledp) override {
+            m_result = new AstSampled{
+                sampledp->fileline(),
+                getFourstateExpressionXZ(VN_AS(sampledp->exprp(), NodeExpr), false)};
+            m_result->dtypeFrom(getTwoStateDtype(sampledp->dtypep()));
         }
 
         void visit(AstLogNot* const logNotp) override {
@@ -2880,6 +2910,24 @@ class FourstateVisitor final : public VNVisitor {
         nodep->unlinkFrBack(&relinker);
         relinker.relink(newp);
         nodep->deleteTree();
+    }
+
+    void visit(AstIsUnknown* const nodep) override {
+        FileLine* const flp = nodep->fileline();
+        if (isFourstate(nodep->lhsp())) {
+            if (nodep->lhsp()->isPure()) {
+                nodep->replaceWith(new AstRedOr{flp, getFourstateExpressionXZ(nodep->lhsp())});
+            } else {
+                nodep->replaceWith(new AstExprStmt{
+                    flp, new AstStmtExpr{flp, getFourstateExpressionValue(nodep->lhsp())},
+                    new AstRedOr{flp, getFourstateExpressionXZ(nodep->lhsp())}});
+            }
+        } else if (nodep->lhsp()->isPure()) {
+            nodep->replaceWith(createZeroOrOnesp(nodep));
+        } else {
+            AstNodeExpr* const lhsp = nodep->lhsp()->unlinkFrBack();
+            nodep->replaceWith(new AstRedOr{flp, new AstAnd{flp, lhsp, createZeroOrOnesp(lhsp)}});
+        }
     }
 
     void visit(AstSel* const nodep) override {

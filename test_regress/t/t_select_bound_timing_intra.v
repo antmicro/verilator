@@ -15,9 +15,11 @@ module t;
   int arr[5];
 
   task automatic intra(input int i);
+    time t = $time;
     arr[i] = #1 i;
     #1;
     if (i < 5) `checkh(arr[i], i);
+    `checkh(t + 2, $time);
   endtask
 
   initial begin

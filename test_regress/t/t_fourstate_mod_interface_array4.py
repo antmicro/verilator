@@ -9,7 +9,7 @@
 
 import vltest_bootstrap
 
-test.scenarios('simulator')
+test.scenarios('simulator_st')
 
 test.top_filename = "t/t_mod_interface_array4.v"
 

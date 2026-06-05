@@ -9,7 +9,7 @@
 
 import vltest_bootstrap
 
-test.scenarios('simulator')
+test.scenarios('linter')
 test.twostate_capable = False
 
 test.top_filename = 't/t_delay_var.v'

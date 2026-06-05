@@ -15,6 +15,7 @@ module t;
   int arr[5];
   int x = 0;
   int y = 0;
+  int z = 0;
 
   task automatic incr(input int i, input int expected);
     arr[i] = x++;
@@ -31,6 +32,17 @@ module t;
     if (i < 5) `checkh(arr[i], expected);
   endtask
 
+   task automatic add_z(inout int a);
+      a += z;
+      z++;
+   endtask
+
+  task automatic assign_side_effect_inout(input int i, input int expected);
+    if (i < 5) arr[i] = 1;
+    add_z(arr[i]);
+    if (i < 5) `checkh(arr[i], expected);
+  endtask
+
   initial begin
     incr(0, 0);
     incr(7, 0);
@@ -40,6 +52,11 @@ module t;
     assign_side_effect(8, 0);
     assign_side_effect(9, 0);
     assign_side_effect(3, 4);
+
+    assign_side_effect_inout(3, 1);
+    assign_side_effect_inout(4, 2);
+    assign_side_effect_inout(5, 0);
+    assign_side_effect_inout(1, 4);
 
     y = 0;
     for (int i = 0; i < 10; i++) begin

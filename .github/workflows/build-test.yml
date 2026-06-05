@@ -183,6 +183,13 @@ jobs:
           - {os: ubuntu-24.04, cc: gcc, reloc: 0, suite: vltmt-0}
           - {os: ubuntu-24.04, cc: gcc, reloc: 0, suite: vltmt-1}
           - {os: ubuntu-24.04, cc: gcc, reloc: 0, suite: vltmt-2}
+          - {os: ubuntu-24.04, cc: gcc, reloc: 0, suite: dist-vlt4-0}
+          - {os: ubuntu-24.04, cc: gcc, reloc: 0, suite: dist-vlt4-1}
+          - {os: ubuntu-24.04, cc: gcc, reloc: 0, suite: dist-vlt4-2}
+          - {os: ubuntu-24.04, cc: gcc, reloc: 0, suite: dist-vlt4-3}
+          - {os: ubuntu-24.04, cc: gcc, reloc: 0, suite: vltmt4-0}
+          - {os: ubuntu-24.04, cc: gcc, reloc: 0, suite: vltmt4-1}
+          - {os: ubuntu-24.04, cc: gcc, reloc: 0, suite: vltmt4-2}
 
   test-2404-clang:
     name: Test | ${{ matrix.os }} | ${{ matrix.cc }} | ${{ matrix.reloc && 'reloc | ' || '' }} ${{ matrix.suite }}
@@ -207,6 +214,13 @@ jobs:
           - {os: ubuntu-24.04, cc: clang, reloc: 0, suite: vltmt-0}
           - {os: ubuntu-24.04, cc: clang, reloc: 0, suite: vltmt-1}
           - {os: ubuntu-24.04, cc: clang, reloc: 0, suite: vltmt-2}
+          - {os: ubuntu-24.04, cc: clang, reloc: 0, suite: dist-vlt4-0}
+          - {os: ubuntu-24.04, cc: clang, reloc: 0, suite: dist-vlt4-1}
+          - {os: ubuntu-24.04, cc: clang, reloc: 0, suite: dist-vlt4-2}
+          - {os: ubuntu-24.04, cc: clang, reloc: 0, suite: dist-vlt4-3}
+          - {os: ubuntu-24.04, cc: clang, reloc: 0, suite: vltmt4-0}
+          - {os: ubuntu-24.04, cc: clang, reloc: 0, suite: vltmt4-1}
+          - {os: ubuntu-24.04, cc: clang, reloc: 0, suite: vltmt4-2}
 
   test-2204-gcc:
     name: Test | ${{ matrix.os }} | ${{ matrix.cc }} | ${{ matrix.reloc && 'reloc | ' || '' }} ${{ matrix.suite }}
@@ -231,6 +245,13 @@ jobs:
           - {os: ubuntu-22.04, cc: gcc, reloc: 0, suite: vltmt-0}
           - {os: ubuntu-22.04, cc: gcc, reloc: 0, suite: vltmt-1}
           - {os: ubuntu-22.04, cc: gcc, reloc: 0, suite: vltmt-2}
+          - {os: ubuntu-22.04, cc: gcc, reloc: 0, suite: dist-vlt4-0}
+          - {os: ubuntu-22.04, cc: gcc, reloc: 0, suite: dist-vlt4-1}
+          - {os: ubuntu-22.04, cc: gcc, reloc: 0, suite: dist-vlt4-2}
+          - {os: ubuntu-22.04, cc: gcc, reloc: 0, suite: dist-vlt4-3}
+          - {os: ubuntu-22.04, cc: gcc, reloc: 0, suite: vltmt4-0}
+          - {os: ubuntu-22.04, cc: gcc, reloc: 0, suite: vltmt4-1}
+          - {os: ubuntu-22.04, cc: gcc, reloc: 0, suite: vltmt4-2}
 
   test-2204-clang:
     name: Test | ${{ matrix.os }} | ${{ matrix.cc }} | ${{ matrix.reloc && 'reloc | ' || '' }} ${{ matrix.suite }}
@@ -255,6 +276,13 @@ jobs:
           - {os: ubuntu-22.04, cc: clang, reloc: 1, suite: vltmt-0}
           - {os: ubuntu-22.04, cc: clang, reloc: 1, suite: vltmt-1}
           - {os: ubuntu-22.04, cc: clang, reloc: 1, suite: vltmt-2}
+          - {os: ubuntu-22.04, cc: clang, reloc: 1, suite: dist-vlt4-0}
+          - {os: ubuntu-22.04, cc: clang, reloc: 1, suite: dist-vlt4-1}
+          - {os: ubuntu-22.04, cc: clang, reloc: 1, suite: dist-vlt4-2}
+          - {os: ubuntu-22.04, cc: clang, reloc: 1, suite: dist-vlt4-3}
+          - {os: ubuntu-22.04, cc: clang, reloc: 1, suite: vltmt4-0}
+          - {os: ubuntu-22.04, cc: clang, reloc: 1, suite: vltmt4-1}
+          - {os: ubuntu-22.04, cc: clang, reloc: 1, suite: vltmt4-2}
 
   lint-py:
     name: Lint Python

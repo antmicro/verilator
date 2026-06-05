@@ -277,6 +277,11 @@ class FourstateLogicTypePropagator final : public VNVisitor {
         setFourstate(nodep, false, m_fourstateInSubtree);
     }
 
+    void visit(AstCountOnes* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, false, m_fourstateInSubtree);
+    }
+
     void visit(AstSFormatArg* const nodep) override {
         iterateChildrenSeparately(nodep);
         setFourstate(nodep, isFourstate(nodep->exprp()), m_fourstateInSubtree);
@@ -2928,6 +2933,15 @@ class FourstateVisitor final : public VNVisitor {
             AstNodeExpr* const lhsp = nodep->lhsp()->unlinkFrBack();
             nodep->replaceWith(new AstRedOr{flp, new AstAnd{flp, lhsp, createZeroOrOnesp(lhsp)}});
         }
+    }
+
+    void visit(AstCountOnes* const nodep) override {
+        if (isFourstate(nodep->lhsp())) {
+            AstNodeExpr* const lhsp = nodep->lhsp();
+            lhsp->replaceWith(getTwoStateCast(lhsp));
+            lhsp->deleteTree();
+        }
+        iterateChildren(nodep);
     }
 
     void visit(AstSel* const nodep) override {

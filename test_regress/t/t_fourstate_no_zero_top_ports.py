@@ -9,7 +9,7 @@
 
 import vltest_bootstrap
 
-test.scenarios('simulator')
+test.scenarios('simulator_st')
 test.twostate_capable = False
 
 test.top_filename = 't_fourstate_zero_top_ports.v'

@@ -66,9 +66,11 @@ class UnknownVisitor final : public VNVisitor {
         if (m_ftaskp) {
             varp->funcLocal(true);
             varp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
-            m_ftaskp->stmtsp()->addHereThisAsNext(varp);
+            if (m_ftaskp->stmtsp()) m_ftaskp->stmtsp()->addHereThisAsNext(varp);
+            else m_ftaskp->addStmtsp(varp);
         } else {
-            m_modp->stmtsp()->addHereThisAsNext(varp);
+	    if (m_modp->stmtsp()) m_ftaskp->stmtsp()->addHereThisAsNext(varp);
+	    else m_modp->addStmtsp(varp);
         }
     }
 

@@ -52,6 +52,7 @@ class UnknownVisitor final : public VNVisitor {
 
     // STATE - across all visitors
     VDouble0 m_statUnkVars;  // Statistic tracking
+    V3UniqueNames m_lvboundNames;  // For generating unique temporary variable name
     std::unique_ptr<V3UniqueNames> m_xrandNames;  // For generating unique temporary variable names
 
     // STATE - for current visit position (use VL_RESTORER)
@@ -69,7 +70,7 @@ class UnknownVisitor final : public VNVisitor {
             if (m_ftaskp->stmtsp()) m_ftaskp->stmtsp()->addHereThisAsNext(varp);
             else m_ftaskp->addStmtsp(varp);
         } else {
-	    if (m_modp->stmtsp()) m_ftaskp->stmtsp()->addHereThisAsNext(varp);
+	    if (m_modp->stmtsp()) m_modp->stmtsp()->addHereThisAsNext(varp);
 	    else m_modp->addStmtsp(varp);
         }
     }
@@ -107,9 +108,8 @@ class UnknownVisitor final : public VNVisitor {
             while (!VN_IS(stmtp, NodeStmt)) stmtp = stmtp->backp();
             VNRelinker replaceHandle;
             AstNode* const origStmtp = stmtp->unlinkFrBack(&replaceHandle);
-            static int cnt = 0;
             AstVar* const varp
-                = new AstVar{fl, VVarType::MODULETEMP, std::string("var") + std::to_string(cnt++),
+                = new AstVar{fl, VVarType::MODULETEMP, m_lvboundNames.get(prep),
                              prep->dtypep()};
             addVar(varp);
             AstNode* elseStmtp = origStmtp->cloneTree(false);
@@ -170,6 +170,7 @@ class UnknownVisitor final : public VNVisitor {
             m_constXCvt = true;
             // Class X randomization causes Vxrand in strange places, so disable
             if (VN_IS(nodep, Class)) m_allowXUnique = false;
+	    m_lvboundNames.reset();
             xrandNames.swap(m_xrandNames);
             iterateChildren(nodep);
             xrandNames.swap(m_xrandNames);
@@ -533,7 +534,8 @@ class UnknownVisitor final : public VNVisitor {
 public:
     // CONSTRUCTORS
     explicit UnknownVisitor(AstNetlist* nodep)
-        : m_xrandNames{std::make_unique<V3UniqueNames>(s_xrandPrefix)} {
+	: m_lvboundNames{"__Vlvbound"}
+        , m_xrandNames{std::make_unique<V3UniqueNames>(s_xrandPrefix)} {
         iterate(nodep);
     }
     ~UnknownVisitor() override {  //

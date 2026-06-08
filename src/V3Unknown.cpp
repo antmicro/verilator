@@ -105,14 +105,15 @@ class UnknownVisitor final : public VNVisitor {
             while (!VN_IS(stmtp, NodeStmt)) stmtp = stmtp->backp();
             VNRelinker replaceHandle;
             AstNode* const origStmtp = stmtp->unlinkFrBack(&replaceHandle);
-	    static int cnt = 0;
-	    AstVar* const varp
-                = new AstVar{fl, VVarType::MODULETEMP, std::string("var") + std::to_string(cnt++), prep->dtypep()};
-	    addVar(varp);
-	    AstNode* elseStmtp = origStmtp->cloneTree(false);
-	    AstNode* const prepCopyp = prep->clonep();
-	    prepCopyp->replaceWith(new AstVarRef{fl, varp, VAccess::WRITE});
-	    pushDeletep(prepCopyp);
+            static int cnt = 0;
+            AstVar* const varp
+                = new AstVar{fl, VVarType::MODULETEMP, std::string("var") + std::to_string(cnt++),
+                             prep->dtypep()};
+            addVar(varp);
+            AstNode* elseStmtp = origStmtp->cloneTree(false);
+            AstNode* const prepCopyp = prep->clonep();
+            prepCopyp->replaceWith(new AstVarRef{fl, varp, VAccess::WRITE});
+            pushDeletep(prepCopyp);
             AstIf* const newp = new AstIf{fl, condp, origStmtp, elseStmtp};
             replaceHandle.relink(newp);
             newp->branchPred(VBranchPred::BP_LIKELY);

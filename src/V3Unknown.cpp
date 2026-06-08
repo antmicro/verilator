@@ -67,11 +67,15 @@ class UnknownVisitor final : public VNVisitor {
         if (m_ftaskp) {
             varp->funcLocal(true);
             varp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
-            if (m_ftaskp->stmtsp()) m_ftaskp->stmtsp()->addHereThisAsNext(varp);
-            else m_ftaskp->addStmtsp(varp);
+            if (m_ftaskp->stmtsp())
+                m_ftaskp->stmtsp()->addHereThisAsNext(varp);
+            else
+                m_ftaskp->addStmtsp(varp);
         } else {
-	    if (m_modp->stmtsp()) m_modp->stmtsp()->addHereThisAsNext(varp);
-	    else m_modp->addStmtsp(varp);
+            if (m_modp->stmtsp())
+                m_modp->stmtsp()->addHereThisAsNext(varp);
+            else
+                m_modp->addStmtsp(varp);
         }
     }
 
@@ -109,8 +113,7 @@ class UnknownVisitor final : public VNVisitor {
             VNRelinker replaceHandle;
             AstNode* const origStmtp = stmtp->unlinkFrBack(&replaceHandle);
             AstVar* const varp
-                = new AstVar{fl, VVarType::MODULETEMP, m_lvboundNames.get(prep),
-                             prep->dtypep()};
+                = new AstVar{fl, VVarType::MODULETEMP, m_lvboundNames.get(prep), prep->dtypep()};
             addVar(varp);
             AstNode* elseStmtp = origStmtp->cloneTree(false);
             AstNode* const prepCopyp = prep->clonep();
@@ -170,7 +173,7 @@ class UnknownVisitor final : public VNVisitor {
             m_constXCvt = true;
             // Class X randomization causes Vxrand in strange places, so disable
             if (VN_IS(nodep, Class)) m_allowXUnique = false;
-	    m_lvboundNames.reset();
+            m_lvboundNames.reset();
             xrandNames.swap(m_xrandNames);
             iterateChildren(nodep);
             xrandNames.swap(m_xrandNames);
@@ -534,7 +537,7 @@ class UnknownVisitor final : public VNVisitor {
 public:
     // CONSTRUCTORS
     explicit UnknownVisitor(AstNetlist* nodep)
-	: m_lvboundNames{"__Vlvbound"}
+        : m_lvboundNames{"__Vlvbound"}
         , m_xrandNames{std::make_unique<V3UniqueNames>(s_xrandPrefix)} {
         iterate(nodep);
     }

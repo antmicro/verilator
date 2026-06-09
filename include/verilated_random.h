@@ -457,9 +457,8 @@ public:
 
     // Record a flat (non-class) element into the array variable table
     template <typename T>
-    typename std::enable_if<!std::is_class<T>::value || VlIsVlWide<T>::value, void>::type
-    record_arr_table(T& var, const std::string& name, int /*dimension*/,
-                     std::vector<IData> indices, std::vector<size_t> idxWidths) {
+    void record_arr_table(T& var, const std::string& name, int /*dimension*/,
+                          std::vector<IData> indices, std::vector<size_t> idxWidths) {
         const std::string key = generateKey(name, m_index);
         m_arr_vars[key] = std::make_shared<ArrayInfo>(name, &var, m_index, indices, idxWidths);
         ++m_index;

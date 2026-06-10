@@ -533,6 +533,7 @@ class UnknownVisitor final : public VNVisitor {
             AstNodeExpr* condp = new AstGte{nodep->fileline(), declElementsp, bitp};
             // Note below has null backp(); the Edit function knows how to deal with that.
             const AstNodeDType* const nodeDtp = nodep->dtypep()->skipRefp();
+            nodep->setRuntimeBoundChecked(true);
             if (!lvalue
                 // Making a scalar would break if we're making an array
                 && VN_IS(nodeDtp, BasicDType)) {

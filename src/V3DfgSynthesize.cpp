@@ -91,11 +91,14 @@ class AstToDfgConverter final : public VNVisitor {
     // Returns true if the expression cannot (or should not) be represented by DFG
     bool unhandled(AstNodeExpr* nodep) {
         // Short-circuiting if something was already unhandled
-        if (m_foundUnhandled) {
+        if (!m_foundUnhandled) {
             // Impure nodes cannot be represented
             if (!nodep->isPure()) {
                 m_foundUnhandled = true;
                 ++m_ctx.m_conv.nonRepImpure;
+            } else if (VN_IS(nodep, ArraySel) && VN_AS(nodep, ArraySel)->isRuntimeBoundChecked()) {
+                m_foundUnhandled = true;
+                ++m_ctx.m_conv.nonRepBoundCheck;
             }
         }
         return m_foundUnhandled;

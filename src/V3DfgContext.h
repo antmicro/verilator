@@ -275,6 +275,7 @@ public:
         VDouble0 nonRepLValue;  // Non representable: unsupported LValue form
         VDouble0 nonRepVarRef;  // Non representable: unsupported var reference
         VDouble0 nonRepOOBSel;  // Non representable: out of bounds select
+        VDouble0 nonRepBoundCheck;  // Non representable: bound check
         VDouble0 nonRepNode;  // Non representable: unsupported AstNode type
         VDouble0 nonRepUnknown;  // Non representable: unhandled AstNode type
     } m_conv;
@@ -322,6 +323,7 @@ private:
         addStat("conv / non-representable (lhs)", m_conv.nonRepLValue);
         addStat("conv / non-representable (varref)", m_conv.nonRepVarRef);
         addStat("conv / non-representable (oobsel)", m_conv.nonRepOOBSel);
+        addStat("conv / non-representable (bound check)", m_conv.nonRepBoundCheck);
         addStat("conv / non-representable (node)", m_conv.nonRepNode);
         addStat("conv / non-representable (unknown)", m_conv.nonRepUnknown);
         VDouble0 nConvNonRep;
@@ -330,6 +332,7 @@ private:
         nConvNonRep += m_conv.nonRepLValue;
         nConvNonRep += m_conv.nonRepVarRef;
         nConvNonRep += m_conv.nonRepOOBSel;
+        nConvNonRep += m_conv.nonRepBoundCheck;
         nConvNonRep += m_conv.nonRepNode;
         nConvNonRep += m_conv.nonRepUnknown;
         VDouble0 nConvExpect;

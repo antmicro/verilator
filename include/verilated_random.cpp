@@ -416,8 +416,8 @@ bool VlRandomVar::set(const std::string& idx, const std::string& val) const {
 
 // XOR constraint over bits [startBit, startBit+rangeWidth) of a single var.
 // Used to build per-element constraints for array variables.
-static void randomConstraintRange(std::ostream& os, VlRNG& rngr, int bits,
-                                   const VlRandomVar& var, int startBit, int rangeWidth) {
+static void randomConstraintRange(std::ostream& os, VlRNG& rngr, int bits, const VlRandomVar& var,
+                                  int startBit, int rangeWidth) {
     if (rangeWidth <= 0) return;
     const IData hash = VL_RANDOM_RNG_I(rngr) & ((1 << bits) - 1);
     os << "(= #b";
@@ -714,8 +714,8 @@ bool VlRandomizer::next(VlRNG& rngr) {
                         const int elemCount = var.second->totalWidth() / elemWidth;
                         for (int e = 0; e < elemCount; ++e) {
                             os << "(assert ";
-                            randomConstraintRange(os, rngr, _VL_SOLVER_HASH_LEN,
-                                                  *var.second, e * elemWidth, elemWidth);
+                            randomConstraintRange(os, rngr, _VL_SOLVER_HASH_LEN, *var.second,
+                                                  e * elemWidth, elemWidth);
                             os << ")\n";
                         }
                     }

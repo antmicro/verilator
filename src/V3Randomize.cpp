@@ -2116,9 +2116,8 @@ class ConstraintExprVisitor final : public VNVisitor {
                 bodyp = preamblep;
                 nodep->user3p(nullptr);
             }
-            nodep->replaceWith(
-                new AstBegin{fl, "", new AstForeach{fl, nodep->headerp()->unlinkFrBack(), bodyp},
-                             true});
+            nodep->replaceWith(new AstBegin{
+                fl, "", new AstForeach{fl, nodep->headerp()->unlinkFrBack(), bodyp}, true});
         }
         VL_DO_DANGLING(nodep->deleteTree(), nodep);
     }
@@ -4473,8 +4472,8 @@ class RandomizeVisitor final : public VNVisitor {
             totalVarp->funcLocal(true);
             totalVarp->isInternal(true);
             addStmt(totalVarp);
-            addStmt(new AstAssign{fl, new AstVarRef{fl, totalVarp, VAccess::WRITE},
-                                  totalWeightExprp});
+            addStmt(
+                new AstAssign{fl, new AstVarRef{fl, totalVarp, VAccess::WRITE}, totalWeightExprp});
 
             // bucketVar = (rand64() % totalWeight) + 1
             const std::string bucketName = "__Vdist_bucket" + cvtToStr(distId);

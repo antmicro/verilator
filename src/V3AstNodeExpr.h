@@ -4793,6 +4793,9 @@ public:
 // === AstNodeSel ===
 class AstArraySel final : public AstNodeSel {
     // @astgen makeDfgVertex
+    bool m_runtimeBoundChecked
+        = false;  // This array access requires bound checks at runtime. Used to prevent
+                  // optimizations that may make memory access unconditional
     void init(const AstNode* fromp) {
         if (fromp && VN_IS(fromp->dtypep()->skipRefp(), NodeArrayDType)) {
             // Strip off array to find what array references
@@ -4826,6 +4829,8 @@ public:
     // Special operators
     // Return base var (or const) nodep dereferences
     static AstNode* baseFromp(AstNode* nodep, bool overMembers);
+    bool isRuntimeBoundChecked() const { return m_runtimeBoundChecked; }
+    void setRuntimeBoundChecked(bool flag) { m_runtimeBoundChecked = flag; }
 };
 class AstAssocSel final : public AstNodeSel {
     void init(const AstNode* fromp) {

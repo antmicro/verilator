@@ -2109,10 +2109,16 @@ class ConstraintExprVisitor final : public VNVisitor {
             nodep->replaceWith(new AstSFormatF{fl, "%s", false, cexprp});
         } else {
             iterateAndNextNull(nodep->bodyp());
-            nodep->replaceWith(new AstBegin{fl, "",
-                                            new AstForeach{fl, nodep->headerp()->unlinkFrBack(),
-                                                           nodep->bodyp()->unlinkFrBackWithNext()},
-                                            true});
+            AstNode* bodyp = nodep->bodyp()->unlinkFrBackWithNext();
+            // Prepend bucket preamble stmts stored by lowerDistConstraints (foreach case)
+            if (AstNode* const preamblep = static_cast<AstNode*>(nodep->user3p())) {
+                preamblep->addNext(bodyp);
+                bodyp = preamblep;
+                nodep->user3p(nullptr);
+            }
+            nodep->replaceWith(
+                new AstBegin{fl, "", new AstForeach{fl, nodep->headerp()->unlinkFrBack(), bodyp},
+                             true});
         }
         VL_DO_DANGLING(nodep->deleteTree(), nodep);
     }
@@ -4332,17 +4338,22 @@ class RandomizeVisitor final : public VNVisitor {
     // Replace AstDist with weighted bucket selection via AstConstraintIf chain.
     // Supports both constant and variable weight expressions.
     void lowerDistConstraints(AstTask* taskp, AstNode* constrItemsp,
-                              AstNode* insertBeforep = nullptr) {
-        // addStmt: insert bucket preamble before insertBeforep (inside foreach body),
-        // or append to taskp when at the top level.
-        AstNode* lastInsertedp = insertBeforep;
+                              AstConstraintForeach* foreachp = nullptr) {
+        // When inside a foreach, bucket preamble stmts are stored in foreachp->user3p()
+        // (as a linked list) so visit(AstConstraintForeach*) can inject them into the
+        // real AstForeach body. Outside a foreach, they go directly into taskp.
+        AstNode* foreachTailp = nullptr;
         auto addStmt = [&](AstNode* x) {
-            if (!lastInsertedp) {
-                taskp->addStmtsp(x);
-                lastInsertedp = x;
+            if (foreachp) {
+                if (!foreachTailp) {
+                    foreachp->user3p(x);
+                    foreachTailp = x;
+                } else {
+                    foreachTailp->addNext(x);
+                    foreachTailp = x;
+                }
             } else {
-                lastInsertedp->addNextHere(x);
-                lastInsertedp = x;
+                taskp->addStmtsp(x);
             }
         };
 
@@ -4358,7 +4369,7 @@ class RandomizeVisitor final : public VNVisitor {
 
             // Recursively handle ConstraintForeach nodes (dist can be inside foreach)
             if (AstConstraintForeach* const cfep = VN_CAST(itemp, ConstraintForeach)) {
-                if (cfep->bodyp()) lowerDistConstraints(taskp, cfep->bodyp(), cfep->bodyp());
+                if (cfep->bodyp()) lowerDistConstraints(taskp, cfep->bodyp(), cfep);
                 continue;
             }
 

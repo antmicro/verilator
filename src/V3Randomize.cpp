@@ -4331,7 +4331,21 @@ class RandomizeVisitor final : public VNVisitor {
 
     // Replace AstDist with weighted bucket selection via AstConstraintIf chain.
     // Supports both constant and variable weight expressions.
-    void lowerDistConstraints(AstTask* taskp, AstNode* constrItemsp) {
+    void lowerDistConstraints(AstTask* taskp, AstNode* constrItemsp,
+                              AstNode* insertBeforep = nullptr) {
+        // addStmt: insert bucket preamble before insertBeforep (inside foreach body),
+        // or append to taskp when at the top level.
+        AstNode* lastInsertedp = insertBeforep;
+        auto addStmt = [&](AstNode* x) {
+            if (!lastInsertedp) {
+                taskp->addStmtsp(x);
+                lastInsertedp = x;
+            } else {
+                lastInsertedp->addNextHere(x);
+                lastInsertedp = x;
+            }
+        };
+
         for (AstNode *nextip, *itemp = constrItemsp; itemp; itemp = nextip) {
             nextip = itemp->nextp();
 
@@ -4344,7 +4358,7 @@ class RandomizeVisitor final : public VNVisitor {
 
             // Recursively handle ConstraintForeach nodes (dist can be inside foreach)
             if (AstConstraintForeach* const cfep = VN_CAST(itemp, ConstraintForeach)) {
-                if (cfep->bodyp()) lowerDistConstraints(taskp, cfep->bodyp());
+                if (cfep->bodyp()) lowerDistConstraints(taskp, cfep->bodyp(), cfep->bodyp());
                 continue;
             }
 
@@ -4447,9 +4461,9 @@ class RandomizeVisitor final : public VNVisitor {
             totalVarp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
             totalVarp->funcLocal(true);
             totalVarp->isInternal(true);
-            taskp->addStmtsp(totalVarp);
-            taskp->addStmtsp(
-                new AstAssign{fl, new AstVarRef{fl, totalVarp, VAccess::WRITE}, totalWeightExprp});
+            addStmt(totalVarp);
+            addStmt(new AstAssign{fl, new AstVarRef{fl, totalVarp, VAccess::WRITE},
+                                  totalWeightExprp});
 
             // bucketVar = (rand64() % totalWeight) + 1
             const std::string bucketName = "__Vdist_bucket" + cvtToStr(distId);
@@ -4459,11 +4473,11 @@ class RandomizeVisitor final : public VNVisitor {
             bucketVarp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
             bucketVarp->funcLocal(true);
             bucketVarp->isInternal(true);
-            taskp->addStmtsp(bucketVarp);
+            addStmt(bucketVarp);
 
             AstNodeExpr* randp = new AstRand{fl, nullptr, false};
             randp->dtypeSetUInt64();
-            taskp->addStmtsp(new AstAssign{
+            addStmt(new AstAssign{
                 fl, new AstVarRef{fl, bucketVarp, VAccess::WRITE},
                 new AstAdd{
                     fl, new AstConst{fl, AstConst::Unsized64{}, 1},

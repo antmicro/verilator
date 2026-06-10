@@ -414,6 +414,32 @@ bool VlRandomVar::set(const std::string& idx, const std::string& val) const {
     return true;
 }
 
+// XOR constraint over bits [startBit, startBit+rangeWidth) of a single var.
+// Used to build per-element constraints for array variables.
+static void randomConstraintRange(std::ostream& os, VlRNG& rngr, int bits,
+                                   const VlRandomVar& var, int startBit, int rangeWidth) {
+    if (rangeWidth <= 0) return;
+    const IData hash = VL_RANDOM_RNG_I(rngr) & ((1 << bits) - 1);
+    os << "(= #b";
+    for (int i = bits - 1; i >= 0; i--) os << (VL_BITISSET_I(hash, i) ? '1' : '0');
+    if (bits > 1) os << " (concat";
+    for (int i = 0; i < bits; ++i) {
+        IData varBitsLeft = rangeWidth;
+        IData varBitsWant = (rangeWidth + 1) / 2;
+        if (rangeWidth > 2) os << " (bvxor";
+        for (int j = 0; j < rangeWidth; j++, varBitsLeft--) {
+            const bool doEmit = (VL_RANDOM_RNG_I(rngr) % varBitsLeft) < varBitsWant;
+            if (doEmit) {
+                var.emitExtract(os, startBit + j);
+                if (--varBitsWant == 0) break;
+            }
+        }
+        if (rangeWidth > 2) os << ')';
+    }
+    if (bits > 1) os << ')';
+    os << ')';
+}
+
 void VlRandomizer::randomConstraint(std::ostream& os, VlRNG& rngr, int bits) {
     const IData hash = VL_RANDOM_RNG_I(rngr) & ((1 << bits) - 1);
     int varBits = 0;
@@ -681,11 +707,18 @@ bool VlRandomizer::next(VlRNG& rngr) {
                         }
                 }
             } else {
-                // Array present: original XOR-rounds path.
+                // Array present: per-element XOR rounds.
                 for (int i = 0; i < _VL_SOLVER_HASH_LEN_TOTAL && sat; ++i) {
-                    os << "(assert ";
-                    randomConstraint(os, rngr, _VL_SOLVER_HASH_LEN);
-                    os << ")\n";
+                    for (const auto& var : m_vars) {
+                        const int elemWidth = var.second->width();
+                        const int elemCount = var.second->totalWidth() / elemWidth;
+                        for (int e = 0; e < elemCount; ++e) {
+                            os << "(assert ";
+                            randomConstraintRange(os, rngr, _VL_SOLVER_HASH_LEN,
+                                                  *var.second, e * elemWidth, elemWidth);
+                            os << ")\n";
+                        }
+                    }
                     os << "\n(check-sat)\n";
                     sat = parseSolution(os, false);
                     (void)sat;

@@ -20,6 +20,7 @@
 
 #include "V3AstUserAllocator.h"
 #include "V3Stats.h"
+#include "V3UniqueNames.h"
 
 VL_DEFINE_DEBUG_FUNCTIONS;
 
@@ -154,6 +155,9 @@ class AssertVisitor final : public VNVisitor {
     AstNode* m_passsp = nullptr;  // Current pass statement
     AstNode* m_failsp = nullptr;  // Current fail statement
     AstFinal* m_finalp = nullptr;  // Current final block
+    VDouble0 m_statPurifiedCaseExpr;  // Count of purified case expressions
+    AstNodeFTask* m_ftaskp = nullptr;  // Current function/task
+    V3UniqueNames m_caseTempNames{"__VCase"};
     // Map from (expression, senTree) to AstAlways that computes delayed values of the expression
     std::unordered_map<VNRef<AstNodeExpr>, std::unordered_map<VNRef<AstSenTree>, AstAlways*>>
         m_modExpr2Sen2DelayedAlwaysp;
@@ -629,6 +633,27 @@ class AssertVisitor final : public VNVisitor {
 
     //========== Case assertions
     void visit(AstCase* nodep) override {
+        // Introduce temporary variable for AstCase if needed - it is done here and not in V3Case
+        // because this phase is before V3Scope and V3Case is not. Doing it before V3Scope ensures
+        // that V3Scope will take care of a scope creation
+        // We also need to do it before V3Begin, co that pragmas like `unique0` also work correctly
+        if (!nodep->exprp()->isPure() && !nodep->user1SetOnce()) {
+            ++m_statPurifiedCaseExpr;
+            FileLine* const fl = nodep->exprp()->fileline();
+            AstVar* const varp = new AstVar{fl, VVarType::XTEMP, m_caseTempNames.get(nodep),
+                                            nodep->exprp()->dtypep()};
+            nodep->exprp(new AstExprStmt{fl,
+                                         new AstAssign{fl, new AstVarRef{fl, varp, VAccess::WRITE},
+                                                       nodep->exprp()->unlinkFrBack()},
+                                         new AstVarRef{fl, varp, VAccess::READ}});
+            if (m_ftaskp) {
+                varp->funcLocal(true);
+                varp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
+                m_ftaskp->stmtsp()->addHereThisAsNext(varp);
+            } else {
+                m_modp->stmtsp()->addHereThisAsNext(varp);
+            }
+        }
         iterateChildren(nodep);
         if (!nodep->user1SetOnce()) {
             bool has_default = false;
@@ -1057,6 +1082,7 @@ public:
         V3Stats::addStat("Assertions, $past variables", m_statPastVars);
         V3Stats::addStat("Assertions, assertOn checks combined", m_statAssertOnCombined);
         V3Stats::addStat("Assertions, assertOn checks hoisted", m_statAssertOnHoisted);
+        V3Stats::addStat("Impure case expressions", m_statPurifiedCaseExpr);
     }
 };
 

@@ -75,7 +75,6 @@ class BeginVisitor final : public VNVisitor {
     string m_unnamedScope;  // Name of begin blocks, including unnamed blocks
     int m_ifDepth = 0;  // Current if depth
     bool m_keepBegins = false;  // True if begins should not be inlined
-    VDouble0 m_statPurifiedCaseExpr;  // Count of purified case expressions
 
     // METHODS
 
@@ -416,26 +415,6 @@ class BeginVisitor final : public VNVisitor {
         iterateChildren(nodep);
     }
     void visit(AstCase* nodep) override {
-        // Introduce temporary variable for AstCase if needed - it is done here and not in V3Case
-        // because this phase is before V3Scope and V3Case is not. Doing it before V3Scope ensures
-        // that V3Scope will take care of a scope creation
-        if (!nodep->exprp()->isPure() && !nodep->user1SetOnce()) {
-            ++m_statPurifiedCaseExpr;
-            FileLine* const fl = nodep->exprp()->fileline();
-            AstVar* const varp = new AstVar{fl, VVarType::XTEMP, m_caseTempNames.get(nodep),
-                                            nodep->exprp()->dtypep()};
-            nodep->exprp(new AstExprStmt{fl,
-                                         new AstAssign{fl, new AstVarRef{fl, varp, VAccess::WRITE},
-                                                       nodep->exprp()->unlinkFrBack()},
-                                         new AstVarRef{fl, varp, VAccess::READ}});
-            if (m_ftaskp) {
-                varp->funcLocal(true);
-                varp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
-                m_ftaskp->stmtsp()->addHereThisAsNext(varp);
-            } else {
-                m_modp->stmtsp()->addHereThisAsNext(varp);
-            }
-        }
         iterateChildren(nodep);
     }
     // VISITORS - LINT CHECK
@@ -467,7 +446,6 @@ public:
         : m_caseTempNames{"__VCase"}
         , m_statep{statep} {
         iterate(nodep);
-        V3Stats::addStatSum("Impure case expressions", m_statPurifiedCaseExpr);
     }
     ~BeginVisitor() override = default;
 };

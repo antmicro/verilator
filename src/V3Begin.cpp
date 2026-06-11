@@ -414,9 +414,7 @@ class BeginVisitor final : public VNVisitor {
         // any BEGINs, but V3Coverage adds them all under the module itself.
         iterateChildren(nodep);
     }
-    void visit(AstCase* nodep) override {
-        iterateChildren(nodep);
-    }
+    void visit(AstCase* nodep) override { iterateChildren(nodep); }
     // VISITORS - LINT CHECK
     void visit(AstIf* nodep) override {  // not AstNodeIf; other types not covered
         VL_RESTORER(m_keepBegins);

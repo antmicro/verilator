@@ -135,6 +135,14 @@ struct VlIsVlWide : public std::false_type {};
 template <std::size_t N_Words>
 struct VlIsVlWide<VlWide<N_Words>> : public std::true_type {};
 
+template <typename T_Class>
+class VlClassRef;
+
+template <typename>
+struct VlIsVlClassRef : public std::false_type {};
+template <typename T>
+struct VlIsVlClassRef<VlClassRef<T>> : public std::true_type {};
+
 // Opaque handles to backing store of a VlWide, These are used to pass the
 // backing store to runtime functions without having to template all the
 // runtime functions on the VlWide template patameters. They created via
@@ -544,9 +552,6 @@ public:
     bool isOpen() const { return m_fp != nullptr; }
     void print(QData addr, bool addrstamp, const void* valuep);
 };
-
-template <typename T_Class>
-class VlClassRef;
 
 //===================================================================
 // Verilog queue and dynamic array container

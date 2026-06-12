@@ -378,7 +378,8 @@ public:
 
     // Register queue of non-struct types
     template <typename T>
-    typename std::enable_if<!VlContainsCustomStruct<T>::value, void>::type
+    typename std::enable_if<!VlContainsCustomStruct<T>::value && !VlIsVlClassRef<T>::value,
+                            void>::type
     write_var(VlQueue<T>& var, int width, const char* name, int dimension,
               std::uint32_t randmodeIdx = std::numeric_limits<std::uint32_t>::max()) {
         if (m_vars.find(name) == m_vars.end()) {
@@ -392,6 +393,11 @@ public:
             m_vars[name]->clearCountCache();
         }
     }
+
+    template <typename T>
+    typename std::enable_if<VlIsVlClassRef<T>::value, void>::type
+    write_var(VlQueue<T>& var, int width, const char* name, int dimension,
+              std::uint32_t randmodeIdx = std::numeric_limits<std::uint32_t>::max()) {}
 
     // Register queue of structs
     template <typename T>
@@ -456,6 +462,10 @@ public:
     // ---  Record Arrays: flat and struct  ---
 
     // Record a flat (non-class) element into the array variable table
+    template <typename T>
+    typename std::enable_if<VlIsVlClassRef<T>::value, void>::type
+    record_arr_table(T& var, const std::string& name, int /*dimension*/,
+                     std::vector<IData> indices, std::vector<size_t> idxWidths) {}
     template <typename T>
     typename std::enable_if<!std::is_class<T>::value || VlIsVlWide<T>::value, void>::type
     record_arr_table(T& var, const std::string& name, int /*dimension*/,

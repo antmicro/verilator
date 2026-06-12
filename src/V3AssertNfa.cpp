@@ -588,7 +588,8 @@ class SvaNfaBuilder final {
         SvaStateVertex* currentp = addDelayChain(entryVtxp, lo, flp);
         SvaStateVertex* const passVertexp = scopedCreateVertex();
         for (int k = 0; k < hi - lo; ++k) {
-            SvaTransEdge* const linkp = guardedLink(currentp, passVertexp, sampledRefOrClone(hoistVarp, exprp, flp), flp);
+            SvaTransEdge* const linkp = guardedLink(currentp, passVertexp,
+                                                    sampledRefOrClone(hoistVarp, exprp, flp), flp);
             linkp->m_matchOnPass = true;
             SvaStateVertex* const nextp = scopedCreateVertex();
             AstLogNot* negCondp = new AstLogNot{flp, sampledRefOrClone(hoistVarp, exprp, flp)};
@@ -1355,7 +1356,8 @@ class SvaNfaLowering final {
         }
     }
 
-    SignalSet computeSignals(LowerCtx& c, std::vector<AstNodeExpr*>* outRequiredStepSrcsp, std::vector<AstNodeExpr*>* outPassMatchSrcsp) {
+    SignalSet computeSignals(LowerCtx& c, std::vector<AstNodeExpr*>* outRequiredStepSrcsp,
+                             std::vector<AstNodeExpr*>* outPassMatchSrcsp) {
         SignalSet sigs;
 
         // Snapshot comparison expression for disable-iff counter.
@@ -1392,9 +1394,9 @@ class SvaNfaLowering final {
                 const int fi = tep->fromVtxp()->color();
                 UASSERT_OBJ(c.vtx[fi]->datap()->stateSigp && tep->m_condp, tep->fromVtxp(),
                             "acceptOnPass Link must have condp and source stateSig");
-                AstNodeExpr* passp = new AstLogAnd{
-                    c.flp, c.vtx[fi]->datap()->stateSigp->cloneTreePure(false),
-                    tep->m_condp->cloneTreePure(false)};
+                AstNodeExpr* passp
+                    = new AstLogAnd{c.flp, c.vtx[fi]->datap()->stateSigp->cloneTreePure(false),
+                                    tep->m_condp->cloneTreePure(false)};
                 if (snapshotOkp) {
                     passp = new AstLogAnd{c.flp, passp, snapshotOkp->cloneTreePure(false)};
                 }
@@ -2229,7 +2231,8 @@ class AssertNfaVisitor final : public VNVisitor {
         const bool needPerSrcFail
             = !isCover && !parts.hasImplication && assertWithFailp && assertWithFailp->failsp();
 
-        const bool needPerSrcMatch = true; // FIXME: dehardcode it, so it is done only for cases that need it (like eventually)
+        const bool needPerSrcMatch = true;  // FIXME: dehardcode it, so it is done only for cases
+                                            // that need it (like eventually)
         std::vector<AstNodeExpr*> requiredStepSrcs;
         std::vector<AstNodeExpr*> passMatchSrcs;
 
@@ -2238,14 +2241,16 @@ class AssertNfaVisitor final : public VNVisitor {
             = m_loweringp->lower(flp, graph, alwaysTriggerp, senTreep, result.finalCondp, isCover,
                                  disableExprp ? disableExprp->cloneTreePure(false) : nullptr,
                                  negated, needMatch ? &matchExprp : nullptr, disableCntVarp,
-                                 snapshotVarp, needPerSrcFail ? &requiredStepSrcs : nullptr, needPerSrcMatch ? &passMatchSrcs : nullptr);
+                                 snapshotVarp, needPerSrcFail ? &requiredStepSrcs : nullptr,
+                                 needPerSrcMatch ? &passMatchSrcs : nullptr);
 
         VL_DO_DANGLING(pushDeletep(alwaysTriggerp), alwaysTriggerp);
         if (disableExprUnlinked) VL_DO_DANGLING(pushDeletep(disableExprp), disableExprp);
         if (result.finalCondp && !result.finalCondp->backp()) pushDeletep(result.finalCondp);
 
         attachMatchHandlers(flp, assertAssertp, assertWithFailp, needMatch ? matchExprp : nullptr,
-                            senTreep, requiredStepSrcs.size() >= 2 ? &requiredStepSrcs : nullptr, passMatchSrcs.size() >= 2 ? &passMatchSrcs : nullptr);
+                            senTreep, requiredStepSrcs.size() >= 2 ? &requiredStepSrcs : nullptr,
+                            passMatchSrcs.size() >= 2 ? &passMatchSrcs : nullptr);
 
         if (senTreeOwned) VL_DO_DANGLING(pushDeletep(senTreep), senTreep);
 

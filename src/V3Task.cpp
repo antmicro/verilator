@@ -1061,6 +1061,10 @@ class TaskVisitor final : public VNVisitor {
 
         // Add DPI Import to top, since it's a global function
         m_topScopep->scopep()->addBlocksp(funcp);
+        if (nodep->dpiCDeclOverride()) {
+            funcp->dpiCDeclOverride(true);
+            funcp->dpiCDecl(nodep->dpiCDecl());
+        }
         if (!makePortList(nodep, funcp)) return nullptr;
         return funcp;
     }

@@ -545,6 +545,20 @@ void V3PreProcImp::comment(const string& text) {
             if (arg.size() && baseCmd == "public_flat_rw_on")
                 baseCmd += "_sns";  // different cmd for applying sensitivity
             if (!printed) insertUnreadback("/*verilator " + baseCmd + "*/ " + arg + " /**/");
+        } else if (VString::startsWith(cmd, "dpi_c_decl")) {
+            // "/*verilator dpi_c_decl foo(bar) */" -> "/*verilator dpi_c_decl*/ \"foo(bar)\""
+            string::size_type endOfCmd = std::strlen("dpi_c_decl");
+            while (VString::isIdentifierChar(cmd[endOfCmd])) ++endOfCmd;
+            string baseCmd = cmd.substr(0, endOfCmd);
+            string arg = cmd.substr(endOfCmd);
+            while (std::isspace(arg[0])) arg = arg.substr(1);
+            if (arg.empty()) {
+                fileline()->v3warn(
+                    BADVLTPRAGMA,
+                    "No function declaration provided in /*verilator dpi_c_decl*/ meta-comment");
+                return;
+            }
+            if (!printed) insertUnreadback("/*verilator " + baseCmd + "*/ \"" + arg + "\" /**/");
         } else {
             if (!printed) insertUnreadback("/*verilator " + cmd + "*/");
         }

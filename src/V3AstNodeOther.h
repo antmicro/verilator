@@ -94,6 +94,7 @@ class AstNodeFTask VL_NOT_FINAL : public AstNode {
     // @astgen op4 := scopeNamep : Optional[AstScopeName]
     string m_name;  // Name of task
     string m_cname;  // Name of task if DPI import
+    string m_dpiCDecl;  // Custom DPI-C function declaration, used when m_dpiCDeclOverride==true
     string m_ifacePortName;  // Interface port name for out-of-block definition (IEEE 25.8)
     uint64_t m_dpiOpenParent = 0;  // DPI import open array, if !=0, how many callees
     bool m_taskPublic : 1;  // Public task
@@ -105,6 +106,7 @@ class AstNodeFTask VL_NOT_FINAL : public AstNode {
     bool m_dpiContext : 1;  // DPI import context
     bool m_dpiOpenChild : 1;  // DPI import open array child wrapper
     bool m_dpiTask : 1;  // DPI import task (vs. void function)
+    bool m_dpiCDeclOverride : 1;  // Override DPI-C declaration with m_dpiCDecl
     bool m_isConstructor : 1;  // Class constructor
     bool m_isExternProto : 1;  // Extern prototype
     bool m_isExternDef : 1;  // Extern definition
@@ -137,6 +139,7 @@ protected:
         , m_dpiContext{false}
         , m_dpiOpenChild{false}
         , m_dpiTask{false}
+        , m_dpiCDeclOverride{false}
         , m_isConstructor{false}
         , m_isExternProto{false}
         , m_isExternDef{false}
@@ -199,6 +202,10 @@ public:
     void dpiOpenChild(bool flag) { m_dpiOpenChild = flag; }
     bool dpiTask() const { return m_dpiTask; }
     void dpiTask(bool flag) { m_dpiTask = flag; }
+    bool dpiCDeclOverride() const { return m_dpiCDeclOverride; }
+    void dpiCDeclOverride(bool flag) { m_dpiCDeclOverride = flag; }
+    const string& dpiCDecl() const { return m_dpiCDecl; }
+    void dpiCDecl(const string& cDecl) { m_dpiCDecl = cDecl; }
     bool isConstructor() const { return m_isConstructor; }
     void isConstructor(bool flag) { m_isConstructor = flag; }
     bool isHideLocal() const { return m_isHideLocal; }
@@ -511,6 +518,7 @@ class AstCFunc final : public AstNode {
     string m_rtnType;  // void, bool, or other return type
     string m_argTypes;  // Argument types
     string m_ifdef;  // #ifdef symbol around this function
+    string m_cDecl;  // Custom DPI-C function declaration, used when m_dpiCDeclOverride==true
     VBoolOrUnknown m_isConst;  // Function is declared const (*this not changed)
     bool m_isStatic : 1;  // Function is static (no need for a 'this' pointer)
     bool m_isTrace : 1;  // Function is related to tracing
@@ -534,6 +542,7 @@ class AstCFunc final : public AstNode {
     bool m_dpiExportImpl : 1;  // DPI export implementation (called from DPI dispatcher via lookup)
     bool m_dpiImportPrototype : 1;  // This is the DPI import prototype (i.e.: provided by user)
     bool m_dpiImportWrapper : 1;  // Wrapper for invoking DPI import prototype from generated code
+    bool m_dpiCDeclOverride : 1;  // Override DPI-C declaration with m_dpiCDecl
     bool m_needProcess : 1;  // Needs access to VlProcess of the caller
     bool m_recursive : 1;  // Recursive or part of recursion
     bool m_noLife : 1;  // Disable V3Life on this function - has multiple calls, and reads Syms
@@ -567,6 +576,7 @@ public:
         m_dpiExportImpl = false;
         m_dpiImportPrototype = false;
         m_dpiImportWrapper = false;
+        m_dpiCDeclOverride = false;
         m_recursive = false;
         m_noLife = false;
         m_isCovergroupSample = false;
@@ -640,6 +650,10 @@ public:
     void dpiImportPrototype(bool flag) { m_dpiImportPrototype = flag; }
     bool dpiImportWrapper() const { return m_dpiImportWrapper; }
     void dpiImportWrapper(bool flag) { m_dpiImportWrapper = flag; }
+    bool dpiCDeclOverride() const { return m_dpiCDeclOverride; }
+    void dpiCDeclOverride(bool flag) { m_dpiCDeclOverride = flag; }
+    const string& dpiCDecl() const { return m_cDecl; }
+    void dpiCDecl(const string& cDecl) { m_cDecl = cDecl; }
     bool isCoroutine() const { return m_rtnType == "VlCoroutine"; }
     void recursive(bool flag) { m_recursive = flag; }
     bool recursive() const { return m_recursive; }

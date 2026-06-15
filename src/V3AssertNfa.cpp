@@ -1175,7 +1175,10 @@ public:
             return buildPropAlways(alwaysp, entryVtxp, isTopLevelStep);
         }
         if (AstEventually* const eventuallyp = VN_CAST(nodep, Eventually)) {
-            if (!eventuallyp->isStrong()) {
+            if (eventuallyp->isStrong()) {
+                // Strong eventually is handled in V3AssertPre. Skip building expr
+                return BuildResult::fail();
+            } else {
                 return buildWeakEventually(eventuallyp, entryVtxp, isTopLevelStep);
             }
         }

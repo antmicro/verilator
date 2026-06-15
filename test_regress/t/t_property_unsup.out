@@ -1,20 +1,124 @@
-%Error-UNSUPPORTED: t/t_property_unsup.v:65:41: Unsupported: eventually[] (in property expression)
-   65 |   assert property (counter == 1 implies eventually[1: 2] counter == 3);
-      |                                         ^~~~~~~~~~
-                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
-%Error-UNSUPPORTED: t/t_property_unsup.v:80:20: Unsupported: eventually[] (in property expression)
-   80 |   assert property (eventually[0: 2] counter == 3);
+%Error-UNSUPPORTED: t/t_property_unsup.v:62:20: Unsupported: Unclocked assertion
+                                              : ... note: In instance 't.eventually2'
+   62 |   assert property (eventually[0: 2] counter == 3);
       |                    ^~~~~~~~~~
-%Error-UNSUPPORTED: t/t_property_unsup.v:90:21: Unsupported: eventually[] (in property expression)
-   90 |   assert property ((eventually[0: 1] a) implies (eventually[0: 1] a));
-      |                     ^~~~~~~~~~
-%Error-UNSUPPORTED: t/t_property_unsup.v:90:50: Unsupported: eventually[] (in property expression)
-   90 |   assert property ((eventually[0: 1] a) implies (eventually[0: 1] a));
-      |                                                  ^~~~~~~~~~
-%Error-UNSUPPORTED: t/t_property_unsup.v:112:21: Unsupported: eventually[] (in property expression)
-  112 |   assert property ((eventually[0: 1] a) iff (eventually[0: 1] a));
-      |                     ^~~~~~~~~~
-%Error-UNSUPPORTED: t/t_property_unsup.v:112:46: Unsupported: eventually[] (in property expression)
-  112 |   assert property ((eventually[0: 1] a) iff (eventually[0: 1] a));
-      |                                              ^~~~~~~~~~
-%Error: Exiting due to
+                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
+%Error-UNSUPPORTED: t/t_property_unsup.v:62:3: Unsupported: Unclocked assertion
+                                             : ... note: In instance 't.eventually2'
+   62 |   assert property (eventually[0: 2] counter == 3);
+      |   ^~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:71:21: Unsupported: Unclocked assertion
+                                              : ... note: In instance 't.sva_implies2'
+   71 |   assert property ((s_eventually a) implies (s_eventually a));
+      |                     ^~~~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:71:46: Unsupported: Unclocked assertion
+                                              : ... note: In instance 't.sva_implies2'
+   71 |   assert property ((s_eventually a) implies (s_eventually a));
+      |                                              ^~~~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:71:3: Unsupported: Unclocked assertion
+                                             : ... note: In instance 't.sva_implies2'
+   71 |   assert property ((s_eventually a) implies (s_eventually a));
+      |   ^~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:73:3: Unsupported: Unclocked assertion
+                                             : ... note: In instance 't.sva_implies2'
+   73 |   assert property ((a s_until b) implies (a s_until b));
+      |   ^~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:75:23: Unsupported: Unclocked assertion
+                                              : ... note: In instance 't.sva_implies2'
+   75 |   assert property ((a until_with b) implies (a until_with b));
+      |                       ^~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:75:48: Unsupported: Unclocked assertion
+                                              : ... note: In instance 't.sva_implies2'
+   75 |   assert property ((a until_with b) implies (a until_with b));
+      |                                                ^~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:75:3: Unsupported: Unclocked assertion
+                                             : ... note: In instance 't.sva_implies2'
+   75 |   assert property ((a until_with b) implies (a until_with b));
+      |   ^~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:77:3: Unsupported: Unclocked assertion
+                                             : ... note: In instance 't.sva_implies2'
+   77 |   assert property ((a s_until_with b) implies (a s_until_with b));
+      |   ^~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:79:3: Unsupported: Unclocked assertion
+                                             : ... note: In instance 't.sva_implies2'
+   79 |   assert property ((a |-> b) implies (a |-> b));
+      |   ^~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:81:23: Unsupported: followed-by (#-# / #=#) nested inside property operator (iff/implies/or) (IEEE 1800-2023 16.12.9)
+                                              : ... note: In instance 't.sva_implies2'
+   81 |   assert property ((a #-# b) implies (a #-# b));
+      |                       ^~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:81:41: Unsupported: followed-by (#-# / #=#) nested inside property operator (iff/implies/or) (IEEE 1800-2023 16.12.9)
+                                              : ... note: In instance 't.sva_implies2'
+   81 |   assert property ((a #-# b) implies (a #-# b));
+      |                                         ^~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:81:3: Unsupported: Unclocked assertion
+                                             : ... note: In instance 't.sva_implies2'
+   81 |   assert property ((a #-# b) implies (a #-# b));
+      |   ^~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:91:21: Unsupported: Unclocked assertion
+                                              : ... note: In instance 't.sva_iff2'
+   91 |   assert property ((s_eventually a) iff (s_eventually a));
+      |                     ^~~~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:91:42: Unsupported: Unclocked assertion
+                                              : ... note: In instance 't.sva_iff2'
+   91 |   assert property ((s_eventually a) iff (s_eventually a));
+      |                                          ^~~~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:91:3: Unsupported: Unclocked assertion
+                                             : ... note: In instance 't.sva_iff2'
+   91 |   assert property ((s_eventually a) iff (s_eventually a));
+      |   ^~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:93:3: Unsupported: Unclocked assertion
+                                             : ... note: In instance 't.sva_iff2'
+   93 |   assert property ((a s_until b) iff (a s_until b));
+      |   ^~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:95:23: Unsupported: Unclocked assertion
+                                              : ... note: In instance 't.sva_iff2'
+   95 |   assert property ((a until_with b) iff (a until_with b));
+      |                       ^~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:95:44: Unsupported: Unclocked assertion
+                                              : ... note: In instance 't.sva_iff2'
+   95 |   assert property ((a until_with b) iff (a until_with b));
+      |                                            ^~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:95:3: Unsupported: Unclocked assertion
+                                             : ... note: In instance 't.sva_iff2'
+   95 |   assert property ((a until_with b) iff (a until_with b));
+      |   ^~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:97:3: Unsupported: Unclocked assertion
+                                             : ... note: In instance 't.sva_iff2'
+   97 |   assert property ((a s_until_with b) iff (a s_until_with b));
+      |   ^~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:99:3: Unsupported: Unclocked assertion
+                                             : ... note: In instance 't.sva_iff2'
+   99 |   assert property ((a |-> b) iff (a |-> b));
+      |   ^~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:101:23: Unsupported: followed-by (#-# / #=#) nested inside property operator (iff/implies/or) (IEEE 1800-2023 16.12.9)
+                                               : ... note: In instance 't.sva_iff2'
+  101 |   assert property ((a #-# b) iff (a #-# b));
+      |                       ^~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:101:37: Unsupported: followed-by (#-# / #=#) nested inside property operator (iff/implies/or) (IEEE 1800-2023 16.12.9)
+                                               : ... note: In instance 't.sva_iff2'
+  101 |   assert property ((a #-# b) iff (a #-# b));
+      |                                     ^~~
+%Error-UNSUPPORTED: t/t_property_unsup.v:101:3: Unsupported: Unclocked assertion
+                                              : ... note: In instance 't.sva_iff2'
+  101 |   assert property ((a #-# b) iff (a #-# b));
+      |   ^~~~~~
+%Warning-SIDEEFFECT: t/t_property_unsup.v:93:3: Expression side effect may be mishandled
+                                              : ... Suggest use a temporary variable in place of this expression
+   93 |   assert property ((a s_until b) iff (a s_until b));
+      |   ^~~~~~
+                     ... For warning description see https://verilator.org/warn/SIDEEFFECT?v=latest
+                     ... Use "/* verilator lint_off SIDEEFFECT */" and lint_on around source to disable this message.
+%Warning-SIDEEFFECT: t/t_property_unsup.v:95:3: Expression side effect may be mishandled
+                                              : ... Suggest use a temporary variable in place of this expression
+   95 |   assert property ((a until_with b) iff (a until_with b));
+      |   ^~~~~~
+%Warning-SIDEEFFECT: t/t_property_unsup.v:97:3: Expression side effect may be mishandled
+                                              : ... Suggest use a temporary variable in place of this expression
+   97 |   assert property ((a s_until_with b) iff (a s_until_with b));
+      |   ^~~~~~
+%Error: Internal Error: t/t_property_unsup.v:73:23: ../V3Ast.cpp:#: AstPExpr::bodyp() cannot have a non-nullptr nextp()
+                                                  : ... note: In instance 't.sva_implies2'
+   73 |   assert property ((a s_until b) implies (a s_until b));
+      |                       ^~~~~~~
+                        ... This fatal error may be caused by the earlier error(s); resolve those first.

@@ -43,27 +43,9 @@ module t (  /*AUTOARG*/
 );
   input clk;
   input reset;
-  eventually1 eventually1 (.*);
   eventually2 eventually2 (.*);
-  sva_implies2 sva_implies2 (.*);
-  sva_iff2 sva_iff2 (.*);
-endmodule
-
-module eventually1 (
-    input clk,
-    input reset
-);
-
-  // count up from 0 to 10
-  reg [7:0] counter;
-  initial counter = 0;
-
-  always @(posedge clk) if (counter != 10) counter = counter + 1;
-
-  // expected to pass
-  p0 :
-  assert property (counter == 1 implies eventually[1: 2] counter == 3);
-
+  sva_implies2 sva_implies2 (clk, reset);
+  sva_iff2 sva_iff2 (clk, reset);
 endmodule
 
 module eventually2 (
@@ -78,7 +60,6 @@ module eventually2 (
   // expected to fail
   p0 :
   assert property (eventually[0: 2] counter == 3);
-
 endmodule
 
 module sva_implies2 (
@@ -86,8 +67,6 @@ module sva_implies2 (
     b
 );
 
-  p2 :
-  assert property ((eventually[0: 1] a) implies (eventually[0: 1] a));
   p3 :
   assert property ((s_eventually a) implies (s_eventually a));
   p5 :
@@ -108,9 +87,7 @@ module sva_iff2 (
     b
 );
 
-  p1 :
-  assert property ((eventually[0: 1] a) iff (eventually[0: 1] a));
-  p2 :
+  p3 :
   assert property ((s_eventually a) iff (s_eventually a));
   p4 :
   assert property ((a s_until b) iff (a s_until b));

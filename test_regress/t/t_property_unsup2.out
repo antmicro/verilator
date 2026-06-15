@@ -1,0 +1,38 @@
+%Error-UNSUPPORTED: t/t_property_unsup2.v:21:52: Unsupported: weak eventually nested under property/sequence operator
+                                               : ... note: In instance 't'
+   21 |   assert property (@(posedge clk) cyc == 1 implies eventually[1: 2] cyc == 3);
+      |                                                    ^~~~~~~~~~
+                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
+%Error-UNSUPPORTED: t/t_property_unsup2.v:23:36: Unsupported: weak eventually nested under property/sequence operator
+                                               : ... note: In instance 't'
+   23 |   assert property (@(posedge clk) (eventually[0: 1] clk) implies (eventually[0: 1] clk));
+      |                                    ^~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup2.v:23:67: Unsupported: weak eventually nested under property/sequence operator
+                                               : ... note: In instance 't'
+   23 |   assert property (@(posedge clk) (eventually[0: 1] clk) implies (eventually[0: 1] clk));
+      |                                                                   ^~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup2.v:25:36: Unsupported: weak eventually nested under property/sequence operator
+                                               : ... note: In instance 't'
+   25 |   assert property (@(posedge clk) (eventually[0: 1] clk) implies (eventually[0: 1] clk))
+      |                                    ^~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup2.v:25:67: Unsupported: weak eventually nested under property/sequence operator
+                                               : ... note: In instance 't'
+   25 |   assert property (@(posedge clk) (eventually[0: 1] clk) implies (eventually[0: 1] clk))
+      |                                                                   ^~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup2.v:29:36: Unsupported: weak eventually nested under property/sequence operator
+                                               : ... note: In instance 't'
+   29 |   assert property (@(posedge clk) (eventually[0: 1] clk) iff (eventually[0: 1] clk));
+      |                                    ^~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup2.v:29:63: Unsupported: weak eventually nested under property/sequence operator
+                                               : ... note: In instance 't'
+   29 |   assert property (@(posedge clk) (eventually[0: 1] clk) iff (eventually[0: 1] clk));
+      |                                                               ^~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup2.v:31:36: Unsupported: weak eventually nested under property/sequence operator
+                                               : ... note: In instance 't'
+   31 |   assert property (@(posedge clk) (eventually[0: 1] clk) iff (eventually[0: 1] clk))
+      |                                    ^~~~~~~~~~
+%Error-UNSUPPORTED: t/t_property_unsup2.v:31:63: Unsupported: weak eventually nested under property/sequence operator
+                                               : ... note: In instance 't'
+   31 |   assert property (@(posedge clk) (eventually[0: 1] clk) iff (eventually[0: 1] clk))
+      |                                                               ^~~~~~~~~~
+%Error: Exiting due to

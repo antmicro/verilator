@@ -14,6 +14,7 @@ module t (  /*AUTOARG*/
 );
 
   input clk;
+  sub_with_clocking_block sub_with_clocking_block(clk);
 
   typedef struct {
     int fails;
@@ -38,15 +39,28 @@ module t (  /*AUTOARG*/
     results[3].passs++;
   else results[3].fails++;
 
+  assert property (@(posedge clk) eventually[0: 2] cyc == 3)
+    results[4].passs++;
+  else results[4].fails++;
+
+  assert property (@(posedge clk) eventually [0:2] 1'b1);
+
   always @(edge clk) begin
     ++cyc;
     if (cyc == MAX) begin
       expected[1] = '{5, 0};
       expected[2] = '{0, 6};
       expected[3] = '{2, 4};
+      expected[4] = '{3, 2};
       `checkh(results, expected);
       $write("*-* All Finished *-*\n");
       $finish;
     end
   end
+endmodule
+
+module sub_with_clocking_block(clk);
+  input clk;
+  default clocking @(posedge clk); endclocking
+  assert property (eventually [0:2] 1'b1);
 endmodule

@@ -826,9 +826,6 @@ private:
         return sizep;
     }
     void visit(AstEventually* nodep) override {
-        UASSERT_OBJ(nodep->isStrong(), nodep, "Weak eventually should be handled in V3AssertNfa");
-        UASSERT(v3Global.rootp()->stdPackagep(), "Should be imported");
-
         AstSenTree* const sentreep = newSenTree(nodep);
         if (!sentreep->sensesp()) {
             VL_DO_DANGLING(pushDeletep(sentreep), sentreep);
@@ -836,6 +833,8 @@ private:
             VL_DO_DANGLING(pushDeletep(nodep), nodep);
             return;
         }
+        UASSERT_OBJ(nodep->isStrong(), nodep, "Weak eventually should be handled in V3AssertNfa");
+        UASSERT(v3Global.rootp()->stdPackagep(), "Should be imported");
 
         FileLine* const flp = nodep->fileline();
 
@@ -901,7 +900,9 @@ private:
         iterate(finalp);
 
         if (m_hasCycleDelay) {
-            nodep->v3warn(E_UNSUPPORTED, "Unsupported: cycle delay in s_eventually");
+            nodep->v3fatalSrc(
+                "Unsupported: cycle delay in s_eventually");  // Internal err as V3Width check
+                                                              // should already cover it
             nodep->replaceWith(new AstConst{nodep->fileline(), AstConst::BitFalse{}});
             VL_DO_DANGLING(pushDeletep(nodep), nodep);
             VL_DO_DANGLING(m_pexprp->deleteTree(), m_pexprp);

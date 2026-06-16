@@ -1640,6 +1640,11 @@ class WidthVisitor final : public VNVisitor {
                 nodep->v3warn(E_UNSUPPORTED,
                               "Unsupported: property/sequence operator inside eventually");
             }
+            if (!nodep->isStrong() && !VN_IS(nodep->abovep(), PropSpec)) {
+                nodep->v3warn(
+                    E_UNSUPPORTED,
+                    "Unsupported: weak eventually nested under property/sequence operator");
+            }
             if (!nodep->loBoundp()) return;  // s_eventually
             if (VN_IS(nodep->loBoundp(), Unbounded) || VN_IS(nodep->hiBoundp(), Unbounded)) {
                 nodep->v3error(

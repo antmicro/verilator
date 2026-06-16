@@ -1440,7 +1440,7 @@ public:
     AstEventually(FileLine* fl, AstNodeExpr* exprp, AstNodeExpr* loBoundp, AstNodeExpr* hiBoundp,
                   bool isStrong)
         : ASTGEN_SUPER_Eventually(fl)
-        , m_isStrong(isStrong) {
+        , m_isStrong{isStrong} {
         this->exprp(exprp);
         this->loBoundp(loBoundp);
         this->hiBoundp(hiBoundp);

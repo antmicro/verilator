@@ -107,6 +107,11 @@ std::unique_ptr<DfgGraph> DfgGraph::clone() const {
             vtxp2clonep.emplace(&vtx, cp);
             break;
         }
+        case VDfgType::ArraySel: {
+            DfgArraySel* const cp = new DfgArraySel{*clonep, vtx.fileline(), vtx.dtype()};
+            vtxp2clonep.emplace(&vtx, cp);
+            break;
+        }
         case VDfgType::Rep: {
             DfgRep* const cp = new DfgRep{*clonep, vtx.fileline(), vtx.dtype()};
             vtxp2clonep.emplace(&vtx, cp);

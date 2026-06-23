@@ -357,8 +357,23 @@ public:
     void fromp(DfgVertex* vtxp) { inputp(0, vtxp); }
     DfgVertex* lsbp() const { return inputp(1); }
     void lsbp(DfgVertex* vtxp) { inputp(1, vtxp); }
+    bool unsafe() const override { return true; }
 
     std::string srcName(size_t idx) const override { return idx ? "lsbp" : "fromp"; }
+};
+
+class DfgArraySel final : public DfgVertexBinary {
+public:
+    DfgArraySel(DfgGraph& dfg, FileLine* flp, const DfgDataType& dtype, bool unsafe = false)
+        : DfgVertexBinary{dfg, dfgType(), flp, dtype} {}
+    ASTGEN_MEMBERS_DfgArraySel;
+
+    DfgVertex* fromp() const { return inputp(0); }
+    void fromp(DfgVertex* vtxp) { inputp(0, vtxp); }
+    DfgVertex* bitp() const { return inputp(1); }
+    void bitp(DfgVertex* vtxp) { inputp(1, vtxp); }
+    std::string srcName(size_t idx) const override { return idx ? "bitp" : "fromp"; }
+    bool unsafe() const override { return !bitp()->is<DfgConst>(); }
 };
 
 //------------------------------------------------------------------------------

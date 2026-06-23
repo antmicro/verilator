@@ -4828,7 +4828,6 @@ public:
 
 // === AstNodeSel ===
 class AstArraySel final : public AstNodeSel {
-    // @astgen makeDfgVertex
     void init(const AstNode* fromp) {
         if (fromp && VN_IS(fromp->dtypep()->skipRefp(), NodeArrayDType)) {
             // Strip off array to find what array references

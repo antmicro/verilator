@@ -2269,7 +2269,7 @@ class V3DfgPeephole final : public DfgVisitor {
     }
 
     void visit(DfgLogAnd* const vtxp) override {
-        if (binary(vtxp)) return;
+        if (binary(vtxp) || vtxp->rhsp()->unsafe()) return;
 
         DfgVertex* const lhsp = vtxp->lhsp();
         DfgVertex* const rhsp = vtxp->rhsp();
@@ -2287,11 +2287,11 @@ class V3DfgPeephole final : public DfgVisitor {
     }
 
     void visit(DfgLogIf* const vtxp) override {
-        if (binary(vtxp)) return;
+        if (binary(vtxp) || vtxp->unsafe()) return;
     }
 
     void visit(DfgLogOr* const vtxp) override {
-        if (binary(vtxp)) return;
+        if (binary(vtxp) || vtxp->unsafe()) return;
 
         DfgVertex* const lhsp = vtxp->lhsp();
         DfgVertex* const rhsp = vtxp->rhsp();
@@ -2771,7 +2771,7 @@ class V3DfgPeephole final : public DfgVisitor {
         DfgVertex* const elsep = vtxp->elsep();
         FileLine* const flp = vtxp->fileline();
 
-        if (condp->dtype() != m_bitDType) return;
+        if (condp->dtype() != m_bitDType || thenp->unsafe() || elsep->unsafe()) return;
 
         if (isOnes(condp)) {
             APPLYING(REMOVE_COND_WITH_TRUE_CONDITION) {

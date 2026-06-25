@@ -806,6 +806,84 @@ class ConstraintExprVisitor final : public VNVisitor {
         return "";
     }
 
+    std::string extractSolveBeforeBaseName(AstNodeExpr* exprp) {
+        if (const AstVarRef* const varrefp = VN_CAST(exprp, VarRef)) {
+            return varrefp->name();
+        } else if (const AstStructSel* selp = VN_CAST(exprp, StructSel)) {
+            return extractSolveBeforeBaseName(selp->fromp());
+        } else if (const AstCMethodHard* cmethp = VN_CAST(exprp, CMethodHard)) {
+            return extractSolveBeforeBaseName(cmethp->fromp());
+        } else if (const AstMemberSel* mselp = VN_CAST(exprp, MemberSel)) {
+            return extractSolveBeforeBaseName(mselp->fromp());
+        }
+        return "";
+    }
+
+    void _buildCMethodAtNameExpr(const AstCMethodHard* cmethp, AstCExpr* exprp) {
+        const AstNode* fromp = cmethp->fromp();
+        if (const AstVarRef* const refp = VN_CAST(fromp, VarRef)) {
+            exprp->add("(\""s + refp->name());
+        } else if (const AstStructSel* selp = VN_CAST(fromp, StructSel)) {
+            _buildStructSelNameExpr(selp, exprp);
+        } else if (const AstCMethodHard* ccmethp = VN_CAST(fromp, CMethodHard)) {
+            _buildCMethodAtNameExpr(ccmethp, exprp);
+        } else if (const AstMemberSel* mselp = VN_CAST(fromp, MemberSel)) {
+            _buildMemberSelNameExpr(mselp, exprp);
+        }
+
+        if (AstVarRef* const argp = VN_CAST(&(cmethp->pinsp()[0]), VarRef)) {
+            exprp->add("[\" + std::to_string(");
+            exprp->add(argp->cloneTreePure(false));
+            exprp->add(") + \"]\"");
+        }
+    }
+
+    void _buildStructSelNameExpr(const AstStructSel* selp, AstCExpr* exprp) {
+        const AstNode* fromp = selp->fromp();
+        if (const AstVarRef* const refp = VN_CAST(fromp, VarRef)) {
+            exprp->add("(\""s + refp->name());
+        } else if (const AstStructSel* selp = VN_CAST(fromp, StructSel)) {
+            _buildStructSelNameExpr(selp, exprp);
+        } else if (const AstCMethodHard* ccmethp = VN_CAST(fromp, CMethodHard)) {
+            _buildCMethodAtNameExpr(ccmethp, exprp);
+        } else if (const AstMemberSel* mselp = VN_CAST(fromp, MemberSel)) {
+            _buildMemberSelNameExpr(mselp, exprp);
+        }
+
+        exprp->add("." + selp->name());
+    }
+
+    void _buildMemberSelNameExpr(const AstMemberSel* mselp, AstCExpr* exprp) {
+        const AstNode* fromp = mselp->fromp();
+        if (const AstVarRef* const refp = VN_CAST(fromp, VarRef)) {
+            exprp->add("(\""s + refp->name());
+        } else if (const AstStructSel* selp = VN_CAST(fromp, StructSel)) {
+            _buildStructSelNameExpr(selp, exprp);
+        } else if (const AstCMethodHard* ccmethp = VN_CAST(fromp, CMethodHard)) {
+            _buildCMethodAtNameExpr(ccmethp, exprp);
+        } else if (const AstMemberSel* mselp = VN_CAST(fromp, MemberSel)) {
+            _buildMemberSelNameExpr(mselp, exprp);
+        }
+
+        exprp->add("." + mselp->name());
+    }
+
+    // Build a C++ expression (as AstNodeExpr) that evaluates to a const char*
+    // containing the SMT variable name for a solve-before variable reference.
+    // Handles simple vars, struct selects, and array element selects (for foreach).
+    AstCExpr* buildDynArrayNameExpr(FileLine* fl, const AstNodeExpr* nodep) {
+        AstCExpr* const exprp = new AstCExpr{fl, ""};
+        if (const AstStructSel* selp = VN_CAST(nodep, StructSel)) {
+            _buildStructSelNameExpr(selp, exprp);
+        } else if (const AstCMethodHard* cmethp = VN_CAST(nodep, CMethodHard)) {
+            _buildCMethodAtNameExpr(cmethp, exprp);
+        } else if (const AstMemberSel* mselp = VN_CAST(nodep, MemberSel)) {
+            _buildMemberSelNameExpr(mselp, exprp);
+        }
+        exprp->add(")");
+        return exprp;
+    }
+
     // Build a C++ expression (as AstNodeExpr) that evaluates to a const char*
     // containing the SMT variable name for a solve-before variable reference.
     // Handles simple vars, member selects, and array element selects (for foreach).
@@ -865,6 +943,19 @@ class ConstraintExprVisitor final : public VNVisitor {
                     = buildMemberPath(VN_AS(selFromp, MemberSel)) + "." + selName;
                 AstCExpr* const p = new AstCExpr{fl, AstCExpr::Pure{}, "\"" + path + "\"s"};
                 p->dtypeSetString();
+                return p;
+            }
+            if (VN_IS(selFromp, StructSel)) {
+                AstCExpr* const p = buildDynArrayNameExpr(fl, selFromp);
+                p->dtypeSetString();
+                return p;
+            }
+            if (const AstCMethodHard* const cMethodp = VN_CAST(selFromp, CMethodHard)) {
+                if (cMethodp->method() != VCMethod::ARRAY_AT) { return nullptr; }
+                AstCExpr* const p = buildDynArrayNameExpr(fl, selFromp);
+                p->dtypeSetString();
+                UINFO(2, "buildDyn:");
+                p->dump();
                 return p;
             }
             return nullptr;
@@ -1091,6 +1182,8 @@ class ConstraintExprVisitor final : public VNVisitor {
         const bool isGlobalConstrained = nodep->varp()->globalConstrained();
 
         AstMemberSel* membersel = nullptr;
+        AstStructSel* structsel = nullptr;
+        AstCMethodHard* methodat = nullptr;
         std::string smtName;
         if (VN_IS(nodep->backp(), MemberSel)) {
             // Build complete path from topmost MemberSel
@@ -1100,8 +1193,27 @@ class ConstraintExprVisitor final : public VNVisitor {
             }
             membersel = VN_AS(topMemberSel, MemberSel)->cloneTree(false);
             smtName = buildMemberPath(membersel);
+        } else if (VN_IS(nodep->backp(), StructSel) || VN_IS(nodep->backp(), CMethodHard)) {
+            // Build complete path for topmost StructSel
+            AstNode* topNode = nodep->backp();
+            while (VN_IS(topNode->backp(), StructSel) || VN_IS(topNode->backp(), CMethodHard)) {
+                topNode = topNode->backp();
+            }
+
+            structsel = VN_CAST(topNode, StructSel);
+            if (structsel) smtName = extractSolveBeforeBaseName(structsel);
+
+            methodat = VN_CAST(topNode, CMethodHard);
+            if (methodat) smtName = extractSolveBeforeBaseName(methodat);
+
+            membersel = VN_CAST(topNode, MemberSel);
+            if (membersel) smtName = buildMemberPath(membersel);
+
+            // Above functions returned empty string, unreckognized node type,
+            // Using nodep->name();
+            if (smtName == "") smtName = nodep->name();
         } else {
-            // No MemberSel: just variable name
+            // No MemberSel, StructSel or CMethodHard:at : just variable name
             smtName = nodep->name();
         }
 
@@ -1382,7 +1494,7 @@ class ConstraintExprVisitor final : public VNVisitor {
                 AstNodeFTask* initTaskp = m_inlineInitTaskp;
                 if (!initTaskp) {
                     varp->user3(true);
-                    if (membersel) {
+                    if (membersel || structsel || methodat) {
                         initTaskp = VN_AS(m_memberMap.findMember(classp, "randomize"), NodeFTask);
                         // Inherited rand members may belong to a base class
                         // that has no randomize(); use the caller's function

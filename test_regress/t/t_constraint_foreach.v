@@ -61,12 +61,33 @@ class D;
   };
 endclass
 
+class E;
+    typedef struct { rand bit [7:0]a; } cfg_t;
+    rand cfg_t cfg[];
+    rand bit b;
+
+    function new();
+        cfg = new [10];
+    endfunction
+
+    constraint c {
+        foreach (cfg[i]) {
+            solve b before cfg[i].a;
+            cfg[i].a[7] == b;
+        }
+    }
+endclass
+
 module t;
   initial begin
     automatic C c = new;
     automatic D d = new;
+    automatic E e = new;
     `check_rand(c, c.x, 4 < c.x && c.x < 7);
     `check_rand(d, d.posit, (d.posit ? 4 : -3) < d.x && d.x < (d.posit ? 7 : 0));
+    foreach (e.cfg[i]) begin
+        `check_rand(e, e.cfg[i].a, (e.cfg[i].a[7] == e.b));
+    end
     $write("*-* All Finished *-*\n");
     $finish;
   end

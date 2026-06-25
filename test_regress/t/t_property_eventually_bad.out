@@ -35,4 +35,20 @@
                                            : ... note: In instance 't'
    18 |   assert property (@(posedge clk) eventually[0:$] 1'b0);
       |                                   ^~~~~~~~~~
+%Error: t/t_property_eventually_bad.v:19:46: eventually range low bound must be non-negative (IEEE 1800-2023 16.12.13)
+                                           : ... note: In instance 't'
+   19 |   assert property (@(posedge clk) eventually[-1:5] 1'b0);
+      |                                              ^
+%Error: t/t_property_eventually_bad.v:20:46: eventually range low bound must be non-negative (IEEE 1800-2023 16.12.13)
+                                           : ... note: In instance 't'
+   20 |   assert property (@(posedge clk) eventually[-2:-3] 1'b0);
+      |                                              ^
+%Error: t/t_property_eventually_bad.v:20:49: eventually range high bound must be >= low bound (IEEE 1800-2023 16.12.13)
+                                           : ... note: In instance 't'
+   20 |   assert property (@(posedge clk) eventually[-2:-3] 1'b0);
+      |                                                 ^
+%Error: t/t_property_eventually_bad.v:21:48: eventually range high bound must be >= low bound (IEEE 1800-2023 16.12.13)
+                                           : ... note: In instance 't'
+   21 |   assert property (@(posedge clk) eventually[5:0] 1'b0);
+      |                                                ^
 %Error: Exiting due to

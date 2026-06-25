@@ -1665,6 +1665,14 @@ class WidthVisitor final : public VNVisitor {
                 nodep->v3error("eventually range high bound must be a constant expression"
                                " (IEEE 1800-2023 16.12.13)");
             }
+            if (loConstp && loConstp->toSInt() < 0) {
+                nodep->loBoundp()->v3error("eventually range low bound must be non-negative"
+                                           " (IEEE 1800-2023 16.12.13)");
+            }
+            if (loConstp && hiConstp && hiConstp->toSInt() < loConstp->toSInt()) {
+                nodep->hiBoundp()->v3error("eventually range high bound must be >= low bound"
+                                           " (IEEE 1800-2023 16.12.13)");
+            }
         }
     }
     void visit(AstRising* nodep) override {

@@ -114,10 +114,11 @@ public:
     // Reject when source is active and condp is false; set only on
     // outermost required-step Link
     bool m_rejectOnFail = false;
+    // Match when source is active and condp is true
+    bool m_matchOnPass = false;
     // Optional dynamic condition vertex for m_rejectOnFail. Used when the
     // success condition is another NFA state rather than a static expression.
     SvaStateVertex* m_condVtxp = nullptr;
-    bool m_matchOnPass = false;
 
     // CONSTRUCTORS
     SvaTransEdge(V3Graph* graphp, V3GraphVertex* fromp, V3GraphVertex* top, AstNodeExpr* condp,
@@ -683,7 +684,6 @@ class SvaNfaBuilder final {
         AstNodeExpr* const exprp = nodep->exprp();
         const int lo = getConstInt(nodep->loBoundp());
         const int hi = getConstInt(nodep->hiBoundp());
-        // UASSERT_OBJ(lo >= 0 && hi >= lo, nodep, "PropAlways bounds invariant (V3Width)");
         AstVar* const hoistVarp = tryHoistSampled(exprp, flp, hi - lo + 1);
         SvaStateVertex* currentp = addDelayChain(entryVtxp, lo, flp);
         SvaStateVertex* const passVertexp = scopedCreateVertex();
@@ -1669,7 +1669,6 @@ class SvaNfaLowering final {
                     passp = new AstLogAnd{c.flp, passp, snapshotOkp->cloneTreePure(false)};
                 }
                 outPassMatchSrcsp->push_back(passp);
-                // should sigs be updated?
             }
         }
 
@@ -2342,7 +2341,7 @@ class AssertNfaVisitor final : public VNVisitor {
             // needMatch implies passsp() was non-null when evaluated above;
             // lowering does not mutate the assert's pass-action between the
             // two reads, so passsp() is still non-null here.
-            UASSERT_OBJ(passsp, assertAssertp, "needMatch set but passsp is null");
+            UASSERT(passsp, "needMatch set but passsp is null");
             passsp->unlinkFrBackWithNext();
             assertAssertp->addPasssp(new AstIf{flp, matchExprp->cloneTreePure(false),
                                                passsp->cloneTree(false), nullptr});

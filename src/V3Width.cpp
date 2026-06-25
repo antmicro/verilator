@@ -1599,10 +1599,8 @@ class WidthVisitor final : public VNVisitor {
             }
             bool hasPropertyOp = propp->isMultiCycleSva();
             if (!hasPropertyOp) {
-                propp->foreach([&](const AstNode* np) {
-                    if (VN_IS(np, Implication) || VN_IS(np, Until) || VN_IS(np, PropSpec)) {
-                        hasPropertyOp = true;
-                    }
+                hasPropertyOp = nodep->exists([](const AstNode* np) {
+                    return VN_IS(np, Implication) || VN_IS(np, Until) || VN_IS(np, PropSpec);
                 });
             }
             if (hasPropertyOp) {
@@ -1618,39 +1616,41 @@ class WidthVisitor final : public VNVisitor {
         // IEEE 1800-2023 16.12.13
         assertAtExpr(nodep);
         if (m_vup->prelim()) {
-            if (nodep->isStrong()
-                && (v3Global.opt.timing().isSetFalse() || !v3Global.opt.timing().isSetTrue())) {
-                nodep->v3warn(E_NOTIMING, "s_eventually requires --timing");
-                nodep->replaceWith(
-                    new AstConst{nodep->fileline(), AstConst::WidthedValue{}, 1, 0});
-                VL_DO_DANGLING(nodep->deleteTree(), nodep);
-                return;
-            }
             userIterateAndNext(nodep->exprp(), WidthVP{SELF, BOTH}.p());
             nodep->dtypeSetBit();
             bool hasPropertyOp = nodep->exprp()->isMultiCycleSva();
             if (!hasPropertyOp) {
-                nodep->exprp()->foreach([&](const AstNode* np) {
-                    if (VN_IS(np, Implication) || VN_IS(np, Until) || VN_IS(np, PropSpec)) {
-                        hasPropertyOp = true;
-                    }
+                hasPropertyOp = nodep->exists([](const AstNode* np) {
+                    return VN_IS(np, Implication) || VN_IS(np, Until) || VN_IS(np, PropSpec);
                 });
             }
             if (hasPropertyOp) {
                 nodep->v3warn(E_UNSUPPORTED,
                               "Unsupported: property/sequence operator inside eventually");
             }
-            if (!nodep->isStrong() && !VN_IS(nodep->abovep(), PropSpec)) {
-                nodep->v3warn(
-                    E_UNSUPPORTED,
-                    "Unsupported: weak eventually nested under property/sequence operator");
+
+            if (nodep->isStrong()) {
+                if (v3Global.opt.timing().isSetFalse() || !v3Global.opt.timing().isSetTrue()) {
+                    nodep->v3warn(E_NOTIMING, "s_eventually requires --timing");
+                    nodep->replaceWith(
+                        new AstConst{nodep->fileline(), AstConst::WidthedValue{}, 1, 0});
+                    VL_DO_DANGLING(nodep->deleteTree(), nodep);
+                    return;
+                }
+                if (!nodep->loBoundp()) return;  // unranged s_eventually. Skip bound check
+            } else {
+                if (!VN_IS(nodep->abovep(), PropSpec)) {
+                    nodep->v3warn(
+                        E_UNSUPPORTED,
+                        "Unsupported: weak eventually nested under property/sequence operator");
+                }
+                if (VN_IS(nodep->loBoundp(), Unbounded) || VN_IS(nodep->hiBoundp(), Unbounded)) {
+                    nodep->v3error("The range for a weak eventually must be bounded (IEEE "
+                                   "1800-2023 16.12.13)");
+                    return;
+                }
             }
-            if (!nodep->loBoundp()) return;  // s_eventually
-            if (VN_IS(nodep->loBoundp(), Unbounded) || VN_IS(nodep->hiBoundp(), Unbounded)) {
-                nodep->v3error(
-                    "The range for a weak eventually must be bounded (IEEE 1800-2023 16.12.13)");
-                return;
-            }
+
             userIterateAndNext(nodep->loBoundp(), WidthVP{SELF, BOTH}.p());
             V3Const::constifyParamsEdit(nodep->loBoundp());
             userIterateAndNext(nodep->hiBoundp(), WidthVP{SELF, BOTH}.p());

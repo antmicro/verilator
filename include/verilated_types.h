@@ -98,24 +98,24 @@ struct VlWide final {
     EData& operator[](size_t index) VL_MT_SAFE { return m_storage[index]; }
     const EData& operator[](size_t index) const VL_MT_SAFE { return m_storage[index]; }
     VlWide<N_Words>& operator&=(const VlWide& rhs) {
-        VL_AND_W(N_Words, *this, *this, rhs);
+        VL_AND_W_TTT(N_Words, *this, *this, rhs);
         return *this;
     }
     VlWide<N_Words>& operator|=(const VlWide& rhs) {
-        VL_OR_W(N_Words, *this, *this, rhs);
+        VL_OR_W_TTT(N_Words, *this, *this, rhs);
         return *this;
     }
     VlWide<N_Words>& operator^=(const VlWide& rhs) {
-        VL_XOR_W(N_Words, *this, *this, rhs);
+        VL_XOR_W_TTT(N_Words, *this, *this, rhs);
         return *this;
     }
     VlWide<N_Words>& operator+=(const VlWide& rhs) {
-        VL_ADD_W(N_Words, *this, *this, rhs);
+        VL_ADD_W_TTT(N_Words, *this, *this, rhs);
         return *this;
     }
     VlWide<N_Words>& operator*=(const VlWide& rhs) {
         VlWide<N_Words> out{};
-        VL_MUL_W(N_Words, out, *this, rhs);
+        VL_MUL_W_TTT(N_Words, out, *this, rhs);
         for (size_t i = 0; i < N_Words; ++i) m_storage[i] = out.m_storage[i];
         return *this;
     }

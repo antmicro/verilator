@@ -1187,8 +1187,8 @@ static inline IData VL_MOSTSETBITP1_Q_T(QData lhs) VL_PURE {
     return 64 - __builtin_clzll(static_cast<unsigned long long>(lhs));
 #else
     const IData hi = static_cast<IData>(lhs >> 32ULL);
-    return hi ? (VL_EDATASIZE + VL_MOSTSETBITP1_I(hi))
-              : VL_MOSTSETBITP1_I(static_cast<IData>(lhs));
+    return hi ? (VL_EDATASIZE + VL_MOSTSETBITP1_I_T(hi))
+              : VL_MOSTSETBITP1_I_T(static_cast<IData>(lhs));
 #endif
 }
 

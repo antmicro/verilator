@@ -761,8 +761,8 @@ class ConstraintExprVisitor final : public VNVisitor {
     AstVar* m_randModeVarp;  // Relevant randmode state variable
     bool m_wantSingle = false;  // Whether to merge constraint expressions with LOGAND
     VMemberMap& m_memberMap;  // Member names cached for fast lookup
-    bool m_structSel = false;  // Marks when inside structSel
-                               // (used to format "%s.%s" for struct arrays)
+    int m_structSel = 0;  // Counts times when inside structSel
+                          // (used to format "%s.%s" for struct arrays)
     std::set<std::string>& m_writtenVars;  // Track which variable paths have write_var generated
                                            // (shared across all constraints)
     std::set<std::string> m_inlineWrittenVars;  // Per-instance tracking for inline constraints
@@ -831,10 +831,16 @@ class ConstraintExprVisitor final : public VNVisitor {
             _buildMemberSelNameExpr(mselp, exprp);
         }
 
-        if (AstVarRef* const argp = VN_CAST(&(cmethp->pinsp()[0]), VarRef)) {
+        AstNode* const argNode = &(cmethp->pinsp()[0]);
+
+        if (AstVarRef* const argp = VN_CAST(argNode, VarRef)) {
             exprp->add("[\" + std::to_string(");
             exprp->add(argp->cloneTreePure(false));
-            exprp->add(") + \"]\"");
+            exprp->add(") + \"]");
+        } else if (AstConst* const constp = VN_CAST(argNode, Const)) {
+            exprp->add("[\" + std::to_string(");
+            exprp->add(constp->cloneTreePure(false));
+            exprp->add(") + \"]");
         }
     }
 
@@ -880,7 +886,7 @@ class ConstraintExprVisitor final : public VNVisitor {
         } else if (const AstMemberSel* mselp = VN_CAST(nodep, MemberSel)) {
             _buildMemberSelNameExpr(mselp, exprp);
         }
-        exprp->add(")");
+        exprp->add("\")");
         return exprp;
     }
 
@@ -954,11 +960,15 @@ class ConstraintExprVisitor final : public VNVisitor {
                 if (cMethodp->method() != VCMethod::ARRAY_AT) { return nullptr; }
                 AstCExpr* const p = buildDynArrayNameExpr(fl, selFromp);
                 p->dtypeSetString();
-                UINFO(2, "buildDyn:");
-                p->dump();
                 return p;
             }
             return nullptr;
+        }
+        if (const AstCMethodHard* const cMethodp = VN_CAST(exprp, CMethodHard)) {
+            if (cMethodp->method() != VCMethod::ARRAY_AT) { return nullptr; }
+            AstCExpr* const p = buildDynArrayNameExpr(fl, exprp);
+            p->dtypeSetString();
+            return p;
         }
         if (const AstArraySel* const selp = VN_CAST(exprp, ArraySel)) {
             // arr[i] -> dynamic name
@@ -1956,7 +1966,7 @@ class ConstraintExprVisitor final : public VNVisitor {
     }
     void visit(AstStructSel* nodep) override {
         if (editFormat(nodep)) return;
-        m_structSel = true;
+        ++m_structSel;
         if (VN_IS(nodep->fromp()->dtypep()->skipRefp(), StructDType)) {
             AstNodeExpr* const fromp = nodep->fromp();
             if (VN_IS(fromp, StructSel)) {
@@ -2000,7 +2010,7 @@ class ConstraintExprVisitor final : public VNVisitor {
             newp = new AstSFormatF{fl, nodep->fromp()->name() + "." + nodep->name(), false,
                                    nullptr};
         }
-        m_structSel = false;
+        --m_structSel;
         nodep->replaceWith(newp);
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }

@@ -1199,7 +1199,7 @@ static inline IData VL_MOSTSETBITP1_W_##suffix(int words, WDataInP lwp) VL_PURE 
         /* MSB set bit plus one; similar to FLS.  0=value is zero */ \
         for (int i = words - 1; i >= 0; --i) { \
             /* Shorter worst case if predict not taken */ \
-            if (VL_UNLIKELY(*lwp)) return i * VL_EDATASIZE + VL_MOSTSETBITP1_I_T(lwp[i]); \
+            if (VL_UNLIKELY(*lwp)) return i * VL_EDATASIZE + VL_MOSTSETBITP1_I_T(*lwp); \
             lwp = lwp - (VL_GET_TYPE_JUMP(suffix)); \
         } \
         return 0; \

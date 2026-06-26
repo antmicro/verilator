@@ -114,8 +114,10 @@ public:
     // Reject when source is active and condp is false; set only on
     // outermost required-step Link
     bool m_rejectOnFail = false;
-    // Match when source is active and condp is true
-    bool m_matchOnPass = false;
+    // In addition to combined match-handler-launcher that ORs all edges together,
+    // add independent matching block for this edge. Meant for properties like
+    // eventually[n:m] that can fire match-handler more than once.
+    bool m_duplicateMatchLauncher = false;
     // Optional dynamic condition vertex for m_rejectOnFail. Used when the
     // success condition is another NFA state rather than a static expression.
     SvaStateVertex* m_condVtxp = nullptr;
@@ -690,7 +692,11 @@ class SvaNfaBuilder final {
         for (int k = 0; k < hi - lo; ++k) {
             SvaTransEdge* const linkp = guardedLink(currentp, passVertexp,
                                                     sampledRefOrClone(hoistVarp, exprp, flp), flp);
-            linkp->m_matchOnPass = true;
+            if (k > 0) {
+                // The first match is handled by common launcher that ORs all conditions,
+                // so we don't duplicate it for first edge
+                linkp->m_duplicateMatchLauncher = true;
+            }
             SvaStateVertex* const nextp = scopedCreateVertex();
             AstLogNot* negCondp = new AstLogNot{flp, sampledRefOrClone(hoistVarp, exprp, flp)};
             guardedEdge(currentp, nextp, negCondp, flp);
@@ -699,7 +705,7 @@ class SvaNfaBuilder final {
         SvaTransEdge* const passlinkp
             = guardedLink(currentp, passVertexp, sampledRefOrClone(hoistVarp, exprp, flp), flp);
         if (isTopLevelStep && !m_inUnboundedScope) passlinkp->m_rejectOnFail = true;
-        passlinkp->m_matchOnPass = true;
+        passlinkp->m_duplicateMatchLauncher = true;
         return {passVertexp, nullptr, {}};
     }
 
@@ -1658,7 +1664,7 @@ class SvaNfaLowering final {
 
         if (outPassMatchSrcsp) {
             for (const SvaTransEdge* const tep : c.edges) {
-                if (!tep->m_matchOnPass) continue;
+                if (!tep->m_duplicateMatchLauncher) continue;
                 const int fi = tep->fromVtxp()->color();
                 UASSERT_OBJ(c.vtx[fi]->datap()->stateSigp && tep->m_condp, tep->fromVtxp(),
                             "acceptOnPass Link must have condp and source stateSig");
@@ -2333,8 +2339,8 @@ class AssertNfaVisitor final : public VNVisitor {
     // lower() on a negated assert.
     void attachMatchHandlers(FileLine* flp, AstAssert* assertAssertp, AstAssert* assertWithFailp,
                              AstNodeExpr* matchExprp, AstSenTree* senTreep,
-                             const std::vector<AstNodeExpr*>* requiredStepSrcsp,
-                             const std::vector<AstNodeExpr*>* passMatchSrcsp) {
+                             const std::vector<AstNodeExpr*>& passMatchSrcs,
+                             const std::vector<AstNodeExpr*>* requiredStepSrcsp) {
         AstNode* passsp = assertAssertp ? assertAssertp->passsp() : nullptr;
         // Gate pass handler on match to prevent vacuous-pass firings.
         if (matchExprp) {
@@ -2378,21 +2384,10 @@ class AssertNfaVisitor final : public VNVisitor {
         }
 
         // Extra match-handler fires for simultaneous passes
-        if (passMatchSrcsp) {
-            UASSERT(passMatchSrcsp->size() >= 2,
-                    "passMatchSrcsp should be null or have >= 2 elements");
-            const std::vector<AstNodeExpr*>& passMatchSrcs = *passMatchSrcsp;
-            AstNodeExpr* cumulativeOrp = passMatchSrcs[0]->cloneTreePure(false);
-            for (size_t i = 1; i < passMatchSrcs.size(); ++i) {
-                AstNodeExpr* const srcp = passMatchSrcs[i];
-                AstNodeExpr* const condp = new AstLogAnd{flp, srcp->cloneTreePure(false),
-                                                         cumulativeOrp->cloneTreePure(false)};
-                m_modp->addStmtsp(
-                    new AstAlways{flp, VAlwaysKwd::ALWAYS, senTreep->cloneTree(false),
-                                  new AstIf{flp, condp, passsp->cloneTree(false), nullptr}});
-                cumulativeOrp = new AstLogOr{flp, cumulativeOrp, srcp->cloneTreePure(false)};
-            }
-            VL_DO_DANGLING(pushDeletep(cumulativeOrp), cumulativeOrp);
+        for (size_t i = 0; i < passMatchSrcs.size(); ++i) {
+            m_modp->addStmtsp(new AstAlways{flp, VAlwaysKwd::ALWAYS, senTreep->cloneTree(false),
+                                            new AstIf{flp, passMatchSrcs[i]->cloneTreePure(false),
+                                                      passsp->cloneTree(false), nullptr}});
         }
     }
 
@@ -2616,8 +2611,8 @@ class AssertNfaVisitor final : public VNVisitor {
         if (result.finalCondp && !result.finalCondp->backp()) pushDeletep(result.finalCondp);
 
         attachMatchHandlers(flp, assertAssertp, assertWithFailp, needMatch ? matchExprp : nullptr,
-                            senTreep, requiredStepSrcs.size() >= 2 ? &requiredStepSrcs : nullptr,
-                            passMatchSrcs.size() >= 2 ? &passMatchSrcs : nullptr);
+                            senTreep, passMatchSrcs,
+                            requiredStepSrcs.size() >= 2 ? &requiredStepSrcs : nullptr);
 
         for (AstNodeExpr* const srcp : requiredStepSrcs) pushDeletep(srcp);
         for (AstNodeExpr* const srcp : passMatchSrcs) pushDeletep(srcp);

@@ -3136,6 +3136,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
     bool m_inPackedArray = false;  // Currently traversing a packed array tree
     bool m_replaceWithAlias
         = true;  // Replace VarScope with an alias. Used in the handling of AstAlias
+    bool m_resolvingTypedef = false;
 
     struct DotStates final {
         DotPosition m_dotPos;  // Scope part of dotted resolution
@@ -3572,10 +3573,14 @@ class LinkDotResolveVisitor final : public VNVisitor {
         while (lookp) {
             VSymEnt* const foundp = lookp->findIdFlat(name);
             if (foundp && !VN_IS(foundp->nodep(), MemberDType)) {
-                // A variable is not a type candidate (IEEE 1800-2023 6.18); skip it so an
-                // enclosing type is found, but keep it to preserve the "found: VAR" error.
-                if (!VN_IS(foundp->nodep(), Var)) return foundp;
-                if (!shadowEntp) shadowEntp = foundp;
+                // Non-type entries are not type candidates
+                // (IEEE 1800-2023 6.18); skip them so an enclosing
+                // type is found, but keep one to preserve the "found: ..." error.
+                if (VN_IS(foundp->nodep(), Typedef) || VN_IS(foundp->nodep(), ParamTypeDType)
+                    || VN_IS(foundp->nodep(), Class)) {
+                    return foundp;
+                }
+                if (!shadowEntp && !VN_IS(foundp->nodep(), MemberDType)) shadowEntp = foundp;
             }
             lookp = lookp->fallbackp();
         }
@@ -5983,12 +5988,15 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     iterate(cpackagep);
                     return;
                 }
-                if (!cpackagerefp->classOrPackageSkipp()) {
+                // skip default typedef param value
+                const bool skipDefault = m_resolvingTypedef && m_statep->forPrimary();
+
+                if (!cpackagerefp->classOrPackageSkipp(skipDefault)) {
                     VSymEnt* const foundp = m_statep->resolveClassOrPackage(
                         m_ds.m_dotSymp, cpackagerefp, true, false, "class/package reference");
                     if (!foundp) return;
                 }
-                nodep->classOrPackagep(cpackagerefp->classOrPackageSkipp());
+                nodep->classOrPackagep(cpackagerefp->classOrPackageSkipp(skipDefault));
                 if (!VN_IS(nodep->classOrPackagep(), Class)
                     && !VN_IS(nodep->classOrPackagep(), Package)) {
                     if (m_statep->forPrimary()) {
@@ -6266,6 +6274,12 @@ class LinkDotResolveVisitor final : public VNVisitor {
         checkNoDot(nodep);
         VL_RESTORER(m_replaceWithAlias);
         if (nodep->user2()) m_replaceWithAlias = false;
+        iterateChildren(nodep);
+    }
+
+    void visit(AstTypedef* nodep) override {
+        VL_RESTORER(m_resolvingTypedef)
+        m_resolvingTypedef = true;
         iterateChildren(nodep);
     }
 

@@ -463,7 +463,7 @@ class TaskVisitor final : public VNVisitor {
         m_scopep->addVarsp(newvscp);
         return newvscp;
     }
-    AstVarScope* createVarScope(AstVar* invarp, const string& name) {
+    AstVarScope* createVarScope(AstVar* invarp, const string& name, AstNode* const insertAfterp = nullptr) {
         if (invarp->isParam() && VN_IS(invarp->valuep(), InitArray)) {
             // Move array params in functions into constant pool
             return v3Global.rootp()->constPoolp()->findTable(VN_AS(invarp->valuep(), InitArray));
@@ -477,7 +477,11 @@ class TaskVisitor final : public VNVisitor {
             newvarp->funcLocal(false);
             newvarp->propagateAttrFrom(invarp);
             newvarp->isInternal(true);
-            m_modp->addStmtsp(newvarp);
+            if (insertAfterp) {
+                insertAfterp->addNextHere(newvarp);
+            } else {
+                m_modp->addStmtsp(newvarp);
+            }
             AstVarScope* const newvscp = new AstVarScope{newvarp->fileline(), m_scopep, newvarp};
             m_scopep->addVarsp(newvscp);
             return newvscp;
@@ -654,7 +658,7 @@ class TaskVisitor final : public VNVisitor {
             } else if (inlineTask && portp->isNonOutput()) {
                 // Make input variable
                 AstVarScope* const newvscp
-                    = createVarScope(portp, namePrefix + "__" + portp->shortName());
+                    = createVarScope(portp, namePrefix + "__" + portp->shortName(), beginp);
                 portp->user2p(newvscp);
                 AstAssign* const preassp = connectPortMakeInAssign(pinp, newvscp, false);
                 // Put assignment in FRONT of all other statements

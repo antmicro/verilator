@@ -484,6 +484,7 @@ class TaskVisitor final : public VNVisitor {
             }
             AstVarScope* const newvscp = new AstVarScope{newvarp->fileline(), m_scopep, newvarp};
             m_scopep->addVarsp(newvscp);
+            newvarp->user2p(newvscp);
             return newvscp;
         }
     }

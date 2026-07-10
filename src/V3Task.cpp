@@ -709,17 +709,9 @@ class TaskVisitor final : public VNVisitor {
                         AstVarScope* const localVscp
                             = createVarScope(portp, namePrefix + "__" + portp->shortName());
                         portp->user2p(localVscp);
-                        if (portp->needsCReset() && portp->lifetime().isAutomatic()
-                            && !portp->valuep()) {
-                            // Reset automatic var to its default, on each invocation of function
-                            AstNode* const crstp = new AstAssign{
-                                portp->fileline(),
-                                new AstVarRef{portp->fileline(), portp, VAccess::WRITE},
-                                new AstCReset{portp->fileline(), portp, false}};
-                            portp->replaceWith(crstp);
-                        } else {
-                            portp->unlinkFrBack();
-                        }
+                        UASSERT_OBJ(!portp->needsCReset() || !portp->lifetime().isAutomatic()
+                                    || portp->valuep(), portp, "Automatic variable needing reset with no valuep()");
+                        portp->unlinkFrBack();
                         pushDeletep(portp);  // Remove it from the clone (not original)
                     }
                 }

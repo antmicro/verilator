@@ -709,7 +709,7 @@ class TaskVisitor final : public VNVisitor {
                         AstVarScope* const localVscp
                             = createVarScope(portp, namePrefix + "__" + portp->shortName());
                         portp->user2p(localVscp);
-                            portp->unlinkFrBack();
+                        portp->unlinkFrBack();
                         pushDeletep(portp);  // Remove it from the clone (not original)
                     }
                 }

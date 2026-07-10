@@ -710,7 +710,8 @@ class TaskVisitor final : public VNVisitor {
                             = createVarScope(portp, namePrefix + "__" + portp->shortName());
                         portp->user2p(localVscp);
                         UASSERT_OBJ(!portp->needsCReset() || !portp->lifetime().isAutomatic()
-                                    || portp->valuep(), portp, "Automatic variable needing reset with no valuep()");
+                                        || portp->valuep(),
+                                    portp, "Automatic variable needing reset with no valuep()");
                         portp->unlinkFrBack();
                         pushDeletep(portp);  // Remove it from the clone (not original)
                     }

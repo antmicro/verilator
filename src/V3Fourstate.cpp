@@ -1452,7 +1452,16 @@ class FourstateVisitor final : public VNVisitor {
         void visit(AstModDivS* const moddivsp) override {
             getFourstateExpressionDivValue(moddivsp);
         }
-
+        void visit(AstCLog2* const clog2p) override {
+            // |(a.xz) ? '1 : clog2(a)
+            FileLine* const flp = clog2p->fileline();
+            m_resultp = new AstCond{
+                flp, new AstRedOr{flp, getFourstateExpressionXZ(clog2p->lhsp())},
+                createZeroOrOnesp(clog2p, true),
+                new AstCLog2{flp, getFourstateExpressionValue(
+                                      clog2p->lhsp(),
+                                      true /*must be in tmp so it always gets evaluated*/)}};
+        }
         void visit(AstConcat* const concatp) override {
             // {a.value, b.value}
             m_resultp = new AstConcat{concatp->fileline(),
@@ -1694,7 +1703,13 @@ class FourstateVisitor final : public VNVisitor {
         void visit(AstModDivS* const moddivsp) override {
             getFourstateExpressionDivValue(moddivsp);
         }
-
+        void visit(AstCLog2* const clog2p) override {
+            // |(a.xz) ? '1 : '0
+            FileLine* const flp = clog2p->fileline();
+            m_resultp
+                = new AstCond{flp, new AstRedOr{flp, getFourstateExpressionXZ(clog2p->lhsp())},
+                              createZeroOrOnesp(clog2p, true), createZeroOrOnesp(clog2p, false)};
+        }
         void visit(AstConcat* const concatp) override {
             // {a.xz, b.xz}
             m_resultp = new AstConcat{concatp->fileline(),

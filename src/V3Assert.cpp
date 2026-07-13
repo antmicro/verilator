@@ -636,6 +636,23 @@ class AssertVisitor final : public VNVisitor {
             if (!passsp && !failsp)
                 failsp = newFireAssertUnchecked(
                     nodep, VN_IS(nodep, AssertIntrinsic) ? "'$cast' failed." : "'assert' failed.");
+            // add support for --coverage-assert
+            if (VN_IS(nodep, Assert) && v3Global.opt.coverageAssert()) {
+                AstCoverOtherDecl* const declp = new AstCoverOtherDecl{
+                    nodep->fileline(), "v_assert/" + m_modp->prettyName(), "assert", "", 0};
+                //                declp->hier(m_beginHier);
+                m_modp->addStmtsp(declp);
+                AstCoverInc* const covincp = new AstCoverInc{nodep->fileline(), declp};
+                if (message != "") covincp->declp()->comment(message);
+                if (passsp) {
+                    passsp = newIfAssertPassOn(passsp, nodep->directive(), nodep->userType(),
+                                               /*vacuous=*/false);
+                    passspGated = true;
+                    passsp = AstNode::addNext<AstNode, AstNode>(covincp, passsp);
+                } else {
+                    passsp = covincp;
+                }
+            }
         } else {
             nodep->v3fatalSrc("Unknown node type");
         }

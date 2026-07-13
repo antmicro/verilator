@@ -225,6 +225,7 @@ private:
     bool m_binary = false;          // main switch: --binary
     bool m_build = false;           // main switch: --build
     bool m_context = true;          // main switch: --Wcontext
+    bool m_coverageAssert = false;    // main switch: --coverage-assert
     bool m_coverageExpr = false;    // main switch: --coverage-expr
     bool m_coverageFsm = false;     // main switch: --coverage-fsm
     bool m_coverageLine = false;    // main switch: --coverage-block
@@ -456,7 +457,7 @@ private:
     void optimize(int level);
     void showVersion(bool verbose);
     void coverage(bool flag) {
-        m_coverageLine = m_coverageToggle = m_coverageExpr = m_coverageFsm = m_coverageUser = flag;
+        m_coverageAssert = m_coverageLine = m_coverageToggle = m_coverageExpr = m_coverageFsm = m_coverageUser = flag;
     }
     static bool suffixed(const string& sw, const char* arg);
     static string parseFileArg(const string& optdir, const string& relfilename);
@@ -519,7 +520,7 @@ public:
     bool coverage() const VL_MT_SAFE {
         // Any enabled coverage kind, including FSM coverage. Code generation
         // and runtime support should generally query this accessor.
-        return m_coverageLine || m_coverageToggle || m_coverageExpr || m_coverageUser
+        return m_coverageAssert || m_coverageLine || m_coverageToggle || m_coverageExpr || m_coverageUser
                || m_coverageFsm;
     }
     bool coverageNonFsm() const VL_MT_SAFE {
@@ -528,6 +529,7 @@ public:
         // extraction still happens through a separate early-recognition path.
         return m_coverageLine || m_coverageToggle || m_coverageExpr || m_coverageUser;
     }
+    bool coverageAssert() const { return m_coverageAssert; }
     bool coverageExpr() const { return m_coverageExpr; }
     bool coverageFsm() const { return m_coverageFsm; }
     bool coverageLine() const { return m_coverageLine; }

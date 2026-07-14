@@ -348,6 +348,26 @@ class FourstateLogicTypePropagator final : public VNVisitor {
         setFourstate(nodep, isFourstate(nodep->thenp()) || isFourstate(nodep->elsep()),
                      m_fourstateInSubtree);
     }
+    void visit(AstCountBits* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, false, m_fourstateInSubtree);
+    }
+    void visit(AstCountOnes* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, false, m_fourstateInSubtree);
+    }
+    void visit(AstOneHot* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, false, m_fourstateInSubtree);
+    }
+    void visit(AstOneHot0* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, false, m_fourstateInSubtree);
+    }
+    void visit(AstIsUnknown* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, false, m_fourstateInSubtree);
+    }
     void visit(AstCReset* const nodep) override {
         iterateChildrenSeparately(nodep);
         setFourstate(nodep, false, m_fourstateInSubtree);
@@ -1846,6 +1866,35 @@ class FourstateVisitor final : public VNVisitor {
         setFourstate(result->rhsp(), false);
         return result;
     }
+    AstNodeExpr* getBitMask(AstNodeExpr* const exprp, AstNodeExpr* const ctrlp) {
+        FileLine* const flp = exprp->fileline();
+        AstNodeExpr* const valuep = getFourstateExpressionValue(exprp);
+        AstNodeExpr* const xzp = getFourstateExpressionXZ(exprp);
+        AstConst* maskp = new AstConst{flp, AstConst::WidthedValue{}, ctrlp->width(), 1};
+        AstNodeExpr* const isValuep = new AstRedOr{
+            flp, new AstAnd{flp, getFourstateExpressionValue(ctrlp), maskp->cloneTree(false)}};
+        AstNodeExpr* const isXZp
+            = new AstRedOr{flp, new AstAnd{flp, getFourstateExpressionXZ(ctrlp), maskp}};
+        // 'x:  a.value &  a.xz
+        // 'z: ~a.value &  a.xz
+        // '1:  a.value & ~a.xz
+        // '0: ~a.value & ~a.xz
+        AstCond* const resultp = new AstCond{
+            flp, isXZp,
+            new AstCond{
+                flp, isValuep->cloneTree(false),
+                new AstAnd{flp, valuep->cloneTree(false), xzp->cloneTree(false)},  // 'x
+                new AstAnd{flp, new AstNot{flp, valuep->cloneTree(false)},
+                           xzp->cloneTree(false)},  // 'z
+            },
+            new AstCond{
+                flp, isValuep,
+                new AstAnd{flp, valuep->cloneTree(false),
+                           new AstNot{flp, xzp->cloneTree(false)}},  // '1
+                new AstNot(flp, new AstOr{flp, valuep, xzp}),  // '0
+            }};
+        return resultp;
+    }
 
     // VISITORS
     void visit(AstNodeAssign* const nodep) override {
@@ -2298,6 +2347,77 @@ class FourstateVisitor final : public VNVisitor {
         nodep->unlinkFrBack(&relinker);
         pushDeletep(nodep);
         relinker.relink(newp);
+    }
+    void visit(AstCountBits* const nodep) override {
+        if (!isFourstate(nodep->lhsp()) && !isFourstate(nodep->rhsp())
+            && !isFourstate(nodep->thsp()) && !isFourstate(nodep->fhsp())) {
+            iterateChildren(nodep);
+            return;
+        }
+        AstNodeExpr* const exprp = nodep->lhsp();
+        FileLine* const flp = exprp->fileline();
+        // sum up bits from all ctrls
+        // same nodes will be optimized out later
+        AstOr* const onesIntersectionp = new AstOr{
+            flp,
+            new AstOr{
+                flp,
+                getBitMask(exprp, nodep->rhsp()),
+                getBitMask(exprp, nodep->thsp()),
+            },
+            getBitMask(exprp, nodep->fhsp()),
+        };
+        AstCountOnes* const newExprp = new AstCountOnes{flp, onesIntersectionp};
+        newExprp->dtypeSetInt();
+        { FourstateLogicTypePropagator{newExprp}; }
+        nodep->replaceWith(newExprp);
+        pushDeletep(nodep);
+    }
+    void visit(AstCountOnes* const nodep) override {
+        if (isFourstate(nodep->lhsp())) {
+            AstNodeExpr* const lhsp = nodep->lhsp();
+            lhsp->replaceWith(getTwoStateCast(lhsp));
+            pushDeletep(lhsp);
+        }
+        iterateChildren(nodep);
+    }
+    void visit(AstOneHot* const nodep) override {
+        if (isFourstate(nodep->lhsp())) {
+            AstNodeExpr* const lhsp = nodep->lhsp();
+            lhsp->replaceWith(getTwoStateCast(lhsp));
+            pushDeletep(lhsp);
+        }
+        iterateChildren(nodep);
+    }
+    void visit(AstOneHot0* const nodep) override {
+        if (isFourstate(nodep->lhsp())) {
+            AstNodeExpr* const lhsp = nodep->lhsp();
+            lhsp->replaceWith(getTwoStateCast(lhsp));
+            pushDeletep(lhsp);
+        }
+        iterateChildren(nodep);
+    }
+    void visit(AstIsUnknown* const nodep) override {
+        FileLine* const flp = nodep->fileline();
+        AstNodeExpr* newExprp;
+        if (isFourstate(nodep->lhsp())) {
+            if (nodep->lhsp()->isPure()) {
+                newExprp = new AstRedOr{flp, getFourstateExpressionXZ(nodep->lhsp())};
+            } else {
+                newExprp = new AstExprStmt{
+                    flp, new AstStmtExpr{flp, getFourstateExpressionValue(nodep->lhsp())},
+                    new AstRedOr{flp, getFourstateExpressionXZ(nodep->lhsp())}};
+            }
+        } else if (nodep->lhsp()->isPure()) {
+            newExprp = createZeroOrOnesp(nodep);
+        } else {
+            AstNodeExpr* const lhsp = nodep->lhsp()->unlinkFrBack();
+            newExprp = new AstRedOr{flp, new AstAnd{flp, lhsp, createZeroOrOnesp(lhsp)}};
+        }
+        { FourstateLogicTypePropagator{newExprp}; }
+        nodep->replaceWith(newExprp);
+        pushDeletep(nodep);
+        iterateChildren(newExprp);
     }
     // Skip these trees since these expressions are not supported anyway
     // LCOV_EXCL_START

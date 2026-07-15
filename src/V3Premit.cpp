@@ -103,6 +103,9 @@ class PremitVisitor final : public VNVisitor {
         UASSERT_OBJ(m_stmtp, nodep, "Attempting to create temporary with no insertion point");
         UINFO(4, "createTemp: " << nodep);
 
+        bool isCondition
+            = VN_IS(nodep->backp(), If) && VN_AS(nodep->backp(), If)->condp() == nodep;
+
         VNRelinker relinker;
         nodep->unlinkFrBack(&relinker);
 
@@ -132,7 +135,14 @@ class PremitVisitor final : public VNVisitor {
         }
 
         // Replace node with VarRef to new Var
-        relinker.relink(new AstVarRef{flp, varp, VAccess::READ});
+        if (isCondition && varp->isWide()) {
+            // Replace with var!=0 if its a wide condp (VlWide cannot be directly converted to
+            // bool)
+            relinker.relink(
+                new AstNeq{flp, new AstVarRef{flp, varp, VAccess::READ}, new AstConst{flp, 0}});
+        } else {
+            relinker.relink(new AstVarRef{flp, varp, VAccess::READ});
+        }
 
         // Return the temporary variable
         return varp;

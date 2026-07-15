@@ -663,9 +663,13 @@ class TaskVisitor final : public VNVisitor {
                 portp->user2p(newvscp);
                 AstAssign* const preassp = connectPortMakeInAssign(pinp, newvscp, false);
                 // Put assignment in FRONT of all other statements
-                if (AstNode* const afterp = beginp->nextp()) {
-                    afterp->unlinkFrBackWithNext();
-                    AstNode::addNext<AstNode, AstNode>(preassp, afterp);
+                AstNode* firstStmtp = beginp->nextp();
+                while (firstStmtp && !VN_IS(firstStmtp, NodeStmt)) {
+                    firstStmtp = firstStmtp->nextp();
+                }
+                if (firstStmtp) {
+                    firstStmtp->unlinkFrBackWithNext();
+                    AstNode::addNext<AstNode, AstNode>(preassp, firstStmtp);
                 }
                 beginp->addNext(preassp);
             }

@@ -576,6 +576,18 @@ class LinkParseVisitor final : public VNVisitor {
         }
     }
 
+    void visit(AstSConsRep* nodep) override {
+        cleanFileline(nodep);
+        iterateChildren(nodep);
+        // IEEE 1800-2023 16.9.2: [+] is equivalent to [*1:$].
+        if (!VN_IS(nodep->maxCountp(), Unbounded) || !nodep->countp()->isOne()) return;
+        AstSConsRep* const newp
+            = new AstSConsRep{nodep->fileline(), nodep->exprp()->unlinkFrBack(),
+                              nodep->countp()->unlinkFrBack(), nullptr, true};
+        nodep->replaceWith(newp);
+        VL_DO_DANGLING(nodep->deleteTree(), nodep);
+    }
+
     void visit(AstAttrOf* nodep) override {
         cleanFileline(nodep);
         iterateChildren(nodep);

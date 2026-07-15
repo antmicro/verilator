@@ -34,6 +34,7 @@ module t (
   int count_fail9 = 0;
   int count_fail10 = 0;
   int count_fail11 = 0;
+  int count_fail12 = 0;
 
   // Test 1: a[*3] |-> b
   assert property (@(posedge clk) a [* 3] |-> b)
@@ -79,6 +80,10 @@ module t (
   assert property (@(posedge clk) a [*] ##1 b)
   else count_fail11 <= count_fail11 + 1;
 
+  // Test 12: a[*1:$] is equivalent to a[+]
+  assert property (@(posedge clk) a[*1:$] ##1 b)
+  else count_fail12 <= count_fail12 + 1;
+
   // Counter FSM with M>0: range > kChainLimit (256) forces counter vertex
   // creation; min>0 exercises the Gte/active gating path in resolveLinks and
   // emitNbaLogic. Cover-only so count_fail values above are undisturbed.
@@ -112,6 +117,7 @@ module t (
       // a[*] ##1 b: NFA treats unbounded [*] as liveness (no reject);
       // Should be definite antecedent
       `checkd(count_fail11, 0);  // All other sims: 29
+      `checkd(count_fail12, count_fail7);
       $write("*-* All Finished *-*\n");
       $finish;
     end

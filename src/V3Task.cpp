@@ -463,7 +463,8 @@ class TaskVisitor final : public VNVisitor {
         m_scopep->addVarsp(newvscp);
         return newvscp;
     }
-    AstVarScope* createVarScope(AstVar* invarp, const string& name, AstNode* const insertAfterp = nullptr) {
+    AstVarScope* createVarScope(AstVar* invarp, const string& name,
+                                AstNode* const insertAfterp = nullptr) {
         if (invarp->isParam() && VN_IS(invarp->valuep(), InitArray)) {
             // Move array params in functions into constant pool
             return v3Global.rootp()->constPoolp()->findTable(VN_AS(invarp->valuep(), InitArray));

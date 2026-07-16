@@ -729,7 +729,8 @@ class CoverageVisitor final : public VNVisitor {
     void visit(AstCover* nodep) override {
         UINFO(4, " COVER: " << nodep);
         VL_RESTORER(m_state);
-// REDUDANT LINE! It's done in createHandle ;)        m_state.m_on = true;  // Always do cover blocks, even if there's a $stop
+        // REDUDANT LINE! It's done in createHandle ;)        m_state.m_on = true;  // Always do
+        // cover blocks, even if there's a $stop
         createHandle(nodep);
         iterateChildren(nodep);
         if (!nodep->coverincsp() && v3Global.opt.coverageUser()) {

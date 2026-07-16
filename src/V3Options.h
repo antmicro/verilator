@@ -457,7 +457,8 @@ private:
     void optimize(int level);
     void showVersion(bool verbose);
     void coverage(bool flag) {
-        m_coverageAssert = m_coverageLine = m_coverageToggle = m_coverageExpr = m_coverageFsm = m_coverageUser = flag;
+        m_coverageAssert = m_coverageLine = m_coverageToggle = m_coverageExpr = m_coverageFsm
+            = m_coverageUser = flag;
     }
     static bool suffixed(const string& sw, const char* arg);
     static string parseFileArg(const string& optdir, const string& relfilename);
@@ -520,8 +521,8 @@ public:
     bool coverage() const VL_MT_SAFE {
         // Any enabled coverage kind, including FSM coverage. Code generation
         // and runtime support should generally query this accessor.
-        return m_coverageAssert || m_coverageLine || m_coverageToggle || m_coverageExpr || m_coverageUser
-               || m_coverageFsm;
+        return m_coverageAssert || m_coverageLine || m_coverageToggle || m_coverageExpr
+               || m_coverageUser || m_coverageFsm;
     }
     bool coverageNonFsm() const VL_MT_SAFE {
         // The broad line/toggle/expr/user coverage transforms use this

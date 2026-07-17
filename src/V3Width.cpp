@@ -9070,7 +9070,7 @@ class WidthVisitor final : public VNVisitor {
         AstNodeDType* const expDTypep = underp->dtypep();
         underp = iterateCheck(parentp, side, underp, SELF, FINAL, expDTypep, EXTEND_EXP);
         AstNodeDType* const checkDtp = expDTypep->skipRefToEnump();
-        if (!checkDtp->isIntegralOrPacked()) {
+        if (!checkDtp->basicp()->untyped() && !checkDtp->isIntegralOrPacked()) {
             parentp->v3error("Expected numeric type, but got a " << checkDtp->prettyDTypeNameQ()
                                                                  << " data type");
         }

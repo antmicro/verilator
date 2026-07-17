@@ -20,6 +20,10 @@ module t (
     @(posedge clk) cyc % 2 == cyc_mod_2 |=> val == expected;
   endproperty
 
+  property stable(signal);
+    @(posedge clk) $stable(signal);
+  endproperty
+
   assert property (check(0, 5'b11111))
   else begin
     // Assertion should pass

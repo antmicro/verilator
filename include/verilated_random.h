@@ -421,6 +421,17 @@ public:
             = std::make_shared<const VlRandomVar>(name, width, &var, dimension, randmodeIdx);
     }
 
+    template <typename T>
+    typename std::enable_if<!VlContainsCustomStruct<T>::value && !IsVlUnpacked<T>::value,
+                            void>::type
+    write_var(T& var, int width, const std::string& name, int dimension,
+              std::uint32_t randmodeIdx = std::numeric_limits<std::uint32_t>::max()) {
+        if (m_vars.find(name) != m_vars.end()) return;
+        // TODO: make_unique once VlRandomizer is per-instance not per-ref
+        m_vars[name]
+            = std::make_shared<const VlRandomVar>(name, width, &var, dimension, randmodeIdx);
+    }
+
     // Register user-defined struct variable by recursively writing members
     template <typename T>
     typename std::enable_if<VlIsCustomStruct<T>::value, void>::type

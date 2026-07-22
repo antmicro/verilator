@@ -126,6 +126,9 @@ public:
 // Unroll one AstLoop
 
 class UnrollOneVisitor final : VNVisitor {
+    // NODE STATE
+    // AstVar::user2p()    AstVar*: pointer to original variable
+    const VNUser2InUse m_inuser2;
     // STATE
     UnrollStats& m_stats;  // Statistics tracking
     UnrolllBindings& m_bindings;  // Variable bindings
@@ -163,7 +166,9 @@ class UnrollOneVisitor final : VNVisitor {
             }
 
             // Clone and iterate one body statement
-            m_wrapp->addStmtsp(stmtp->cloneTree(false));
+            AstNode* copiedStmtp = stmtp->cloneTree(false);
+            if (VN_IS(copiedStmtp, Var)) copiedStmtp->clonep()->user2p(copiedStmtp);
+            m_wrapp->addStmtsp(copiedStmtp);
             iterateAndNextNull(m_wrapp->stmtsp());
             // Give up if failed
             if (!m_ok) return false;
@@ -211,6 +216,10 @@ class UnrollOneVisitor final : VNVisitor {
                 }
             }
         }
+        m_wrapp->foreachAndNext([](AstVarRef* const refp) {
+            if (AstVar* const cloneVarp = VN_AS(refp->varp()->user2p(), Var))
+                refp->varp(cloneVarp);
+        });
         // If there is no loop test in the body, give up, it's an infinite loop
         if (!foundLoopTest) {
             cantUnroll(m_loopp, m_stats.m_nFailInfinite);

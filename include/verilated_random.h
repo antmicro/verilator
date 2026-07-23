@@ -56,6 +56,11 @@ public:
         , m_idxWidths{idxWidths} {}
 };
 using ArrayInfoMap = std::map<std::string, std::shared_ptr<const ArrayInfo>>;
+// One sampled assignment: var name -> {flat element index -> raw SMT value
+// string}. Scalars just have a single {0: value} entry. Element index
+// matches VlRandomArrayVarTemplate's flat naming (name()+to_string(j)), the
+// same index ArrayInfo::m_index uses, so it can be fed straight to set().
+using Witness = std::map<std::string, std::map<int, std::string>>;
 
 class VlRandomVar VL_NOT_FINAL {
     std::string m_name;  // Variable name
@@ -83,6 +88,10 @@ public:
     virtual void emitGetValue(std::ostream& s) const;
     virtual void emitExtract(std::ostream& s, int i) const;
     virtual void emitType(std::ostream& s) const;
+    // Emit the expression referring to element j as a whole (the full var
+    // for scalars, "(select arr idx...)" for array element j). Used by BSAT
+    // to query/re-assert one whole element's value, not a single bit.
+    virtual void emitElement(std::ostream& s, int j) const;
     // Emit the current runtime value as an SMT bit-vector literal (#b...).
     // Used by randomize(null) to pin a var to its existing value.
     virtual void emitConcreteValue(std::ostream& s) const;
@@ -213,6 +222,18 @@ public:
         const int elementCounts = countMatchingElements(*m_arrVarsRefp, name());
         return width() * elementCounts;
     }
+    void emitElement(std::ostream& s, int j) const override {
+        const std::string indexed_name = name() + std::to_string(j);
+        const auto it = m_arrVarsRefp->find(indexed_name);
+        if (it != m_arrVarsRefp->end()) {
+            const std::vector<IData>& indices = it->second->m_indices;
+            const std::vector<size_t>& idxWidths = it->second->m_idxWidths;
+            s << ' ';
+            emitSelect(s, indices, idxWidths);
+        } else {
+            VL_FATAL_MT(__FILE__, __LINE__, "randomize", "indexed_name not found in m_arr_vars");
+        }
+    }
     void emitExtract(std::ostream& s, int i) const override {
         const int j = i / width();
         i = i % width();
@@ -256,18 +277,63 @@ class VlRandomizer VL_NOT_FINAL {
         m_solveBefore;  // Solve-before ordering pairs (beforeVar, afterVar)
     bool m_checkOnly = false;  // Set for randomize(null)
 
+    // ---  UniGen2 sampling state  ---
+    std::vector<Witness> m_witnesses;  // Raw BSAT pool for this cell
+    std::vector<Witness> m_loTreshWitnesses;  // Consumable batch: loThresh random picks from m_witnesses
+    // UniGen2 parameter cache: estimateParameters() only depends on the
+    // constraints, not on which batch we're generating, so its (expensive)
+    // result is reused across generateSamples() calls until the constraints
+    // actually change.
+    bool m_ug2ParamsValid = false;
+    size_t m_ug2ParamHash = 0;
+    int m_ug2HashBits = 0;
+    int m_ug2LoTresh = 0;
+    int m_ug2HiTresh = 0;
+    // Leapfrogging: remember which of {hashBits-2, hashBits-1, hashBits}
+    // succeeded last time, and try that one first next time.
+    bool m_ug2HasLastSuccess = false;
+    int m_ug2LastSuccessI = 0;
+    // getSolver() is a single process-wide session shared by every
+    // VlRandomizer instance, so "is my declare/assert still live" can't be a
+    // per-instance flag -- some OTHER instance's call could have reset the
+    // shared solver in between. These track who currently owns the live
+    // (declared+asserted) session and against which constraint hash, so any
+    // instance/any constraint change correctly forces a fresh reset.
+    static const void* s_ug2LiveOwner;
+    static size_t s_ug2LiveHash;
     // PRIVATE METHODS
     void randomConstraint(std::ostream& os, VlRNG& rngr, int bits);
+    // Assert that a random XOR of the rand vars' bits equals a random target,
+    // one such equation per bit, each with independent per-bit coin flips.
+    bool unigenXors(std::iostream& os, VlRNG& rngr, int bits);
     bool parseSolution(std::iostream& os, bool log = false);
     bool checkSat(std::iostream& os);
     // Assert the maximal compatible soft-constraint set onto the open session.
     void relaxSoftConstraints(std::iostream& os);
-    // Indices of the "a<N>" literals named by (get-unsat-assumptions).
-    std::vector<int> readUnsatAssumptions(std::iostream& os);
     void emitRandcExclusions(std::ostream& os) const;  // Emit randc exclusion constraints
     void recordRandcValues();  // Record solved randc values for future exclusion
     size_t hashConstraints() const;
     bool nextPhased(VlRNG& rngr);  // Phased solving for solve...before
+    // randc vars can't share Unigen2's batching (a cached batch is drawn
+    // before any of its witnesses are "used", so two of them could carry the
+    // same randc value). Solve randc vars alone first, one exclusion-checked
+    // value per var, then pin those values and let Unigen2 batch-sample
+    // everything else around them.
+    bool nextWithRandc(VlRNG& rngr);
+
+    // ---  UniGen2 sampling  ---
+    bool estimateParameters(std::iostream& os, VlRNG& rngr, double epsilon, int& hashBits,
+                             int& loTresh, int& hiTresh);
+    // Returns up to `bound` distinct witnesses satisfying whatever's already
+    // asserted on the solver, by repeatedly asking for a model then blocking
+    // it so the next (check-sat) is forced to find a different one.
+    int BSAT(std::iostream& solver, int bound, std::vector<Witness>& witnesses);
+    bool Unigen2(VlRNG& rngr);
+    // Write one sampled witness back into the live SV variables (scalars via
+    // set("", value); array elements via a hex-encoded flat index).
+    void writeBackWitness(const Witness& witness);
+    bool generateSamples(int& hashBits, int& loTresh, int& hiTresh, std::iostream& solver,
+                          VlRNG& rngr);
 
 public:
     // CONSTRUCTORS

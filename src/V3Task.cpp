@@ -121,6 +121,8 @@ class TaskStateVisitor final : public VNVisitor {
     std::vector<AstInitialAutomatic*> m_initialps;  // Initial blocks to move
     bool m_underPortVar = false;  // Visiting under a port AstVar; any expression there
                                   // is a default value, evaluated at call sites only
+    bool m_inLoop = false;
+    bool m_suspendableInLoop = false;
 
 public:
     // METHODS
@@ -251,6 +253,9 @@ private:
         // Virtual-interface method calls dispatch through a runtime handle and
         // must not be inlined.
         if (isVirtualIfaceMethodCall(nodep)) taskVtxp->needsNonInlineCFunc(true);
+        // Suspendable tasks called inside loops can't be inlined,
+        // because otherwise multiple calls may use the same variables at the same time
+        if (m_suspendableInLoop) taskVtxp->noInline(true);
         // Do we have to disable inlining the function?
         const V3TaskConnects tconnects = V3Task::taskConnects(nodep, nodep->taskp()->stmtsp());
         if (!taskVtxp->noInline()) {  // Else short-circuit below
@@ -335,6 +340,16 @@ private:
     }
     void visit(AstInitialAutomatic* nodep) override {
         m_initialps.push_back(nodep);
+        iterateChildren(nodep);
+    }
+    void visit(AstLoop* nodep) override {
+        VL_RESTORER(m_inLoop);
+        m_inLoop = true;
+        iterateChildren(nodep);
+    }
+    void visit(AstFork* nodep) override {
+        VL_RESTORER(m_suspendableInLoop);
+        m_suspendableInLoop |= m_inLoop && !nodep->joinType().join();
         iterateChildren(nodep);
     }
     //--------------------

@@ -4,22 +4,40 @@
 // SPDX-FileCopyrightText: 2024 Antmicro Ltd
 // SPDX-License-Identifier: CC0-1.0
 
+
+
 `define check_rand(cl, field, cond) \
 begin \
    automatic longint prev_result; \
    automatic int ok; \
-   if (!bit'(cl.randomize())) $stop; \
+   if (!bit'(cl.randomize())) begin \
+      $display("wywalil sie randomize"); \
+      $stop; \
+   end \
    prev_result = longint'(field); \
-   if (!(cond)) $stop; \
-   repeat(9) begin \
+   if (!(cond)) begin \
+      $display("wywalil sie 1 cond"); \
+      $stop; \
+   end \
+   repeat (9) begin \
       longint result; \
-      if (!bit'(cl.randomize())) $stop; \
+      if (!bit'(cl.randomize())) begin \
+         $display("wywalil sie cond"); \
+         $stop; \
+      end \
       result = longint'(field); \
-      if (!(cond)) $stop; \
+      if (!(cond)) begin \
+         $display("wywalil sie cond"); \
+         $stop; \
+      end \
       if (result != prev_result) ok = 1; \
       prev_result = result; \
+      $display("Randomized value: %0d", result); \
    end \
-   if (ok != 1) $stop; \
+   if (ok != 1) begin \
+      $display("wywalil ok != 1"); \
+      $stop; \
+   end \
 end
 
 class Foo;

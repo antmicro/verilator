@@ -42,9 +42,7 @@ def jensen_shannon_divergence_pct(observed_counts, solutions):
 
 # (sel, arr[0], arr[1]): sel==1 -> arr[0] > arr[1]; sel==0 -> arr[0] <= arr[1]
 SOLUTIONS = [
-    '%d %d %d' % ((1 if arr0 > arr1 else 0), arr0, arr1)
-    for arr0 in range(8)
-    for arr1 in range(8)
+    '%d %d %d' % ((1 if arr0 > arr1 else 0), arr0, arr1) for arr0 in range(8) for arr1 in range(8)
 ]
 
 observed = {}
@@ -56,7 +54,6 @@ with open(test.run_log_filename, 'r', encoding='latin-1') as fh:
 
 jsd = jensen_shannon_divergence_pct(observed, SOLUTIONS)
 if jsd > JSD_MAX:
-    test.error("JSD %.6f exceeds max %.6f -- distribution is not uniform enough" %
-               (jsd, JSD_MAX))
+    test.error("JSD %.6f exceeds max %.6f -- distribution is not uniform enough" % (jsd, JSD_MAX))
 
 test.passes()

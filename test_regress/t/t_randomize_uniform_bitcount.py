@@ -52,7 +52,6 @@ with open(test.run_log_filename, 'r', encoding='latin-1') as fh:
 
 jsd = jensen_shannon_divergence_pct(observed, SOLUTIONS)
 if jsd > JSD_MAX:
-    test.error("JSD %.6f exceeds max %.6f -- distribution is not uniform enough" %
-               (jsd, JSD_MAX))
+    test.error("JSD %.6f exceeds max %.6f -- distribution is not uniform enough" % (jsd, JSD_MAX))
 
 test.passes()

@@ -445,7 +445,6 @@ void VlRandomizer::randomConstraint(std::ostream& os, VlRNG& rngr, int bits) {
     os << ')';
 }
 
-
 static std::string toBitStringWide(const std::vector<EData>& buf, int width) {
     std::string result = "#b";
     for (int i = width - 1; i >= 0; --i)

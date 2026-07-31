@@ -279,7 +279,8 @@ class VlRandomizer VL_NOT_FINAL {
 
     // ---  UniGen2 sampling state  ---
     std::vector<Witness> m_witnesses;  // Raw BSAT pool for this cell
-    std::vector<Witness> m_loTreshWitnesses;  // Consumable batch: loThresh random picks from m_witnesses
+    std::vector<Witness>
+        m_loTreshWitnesses;  // Consumable batch: loThresh random picks from m_witnesses
     // UniGen2 parameter cache: estimateParameters() only depends on the
     // constraints, not on which batch we're generating, so its (expensive)
     // result is reused across generateSamples() calls until the constraints
@@ -323,7 +324,7 @@ class VlRandomizer VL_NOT_FINAL {
 
     // ---  UniGen2 sampling  ---
     bool estimateParameters(std::iostream& os, VlRNG& rngr, double epsilon, int& hashBits,
-                             int& loTresh, int& hiTresh);
+                            int& loTresh, int& hiTresh);
     // Returns up to `bound` distinct witnesses satisfying whatever's already
     // asserted on the solver, by repeatedly asking for a model then blocking
     // it so the next (check-sat) is forced to find a different one.
@@ -333,7 +334,7 @@ class VlRandomizer VL_NOT_FINAL {
     // set("", value); array elements via a hex-encoded flat index).
     void writeBackWitness(const Witness& witness);
     bool generateSamples(int& hashBits, int& loTresh, int& hiTresh, std::iostream& solver,
-                          VlRNG& rngr);
+                         VlRNG& rngr);
 
 public:
     // CONSTRUCTORS

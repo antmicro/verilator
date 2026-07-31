@@ -25,11 +25,16 @@ test.compile()
 # every later call. once=False acts again in every solver, so the runtime gives
 # up and disables randomization.
 runs = [
-    ('die_at', True, 11),  # solver exits with a model reply pending
-    ('die_status_at', True, 11),  # solver exits with a status pending
-    ('mute_at', True, 11),  # solver stays running but stops answering
-    ('garbage_at', True, 11),  # solver answers, but not with an S-expression
-    ('garbage_at', False, 0),  # every solver answers the same way
+    ('die_at', 10, 3),  # solver exits with a model reply pending
+    ('die_status_at', 4, 1),  # solver exits with a soft constraint status pending
+    ('die_status_at', 7, 2),  # solver exits between the status and the model read
+    ('mute_at', 3, 2),  # solver stays running but stops answering
+    ('garbage_at', 2, 1),  # solver answers, but not with an S-expression
+    # These land on a reply the UniGen2 cell enumerator reads
+    ('unknown_var', 5, 2),  # reply names a variable that was not asked for
+    ('pair_paren_all', 10, 3),  # a (name value) pair lost its opening paren
+    ('bad_value_all', 10, 3),  # a value with no base
+    ('extra_pair_all', 14, 3),  # one pair more than was asked for
 ]
 
 for mode, once, npass in runs:

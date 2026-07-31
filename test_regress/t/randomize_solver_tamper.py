@@ -10,19 +10,21 @@
 # Forwards the SMT-LIB conversation to a real solver, tampering the replies.
 #
 # Input arguments from environment variables:
-# TAMPER: bad_base | bad_digits | bad_index | bad_value | bare_hash | binary
-#         | core_junk | crlf | die_at | die_status_at | diversity_model
+# TAMPER: bad_base | bad_digits | bad_index | bad_value | bad_value_all
+#         | bare_hash | binary | core_junk | crlf | die_at | die_status_at
 #         | dup_model | err_assume | err_core | err_multiline | err_once
 #         | err_phase | err_reply | err_trunc | err_unbal | err_unbal_cont
-#         | garbage_assume | garbage_at | garbage_model | garbage_status
-#         | high_digit | indent | low_digit | model_trunc | multiline | mute_at
-#         | no_digits | none | octal | oor_assume | phase_model | phase_trunc
-#         | short_model | success | unknown_once | unknown_twice | unknown_var
-#         | unsat_recheck | unsupported_once | upper_hex
+#         | extra_pair_all | garbage_assume | garbage_at | garbage_model
+#         | garbage_status | high_digit | indent | low_digit | model_trunc
+#         | multiline | mute_at | no_digits | none | octal | oor_assume
+#         | pair_paren_all | phase_model | phase_trunc | short_model | success
+#         | unknown_once | unknown_twice | unknown_var | unsupported_once
+#         | upper_hex
 #   bad_base         - replace the Nth model reply with a base character that is not b, o, x or h
 #   bad_digits       - replace the Nth model reply with one value holding digits outside its base
 #   bad_index        - replace the first array model reply with a bad select index
 #   bad_value        - replace the Nth model reply with one well-formed value lacking a base
+#   bad_value_all    - like bad_value, but on the Nth model reply and every one after
 #   bare_hash        - replace the Nth model reply with one value that is only "#"
 #   binary           - replace the Nth model reply with binary values
 #   core_junk        - prepend garbage to the core reply and close the pipe
@@ -40,6 +42,7 @@
 #   err_trunc        - answer the Nth status with an unterminated (error and close the pipe
 #   err_unbal        - answer the Nth status with an error closing an extra paren
 #   err_unbal_cont   - answer the Nth status with an error, the extra paren on a continuation line
+#   extra_pair_all   - answer one pair more than asked, from the Nth model reply on
 #   garbage_assume   - answer the unsat assumptions with a non-S-expression word
 #   garbage_at       - replace every Nth model reply with a non-S-expression line
 #   garbage_model    - replace the Nth model reply with a partly valid one
@@ -54,6 +57,7 @@
 #   none             - forward every reply unchanged
 #   octal            - replace the Nth model reply with octal values
 #   oor_assume       - answer the unsat assumptions with an out-of-range literal
+#   pair_paren_all   - drop a pair's '(', from the Nth model reply on
 #   phase_model      - replace the final phased model reply with (error ...)
 #   phase_trunc      - answer an unterminated phase value reply and close the pipe
 #   short_model      - replace the Nth model reply with one omitting a requested variable
@@ -226,6 +230,17 @@ for line in proc.stdout:
     if mode == "bad_value":
         emit("((a #x0b) (b bogus))")
         swallow(line)
+        continue
+    # These spoil every reply from the Nth on, so both UniGen2 and the plain solve after it fail
+    if mode in ("bad_value_all", "extra_pair_all", "pair_paren_all"):
+        emit({
+            "bad_value_all": "((a #x0b) (b 12))",
+            "extra_pair_all": "((a #x0b) (b #x12) (c #x33))",
+            "pair_paren_all": "((a #x0b) junk)",
+        }[mode])
+        swallow(line)
+        depth, inside = 0, False  # swallow() doesn't move these, and it ate a whole reply
+        done = False
         continue
     if mode == "bare_hash":
         emit("((a #x0b) (b #))")

@@ -10,13 +10,31 @@
 `define check_range(gotv,minv,maxv) do if ((gotv) < (minv) || (gotv) > (maxv)) begin $write("%%Error: %s:%0d:  got=%0d exp=%0d-%0d\n", `__FILE__,`__LINE__, (gotv), (minv), (maxv)); `stop; end while(0);
 /*verilator lint_on*/
 
+class SubSubClass;
+  rand int subVal;
+  rand int subArr[];
+
+  constraint c{
+    subArr.size < 10;
+  }
+endclass
+
 class SubClass;
   rand int subVal;
   rand int subArr[];
+  rand int assocArr[string] = '{ "test": 1, "test2" : 2 };
+  SubSubClass ssc;
+
+  function new();
+    ssc = new;
+    ssc.randomize();
+  endfunction
 endclass
 
 class IndepClass;
-  rand int val;
+  rand int val0;
+  rand int val1;
+  rand int val2;
   rand SubClass sc;
 
   function new();
@@ -39,15 +57,23 @@ class ExtClass0 extends BaseClass;
       // If with arr.size on array, that's a field of class
       // calling randomize() with
       if (arr.size > 0) {
-        val inside {arr};
+        val0 inside {arr};
       }
 
-      // Randomize nested class array size
-      sc.subArr.size < 100;
-      sc.subArr.size > 0;
+      // If with arr.size on array thats a field inside subclass
+      // chain
+      if (cls.sc.ssc.subArr.size > 0 ) {
+        val1 == 'hDEADBEEF;
+      }
 
-      // Randomization of nested class field
-      sc.subVal == val;
+      // Randomizable array size
+      sc.subArr.size > 25;
+      sc.subArr.size < 50;
+
+      // If with associative array size
+      if (sc.assocArr.size > 0) {
+        val2 == 'hCAFEBABE;
+      }
     });
   endfunction
 endclass
@@ -71,15 +97,17 @@ module t;
     indep = new;
     ext0 = new;
     ext1 = new;
-
     repeat(10) begin
       `checkh(ext0.randomize(), 1);
+      `checkh(ext0.randomize(), 1);
       `checkh(ext0.randomize_gpr(indep), 1);
-      `checkh(indep.val, indep.sc.subVal);
 
-      `checkh(indep.val inside {ext0.arr}, 1);
+      `checkh(indep.val0 inside {ext0.arr}, 1);
+      `checkh(indep.val1, 'hDEADBEEF);
+      `checkh(indep.val2, 'hCAFEBABE);
+
       `check_range(ext0.arr.size(), 5, 10);
-      `check_range(indep.sc.subArr.size(), 0, 100);
+      `check_range(indep.sc.subArr.size(), 25, 50);
 
       foreach (ext0.arr[i]) begin
         if (ext0.arr[i] == 0) begin

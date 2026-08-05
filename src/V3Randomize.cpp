@@ -3073,7 +3073,7 @@ class ConstraintExprVisitor final : public VNVisitor {
         }
 
         // We've handled DYN_SIZE already if they should be randomized
-        if (nodep->method() == VCMethod::DYN_SIZE) {
+        if (nodep->method() == VCMethod::DYN_SIZE || nodep->method() == VCMethod::ASSOC_SIZE) {
             AstNodeExpr* nodeExprp = nodep->fromp();
             // Check if it is a pure chain of MemberSel ended with VarRef
             // if not throw warning
@@ -4626,11 +4626,11 @@ class RandomizeVisitor final : public VNVisitor {
             resExprp = buildMemberSelExprp(memberSelp->fromp(), nullptr);
             AstVar* varp = memberSelp->varp();
             if (deepestVarp) varp = deepestVarp;
-            resExprp = new AstMemberSel{deepestVarp->fileline(), resExprp, varp};
+            resExprp = new AstMemberSel{exprp->fileline(), resExprp, varp};
         } else if (const AstVarRef* varRefp = VN_CAST(exprp, VarRef)) {
             AstVar* varp = varRefp->varp();
             if (deepestVarp) varp = deepestVarp;
-            resExprp = new AstVarRef{varp->fileline(), VN_AS(varp->user2p(), NodeModule), varp,
+            resExprp = new AstVarRef{exprp->fileline(), VN_AS(varp->user2p(), NodeModule), varp,
                                      VAccess::READWRITE};
         }
 
@@ -6257,8 +6257,13 @@ class RandomizeVisitor final : public VNVisitor {
                     // Only variables that are part of object that randomize is called on shall be
                     // randomized (18.6.1), skip randomization if deepest variable is reference to
                     // __Vthis
-                    if (VN_AS(memberSelp->fromp(), VarRef)->varp() == captured.getThisp()) {
-                        continue;
+                    const AstNodeExpr* fromp = memberSelp->fromp();
+                    if (const AstVarRef* varRefp = VN_CAST(fromp, VarRef)) {
+                        if (varRefp->varp() == captured.getThisp()) continue;
+                    } else {
+                        fromp->v3warn(E_UNSUPPORTED, "Unsupported: Unsupported size constraint "
+                                                     "inside 'with' statement of type "
+                                                         << fromp->dtypep()->prettyTypeName());
                     }
                 } else if (AstVarRef* const varRefp = VN_CAST(rootExprp, VarRef)) {
                     arrVarp = varRefp->varp();
@@ -6266,6 +6271,8 @@ class RandomizeVisitor final : public VNVisitor {
                 if (!arrVarp) continue;
                 // Only handle rand-declared dynamic/assoc array variables
                 if (!arrVarp->rand().isRandomizable()) continue;
+                // Do not randomize associative array size (IEEE 18.4)
+                if (VN_IS(arrVarp->dtypep()->skipRefp(), AssocArrayDType)) continue;
                 FileLine* const fl = methodp->fileline();
                 bool wasCreated = false;
                 AstClass* const varClassp = VN_AS(arrVarp->user2p(), Class);
@@ -6275,21 +6282,15 @@ class RandomizeVisitor final : public VNVisitor {
                 // array is inherited; route VarRefs through their declaring
                 // class so V3Scope can resolve them.
                 if (wasCreated) {
-                    // Generate resize for dynamic arrays/queues (not assoc arrays)
-                    if (!VN_IS(arrVarp->dtypep()->skipRefp(), AssocArrayDType)) {
-                        AstNodeExpr* const resizeVarRefp = buildMemberSelExprp(rootExprp, arrVarp);
-                        AstNodeExpr* const sizeExprp = buildMemberSelExprp(rootExprp, sizeVarp);
-                        // Append size >= 0 constraint so ConstraintExprVisitor processes it
-                        capturedTreep->addNext(
-                            createSizeGteZeroConstraint(fl, sizeVarp, rootExprp));
-                        AstCMethodHard* const resizep = new AstCMethodHard{
-                            fl, resizeVarRefp, VCMethod::DYN_RESIZE, sizeExprp};
-                        resizep->dtypep(methodp->findVoidDType());
-                        inlineResizeStmtsp
-                            = AstNode::addNext(inlineResizeStmtsp, new AstStmtExpr{fl, resizep});
-                    } else {
-                        capturedTreep->addNext(createSizeGteZeroConstraint(fl, sizeVarp));
-                    }
+                    AstNodeExpr* const resizeVarRefp = buildMemberSelExprp(rootExprp, arrVarp);
+                    AstNodeExpr* const sizeExprp = buildMemberSelExprp(rootExprp, sizeVarp);
+                    // Append size >= 0 constraint so ConstraintExprVisitor processes it
+                    capturedTreep->addNext(createSizeGteZeroConstraint(fl, sizeVarp, rootExprp));
+                    AstCMethodHard* const resizep
+                        = new AstCMethodHard{fl, resizeVarRefp, VCMethod::DYN_RESIZE, sizeExprp};
+                    resizep->dtypep(methodp->findVoidDType());
+                    inlineResizeStmtsp
+                        = AstNode::addNext(inlineResizeStmtsp, new AstStmtExpr{fl, resizep});
                 }
                 AstNodeExpr* const sizeNodeExprp = buildMemberSelExprp(rootExprp, sizeVarp);
                 methodp->replaceWith(sizeNodeExprp);

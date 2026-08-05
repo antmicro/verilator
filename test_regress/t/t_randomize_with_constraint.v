@@ -14,7 +14,6 @@ class ArgCls;
   rand int b;
 endclass
 
-
 class Cls;
   rand int m_x;
   rand int m_z;

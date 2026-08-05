@@ -54,6 +54,7 @@ module Test (  /*AUTOARG*/
   bit [31:0] dly0 = 0;
   bit [31:0] dly1 = 0;
   bit [31:0] dly2 = 0;
+  bit stable1 = 1;
 
   // If called in an assertion, sequence, or property, the appropriate clocking event.
   // Otherwise, if called in a disable condition or a clock expression in an assertion, sequence, or prop, explicit.
@@ -70,7 +71,10 @@ module Test (  /*AUTOARG*/
     if ($rose(dly0[4])) $stop;
     if ($fell(dly0[4])) $stop;
     if (!$stable(dly0[4])) $stop;
+    if (!$stable(1'b1)) $stop;
+    if (in == 1 && !$stable(stable1)) $stop;
     if ($changed(dly0[4])) $stop;
+    stable1 <= ~stable1;
   end
 
   assert property (@(posedge clk) $rose(dly0) || dly0 % 2 == 0 || dly2 < 3);

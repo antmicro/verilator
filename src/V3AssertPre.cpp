@@ -69,6 +69,7 @@ private:
     V3UniqueNames m_nonConsRepNames{"__VnonConsRep"};  // Nonconsecutive rep name generator
     V3UniqueNames m_disableCntNames{"__VdisableCnt"};  // Disable condition counter name generator
     V3UniqueNames m_propVarNames{"__Vpropvar"};  // Property-local variable name generator
+    V3UniqueNames m_stableNames{"__Vstable"};  // Stable sampled value name generator
     V3UniqueNames m_activeNames{"__VassertsActive"};  // Active asserts map name generator
     bool m_inAssign = false;  // True if in an AssignNode
     bool m_inAssignDlyLhs = false;  // True if in AssignDly's LHS
@@ -920,10 +921,18 @@ private:
         AstNodeExpr* exprp = nodep->exprp()->unlinkFrBack();
         AstSenTree* sentreep = nodep->sentreep();
         if (sentreep) sentreep->unlinkFrBack();
-        AstPast* const pastp = new AstPast{fl, exprp};
-        pastp->dtypeFrom(exprp);
-        pastp->sentreep(newSenTree(nodep, sentreep));
-        exprp = new AstEq{fl, pastp, exprp->cloneTreePure(false)};
+        AstVar* const varp
+            = new AstVar{fl, VVarType::MODULETEMP, m_stableNames.get(nodep), exprp->dtypep()};
+        varp->lifetime(VLifetime::STATIC_EXPLICIT);
+        m_modp->addStmtsp(varp);
+        m_modp->addStmtsp(
+            new AstInitialStatic{fl, new AstAssign{fl, new AstVarRef{fl, varp, VAccess::WRITE},
+                                                   exprp->cloneTreePure(false)}});
+        m_modp->addStmtsp(new AstAlways{
+            fl, VAlwaysKwd::ALWAYS, newSenTree(nodep, sentreep),
+            new AstAssignDly{fl, new AstVarRef{fl, varp, VAccess::WRITE},
+                             new AstSampled{fl, exprp->cloneTreePure(false), exprp->dtypep()}}});
+        exprp = new AstEq{fl, new AstVarRef{fl, varp, VAccess::READ}, exprp};
         exprp->dtypeSetBit();
         nodep->replaceWith(exprp);
         VL_DO_DANGLING(pushDeletep(nodep), nodep);

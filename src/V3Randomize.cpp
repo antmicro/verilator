@@ -5610,6 +5610,8 @@ class RandomizeVisitor final : public VNVisitor {
                               AstEnumDType* const enumDtp
                                   = VN_CAST(subVarp->dtypep()->skipRefToEnump(), EnumDType);
                               if (enumDtp) {
+                                  // Do not emit when enum isn't constrained
+                                  if (!subVarp->user3()) return;
                                   emitEnumConstraint(smtName, enumDtp);
                                   return;
                               }

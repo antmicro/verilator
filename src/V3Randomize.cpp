@@ -2968,34 +2968,36 @@ class ConstraintExprVisitor final : public VNVisitor {
                 AstNodeModule* const genModulep = VN_AS(m_genp->user2p(), NodeModule);
                 arrVarp->user3(true);
 
+                AstNodeExpr* const arrVarNamep
+                    = new AstCExpr{fl, AstCExpr::Pure{}, "\"" + smtArrayName + "\"", elemWidth};
+
+                // Add write_var call to init task
+                AstCMethodHard* const writeVarCallp
+                    = new AstCMethodHard{fl, new AstVarRef{fl, genModulep, m_genp, VAccess::READ},
+                                         VCMethod::RANDOMIZER_WRITE_VAR};
+                writeVarCallp->addPinsp(new AstVarRef{fl, arrModulep, arrVarp, VAccess::READ});
+                writeVarCallp->addPinsp(
+                    new AstConst{fl, AstConst::Unsized64{}, static_cast<uint64_t>(elemWidth)});
+                writeVarCallp->addPinsp(arrVarNamep);
+                writeVarCallp->addPinsp(new AstConst{fl, 1});  // Dimension
+                const RandomizeMode randMode = {.asInt = arrVarp->user1()};
+                if (randMode.usesMode) {
+                    writeVarCallp->addPinsp(
+                        new AstConst{fl, AstConst::Unsized64{}, randMode.index});
+                }
+                writeVarCallp->dtypeSetVoid();
+                AstNodeFTask* initTaskp = m_inlineInitTaskp;
+                if (!initTaskp) {
+                    initTaskp = VN_AS(m_memberMap.findMember(arrModulep, "new"), NodeFTask);
+                    UASSERT_OBJ(initTaskp, arrModulep, "No new() in class");
+                }
+                initTaskp->addStmtsp(writeVarCallp->makeStmt());
+
                 // Create variable name using AstSFormatF
-                AstSFormatF* const varNamep = new AstSFormatF{
-                    fl, smtArrayName + "_%x", false, new AstVarRef{fl, loopVarp, VAccess::READ}};
+                AstSFormatF* const varNamep
+                    = new AstSFormatF{fl, "(select " + smtArrayName + " #x%08x)", false,
+                                      new AstVarRef{fl, loopVarp, VAccess::READ}};
 
-                // Create array element reference: array.atWrite(index)
-                AstCMethodHard* const atWritep = new AstCMethodHard{
-                    fl, new AstVarRef{fl, arrModulep, arrVarp, VAccess::READWRITE},
-                    VCMethod::ARRAY_AT_WRITE, new AstVarRef{fl, loopVarp, VAccess::READ}};
-                atWritep->dtypeFrom(elemDtp);
-
-                // Convert std::string to const char* for write_var
-                AstCExpr* const varNameCStrp = new AstCExpr{fl, AstCExpr::Pure{}};
-                varNameCStrp->dtypeSetString();
-                varNameCStrp->add("(");
-                varNameCStrp->add(varNamep->cloneTree(false));
-                varNameCStrp->add(").c_str()");
-
-                // Create write_var method call: gen.write_var(arrElement, width, name, 0)
-                AstCMethodHard* const writeVarp = new AstCMethodHard{
-                    fl, new AstVarRef{fl, genModulep, m_genp, VAccess::READWRITE},
-                    VCMethod::RANDOMIZER_WRITE_VAR, atWritep};
-                writeVarp->addPinsp(new AstConst{fl, AstConst::WidthedValue{}, 64,
-                                                 static_cast<uint32_t>(elemWidth)});
-                writeVarp->addPinsp(varNameCStrp);
-                writeVarp->addPinsp(new AstConst{fl, AstConst::WidthedValue{}, 64, 0});
-                writeVarp->dtypeSetVoid();
-
-                cstmtp->add(writeVarp->makeStmt());
                 cstmtp->add("ret += \" \";\n");
                 cstmtp->add("ret += ");
                 cstmtp->add(varNamep);

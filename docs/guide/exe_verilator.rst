@@ -851,6 +851,18 @@ Summary:
 
    Disables four-state logic support which is the default. Exists for forward compatibility.
 
+.. option:: --fsm-max-expandable-size
+
+   TODO - outdated:
+   Sets the maximum size - maximum number of possible states - of expandable FSM.
+   When FSM is expanded Verilator generates coverage of every
+   teoritically possible transiztion. This allows to avoid getting ANY state
+   in coverage report. This flag makes sense only with fsm coverage enabled.
+   Note that amount of possible transition (therefore binary size) grows
+   with count of states squared.
+
+   Defaults to 256.
+
 .. option:: --fslice-element-limit
 
    Rarely needed. Set the maximum array size (number of elements) for slice

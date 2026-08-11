@@ -22,11 +22,16 @@ test.lint(v_flags=["--coverage-fsm", "--dump-tree"])
 tree_files = [Path(filename) for filename in test.glob_some(test.obj_dir + "/*.tree")]
 tree_texts = [filename.read_text(encoding="utf8") for filename in tree_files]
 
-assert any("COVEROTHERDECL" in text and " fv=t.style_u.state" in text for text in tree_texts)
-assert any(
-    "COVEROTHERDECL" in text and " ff=ANY" in text and " ft=S0" in text and " fg=reset" in text
-    for text in tree_texts)
-assert any("COVEROTHERDECL" in text and " ff=default" in text and " ft=S0" in text
-           and " fg=default" in text for text in tree_texts)
+if not any("COVEROTHERDECL" in text and " fv=t.style_u.state" in text for text in tree_texts):
+    test.error("COVEROTHERDECL of 't.style_u.state' not found")
+
+if not any(
+        "COVEROTHERDECL" in text and " ff=ANY" in text and " ft=S0" in text and " fg=reset" in text
+        for text in tree_texts):
+    test.error("COVEROTHERDECL of 'reset' not found")
+
+if not any("COVEROTHERDECL" in text and " ff=default" in text and " ft=S0" in text
+           and " fg=default" in text for text in tree_texts):
+    test.error("COVEROTHERDECL of 'default' not found")
 
 test.passes()

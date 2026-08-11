@@ -1444,6 +1444,7 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc,
     DECL_OPTION("-exe", OnOff, &m_exe);
     DECL_OPTION("-expand-limit", CbVal,
                 [this](const char* valp) { m_expandLimit = std::atoi(valp); });
+    DECL_OPTION("-fsm-max-expandable-size", Set, &m_fsmMaxExpandableSize);
 
     DECL_OPTION("-F", CbVal, [this, fl, &optdir](const char* valp) VL_MT_DISABLED {
         parseOptsFile(fl, parseFileArg(optdir, valp), true);
@@ -1643,6 +1644,24 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc,
     DECL_OPTION("-O3", CbCall, [this]() { optimize(3); });
 
     DECL_OPTION("-o", Set, &m_exeName);
+    DECL_OPTION("-coverage-fsm-expand", CbVal, [this, fl](const char* const valp) {
+        if (!std::strcmp(valp, "none")) {
+            m_coverageFsmExpand = "none";
+        } else if (!std::strcmp(valp, "reset")) {
+            m_coverageFsmExpand = "reset";
+        } else if (!std::strcmp(valp, "defaults")) {
+            m_coverageFsmExpand = "defaults";
+        } else if (!std::strcmp(valp, "all")) {
+            m_coverageFsmExpand = "all";
+        } else if (!std::strcmp(valp, "full")) {
+            m_coverageFsmExpand = "full";
+        } else {
+            fl->v3error("Unknown setting for --coverage-fsm-expand: '"
+                        << valp << "'\n"
+                        << fl->warnMore()
+                        << "... Suggest 'none', 'reset', 'defaults', 'all', or 'full'");
+        }
+    });
     DECL_OPTION("-order-clock-delay", CbOnOff, [fl](bool /*flag*/) {
         fl->v3warn(DEPRECATED, "Option order-clock-delay is deprecated and has no effect.");
     }).undocumented();
@@ -2307,6 +2326,7 @@ void V3Options::showVersion(bool verbose) {
 V3Options::V3Options() {
     m_impp = new V3OptionsImp;
 
+    m_coverageFsmExpand = "none";
     m_makeDir = "obj_dir";
     m_unusedRegexp = "*unused*";
     m_xAssign = "fast";

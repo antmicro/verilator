@@ -323,6 +323,7 @@ private:
     int         m_coverageMaxWidth = 256; // main switch: --coverage-max-width
     int         m_debugAllocRandom = 0;  // main switch: --debug-alloc-random <seed>
     int         m_expandLimit = 256;  // main switch: --expand-limit
+    int         m_fsmMaxExpandableSize = 256;  // main switch: --fsm-max-expandable-size
     int         m_gateStmts = 100;    // main switch: --gate-stmts
     int         m_hierChild = 0;      // main switch: --hierarchical-child
     int         m_hierThreads = 0;      // main switch: --hierarchical-threads
@@ -371,6 +372,7 @@ private:
     string      m_buildDepBin;  // main switch: --build-dep-bin {filename}
     string      m_diagnosticsSarifOutput;  // main switch: --diagnostics-sarif-output
     string      m_exeName;      // main switch: -o {name}
+    string      m_coverageFsmExpand;  // main switch: --coverage-fsm-expand <mode>
     VFileLibList m_hierParamsFile; // main switch: --hierarchical-params-file
     string      m_jsonOnlyOutput;    // main switch: --json-only-output
     string      m_jsonOnlyMetaOutput;    // main switch: --json-only-meta-output
@@ -628,6 +630,7 @@ public:
     int debugAllocRandom() const { return m_debugAllocRandom; }
     bool dumpTreeAddrids() const VL_MT_SAFE;
     int expandLimit() const { return m_expandLimit; }
+    int fsmMaxExpandableSize() const { return m_fsmMaxExpandableSize; }
     int gateStmts() const { return m_gateStmts; }
     int ifDepth() const { return m_ifDepth; }
     int inlineCFuncs() const { return m_inlineCFuncs; }
@@ -680,6 +683,7 @@ public:
                                                 : m_diagnosticsSarifOutput;
     }
     string exeName() const { return m_exeName != "" ? m_exeName : prefix(); }
+    const string& coverageFsmExpand() const { return m_coverageFsmExpand; }
     VFileLibList hierParamFile() const { return m_hierParamsFile; }
     string jsonOnlyOutput() const { return m_jsonOnlyOutput; }
     string jsonOnlyMetaOutput() const { return m_jsonOnlyMetaOutput; }

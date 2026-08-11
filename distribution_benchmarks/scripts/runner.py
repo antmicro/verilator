@@ -30,6 +30,8 @@ def compile_sv(obj_dir, num_iterations, input_path):
     Returns elapsed wall-clock time in seconds.
     """
     shutil.rmtree(obj_dir, ignore_errors=True)
+    # run_all.py creates this, a single runner invoked on its own does not.
+    obj_dir.parent.mkdir(parents=True, exist_ok=True)
     iterations = '+define+NUM_ITERATIONS=%d' % num_iterations
     cmd = [os.environ["VERILATOR_CNT_RND"], "--binary", "-j", "0"]
     cmd += ['--Mdir', str(obj_dir), str(iterations), str(input_path)]
@@ -184,6 +186,74 @@ def draw_frequency_plot(observed_samples, uniform_samples, module_name, out_path
     plt.savefig(str(out_path))
     print('Plot saved under: ' + str(out_path))
 
+def solution_count(solutions):
+    """Number of solutions, whether given as an explicit list or just a count."""
+    return solutions if isinstance(solutions, int) else len(solutions)
+
+
+def calculate_coverage_large(num_solutions, observed_samples):
+    """Coverage without an explicit solution list. Every value the solver returns
+    satisfies the constraints, so each observed key is a valid solution."""
+    distinct_hit = len(observed_samples)
+    return distinct_hit, num_solutions, distinct_hit / num_solutions
+
+
+def calculate_variance_large(num_solutions, observed_samples):
+    """Same metric as calculate_variance, computed from the observed counts alone.
+    f_i = c_i / n for observed solutions and 0 otherwise, so the mean is 1/N and
+    Var = sum(f_i^2)/N - 1/N^2 without ever materialising the zeros.
+    """
+    n_samples = sum(observed_samples.values())
+    if n_samples == 0:
+        raise ValueError('No samples collected')
+    q = np.array(list(observed_samples.values())) / n_samples
+    return float(np.sum(q * q) / num_solutions - 1.0 / num_solutions ** 2) * 10000
+
+
+def calculate_jsd_large(num_solutions, observed_samples):
+    """Same metric as calculate_jsd, computed from the observed counts alone.
+    Unobserved solutions all contribute the same term: with q_i = 0 the mixture is
+    M_i = p/2, so each adds p*ln2 to KL(P||M) and nothing to KL(Q||M). They
+    collapse into one product instead of N array entries.
+    """
+    n_samples = sum(observed_samples.values())
+    if n_samples == 0:
+        raise ValueError('No samples collected')
+    p = 1.0 / num_solutions
+    q = np.array(list(observed_samples.values())) / n_samples
+    m = (p + q) / 2
+    kl_p = np.sum(p * np.log(p / m)) + (num_solutions - len(q)) * p * np.log(2)
+    kl_q = np.sum(q * np.log(q / m))
+    return float(kl_p + kl_q) / 2 * 100
+
+
+def compute_coverage_curve_large(lines, num_solutions):
+    """compute_coverage_curve without the solution set, for spaces too large to
+    enumerate. Same downsampling."""
+    seen = set()
+    xs, ys = [], []
+    idx = 0
+    for line in lines:
+        if line.startswith('-'):
+            continue
+        parts = line.split()
+        key = int(parts[0]) if len(parts) == 1 else line
+        seen.add(key)
+        idx += 1
+        xs.append(idx)
+        ys.append(len(seen) / num_solutions)
+    if not xs:
+        return xs, ys
+    if len(xs) > 2000:
+        step = len(xs) // 2000
+        indices = list(range(0, len(xs), step))
+        if indices[-1] != len(xs) - 1:
+            indices.append(len(xs) - 1)
+        xs = [xs[i] for i in indices]
+        ys = [ys[i] for i in indices]
+    return xs, ys
+
+
 def calculate_coverage(solutions, observed_samples):
     """Compute coverage: fraction of valid solutions observed at least once.
     Returns (distinct_hit, total, coverage_ratio).
@@ -319,7 +389,7 @@ def generate_report(module_name, solutions, iterations, observed, jsd_nats, cove
     """
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     rst_path = OUTPUT_DIR / RST_FILE
-    num_solutions = len(solutions)
+    num_solutions = solution_count(solutions)
     num_samples = sum(observed.values())
     uniform_pct = 100.0 / num_solutions
 
@@ -353,8 +423,9 @@ def generate_report(module_name, solutions, iterations, observed, jsd_nats, cove
         f.write(':Verilation time: %.1fs\n' % compile_time)
         f.write(':Simulation time: %.1fs\n\n' % sim_time)
 
-        f.write('.. dropdown:: View frequency plot\n\n')
-        f.write('   .. image:: %s\n\n' % (freq_svg_name or f'{method}_{module_name}_frequency.svg'))
+        if freq_svg_name != '':
+            f.write('.. dropdown:: View frequency plot\n\n')
+            f.write('   .. image:: %s\n\n' % (freq_svg_name or f'{method}_{module_name}_frequency.svg'))
 
         f.write('.. dropdown:: View coverage curve\n\n')
         f.write('   .. image:: %s\n\n' % (cov_svg_name or f'{method}_{module_name}_coverage.svg'))
@@ -454,6 +525,56 @@ def round_iterations(iterations, num_solutions):
     lower = iterations - remainder
     upper = lower + num_solutions
     return lower if remainder < num_solutions / 2 else upper
+
+
+def run_experiment_large(module_name, num_solutions, iterations=None, method=None):
+    """run_experiment for spaces too large to enumerate.
+
+    Takes the solution count instead of the solutions themselves. Every metric
+    has a closed form that needs only that count plus the observed samples, so
+    nothing of size N is ever built. The frequency plot is skipped, since one
+    marker per solution is unreadable and slow at this scale; the coverage curve
+    is kept because it is downsampled to 2000 points either way.
+    """
+    if method is None:
+        method = os.environ.get('VERILATOR_METHOD', 'verilator')
+    requested = iterations if iterations is not None else compute_default_iterations(num_solutions)
+    # Unlike the enumerable path this does not round a smaller budget up to a full
+    # N. On a 5M space that would turn `run_all.py 1000` into 5M iterations. No
+    # metric here needs an integer expected count, so a fractional one is fine.
+    ITERATIONS = round_iterations(requested, num_solutions) if requested >= num_solutions else requested
+    if ITERATIONS != requested:
+        print(f'Iterations rounded to {ITERATIONS} (nearest multiple of {num_solutions})')
+
+    INPUT_PATH = INPUT_DIR / (module_name + ".sv")
+    if not INPUT_PATH.exists():
+        print(f'Input file not found: {INPUT_PATH}')
+        raise SystemExit(1)
+    OBJ_DIR = OUTPUT_DIR / ("build_" + module_name)
+    SIM_PATH = OBJ_DIR / ("V" + module_name)
+
+    cov_svg_name = f'{method}_{module_name}_coverage.svg'
+    cov_svg_path = OUTPUT_DIR / cov_svg_name
+
+    compile_time = compile_sv(OBJ_DIR, ITERATIONS, INPUT_PATH)
+    lines, sim_time = simulate(SIM_PATH)
+    observed = count_observed_samples(lines)
+    unsat_count = count_unsat_samples(lines)
+    cov_x, cov_y = compute_coverage_curve_large(lines, num_solutions)
+    draw_coverage_curve(cov_x, cov_y, module_name, num_solutions, ITERATIONS, cov_svg_path)
+    jsd_nats = calculate_jsd_large(num_solutions, observed)
+    distinct_hit, total, coverage = calculate_coverage_large(num_solutions, observed)
+    freq_variance = calculate_variance_large(num_solutions, observed)
+    n_samples = sum(observed.values())
+    total_attempts = n_samples + unsat_count
+    unsat_pct = 100.0 * unsat_count / total_attempts if total_attempts > 0 else 0.0
+    uniqueness_pct = 100.0 * distinct_hit / n_samples if n_samples > 0 else 0.0
+    print('\nJensen-Shannon divergence: %.6f (nats * 100)' % jsd_nats)
+    print('Coverage: %d/%d (%.2f%%)' % (distinct_hit, total, coverage * 100))
+    print('Variance of relative frequencies: %.8f (multiplied by 10000)' % freq_variance)
+    print('Verilation time: %.1fs' % compile_time)
+    print('Simulation time: %.1fs' % sim_time)
+    generate_report(module_name, num_solutions, ITERATIONS, observed, jsd_nats, coverage, distinct_hit, freq_variance, compile_time, sim_time, INPUT_PATH, method=method, unsat_pct=unsat_pct, uniqueness_pct=uniqueness_pct, freq_svg_name='', cov_svg_name=cov_svg_name)
 
 
 def run_experiment(module_name, solutions, iterations=None, method=None):

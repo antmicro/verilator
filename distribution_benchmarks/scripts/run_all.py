@@ -68,7 +68,17 @@ ARRAY_RUNNERS = [
     'run_distr_array_mixed.py',          # array plus a scalar selector
 ]
 
-RUNNERS = SCALAR_RUNNERS + ARRAY_RUNNERS
+# Solution spaces past the 61 * 2^10 point where the parameter search gives up,
+# so they exercise the fixed-XOR path. Run last: they are by far the slowest, and
+# they report through run_experiment_large, which takes the solution count rather
+# than the solutions themselves.
+LARGE_RUNNERS = [
+    'run_distr_range_65K.py',
+    'run_distr_large_mod.py',
+    'run_distr_large_countones.py',
+]
+
+RUNNERS = SCALAR_RUNNERS + ARRAY_RUNNERS + LARGE_RUNNERS
 
 
 def clean_output_dir(output_dir):

@@ -1439,7 +1439,6 @@ void VlRandomizer::reportUnsatCore(VlSolverSession& sess) VL_REQUIRES(sess.m_mut
 
 bool VlRandomizer::applyModel(VlSolverSession& sess) VL_REQUIRES(sess.m_mutex) {
     std::iostream& os = sess.os();
-    os << "(get-value (";
     for (const auto& var : m_vars) {
         if (var.second->dimension() > 0) {
             auto arrVarsp = std::make_shared<const ArrayInfoMap>(m_arr_vars);
@@ -1447,7 +1446,13 @@ bool VlRandomizer::applyModel(VlSolverSession& sess) VL_REQUIRES(sess.m_mutex) {
         }
         var.second->emitGetValue(os);
     }
-    os << "))\n";
+    if (getValueStr.str() == "") {
+        // Mark as m_checkOnly to skip generation of any subsequent solver calls
+        m_checkOnly = true;
+        return true;
+    }
+    os << "(get-value (" << getValueStr.str() << "))\n";
+
     std::string reply;
     if (!sess.readSExpr(reply)) return false;
     if (isSolverError(reply)) {

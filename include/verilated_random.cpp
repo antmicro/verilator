@@ -1113,9 +1113,14 @@ int VlRandomizer::BSAT(std::iostream& solver, int bound, std::vector<Witness>& w
         do { std::getline(solver, result); } while (result.empty());
         if (result != "sat") break;  // every distinct witness already found
 
-        solver << "(get-value (";
-        for (const auto& entry : order) m_vars.at(entry.first)->emitElement(solver, entry.second);
-        solver << "))\n";
+        std::stringstream ss;
+        for (const auto& entry : order) m_vars.at(entry.first)->emitElement(ss, entry.second);
+        if (ss.str() == "" ) {
+            Witness witness;
+            witnesses.push_back(std::move(witness));
+            continue;
+        }
+        solver << "(get-value (" << ss.str() << "))\n";
 
         Witness witness;
         char c;
@@ -1439,12 +1444,13 @@ void VlRandomizer::reportUnsatCore(VlSolverSession& sess) VL_REQUIRES(sess.m_mut
 
 bool VlRandomizer::applyModel(VlSolverSession& sess) VL_REQUIRES(sess.m_mutex) {
     std::iostream& os = sess.os();
+    std::stringstream getValueStr;
     for (const auto& var : m_vars) {
         if (var.second->dimension() > 0) {
             auto arrVarsp = std::make_shared<const ArrayInfoMap>(m_arr_vars);
             var.second->setArrayInfo(arrVarsp);
         }
-        var.second->emitGetValue(os);
+        var.second->emitGetValue(getValueStr);
     }
     if (getValueStr.str() == "") {
         // Mark as m_checkOnly to skip generation of any subsequent solver calls

@@ -439,77 +439,61 @@ module Vt_debug_emitv_t;
                     $display("fail");
                 end
             end
-        end
-    end
-    always  begin
-        begin : assert_observed_deferred_immediate
-            assert #0 ('sh0) begin
+            begin : assert_observed_deferred_immediate
+                assert #0 ('sh0) begin
+                end
+                else begin
+                end
             end
-            else begin
+            begin : assert_observed_deferred_immediate_else
+                assert #0 ('sh0) begin
+                end
+                else begin
+                    $display("fail");
+                end
             end
-        end
-    end
-    always  begin
-        begin : assert_observed_deferred_immediate_else
-            assert #0 ('sh0) begin
+            begin : assert_observed_deferred_immediate_stmt
+                assert #0 ('sh0) begin
+                    $display("pass");
+                end
+                else begin
+                end
             end
-            else begin
-                $display("fail");
+            begin : assert_observed_deferred_immediate_stmt_else
+                assert #0 ('sh0) begin
+                    $display("pass");
+                end
+                else begin
+                    $display("fail");
+                end
             end
-        end
-    end
-    always  begin
-        begin : assert_observed_deferred_immediate_stmt
-            assert #0 ('sh0) begin
-                $display("pass");
+            begin : assume_observed_deferred_immediate
+                assume #0 ('sh0) begin
+                end
+                else begin
+                end
             end
-            else begin
+            begin : assume_observed_deferred_immediate_else
+                assume #0 ('sh0) begin
+                end
+                else begin
+                    $display("fail");
+                end
             end
-        end
-    end
-    always  begin
-        begin : assert_observed_deferred_immediate_stmt_else
-            assert #0 ('sh0) begin
-                $display("pass");
+            begin : assume_observed_deferred_immediate_stmt
+                assume #0 ('sh0) begin
+                    $display("pass");
+                end
+                else begin
+                end
             end
-            else begin
-                $display("fail");
-            end
-        end
-    end
-    always  begin
-        begin : assume_observed_deferred_immediate
-            assume #0 ('sh0) begin
-            end
-            else begin
-            end
-        end
-    end
-    always  begin
-        begin : assume_observed_deferred_immediate_else
-            assume #0 ('sh0) begin
-            end
-            else begin
-                $display("fail");
-            end
-        end
-    end
-    always  begin
-        begin : assume_observed_deferred_immediate_stmt
-            assume #0 ('sh0) begin
-                $display("pass");
-            end
-            else begin
-            end
-        end
-    end
-    always  begin
-        begin : assume_observed_deferred_immediate_stmt_else
-            assume #0 ('sh0) begin
-                $display("pass");
-            end
-            else begin
-                $display("fail");
+            begin : assume_observed_deferred_immediate_stmt_else
+                assume #0 ('sh0) begin
+                    $display("pass");
+                end
+                else begin
+                    $display("fail");
+                end
             end
         end
     end

@@ -44,6 +44,58 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
+class ObservedDeferredUnsupportedVisitor final : public VNVisitorConst {
+    static bool isFlushPoint(const AstNode* nodep) {
+        if (VN_IS(nodep, EventControl) || VN_IS(nodep, Wait) || VN_IS(nodep, WaitFork)
+            || VN_IS(nodep, Disable)) {
+            return true;
+        }
+        if (const AstDelay* const delayp = VN_CAST(nodep, Delay)) {
+            if (delayp->isCycleDelay()) return false;
+            const AstConst* const valuep = VN_CAST(delayp->lhsp(), Const);
+            return !valuep || valuep->isZero();
+        }
+        return false;
+    }
+    static void checkOwner(AstNode* nodep) {
+        AstAssert* observedp = nullptr;
+        nodep->foreach([&](AstAssert* assertp) {
+            if (!observedp && assertp->userType() == VAssertType::OBSERVED_DEFERRED_IMMEDIATE) {
+                observedp = assertp;
+            }
+        });
+        if (!observedp) return;
+
+        bool hasFlushPoint
+            = nodep->exists([](const AstNode* const itemp) { return isFlushPoint(itemp); });
+        if (const AstAlways* const alwaysp = VN_CAST(nodep, Always)) {
+            hasFlushPoint |= alwaysp->keyword() == VAlwaysKwd::ALWAYS_COMB
+                             || alwaysp->keyword() == VAlwaysKwd::ALWAYS_LATCH;
+        }
+        if (hasFlushPoint) {
+            observedp->v3warn(
+                E_UNSUPPORTED,
+                "Unsupported: Observed deferred immediate assertion in a process with deferred "
+                "assertion flush points (IEEE 1800-2023 16.4.2).");
+        }
+    }
+
+    void visit(AstNodeFTask* nodep) override {
+        checkOwner(nodep);
+        iterateChildrenConst(nodep);
+    }
+    void visit(AstNodeProcedure* nodep) override {
+        checkOwner(nodep);
+        iterateChildrenConst(nodep);
+    }
+    void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }
+
+public:
+    explicit ObservedDeferredUnsupportedVisitor(AstNetlist* nodep) { iterateChildrenConst(nodep); }
+};
+
+//######################################################################
+
 class LinkJumpVisitor final : public VNVisitor {
     // NODE STATE
     //  AstBegin/etc::user1()  -> AstJumpBlock*, for body of this loop
@@ -651,6 +703,7 @@ public:
 
 void V3LinkJump::linkJump(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ":");
+    { ObservedDeferredUnsupportedVisitor{nodep}; }
     { LinkJumpVisitor{nodep}; }  // Destruct before checking
     V3Global::dumpCheckGlobalTree("linkjump", 0, dumpTreeEitherLevel() >= 3);
 }

@@ -1,0 +1,5 @@
+%Error-NOTIMING: t/t_assert_obs_defer_notiming_bad.v:10:10: Observed deferred immediate assertion action block requires --timing
+   10 |     else $display("fail");
+      |          ^~~~~~~~
+                 ... For error description see https://verilator.org/warn/NOTIMING?v=latest
+%Error: Exiting due to

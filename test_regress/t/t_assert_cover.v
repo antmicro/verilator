@@ -74,8 +74,7 @@ module Test
   labeled_imm0: cover #0 (cyc == 0);
   labeled_immf: cover final (cyc == 0);
 
-  // Immediate assert
-  labeled_imas: assert #0 (1);
+  // Final deferred immediate assert
   assert final (1);
 
   //============================================================

@@ -318,17 +318,16 @@ module t (/*AUTOARG*/
     assume_simple_immediate_else: assume(0) else $display("fail");
     assume_simple_immediate_stmt: assume(0) $display("pass");
     assume_simple_immediate_stmt_else: assume(0) $display("pass"); else $display("fail");
+    assert_observed_deferred_immediate: assert #0 (0);
+    assert_observed_deferred_immediate_else: assert #0 (0) else $display("fail");
+    assert_observed_deferred_immediate_stmt: assert #0 (0) $display("pass");
+    assert_observed_deferred_immediate_stmt_else: assert #0 (0) $display("pass"); else $display("fail");
+
+    assume_observed_deferred_immediate: assume #0 (0);
+    assume_observed_deferred_immediate_else: assume #0 (0) else $display("fail");
+    assume_observed_deferred_immediate_stmt: assume #0 (0) $display("pass");
+    assume_observed_deferred_immediate_stmt_else: assume #0 (0) $display("pass"); else $display("fail");
   end
-
-  assert_observed_deferred_immediate: assert #0 (0);
-  assert_observed_deferred_immediate_else: assert #0 (0) else $display("fail");
-  assert_observed_deferred_immediate_stmt: assert #0 (0) $display("pass");
-  assert_observed_deferred_immediate_stmt_else: assert #0 (0) $display("pass"); else $display("fail");
-
-  assume_observed_deferred_immediate: assume #0 (0);
-  assume_observed_deferred_immediate_else: assume #0 (0) else $display("fail");
-  assume_observed_deferred_immediate_stmt: assume #0 (0) $display("pass");
-  assume_observed_deferred_immediate_stmt_else: assume #0 (0) $display("pass"); else $display("fail");
 
   assert_final_deferred_immediate: assert final (0);
   assert_final_deferred_immediate_else: assert final (0) else $display("fail");

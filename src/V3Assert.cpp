@@ -20,6 +20,7 @@
 
 #include "V3AstUserAllocator.h"
 #include "V3Stats.h"
+#include "V3Task.h"
 #include "V3UniqueNames.h"
 
 VL_DEFINE_DEBUG_FUNCTIONS;
@@ -272,6 +273,7 @@ class AssertVisitor final : public VNVisitor {
     AstVar* m_monitorOffVarp = nullptr;  // $monitoroff variable
     unsigned m_modPastNum = 0;  // Module past numbering
     unsigned m_modStrobeNum = 0;  // Module $strobe numbering
+    unsigned m_modObsDeferNum = 0;  // Module observed deferred assertion numbering
     AstNodeProcedure* m_procedurep = nullptr;  // Current procedure
     VDouble0 m_statCover;  // Statistic tracking
     VDouble0 m_statAsNotImm;  // Statistic tracking
@@ -289,6 +291,8 @@ class AssertVisitor final : public VNVisitor {
     VDouble0 m_statLiftedCaseExprs;  // Count of purified case expressions
     AstNodeFTask* m_ftaskp = nullptr;  // Current function/task
     V3UniqueNames m_caseTempNames{"__VCase"};
+    V3UniqueNames m_obsValueNames{
+        "__VassertObsVal"};  // Observed deferred action argument snapshot names
     // Map from (expression, senTree) to AstAlways that computes delayed values of the expression
     std::unordered_map<VNRef<AstNodeExpr>, std::unordered_map<VNRef<AstSenTree>, AstAlways*>>
         m_modExpr2Sen2DelayedAlwaysp;
@@ -408,6 +412,49 @@ class AssertVisitor final : public VNVisitor {
         AstVarRef* const varrefp = new AstVarRef{nodep->fileline(), m_monitorOffVarp, access};
         varrefp->classOrPackagep(v3Global.rootp()->dollarUnitPkgAddp());
         return varrefp;
+    }
+    static AstVar* newModuleTemp(FileLine* flp, const string& name, AstNodeDType* dtypep,
+                                 AstNodeModule* ownerp) {
+        AstVar* const varp = new AstVar{flp, VVarType::MODULETEMP, name, dtypep};
+        varp->isInternal(true);
+        ownerp->addStmtsp(varp);
+        return varp;
+    }
+    static AstQueueDType* newQueueDTypep(FileLine* flp, AstNodeDType* elemDTypep) {
+        AstQueueDType* const queueDtp = new AstQueueDType{flp, elemDTypep, nullptr};
+        v3Global.rootp()->typeTablep()->addTypesp(queueDtp);
+        return queueDtp;
+    }
+    static AstNodeStmt* newQueuePush(FileLine* flp, AstVar* queuep, AstNodeExpr* valuep) {
+        AstCMethodHard* const callp = new AstCMethodHard{
+            flp, new AstVarRef{flp, queuep, VAccess::WRITE}, VCMethod::ARRAY_PUSH_BACK, valuep};
+        callp->dtypeSetVoid();
+        return callp->makeStmt();
+    }
+    static AstCMethodHard* newQueuePop(FileLine* flp, AstVar* queuep, AstNodeDType* elemDTypep) {
+        AstCMethodHard* const callp = new AstCMethodHard{
+            flp, new AstVarRef{flp, queuep, VAccess::READWRITE}, VCMethod::ARRAY_POP_FRONT};
+        callp->dtypeFrom(elemDTypep);
+        return callp;
+    }
+    void snapshotObservedExpr(AstNodeExpr* exprp, AstNodeStmt*& queuesp) {
+        FileLine* const flp = exprp->fileline();
+        AstNodeDType* const dtypep = exprp->dtypep();
+        AstVar* const queuep = newModuleTemp(flp, m_obsValueNames.get(exprp) + "Queue",
+                                             newQueueDTypep(flp, dtypep), m_modp);
+        queuep->setIgnoreSchedWrite();
+        VNRelinker handle;
+        AstNodeExpr* const oldp = exprp->unlinkFrBack(&handle);
+        handle.relink(newQueuePop(flp, queuep, dtypep));
+        queuesp = AstNode::addNext(queuesp, newQueuePush(flp, queuep, oldp));
+    }
+    void snapshotObservedSFormatArgs(AstSFormatF* fmtp, AstNodeStmt*& queuesp) {
+        for (AstNodeExpr* exprp = fmtp->exprsp(); exprp;) {
+            AstNodeExpr* const nextp = VN_CAST(exprp->nextp(), NodeExpr);
+            AstSFormatArg* const argp = VN_CAST(exprp, SFormatArg);
+            snapshotObservedExpr(argp ? argp->exprp() : exprp, queuesp);
+            exprp = nextp;
+        }
     }
     static AstIf* newIfAssertOn(AstNode* bodyp, VAssertDirectiveType directiveType,
                                 VAssertType type = VAssertType::INTERNAL) {
@@ -556,6 +603,84 @@ class AssertVisitor final : public VNVisitor {
         return new AstVarRef{exprp->fileline(), delayedr.at(ticks - 1), VAccess::READ};
     }
 
+    // Lower observed deferred action into immediate argument snapshots and an
+    // Observed-to-Reactive queue entry.
+    AstNodeStmt* newObservedDeferredAction(FileLine* flp, AstNode* actionsp) {
+        if (!v3Global.opt.timing().isSetTrue()) {
+            actionsp->v3warn(
+                E_NOTIMING,
+                "Observed deferred immediate assertion action block requires --timing");
+        }
+        v3Global.setUsesTiming();
+        if (!(actionsp->isOutputter() || VN_IS(actionsp, SFormat) || VN_IS(actionsp, StmtExpr))) {
+            actionsp->v3error("Observed deferred immediate assertion action block must be a "
+                              "single subroutine call (IEEE 1800-2023 16.4).");
+        }
+        const string suffix = cvtToStr(m_modObsDeferNum++);
+        AstNodeStmt* queuesp = nullptr;
+        if (AstDisplay* const displayp = VN_CAST(actionsp, Display)) {
+            if (displayp->filep()) snapshotObservedExpr(displayp->filep(), queuesp);
+            snapshotObservedSFormatArgs(displayp->fmtp(), queuesp);
+        } else if (AstSFormat* const sformatp = VN_CAST(actionsp, SFormat)) {
+            snapshotObservedSFormatArgs(sformatp->fmtp(), queuesp);
+        } else if (AstSystemT* const systemp = VN_CAST(actionsp, SystemT)) {
+            snapshotObservedExpr(systemp->lhsp(), queuesp);
+        } else if (AstStmtExpr* const stmtexprp = VN_CAST(actionsp, StmtExpr)) {
+            AstNodeFTaskRef* const refp = VN_AS(stmtexprp->exprp(), NodeFTaskRef);
+            // Match actuals to formal ports, including named/default arguments
+            const V3TaskConnects tconnects
+                = V3Task::taskConnects(refp, refp->taskp()->stmtsp(), nullptr, false);
+            for (const auto& tconnect : tconnects) {
+                AstVar* const portp = tconnect.first;
+                AstArg* const argp = tconnect.second;
+                if (portp->isRef() || portp->isConstRef()) {
+                    if (argp->exprp()->exists([](const AstNodeVarRef* varrefp) {
+                            return varrefp->varp()->lifetime().isAutomatic()
+                                   || varrefp->varp()->dtypep()->skipRefp()->isDynamicallySized();
+                        })) {
+                        argp->exprp()->v3error(
+                            "Observed deferred immediate assertion ref action argument cannot "
+                            "have automatic or dynamic storage (IEEE 1800-2023 16.4).");
+                    }
+                } else if (portp->isNonOutput()) {
+                    snapshotObservedExpr(argp->exprp(), queuesp);
+                } else {
+                    argp->exprp()->v3error("Observed deferred immediate assertion action "
+                                           "argument must be input, ref, or const ref "
+                                           "(IEEE 1800-2023 16.4).");
+                }
+            }
+        }
+
+        AstNodeDType* const uint64p = m_modp->findUInt64DType();
+        AstVar* const reportQueuep = newModuleTemp(flp, "__VassertObsQueue" + suffix,
+                                                   newQueueDTypep(flp, uint64p), m_modp);
+        reportQueuep->setIgnoreSchedWrite();
+        AstVar* const eventp
+            = newModuleTemp(flp, "__VassertObsEvent" + suffix,
+                            m_modp->findBasicDType(VBasicDTypeKwd::EVENT), m_modp);
+        v3Global.setHasEvents();
+
+        queuesp = AstNode::addNext(
+            queuesp, newQueuePush(flp, reportQueuep, new AstConst{flp, AstConst::Unsized64{}, 0}));
+        queuesp = AstNode::addNext(
+            queuesp, new AstFireEvent{flp, new AstVarRef{flp, eventp, VAccess::WRITE}, false});
+
+        AstLoop* const reactLoopp = new AstLoop{flp};
+        AstCMethodHard* const reportQueueSizep = new AstCMethodHard{
+            flp, new AstVarRef{flp, reportQueuep, VAccess::READ}, VCMethod::DYN_SIZE};
+        reportQueueSizep->dtypeSetInt();
+        reactLoopp->addStmtsp(new AstLoopTest{flp, reactLoopp, reportQueueSizep});
+        reactLoopp->addStmtsp(newQueuePop(flp, reportQueuep, uint64p)->makeStmt());
+        reactLoopp->addStmtsp(actionsp);
+        m_modp->addStmtsp(new AstAlwaysReactive{
+            flp,
+            new AstSenTree{flp, new AstSenItem{flp, VEdgeType::ET_EVENT,
+                                               new AstVarRef{flp, eventp, VAccess::READ}}},
+            reactLoopp});
+        return queuesp;
+    }
+
     void visitAssertionIterate(AstNodeCoverOrAssert* nodep, AstNode* failsp) {
         if (m_beginp && nodep->name() == "") nodep->name(m_beginp->name());
 
@@ -656,6 +781,11 @@ class AssertVisitor final : public VNVisitor {
             propExprp = nodep->propp()->unlinkFrBack();
         }
         FileLine* const flp = nodep->fileline();
+        if (VN_IS(nodep, Assert)
+            && nodep->userType() == VAssertType::OBSERVED_DEFERRED_IMMEDIATE) {
+            if (passsp) passsp = newObservedDeferredAction(flp, passsp);
+            if (failsp) failsp = newObservedDeferredAction(flp, failsp);
+        }
         bool passspAlreadyGated = false;
         if (passsp && VN_IS(passsp, If)) passspAlreadyGated = VN_AS(passsp, If)->user1();
         if (passsp && !passspGated && !passspAlreadyGated && !VN_IS(propExprp, PExpr)
@@ -1209,12 +1339,14 @@ class AssertVisitor final : public VNVisitor {
 
     void visit(AstNodeModule* nodep) override {
         VL_RESTORER(m_modp);
+        VL_RESTORER(m_modObsDeferNum);
         VL_RESTORER(m_modPastNum);
         VL_RESTORER(m_modStrobeNum);
         VL_RESTORER(m_finalp);
         VL_RESTORER_CLEAR(m_modExpr2Sen2DelayedAlwaysp);
         m_modp = nodep;
         m_modPastNum = 0;
+        m_modObsDeferNum = 0;
         m_modStrobeNum = 0;
         m_finalp = nullptr;
         iterateChildren(nodep);

@@ -1,0 +1,23 @@
+%Error-UNSUPPORTED: t/t_assert_obs_defer_flush_unsup.v:13:5: Unsupported: Observed deferred immediate assertion in a process with deferred assertion flush points (IEEE 1800-2023 16.4.2).
+   13 |     assert #0 (0)
+      |     ^~~~~~
+                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
+%Error-UNSUPPORTED: t/t_assert_obs_defer_flush_unsup.v:19:5: Unsupported: Observed deferred immediate assertion in a process with deferred assertion flush points (IEEE 1800-2023 16.4.2).
+   19 |     assert #0 (0)
+      |     ^~~~~~
+%Error-UNSUPPORTED: t/t_assert_obs_defer_flush_unsup.v:29:5: Unsupported: Observed deferred immediate assertion in a process with deferred assertion flush points (IEEE 1800-2023 16.4.2).
+   29 |     assert #0 (0)
+      |     ^~~~~~
+%Error-UNSUPPORTED: t/t_assert_obs_defer_flush_unsup.v:35:5: Unsupported: Observed deferred immediate assertion in a process with deferred assertion flush points (IEEE 1800-2023 16.4.2).
+   35 |     assert #0 (0)
+      |     ^~~~~~
+%Error-UNSUPPORTED: t/t_assert_obs_defer_flush_unsup.v:41:5: Unsupported: Observed deferred immediate assertion in a process with deferred assertion flush points (IEEE 1800-2023 16.4.2).
+   41 |     assert #0 (0)
+      |     ^~~~~~
+%Error-UNSUPPORTED: t/t_assert_obs_defer_flush_unsup.v:47:5: Unsupported: Observed deferred immediate assertion in a process with deferred assertion flush points (IEEE 1800-2023 16.4.2).
+   47 |     assert #0 (a)
+      |     ^~~~~~
+%Error-UNSUPPORTED: t/t_assert_obs_defer_flush_unsup.v:54:7: Unsupported: Observed deferred immediate assertion in a process with deferred assertion flush points (IEEE 1800-2023 16.4.2).
+   54 |       assert #0 (q)
+      |       ^~~~~~
+%Error: Exiting due to

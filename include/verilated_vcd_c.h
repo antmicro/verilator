@@ -128,6 +128,8 @@ public:
     void close() VL_MT_SAFE_EXCLUDES(m_mutex);
     // Flush any remaining data to this file
     void flush() VL_MT_SAFE_EXCLUDES(m_mutex);
+    // Write text into the file as a $comment block
+    void comment(const std::string& text) VL_MT_SAFE_EXCLUDES(m_mutex);
     // Return if file is open
     bool isOpen() const VL_MT_SAFE { return m_isOpen; }
 
@@ -320,6 +322,8 @@ public:
     }
     /// Flush dump
     void flush() VL_MT_SAFE { m_sptrace.flush(); }
+    /// Write text into the dump as a $comment block
+    void comment(const std::string& text) VL_MT_SAFE { m_sptrace.comment(text); }
     /// Write one cycle of dump data
     /// Call with the current context's time just after eval'ed,
     /// e.g. ->dump(contextp->time())

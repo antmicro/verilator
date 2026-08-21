@@ -251,6 +251,14 @@ void VerilatedVcd::flush() VL_MT_SAFE_EXCLUDES(m_mutex) {
     bufferFlush();
 }
 
+void VerilatedVcd::comment(const std::string& text) VL_MT_SAFE_EXCLUDES(m_mutex) {
+    const VerilatedLockGuard lock{m_mutex};
+    if (!isOpen()) return;
+    printStr("$comment ");
+    printStr(text.c_str());
+    printStr(" $end\n");
+}
+
 void VerilatedVcd::printStr(const char* str) {
     // Not fast...
     while (*str) {

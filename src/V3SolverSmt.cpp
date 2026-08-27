@@ -395,12 +395,9 @@ class ConstraintExprVisitor final : public VNVisitor {
         AstNodeExpr* const namep
             = fromp ? buildNamePrefix(fl, fromp) : new AstConst{fl, AstConst::String{}, ""};
 
-        if (const AstStructSel* const selp = VN_CAST(nodep, StructSel)) {
+        if (VN_IS(nodep, StructSel) || VN_IS(nodep, MemberRef)) {
             return new AstConcatN{fl, namep,
-                                  new AstConst{fl, AstConst::String{}, "." + selp->name()}};
-        } else if (VN_IS(nodep, MemberRef)) {
-            nodep->v3warn(E_UNSUPPORTED,
-                          "Unsupported: Nested array element access in global constraint");
+                                  new AstConst{fl, AstConst::String{}, "." + nodep->name()}};
         } else if (const AstCMethodHard* const cmethp = VN_CAST(nodep, CMethodHard)) {
             UASSERT_OBJ(cmethp->method() == VCMethod::ARRAY_AT, cmethp,
                         "Unexpected CMethodHard: " << cmethp->prettyTypeNameQ());

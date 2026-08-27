@@ -63,7 +63,11 @@ class Outer;
   rand Middle m_mid2;
   rand Middle m_mid_arr[3];
   rand Middle m_mid_arr2[3];
+  rand Middle m_mid_arr3[3][2];
+  rand Middle m_mid_arr4[3][2];
+  rand Middle m_mid_arr5[3][2];
   rand Inner m_assoc[int];
+  rand Middle m_assoc_foreach[int];
   string m_key;
   rand Inner m_assoc_nested[int][bit];
   rand Holder m_holder;
@@ -86,9 +90,31 @@ class Outer;
       m_mid_arr2[i].m_obj = new;
       foreach (m_mid_arr2[i].m_arr[j]) m_mid_arr2[i].m_arr[j] = new;
     end
+    foreach (m_mid_arr3[i])
+      foreach (m_mid_arr3[i][j]) begin
+        m_mid_arr3[i][j] = new;
+        m_mid_arr3[i][j].m_obj = new;
+        foreach (m_mid_arr3[i][j].m_arr[k]) m_mid_arr3[i][j].m_arr[k] = new;
+      end
+    foreach (m_mid_arr4[i])
+      foreach (m_mid_arr4[i][j]) begin
+        m_mid_arr4[i][j] = new;
+        m_mid_arr4[i][j].m_obj = new;
+        foreach (m_mid_arr4[i][j].m_arr[k]) m_mid_arr4[i][j].m_arr[k] = new;
+      end
+    foreach (m_mid_arr5[i])
+      foreach (m_mid_arr5[i][j]) begin
+        m_mid_arr5[i][j] = new;
+        m_mid_arr5[i][j].m_obj = new;
+        foreach (m_mid_arr5[i][j].m_arr[k]) m_mid_arr5[i][j].m_arr[k] = new;
+      end
 
     m_assoc[0] = new;
     m_assoc[1] = new;
+    m_assoc_foreach[3] = new;
+    m_assoc_foreach[3].m_obj = new;
+    m_assoc_foreach[7] = new;
+    m_assoc_foreach[7].m_obj = new;
     m_assoc_nested[123][1] = new;
     m_holder = new;
   endfunction
@@ -157,6 +183,42 @@ class Outer;
 
   // Case 7: randc
   constraint c_randc {m_holder.cyclic[0].cycle inside {[0 : 3]};}
+
+  constraint c_foreach0 {
+    foreach (m_mid_arr3[i])
+      foreach (m_mid_arr3[i][j])
+        m_mid_arr3[i][j].m_obj.m_x == i - j;
+  }
+
+  constraint c_foreach1 {
+    foreach (m_mid_arr4[i])
+        m_mid_arr4[i][m_idx].m_obj.m_x == i;
+  }
+
+  constraint c_foreach2 {
+    foreach (m_mid_arr5[i, j])
+      m_mid_arr5[i][j].m_obj.m_x == i + j;
+  }
+
+  constraint c_foreach3 {
+    foreach (m_mid_arr5[i]) {
+      m_mid_arr5[i][0].m_obj.m_y == i;
+      foreach (m_mid_arr5[i][j]) m_mid_arr5[i][j].m_obj.m_x == i + j;
+      m_mid_arr5[i][1].m_obj.m_y == i + 10;
+    }
+  }
+
+  constraint c_foreach_multiple {
+    foreach(m_holder.items[i]) {
+      m_holder.items[i].x == i;
+      m_holder.items[i].y == i + 10;
+    }
+  }
+
+  constraint c_foreach_assoc {
+    foreach (m_assoc_foreach[i]) m_assoc_foreach[i].m_obj.m_x == i + 100;
+  }
+
 endclass
 
 
@@ -178,6 +240,21 @@ module t_constraint_global_arr_nested;
     rand_res = o.randomize();
     `checkd(rand_res, 1);
 
+    foreach (o.m_mid_arr3[i])
+      foreach (o.m_mid_arr3[i][j])
+        if (o.m_mid_arr3[i][j].m_obj.m_x != i - j) $stop;
+    foreach (o.m_mid_arr4[i])
+      if (o.m_mid_arr4[i][1].m_obj.m_x != i) $stop;
+    foreach (o.m_mid_arr5[i])
+      foreach (o.m_mid_arr5[i][j])
+        if (o.m_mid_arr5[i][j].m_obj.m_x != i + j) $stop;
+    foreach (o.m_mid_arr5[i]) begin
+      `checkd(o.m_mid_arr5[i][0].m_obj.m_y, i);
+      foreach (o.m_mid_arr5[i][j]) `checkd(o.m_mid_arr5[i][j].m_obj.m_x, i + j);
+      `checkd(o.m_mid_arr5[i][1].m_obj.m_y, i + 10);
+    end
+    `checkd(o.m_assoc_foreach[3].m_obj.m_x, 103);
+    `checkd(o.m_assoc_foreach[7].m_obj.m_x, 107);
     `checkd(o.m_mid.m_obj.m_x, 100);
     `checkd(o.m_mid.m_obj.m_y, 101);
 
@@ -201,6 +278,10 @@ module t_constraint_global_arr_nested;
     `checkd(o.m_mid_arr2[2].m_obj.m_x, 500);
     `checkd(o.m_mid_arr2[2].m_obj.m_y, 501);
 
+    foreach (o.m_holder.items[i]) begin
+      `checkd(o.m_holder.items[i].x, i);
+      `checkd(o.m_holder.items[i].y, i + 10);
+    end
     `check_rand(o, o.m_mid2.m_arr[0].m_x, o.m_mid2.m_arr[0].m_x < 200);
     `check_rand(o, o.m_mid2.m_arr[0].m_y, o.m_mid2.m_arr[0].m_y < 201);
 

@@ -63,6 +63,9 @@ private:
 
     std::vector<char> m_suffixes;  // VCD line end string codes + metadata
 
+    std::vector<std::string> m_logNames;  // Names of log signals, indexed by handle
+    std::vector<std::string> m_logCodes;  // VCD codes of log signals, indexed by handle
+
     // Prefixes to add to signal names/scope types
     std::vector<std::pair<std::string, VerilatedTracePrefixType>> m_prefixStack{
         {"", VerilatedTracePrefixType::SCOPE_MODULE}};
@@ -128,6 +131,11 @@ public:
     void close() VL_MT_SAFE_EXCLUDES(m_mutex);
     // Flush any remaining data to this file
     void flush() VL_MT_SAFE_EXCLUDES(m_mutex);
+    // Declare a signal holding arbitrary text, and return its handle.
+    // Must be called before open(), as declarations go into the file header.
+    uint32_t declLog(const std::string& name) VL_MT_SAFE_EXCLUDES(m_mutex);
+    // Write text as a value change of the log signal with the given handle
+    void log(uint32_t handle, const std::string& text) VL_MT_SAFE_EXCLUDES(m_mutex);
     // Return if file is open
     bool isOpen() const VL_MT_SAFE { return m_isOpen; }
 
@@ -320,6 +328,11 @@ public:
     }
     /// Flush dump
     void flush() VL_MT_SAFE { m_sptrace.flush(); }
+    /// Declare a signal holding arbitrary text, and return its handle.
+    /// Must be called before open(), as declarations go into the file header.
+    uint32_t declLog(const std::string& name) VL_MT_SAFE { return m_sptrace.declLog(name); }
+    /// Write text as a value change of the log signal with the given handle
+    void log(uint32_t handle, const std::string& text) VL_MT_SAFE { m_sptrace.log(handle, text); }
     /// Write one cycle of dump data
     /// Call with the current context's time just after eval'ed,
     /// e.g. ->dump(contextp->time())

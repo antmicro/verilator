@@ -61,6 +61,36 @@ constexpr unsigned VL_TRACE_MAX_VCD_CODE_SIZE = 5;  // Maximum length of a VCD s
 // cache-lines.
 constexpr unsigned VL_TRACE_SUFFIX_ENTRY_SIZE = 8;  // Size of a suffix entry
 
+// Convert a VCD identifier code to printable ASCII between '!' and '~'
+static std::string vcdCodeStr(uint32_t code) {
+    std::string out;
+    do {
+        out += static_cast<char>('!' + (code % 94));
+        code /= 94;
+    } while (code--);
+    return out;
+}
+
+// Escape text for use as a VCD string value
+static std::string vcdEscapeStr(const std::string& text) {
+    std::string out;
+    out.reserve(text.size());
+    for (const char c : text) {
+        const unsigned char u = static_cast<unsigned char>(c);
+        if (u == '\\') {
+            out += "\\\\";
+        } else if (u > ' ' && u <= '~') {
+            out += c;
+        } else {
+            out += '\\';
+            out += static_cast<char>('0' + (u >> 6));
+            out += static_cast<char>('0' + ((u >> 3) & 7));
+            out += static_cast<char>('0' + (u & 7));
+        }
+    }
+    return out;
+}
+
 //=============================================================================
 // Specialization of the generics for this trace format
 
@@ -125,6 +155,15 @@ void VerilatedVcd::open(const char* filename) VL_MT_SAFE_EXCLUDES(m_mutex) {
     Super::traceInit();
     --m_indent;
     assert(m_indent >= 0);
+
+    // Declare the log signals after the model's signals to avoid collisions with the model's codes
+    m_logCodes.clear();
+    for (size_t i = 0; i < m_logNames.size(); ++i) {
+        m_logCodes.push_back(vcdCodeStr(nextCode() + static_cast<uint32_t>(i)));
+        const std::string decl
+            = "$var string 1 " + m_logCodes.back() + " " + m_logNames[i] + " $end\n";
+        printStr(decl.c_str());
+    }
 
     printStr("$enddefinitions $end\n\n\n");
 
@@ -249,6 +288,26 @@ void VerilatedVcd::flush() VL_MT_SAFE_EXCLUDES(m_mutex) {
     const VerilatedLockGuard lock{m_mutex};
     Super::flushBase();
     bufferFlush();
+}
+
+uint32_t VerilatedVcd::declLog(const std::string& name) VL_MT_SAFE_EXCLUDES(m_mutex) {
+    const VerilatedLockGuard lock{m_mutex};
+    if (VL_UNLIKELY(isOpen())) {
+        VL_FATAL_MT(__FILE__, __LINE__, "", "VerilatedVcd::declLog called after open()");
+    }
+    m_logNames.push_back(name);
+    return static_cast<uint32_t>(m_logNames.size() - 1);
+}
+
+void VerilatedVcd::log(uint32_t handle, const std::string& text) VL_MT_SAFE_EXCLUDES(m_mutex) {
+    const VerilatedLockGuard lock{m_mutex};
+    if (!isOpen()) return;
+    assert(handle < m_logCodes.size());
+    printStr("s");
+    printStr(vcdEscapeStr(text).c_str());
+    printStr(" ");
+    printStr(m_logCodes[handle].c_str());
+    printStr("\n");
 }
 
 void VerilatedVcd::printStr(const char* str) {
@@ -398,17 +457,9 @@ void VerilatedVcd::declare(uint32_t code, const char* name, const char* wirep, b
     if (!enabled) return;
 
     // Create the VCD code and build the suffix array entry
-    char vcdCode[VL_TRACE_SUFFIX_ENTRY_SIZE];
+    const std::string vcdCode = vcdCodeStr(code);
     {
-        // Render the VCD code
-        char* vcdCodeWritep = vcdCode;
-        uint32_t codeEnc = code;
-        do {
-            *vcdCodeWritep++ = static_cast<char>('!' + (codeEnc % 94));
-            codeEnc /= 94;
-        } while (codeEnc--);
-        *vcdCodeWritep = '\0';
-        const size_t vcdCodeLength = vcdCodeWritep - vcdCode;
+        const size_t vcdCodeLength = vcdCode.size();
         assert(vcdCodeLength <= VL_TRACE_MAX_VCD_CODE_SIZE);
         // Build suffix array entry
         char* const entryBeginp = &m_suffixes[code * VL_TRACE_SUFFIX_ENTRY_SIZE];
@@ -416,7 +467,7 @@ void VerilatedVcd::declare(uint32_t code, const char* name, const char* wirep, b
         // 1 bit values don't have a ' ' separator between value and string code
         char* entryWritep = bits == 1 ? entryBeginp : entryBeginp + 1;
         // Use memcpy as we know the size, and strcpy is flagged unsafe
-        std::memcpy(entryWritep, vcdCode, vcdCodeLength);
+        std::memcpy(entryWritep, vcdCode.c_str(), vcdCodeLength);
         entryWritep += vcdCodeLength;
         // Line terminator
         *entryWritep++ = '\n';

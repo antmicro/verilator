@@ -268,12 +268,25 @@ class EmitCHeader final : public EmitCConstInit {
                         }
                     });
                 const string className = EmitCUtil::prefixNameProtect(classp);
-                if (embeddedCovergroupVars.empty()) {
+                if (embeddedCovergroupVars.empty() && !classp->hasUpdateRandVarsAfterCopy()) {
                     putns(classp,
                           "VlClass* clone() const { return new " + className + "(*this); }\n");
                 } else {
                     putns(classp, "VlClass* clone() const { " + className + "* const clonep = new "
                                       + className + "(*this); ");
+                    if (classp->hasUpdateRandVarsAfterCopy()) {
+                        AstCFunc* updatep = nullptr;
+                        for (AstNode* memberp = classp->membersp(); memberp;
+                             memberp = memberp->nextp()) {
+                            AstCFunc* const cfuncp = VN_CAST(memberp, CFunc);
+                            if (cfuncp && cfuncp->name() == "__VupdateRandVarsAfterCopy") {
+                                updatep = cfuncp;
+                                break;
+                            }
+                        }
+                        UASSERT_OBJ(updatep, classp, "Missing update rand vars after copy method");
+                        puts("clonep->" + updatep->nameProtect() + "();\n");
+                    }
                     for (const EmbeddedCovergroupVar& item : embeddedCovergroupVars) {
                         puts("clonep->" + EmitCUtil::prefixNameProtect(item.first)
                              + "::" + item.second->nameProtect() + " = VlNull{}; ");

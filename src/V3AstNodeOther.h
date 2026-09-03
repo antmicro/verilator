@@ -2901,6 +2901,7 @@ class AstClass final : public AstNodeModule {
     // @astgen ptr := m_covergroupEnclosingClassp : Optional[AstClass]  // Lexical enclosing class
     uint32_t m_declTokenNum;  // Declaration token number
     VBaseOverride m_baseOverride;  // BaseOverride (inital/final/extends)
+    bool m_hasUpdateRandVarsAfterCopy = false;  // Has function updating rand var pointers in clone()
     bool m_covergroup = false;  // Is covergroup (TODO perhaps make a new Ast node type for CG?)
     bool m_extended = false;  // Is extension or extended by other classes
     bool m_interfaceClass = false;  // Interface class
@@ -2929,6 +2930,8 @@ public:
     void covergroupEnclosingClassp(AstClass* classp) { m_covergroupEnclosingClassp = classp; }
     AstNode* membersp() const VL_MT_STABLE { return stmtsp(); }
     void addMembersp(AstNode* nodep) { addStmtsp(nodep); }
+    bool hasUpdateRandVarsAfterCopy() const { return m_hasUpdateRandVarsAfterCopy; }
+    void hasUpdateRandVarsAfterCopy(bool flag) { m_hasUpdateRandVarsAfterCopy = flag; }
     bool isCovergroup() const { return m_covergroup; }
     void isCovergroup(bool flag) { m_covergroup = flag; }
     bool isExtended() const { return m_extended; }

@@ -4645,7 +4645,9 @@ class RandomizeVisitor final : public VNVisitor {
         if (derefFromp) {
             sizeNodeExprp = buildMemberSelExprp(derefFromp, sizeVarp);
         } else {
-            sizeNodeExprp = new AstVarRef{fl, sizeVarp, VAccess::READ};
+            AstVarRef* const sizeVarRefp = new AstVarRef{fl, sizeVarp, VAccess::READ};
+            sizeVarRefp->classOrPackagep(VN_AS(sizeVarp->user2p(), NodeModule));
+            sizeNodeExprp = sizeVarRefp;
         }
         sizeNodeExprp->user1(true);
         AstGteS* const sizeGtep = new AstGteS{fl, sizeNodeExprp, new AstConst{fl, 0}};
@@ -4743,6 +4745,62 @@ class RandomizeVisitor final : public VNVisitor {
 
         resExprp->user1(true);
         return resExprp;
+    }
+
+    void addUpdateRandVarsAfterCopyBody(AstClass* const nodep, AstFunc* const randomizep) {
+        if (nodep->hasUpdateRandVarsAfterCopy()) return;
+
+        AstCFunc* const updatep
+            = new AstCFunc{nodep->fileline(), "__VupdateRandVarsAfterCopy", nullptr, "void"};
+        updatep->isVirtual(true);
+        updatep->isConst(false);
+        nodep->addMembersp(updatep);
+        nodep->hasUpdateRandVarsAfterCopy(true);
+
+        const auto cloneWriteVarStmts = [updatep](AstNodeFTask* const ftaskp) {
+            if (!ftaskp || !ftaskp->stmtsp()) return;
+            for (AstNode* stmtp = ftaskp->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+                bool foundClearConstraints = false;
+                stmtp->foreach([&](AstCMethodHard* methodp) {
+                    if (methodp->method() == VCMethod::RANDOMIZER_CLEARCONSTRAINTS) {
+                        foundClearConstraints = true;
+                    }
+                    if (methodp->method() != VCMethod::RANDOMIZER_WRITE_VAR) return;
+
+                    bool hasNonMemberRef = false;
+                    methodp->pinsp()->foreach([&](AstNodeVarRef* refp) {
+                        AstVar* const refVarp = refp->varp();
+                        if (refVarp->lifetime().isStatic() || !refVarp->isClassMember()) {
+                            hasNonMemberRef = true;
+                        }
+                    });
+                    if (hasNonMemberRef) return;
+
+                    AstCMethodHard* const updateMethodp = methodp->cloneTree(false);
+                    updateMethodp->method(VCMethod::RANDOMIZER_UPDATE_VAR);
+
+                    AstNodeExpr* const varp = updateMethodp->pinsp();
+                    AstNodeExpr* const widthp = VN_AS(varp->nextp(), NodeExpr);
+                    AstNodeExpr* const namep = VN_AS(widthp->nextp(), NodeExpr);
+                    varp->unlinkFrBack();
+                    namep->unlinkFrBack();
+                    updateMethodp->pinsp()->unlinkFrBackWithNext()->deleteTree();
+                    updateMethodp->addPinsp(varp);
+                    updateMethodp->addPinsp(namep);
+                    updatep->addStmtsp(updateMethodp->makeStmt());
+                });
+                if (foundClearConstraints) break;
+            }
+        };
+
+        for (AstClass* classp = nodep; classp;
+             classp = classp->extendsp() ? classp->extendsp()->classp() : nullptr) {
+            cloneWriteVarStmts(VN_CAST(m_memberMap.findMember(classp, "new"), NodeFTask));
+            cloneWriteVarStmts(classp == nodep ? randomizep
+                                               : VN_CAST(m_memberMap.findMember(classp,
+                                                                                "randomize"),
+                                                         NodeFTask));
+        }
     }
 
     void addBasicRandomizeBody(AstFunc* const basicRandomizep, AstClass* const nodep,
@@ -5944,6 +6002,8 @@ class RandomizeVisitor final : public VNVisitor {
             beginValp = new AstConst{fl, AstConst::WidthedValue{}, 32, 1};
         }
 
+        addUpdateRandVarsAfterCopyBody(nodep, randomizep);
+
         AstFunc* const basicRandomizep
             = V3Randomize::newRandomizeFunc(m_memberMap, nodep, BASIC_RANDOMIZE_FUNC_NAME);
         addBasicRandomizeBody(basicRandomizep, nodep, randModeVarp);
@@ -6499,9 +6559,10 @@ class RandomizeVisitor final : public VNVisitor {
                             = newResizeConstrainedArrayTask(classp, m_constraintp->name());
                         m_constraintp->user3p(resizerTaskp);
                     }
+                    AstVarRef* const sizeVarRefp = new AstVarRef{fl, sizeVarp, VAccess::READ};
+                    sizeVarRefp->classOrPackagep(VN_AS(sizeVarp->user2p(), NodeModule));
                     AstCMethodHard* const resizep = new AstCMethodHard{
-                        fl, nodep->fromp()->unlinkFrBack(), VCMethod::DYN_RESIZE,
-                        new AstVarRef{fl, sizeVarp, VAccess::READ}};
+                        fl, nodep->fromp()->unlinkFrBack(), VCMethod::DYN_RESIZE, sizeVarRefp};
                     resizep->dtypep(nodep->findVoidDType());
                     resizerTaskp->addStmtsp(new AstStmtExpr{fl, resizep});
                 }
@@ -6511,6 +6572,7 @@ class RandomizeVisitor final : public VNVisitor {
                 m_constraintp->addItemsp(createSizeGteZeroConstraint(fl, sizeVarp));
             }
             AstVarRef* const sizeVarRefp = new AstVarRef{fl, sizeVarp, VAccess::READ};
+            sizeVarRefp->classOrPackagep(VN_AS(sizeVarp->user2p(), NodeModule));
             sizeVarRefp->user1(true);
             nodep->replaceWith(sizeVarRefp);
             VL_DO_DANGLING(nodep->deleteTree(), nodep);

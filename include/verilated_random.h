@@ -744,6 +744,99 @@ public:
              0)...};
     }
 
+    template <typename T>
+    typename std::enable_if<!VlContainsCustomStruct<T>::value && !IsVlUnpacked<T>::value,
+                            void>::type
+    update_var(T& var, const char* name) {
+        auto it = m_vars.find(name);
+        assert(it != m_vars.end());
+        it->second = std::make_shared<const VlRandomVar>(
+            name, it->second->width(), &var, it->second->dimension(), it->second->randModeIdx());
+    }
+
+    template <typename T>
+    typename std::enable_if<VlIsCustomStruct<T>::value, void>::type
+    update_var(T& var, const char* name) {
+        modifyMembers(var, var.memberIndices(), name);
+    }
+
+    template <typename T, size_t N_MaxSize>
+    typename std::enable_if<!VlContainsCustomStruct<T>::value, void>::type
+    update_var(VlQueue<T, N_MaxSize>& var, const char* name) {
+        auto it = m_vars.find(name);
+        assert(it != m_vars.end());
+        const int dimension = it->second->dimension();
+        it->second = std::make_shared<const VlRandomArrayVarTemplate<VlQueue<T, N_MaxSize>>>(
+            name, it->second->width(), &var, dimension, it->second->randModeIdx());
+        if (dimension > 0) {
+            m_index = 0;
+            clear_arr_table(name);
+            record_arr_table(var, name, dimension, {}, {});
+            m_vars[name]->clearCountCache();
+        }
+    }
+
+    template <typename T, size_t N_MaxSize>
+    typename std::enable_if<VlContainsCustomStruct<T>::value, void>::type
+    update_var(VlQueue<T, N_MaxSize>& var, const char* name) {
+        auto it = m_vars.find(name);
+        if (it != m_vars.end() && it->second->dimension() > 0) {
+            record_struct_arr(var, name, it->second->dimension(), {}, {});
+        }
+    }
+
+    template <typename T, std::size_t N_Depth>
+    typename std::enable_if<!VlContainsCustomStruct<T>::value, void>::type
+    update_var(VlUnpacked<T, N_Depth>& var, const char* name) {
+        auto it = m_vars.find(name);
+        assert(it != m_vars.end());
+        const int dimension = it->second->dimension();
+        it->second = std::make_shared<const VlRandomArrayVarTemplate<VlUnpacked<T, N_Depth>>>(
+            name, it->second->width(), &var, dimension, it->second->randModeIdx());
+        if (dimension > 0) {
+            m_index = 0;
+            clear_arr_table(name);
+            record_arr_table(var, name, dimension, {}, {});
+            m_vars[name]->clearCountCache();
+        }
+    }
+
+    template <typename T, std::size_t N_Depth>
+    typename std::enable_if<VlContainsCustomStruct<T>::value, void>::type
+    update_var(VlUnpacked<T, N_Depth>& var, const char* name) {
+        auto it = m_vars.find(name);
+        if (it != m_vars.end() && it->second->dimension() > 0) {
+            record_struct_arr(var, name, it->second->dimension(), {}, {});
+        }
+    }
+
+    template <typename T_Key, typename T_Value>
+    typename std::enable_if<!VlContainsCustomStruct<T_Value>::value, void>::type
+    update_var(VlAssocArray<T_Key, T_Value>& var, const char* name) {
+        auto it = m_vars.find(name);
+        assert(it != m_vars.end());
+        const int dimension = it->second->dimension();
+        std::vector<size_t> keyWidths;
+        VlRandomAssocKeyWidths<VlAssocArray<T_Key, T_Value>>::push(keyWidths);
+        it->second = std::make_shared<const VlRandomArrayVarTemplate<VlAssocArray<T_Key, T_Value>>>(
+            name, it->second->width(), &var, dimension, it->second->randModeIdx(), keyWidths);
+        if (dimension > 0) {
+            m_index = 0;
+            clear_arr_table(name);
+            record_arr_table(var, name, dimension, {}, {});
+            m_vars[name]->clearCountCache();
+        }
+    }
+
+    template <typename T_Key, typename T_Value>
+    typename std::enable_if<VlContainsCustomStruct<T_Value>::value, void>::type
+    update_var(VlAssocArray<T_Key, T_Value>& var, const char* name) {
+        auto it = m_vars.find(name);
+        if (it != m_vars.end() && it->second->dimension() > 0) {
+            record_struct_arr(var, name, it->second->dimension(), {}, {});
+        }
+    }
+
     // Helper: Generate unique variable key from name and index
     static std::string generateKey(const std::string& name, int idx) {
         if (!name.empty() && name[0] == '\\') {

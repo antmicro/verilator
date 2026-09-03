@@ -734,6 +734,16 @@ public:
              0)...};
     }
 
+    template <typename T>
+    typename std::enable_if<!VlContainsCustomStruct<T>::value && !IsVlUnpacked<T>::value,
+                            void>::type
+    update_var(T& var, const char* name) {
+        auto it = m_vars.find(name);
+        assert(it != m_vars.end());
+        it->second = std::make_shared<const VlRandomVar>(
+            name, it->second->width, &var, it->second->dimension, it->second->randModeIdx);
+    }
+
     // Helper: Generate unique variable key from name and index
     static std::string generateKey(const std::string& name, int idx) {
         if (!name.empty() && name[0] == '\\') {

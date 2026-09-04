@@ -4583,9 +4583,17 @@ class RandomizeVisitor final : public VNVisitor {
                     if (methodp->method() == VCMethod::RANDOMIZER_WRITE_VAR) {
                         if (!clonedStmtp) clonedStmtp = stmtp->cloneTree(false);
                         clonedStmtp->foreach([](AstCMethodHard* updateMethodp) {
-                            if (updateMethodp->method() == VCMethod::RANDOMIZER_WRITE_VAR) {
-                                updateMethodp->method(VCMethod::RANDOMIZER_UPDATE_VAR);
-                            }
+                            if (updateMethodp->method() != VCMethod::RANDOMIZER_WRITE_VAR) return;
+                            updateMethodp->method(VCMethod::RANDOMIZER_UPDATE_VAR);
+
+                            AstNodeExpr* const varp = updateMethodp->pinsp();
+                            AstNodeExpr* const widthp = VN_AS(varp->nextp(), NodeExpr);
+                            AstNodeExpr* const namep = VN_AS(widthp->nextp(), NodeExpr);
+                            varp->unlinkFrBack();
+                            namep->unlinkFrBack();
+                            updateMethodp->pinsp()->unlinkFrBackWithNext()->deleteTree();
+                            updateMethodp->addPinsp(varp);
+                            updateMethodp->addPinsp(namep);
                         });
                     } else if (methodp->method() == VCMethod::RANDOMIZER_CLEARCONSTRAINTS) {
                         foundClearConstraints = true;

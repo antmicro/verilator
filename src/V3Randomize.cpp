@@ -4564,6 +4564,48 @@ class RandomizeVisitor final : public VNVisitor {
         return resExprp;
     }
 
+    void addUpdateRandVarsAfterCopyBody(AstClass* const nodep, AstFunc* const randomizep) {
+        if (nodep->hasUpdateRandVarsAfterCopy()) return;
+
+        AstCFunc* const updatep
+            = new AstCFunc{nodep->fileline(), "__VupdateRandVarsAfterCopy", nullptr, "void"};
+        updatep->isVirtual(true);
+        updatep->isConst(false);
+        nodep->addMembersp(updatep);
+        nodep->hasUpdateRandVarsAfterCopy(true);
+
+        const auto cloneWriteVarStmts = [updatep](AstNodeFTask* const ftaskp) {
+            if (!ftaskp || !ftaskp->stmtsp()) return;
+            for (AstNode* stmtp = ftaskp->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+                bool foundClearConstraints = false;
+                AstNode* clonedStmtp = nullptr;
+                stmtp->foreach([&](AstCMethodHard* methodp) {
+                    if (methodp->method() == VCMethod::RANDOMIZER_WRITE_VAR) {
+                        if (!clonedStmtp) clonedStmtp = stmtp->cloneTree(false);
+                        clonedStmtp->foreach([](AstCMethodHard* updateMethodp) {
+                            if (updateMethodp->method() == VCMethod::RANDOMIZER_WRITE_VAR) {
+                                updateMethodp->method(VCMethod::RANDOMIZER_UPDATE_VAR);
+                            }
+                        });
+                    } else if (methodp->method() == VCMethod::RANDOMIZER_CLEARCONSTRAINTS) {
+                        foundClearConstraints = true;
+                    }
+                });
+                if (clonedStmtp) updatep->addStmtsp(clonedStmtp);
+                if (foundClearConstraints) break;
+            }
+        };
+
+        for (AstClass* classp = nodep; classp;
+             classp = classp->extendsp() ? classp->extendsp()->classp() : nullptr) {
+            cloneWriteVarStmts(VN_CAST(m_memberMap.findMember(classp, "new"), NodeFTask));
+            cloneWriteVarStmts(classp == nodep ? randomizep
+                                               : VN_CAST(m_memberMap.findMember(classp,
+                                                                                "randomize"),
+                                                         NodeFTask));
+        }
+    }
+
     void addBasicRandomizeBody(AstFunc* const basicRandomizep, AstClass* const nodep,
                                AstVar* randModeVarp) {
         UINFO(9, "addBasicRTB " << nodep);
@@ -5762,6 +5804,8 @@ class RandomizeVisitor final : public VNVisitor {
         } else {
             beginValp = new AstConst{fl, AstConst::WidthedValue{}, 32, 1};
         }
+
+        addUpdateRandVarsAfterCopyBody(nodep, randomizep);
 
         AstFunc* const basicRandomizep
             = V3Randomize::newRandomizeFunc(m_memberMap, nodep, BASIC_RANDOMIZE_FUNC_NAME);

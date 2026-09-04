@@ -737,11 +737,91 @@ public:
     template <typename T>
     typename std::enable_if<!VlContainsCustomStruct<T>::value && !IsVlUnpacked<T>::value,
                             void>::type
-    update_var(T& var, const char* name) {
+    update_var(T& var, QData /*width*/, const char* name, uint32_t /*dimension*/, int /*idx*/ = -1) {
         auto it = m_vars.find(name);
         assert(it != m_vars.end());
         it->second = std::make_shared<const VlRandomVar>(
-            name, it->second->width, &var, it->second->dimension, it->second->randModeIdx);
+            name, it->second->width(), &var, it->second->dimension(), it->second->randModeIdx());
+    }
+
+    template <typename T>
+    typename std::enable_if<VlIsCustomStruct<T>::value, void>::type
+    update_var(T& var, int width, const char* name, int dimension,
+               std::uint32_t randmodeIdx = std::numeric_limits<std::uint32_t>::max()) {
+        write_var(var, width, name, dimension, randmodeIdx);
+    }
+
+    template <typename T, size_t N_MaxSize>
+    typename std::enable_if<!VlContainsCustomStruct<T>::value, void>::type
+    update_var(VlQueue<T, N_MaxSize>& var, int /*width*/, const char* name, int dimension,
+               std::uint32_t /*randmodeIdx*/ = std::numeric_limits<std::uint32_t>::max()) {
+        auto it = m_vars.find(name);
+        assert(it != m_vars.end());
+        it->second = std::make_shared<const VlRandomArrayVarTemplate<VlQueue<T, N_MaxSize>>>(
+            name, it->second->width(), &var, it->second->dimension(), it->second->randModeIdx());
+        if (dimension > 0) {
+            m_index = 0;
+            clear_arr_table(name);
+            record_arr_table(var, name, dimension, {}, {});
+            m_vars[name]->clearCountCache();
+        }
+    }
+
+    template <typename T, size_t N_MaxSize>
+    typename std::enable_if<VlContainsCustomStruct<T>::value, void>::type
+    update_var(VlQueue<T, N_MaxSize>& var, int width, const char* name, int dimension,
+               std::uint32_t randmodeIdx = std::numeric_limits<std::uint32_t>::max()) {
+        write_var(var, width, name, dimension, randmodeIdx);
+    }
+
+    template <typename T, std::size_t N_Depth>
+    typename std::enable_if<!VlContainsCustomStruct<T>::value, void>::type
+    update_var(VlUnpacked<T, N_Depth>& var, uint32_t /*width*/, const std::string& name,
+               uint32_t dimension,
+               std::uint32_t /*randmodeIdx*/ = std::numeric_limits<std::uint32_t>::max()) {
+        auto it = m_vars.find(name);
+        assert(it != m_vars.end());
+        it->second = std::make_shared<const VlRandomArrayVarTemplate<VlUnpacked<T, N_Depth>>>(
+            name, it->second->width(), &var, it->second->dimension(), it->second->randModeIdx());
+        if (dimension > 0) {
+            m_index = 0;
+            clear_arr_table(name);
+            record_arr_table(var, name, dimension, {}, {});
+            m_vars[name]->clearCountCache();
+        }
+    }
+
+    template <typename T, std::size_t N_Depth>
+    typename std::enable_if<VlContainsCustomStruct<T>::value, void>::type
+    update_var(VlUnpacked<T, N_Depth>& var, int width, const char* name, int dimension,
+               std::uint32_t randmodeIdx = std::numeric_limits<std::uint32_t>::max()) {
+        write_var(var, width, name, dimension, randmodeIdx);
+    }
+
+    template <typename T_Key, typename T_Value>
+    typename std::enable_if<!VlContainsCustomStruct<T_Value>::value, void>::type
+    update_var(VlAssocArray<T_Key, T_Value>& var, int /*width*/, const char* name, int dimension,
+               std::uint32_t /*randmodeIdx*/ = std::numeric_limits<std::uint32_t>::max()) {
+        auto it = m_vars.find(name);
+        assert(it != m_vars.end());
+        std::vector<size_t> keyWidths;
+        VlRandomAssocKeyWidths<VlAssocArray<T_Key, T_Value>>::push(keyWidths);
+        it->second = std::make_shared<const VlRandomArrayVarTemplate<VlAssocArray<T_Key, T_Value>>>(
+            name, it->second->width(), &var, it->second->dimension(), it->second->randModeIdx(),
+            keyWidths);
+        if (dimension > 0) {
+            m_index = 0;
+            clear_arr_table(name);
+            record_arr_table(var, name, dimension, {}, {});
+            m_vars[name]->clearCountCache();
+        }
+    }
+
+    template <typename T_Key, typename T_Value>
+    typename std::enable_if<VlContainsCustomStruct<T_Value>::value, void>::type
+    update_var(VlAssocArray<T_Key, T_Value>& var, int width, const char* name, int dimension,
+               std::uint32_t randmodeIdx = std::numeric_limits<std::uint32_t>::max()) {
+        write_var(var, width, name, dimension, randmodeIdx);
     }
 
     // Helper: Generate unique variable key from name and index

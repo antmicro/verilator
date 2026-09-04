@@ -268,15 +268,14 @@ class EmitCHeader final : public EmitCConstInit {
                         }
                     });
                 const string className = EmitCUtil::prefixNameProtect(classp);
-                if (embeddedCovergroupVars.empty() && !classp->updateRandVarsAfterCopyp()) {
+                if (embeddedCovergroupVars.empty() && !classp->hasUpdateRandVarsAfterCopy()) {
                     putns(classp,
                           "VlClass* clone() const { return new " + className + "(*this); }\n");
                 } else {
                     putns(classp, "VlClass* clone() const { " + className + "* const clonep = new "
                                       + className + "(*this); ");
-                    if (classp->updateRandVarsAfterCopyp()) {
-                        AstCFunc* const cfuncp = VN_AS(classp->updateRandVarsAfterCopyp(), CFunc);
-                        puts("clonep->" + cfuncp->nameProtect() + "();\n");
+                    if (classp->hasUpdateRandVarsAfterCopy()) {
+                        puts("clonep->__VupdateRandVarsAfterCopy();\n");
                     }
                     for (const EmbeddedCovergroupVar& item : embeddedCovergroupVars) {
                         puts("clonep->" + EmitCUtil::prefixNameProtect(item.first)

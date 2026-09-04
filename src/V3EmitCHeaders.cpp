@@ -275,7 +275,17 @@ class EmitCHeader final : public EmitCConstInit {
                     putns(classp, "VlClass* clone() const { " + className + "* const clonep = new "
                                       + className + "(*this); ");
                     if (classp->hasUpdateRandVarsAfterCopy()) {
-                        puts("clonep->__VupdateRandVarsAfterCopy();\n");
+                        AstCFunc* updatep = nullptr;
+                        for (AstNode* memberp = classp->membersp(); memberp;
+                             memberp = memberp->nextp()) {
+                            AstCFunc* const cfuncp = VN_CAST(memberp, CFunc);
+                            if (cfuncp && cfuncp->name() == "__VupdateRandVarsAfterCopy") {
+                                updatep = cfuncp;
+                                break;
+                            }
+                        }
+                        UASSERT_OBJ(updatep, classp, "Missing update rand vars after copy method");
+                        puts("clonep->" + updatep->nameProtect() + "();\n");
                     }
                     for (const EmbeddedCovergroupVar& item : embeddedCovergroupVars) {
                         puts("clonep->" + EmitCUtil::prefixNameProtect(item.first)

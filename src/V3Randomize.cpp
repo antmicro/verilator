@@ -4586,11 +4586,14 @@ class RandomizeVisitor final : public VNVisitor {
                     }
                     if (methodp->method() != VCMethod::RANDOMIZER_WRITE_VAR) return;
 
-                    bool isStaticVar = false;
+                    bool hasNonMemberRef = false;
                     methodp->pinsp()->foreach([&](AstNodeVarRef* refp) {
-                        if (refp->varp()->lifetime().isStatic()) isStaticVar = true;
+                        AstVar* const refVarp = refp->varp();
+                        if (refVarp->lifetime().isStatic() || !refVarp->isClassMember()) {
+                            hasNonMemberRef = true;
+                        }
                     });
-                    if (isStaticVar) return;
+                    if (hasNonMemberRef) return;
 
                     AstCMethodHard* const updateMethodp = methodp->cloneTree(false);
                     updateMethodp->method(VCMethod::RANDOMIZER_UPDATE_VAR);

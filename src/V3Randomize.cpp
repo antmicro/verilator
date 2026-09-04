@@ -4581,6 +4581,11 @@ class RandomizeVisitor final : public VNVisitor {
                 AstNode* clonedStmtp = nullptr;
                 stmtp->foreach([&](AstCMethodHard* methodp) {
                     if (methodp->method() == VCMethod::RANDOMIZER_WRITE_VAR) {
+                        bool isStaticVar = false;
+                        methodp->pinsp()->foreach([&](AstNodeVarRef* refp) {
+                            if (refp->varp()->lifetime().isStatic()) isStaticVar = true;
+                        });
+                        if (isStaticVar) return;
                         if (!clonedStmtp) clonedStmtp = stmtp->cloneTree(false);
                         clonedStmtp->foreach([](AstCMethodHard* updateMethodp) {
                             if (updateMethodp->method() != VCMethod::RANDOMIZER_WRITE_VAR) return;

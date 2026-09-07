@@ -997,7 +997,8 @@ void VlRandomizer::reportUnsatSetup(VlSolverSession& sess,
     if (sess.readStatus() == VlSolverStatus::UNSAT) reportUnsatCore(sess);
 }
 
-bool VlRandomizer::Unigen2(VlRNG& rngr, const std::vector<std::string>& uniqueExprs, VlSolverSession& sess) {
+bool VlRandomizer::Unigen2(VlRNG& rngr, const std::vector<std::string>& uniqueExprs,
+                           VlSolverSession& sess) {
     // Soft constraints are not handled in Unigen2 -- leave them to the caller.
     if (!m_softConstraints.empty()) return false;
 
@@ -1115,7 +1116,7 @@ int VlRandomizer::BSAT(std::iostream& solver, int bound, std::vector<Witness>& w
 
         std::stringstream ss;
         for (const auto& entry : order) m_vars.at(entry.first)->emitElement(ss, entry.second);
-        if (ss.str() == "" ) {
+        if (ss.str() == "") {
             Witness witness;
             witnesses.push_back(std::move(witness));
             continue;

@@ -651,19 +651,32 @@ public:
         }
     }
 
-    // Register a single structArray element via write_var
-    template <typename T>
-    typename std::enable_if<VlContainsCustomStruct<T>::value, void>::type
-    record_struct_arr(T& var, const std::string& name, int /*dimension*/,
-                      std::vector<IData> indices, std::vector<size_t> idxWidths) {
+    std::string struct_arr_name(const std::string& name, const std::vector<IData>& indices,
+                                const std::vector<size_t>& idxWidths) {
         std::ostringstream oss;
         for (size_t i = 0; i < indices.size(); ++i) {
             oss << std::hex << std::setw(int(idxWidths[i] / 4)) << std::setfill('0')
                 << static_cast<int>(indices[i]);
             if (i < indices.size() - 1) oss << ".";
         }
-        write_var(var, 1ULL,
-                  oss.str().length() > 0 ? (name + "." + oss.str()).c_str() : name.c_str(), 1ULL);
+        return oss.str().length() > 0 ? name + "." + oss.str() : name;
+    }
+
+    // Register a single structArray element via write_var
+    template <typename T>
+    typename std::enable_if<VlContainsCustomStruct<T>::value, void>::type
+    record_struct_arr(T& var, const std::string& name, int /*dimension*/,
+                      std::vector<IData> indices, std::vector<size_t> idxWidths) {
+        const std::string indexedName = struct_arr_name(name, indices, idxWidths);
+        write_var(var, 1ULL, indexedName.c_str(), 1ULL);
+    }
+
+    template <typename T>
+    typename std::enable_if<VlContainsCustomStruct<T>::value, void>::type
+    update_struct_arr(T& var, const std::string& name, int /*dimension*/,
+                      std::vector<IData> indices, std::vector<size_t> idxWidths) {
+        const std::string indexedName = struct_arr_name(name, indices, idxWidths);
+        update_var(var, indexedName.c_str());
     }
 
     // Recursively process VlUnpacked of structs
@@ -676,6 +689,20 @@ public:
             for (size_t i = 0; i < N_Depth; ++i) {
                 indices.push_back(i);
                 record_struct_arr(var.operator[](i), name, dimension - 1, indices, idxWidths);
+                indices.pop_back();
+            }
+        }
+    }
+
+    template <typename T, std::size_t N_Depth>
+    void update_struct_arr(VlUnpacked<T, N_Depth>& var, const std::string& name, int dimension,
+                           std::vector<IData> indices, std::vector<size_t> idxWidths) {
+        if (dimension > 0 && N_Depth != 0) {
+            constexpr size_t idx_width = 1 << VL_CLOG2_CE_Q(VL_CLOG2_CE_Q(N_Depth) + 1);
+            idxWidths.push_back(idx_width);
+            for (size_t i = 0; i < N_Depth; ++i) {
+                indices.push_back(i);
+                update_struct_arr(var.operator[](i), name, dimension - 1, indices, idxWidths);
                 indices.pop_back();
             }
         }
@@ -695,6 +722,19 @@ public:
         }
     }
 
+    template <typename T, size_t N_MaxSize>
+    void update_struct_arr(VlQueue<T, N_MaxSize>& var, const std::string& name, int dimension,
+                           std::vector<IData> indices, std::vector<size_t> idxWidths) {
+        if ((dimension > 0) && (var.size() != 0)) {
+            idxWidths.push_back(32);
+            for (size_t i = 0; i < var.size(); ++i) {
+                indices.push_back(i);
+                update_struct_arr(var.atWrite(i), name, dimension - 1, indices, idxWidths);
+                indices.pop_back();
+            }
+        }
+    }
+
     // Recursively process associative arrays of structs
     template <typename T_Key, typename T_Value>
     void record_struct_arr(VlAssocArray<T_Key, T_Value>& var, const std::string& name,
@@ -703,7 +743,6 @@ public:
         if ((dimension > 0) && (!var.empty())) {
             for (auto it = var.begin(); it != var.end(); ++it) {
                 const T_Key& key = it->first;
-                const T_Value& value = it->second;
 
                 std::string indexed_name;
                 std::vector<size_t> integral_index;
@@ -722,6 +761,32 @@ public:
         }
     }
 
+    template <typename T_Key, typename T_Value>
+    void update_struct_arr(VlAssocArray<T_Key, T_Value>& var, const std::string& name,
+                           int dimension, const std::vector<IData>& indices,
+                           const std::vector<size_t>& idxWidths) {
+        if ((dimension > 0) && (!var.empty())) {
+            for (auto it = var.begin(); it != var.end(); ++it) {
+                const T_Key& key = it->first;
+
+                std::string indexed_name;
+                std::vector<size_t> integral_index;
+                size_t idx_width = 0;
+
+                process_key(key, indexed_name, integral_index, name, idx_width);
+                std::ostringstream oss;
+                for (size_t i = 0; i < integral_index.size(); ++i) {
+                    oss << std::hex << static_cast<int>(integral_index[i]);
+                }
+
+                std::string result = oss.str();
+                result.insert(result.begin(), int(idx_width / 4) - result.size(), '0');
+                update_struct_arr(var.atWrite(key), name + "." + result, dimension - 1, indices,
+                                  idxWidths);
+            }
+        }
+    }
+
     // ---  Helper functions  ---
 
     // Helper: Register all members of a user-defined struct
@@ -731,6 +796,14 @@ public:
         (void)std::initializer_list<int>{
             (write_var(std::get<I>(obj.getMembers(obj)), obj.memberWidth()[I],
                        (baseName + "." + obj.memberNames()[I]).c_str(), obj.memberDimension()[I]),
+             0)...};
+    }
+
+    template <typename T, std::size_t... I>
+    void updateMembers(T& obj, std::index_sequence<I...>, const std::string& baseName) {
+        (void)std::initializer_list<int>{
+            (update_var(std::get<I>(obj.getMembers(obj)),
+                        (baseName + "." + obj.memberNames()[I]).c_str()),
              0)...};
     }
 

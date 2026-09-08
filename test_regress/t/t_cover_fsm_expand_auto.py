@@ -14,7 +14,7 @@ import vltest_bootstrap
 test.scenarios('simulator')
 test.top_filename = "t/t_cover_fsm_expand.v"
 
-test.compile(verilator_flags2=['--binary', '--coverage-fsm', '--coverage-fsm-expand', 'reset'])
+test.compile(verilator_flags2=['--binary', '--coverage-fsm', '--coverage-fsm-expand', 'auto'])
 
 test.execute(all_run_flags=["+verilator+coverage+file+" + test.coverage_filename])
 

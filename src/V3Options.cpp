@@ -1645,21 +1645,16 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc,
 
     DECL_OPTION("-o", Set, &m_exeName);
     DECL_OPTION("-coverage-fsm-expand", CbVal, [this, fl](const char* const valp) {
-        if (!std::strcmp(valp, "none")) {
-            m_coverageFsmExpand = "none";
-        } else if (!std::strcmp(valp, "reset")) {
-            m_coverageFsmExpand = "reset";
-        } else if (!std::strcmp(valp, "defaults")) {
-            m_coverageFsmExpand = "defaults";
-        } else if (!std::strcmp(valp, "all")) {
-            m_coverageFsmExpand = "all";
+        if (!std::strcmp(valp, "auto")) {
+            m_coverageFsmExpand = "auto";
+        } else if (!std::strcmp(valp, "auto-expand")) {
+            m_coverageFsmExpand = "auto-expand";
         } else if (!std::strcmp(valp, "full")) {
             m_coverageFsmExpand = "full";
         } else {
             fl->v3error("Unknown setting for --coverage-fsm-expand: '"
                         << valp << "'\n"
-                        << fl->warnMore()
-                        << "... Suggest 'none', 'reset', 'defaults', 'all', or 'full'");
+                        << fl->warnMore() << "... Suggest 'auto', 'auto-expand', or 'full'");
         }
     });
     DECL_OPTION("-order-clock-delay", CbOnOff, [fl](bool /*flag*/) {

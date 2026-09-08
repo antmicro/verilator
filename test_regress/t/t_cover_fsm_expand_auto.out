@@ -46,12 +46,16 @@
             else begin
 %000002       case (state2)
         // [FSM coverage]
-%000002        // [fsm_arc t.state2::ANY->S2_IDLE[reset]] [reset arc, excluded from %]
+%000001        // [fsm_arc t.state2::S2_ALT_PATH->S2_ERR]
+%000000        // [fsm_arc t.state2::S2_ALT_PATH->S2_IDLE]
 %000001        // [fsm_arc t.state2::S2_COMPLETING->S2_DONE]
+%000000        // [fsm_arc t.state2::S2_COMPLETING->S2_IDLE]
+%000000        // [fsm_arc t.state2::S2_DONE->S2_IDLE]
+%000002        // [fsm_arc t.state2::S2_ERR->S2_IDLE]
 %000002        // [fsm_arc t.state2::S2_IDLE->S2_RUN]
 %000001        // [fsm_arc t.state2::S2_RUN->S2_ALT_PATH]
 %000001        // [fsm_arc t.state2::S2_RUN->S2_COMPLETING]
-%000001        // [SYNTHETIC DEFAULT ARC: t.state2::default->S2_ERR]
+%000000        // [fsm_arc t.state2::S2_RUN->S2_IDLE]
 %000001        // [fsm_state t.state2::S2_ALT_PATH]
 %000001        // [fsm_state t.state2::S2_COMPLETING]
 %000001        // [fsm_state t.state2::S2_DONE]
@@ -78,10 +82,11 @@
             else begin
 %000002       case (state)
         // [FSM coverage]
-%000002        // [fsm_arc t.state::ANY->S_IDLE[reset]] [reset arc, excluded from %]
+%000001        // [fsm_arc t.state::S_DONE->S_IDLE]
+%000001        // [fsm_arc t.state::S_ERR->S_IDLE]
 %000002        // [fsm_arc t.state::S_IDLE->S_RUN]
 %000002        // [fsm_arc t.state::S_RUN->S_DONE]
-%000000        // [SYNTHETIC DEFAULT ARC: t.state::default->S_ERR]
+%000000        // [fsm_arc t.state::S_RUN->S_IDLE]
 %000002        // [fsm_state t.state::S_DONE]
 %000001        // [fsm_state t.state::S_ERR]
 %000002        // [fsm_state t.state::S_IDLE]

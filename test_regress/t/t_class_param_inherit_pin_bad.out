@@ -1,0 +1,6 @@
+%Error: t/t_class_param_inherit_pin_bad.v:18:12: Parameter type pin value isn't a type: Param 'T' of 'holder'
+                                               : ... note: In instance 't'
+   18 |   holder #(MISSING) value;
+      |            ^~~~~~~
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: Exiting due to

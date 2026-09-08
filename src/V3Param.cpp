@@ -66,6 +66,7 @@
 #include "V3Stats.h"
 #include "V3Unroll.h"
 #include "V3Width.h"
+#include "V3WidthCommit.h"
 
 #include <cctype>
 #include <cstdlib>
@@ -1761,7 +1762,7 @@ class ParamProcessor final {
             const AstNodeDType* origp = modvarp->skipRefToNonRefp();
             if (!exprp) {
                 pinp->v3error("Parameter type pin value isn't a type: Param "
-                              << pinp->prettyNameQ() << " of " << nodep->prettyNameQ());
+                              << modvarp->prettyNameQ() << " of " << nodep->prettyNameQ());
             } else if (!origp) {
                 pinp->v3error("Parameter type variable isn't a type: Param "
                               << modvarp->prettyNameQ());
@@ -2331,6 +2332,25 @@ class ParamProcessor final {
     };
 
 public:
+    std::pair<AstNode*, AstClass*> findClassMember(AstClass* classp, const string& name) {
+        while (true) {
+            if (AstNode* const memberp = m_memberMap.findMember(classp, name)) {
+                return {memberp, classp};
+            }
+            AstClassExtends* const extendsp = classp->extendsp();
+            if (!extendsp || extendsp->isImplements()) return {nullptr, nullptr};
+            AstClassRefDType* const baseRefp = classRefDTypeOfNode(extendsp->childDTypep());
+            if (!baseRefp) return {nullptr, nullptr};
+            // Inherited names were deferred by linking until the base is specialized.
+            // Inherited parameters use the specialized base (IEEE 1800-2023 8.25).
+            if (baseRefp->paramsp() || baseRefp->classp()->hasGParam()) {
+                VL_RESTORER(m_modp);
+                nodeDeparam(baseRefp, baseRefp->classp(), classp, classp->someInstanceName());
+            }
+            classp = baseRefp->classp();
+        }
+    }
+
     // After an interface cell inside parentModp has been deparameterized
     // (rewired from template to clone), retarget REFDTYPEs that still
     // reference the old template's types so that $bits(iface_typedef)
@@ -2757,6 +2777,7 @@ class ParamVisitor final : public VNVisitor {
 
     // STATE - for current visit position (use VL_RESTORER)
     AstNodeModule* m_modp = nullptr;  // Module iterating
+    bool m_inParamPin = false;  // Visiting a parameter override expression inside a class
     std::unordered_set<std::string> m_ifacePortNames;  // Interface port names in current module
     std::unordered_map<std::string, AstCell*>
         m_ifaceInstCells;  // Local interface instance cells in current module, keyed by name
@@ -3162,7 +3183,42 @@ class ParamVisitor final : public VNVisitor {
         if (!m_inGenerateCond) m_cellps.emplace(!isIface, nodep);
     }
 
+    void linkClassType(AstRefDType* nodep, AstNode* memberp, AstClass* memberClassp) const {
+        if (AstParamTypeDType* const typep = VN_CAST(memberp, ParamTypeDType)) {
+            nodep->refDTypep(typep);
+            nodep->classOrPackagep(memberClassp);
+        } else if (AstTypedef* const typedefp = VN_CAST(memberp, Typedef)) {
+            nodep->typedefp(typedefp);
+            // Check at the use site; parameter types are cloned into another class.
+            V3WidthCommit::classEncapCheck(nodep, typedefp, memberClassp, m_modp);
+        }
+    }
+
     // VISITORS
+    void visit(AstPin* nodep) override {
+        VL_RESTORER(m_inParamPin);
+        m_inParamPin = nodep->param() && VN_IS(m_modp, Class);
+        iterateChildren(nodep);
+    }
+    void visit(AstParseRef* nodep) override {
+        iterateChildren(nodep);
+        if (!m_inParamPin) return;
+        AstClass* const classp = VN_AS(m_modp, Class);
+        const auto [memberp, memberClassp] = m_processor.findClassMember(classp, nodep->name());
+        AstNode* newp = nullptr;
+        if (VN_IS(memberp, ParamTypeDType) || VN_IS(memberp, Typedef)) {
+            AstRefDType* const refp = new AstRefDType{nodep->fileline(), nodep->name()};
+            linkClassType(refp, memberp, memberClassp);
+            newp = refp;
+        } else if (AstVar* const varp = VN_CAST(memberp, Var)) {
+            newp = new AstVarRef{nodep->fileline(), varp, VAccess::READ};
+            V3WidthCommit::classEncapCheck(newp, varp, memberClassp, m_modp);
+        }
+        if (newp) {
+            nodep->replaceWith(newp);
+            VL_DO_DANGLING(pushDeletep(nodep), nodep);
+        }
+    }
     void visit(AstNodeModule* nodep) override {
         if (nodep->recursiveClone()) nodep->dead(true);  // Fake, made for recursive elimination
         if (nodep->dead()) return;  // Marked by LinkDot (and above)
@@ -3213,6 +3269,15 @@ class ParamVisitor final : public VNVisitor {
     }
 
     void visit(AstRefDType* nodep) override {
+        // Typedefs used by pins can themselves refer to inherited parameter types.
+        if (AstClass* const classp = VN_CAST(m_modp, Class)) {
+            if (!nodep->subDTypep() && !nodep->typeofp() && !nodep->classOrPackagep()
+                && !nodep->classOrPackageOpp()) {
+                const auto [memberp, memberClassp]
+                    = m_processor.findClassMember(classp, nodep->name());
+                linkClassType(nodep, memberp, memberClassp);
+            }
+        }
         const bool isCircular = isCircularType(nodep);
         // A module-body `typedef C#(Cfg)::t alias` the deferred pin/param walk
         // never reached would survive to V3Width unlinked. If its alias chain is
@@ -3535,6 +3600,8 @@ class ParamVisitor final : public VNVisitor {
     }
 
     void visit(AstDot* nodep) override {
+        VL_RESTORER(m_inParamPin);
+        m_inParamPin = false;  // Dotted names use the scope on their left.
         iterate(nodep->lhsp());
         // Check if it is a reference to a field of a parameterized class.
         // If so, the RHS should be updated, when the LHS is replaced

@@ -755,8 +755,8 @@ public:
     }
 
     template <typename T>
-    typename std::enable_if<VlIsCustomStruct<T>::value, void>::type
-    update_var(T& var, const char* name) {
+    typename std::enable_if<VlIsCustomStruct<T>::value, void>::type update_var(T& var,
+                                                                               const char* name) {
         modifyMembers(var, var.memberIndices(), name);
     }
 
@@ -818,8 +818,9 @@ public:
         const int dimension = it->second->dimension();
         std::vector<size_t> keyWidths;
         VlRandomAssocKeyWidths<VlAssocArray<T_Key, T_Value>>::push(keyWidths);
-        it->second = std::make_shared<const VlRandomArrayVarTemplate<VlAssocArray<T_Key, T_Value>>>(
-            name, it->second->width(), &var, dimension, it->second->randModeIdx(), keyWidths);
+        it->second
+            = std::make_shared<const VlRandomArrayVarTemplate<VlAssocArray<T_Key, T_Value>>>(
+                name, it->second->width(), &var, dimension, it->second->randModeIdx(), keyWidths);
         if (dimension > 0) {
             m_index = 0;
             clear_arr_table(name);

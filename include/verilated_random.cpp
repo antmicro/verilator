@@ -887,7 +887,8 @@ bool VlRandomizer::nextFlat(VlRNG& rngr, VlSolverSession& sess,
     std::iostream& os = sess.os();
     // Randc retry: if unsat due to randc exhaustion, clear history and retry once
     const bool hasRandc = !m_randcVarNames.empty();
-    if (!hasRandc && !m_checkOnly && !hasFrozenVar() && unigen2(rngr, sess, uniqueExprs)) return true;
+    if (!hasRandc && !m_checkOnly && !hasFrozenVar() && unigen2(rngr, sess, uniqueExprs))
+        return true;
     for (int attempt = 0; attempt < (hasRandc ? 2 : 1); ++attempt) {
         os << "(set-option :produce-models true)\n";
         // Lets the scalar pin path learn which free-bit assumptions conflict.
@@ -936,7 +937,8 @@ bool VlRandomizer::nextFlat(VlRNG& rngr, VlSolverSession& sess,
 // Enumerate one cell of the solution space, and cache the solutions in m_ug2.loTreshWitnesses.
 // The next call with the same constraint set will drain the cache before running the full
 // mechanism again.
-bool VlRandomizer::unigen2(VlRNG& rngr, VlSolverSession& sess, const std::vector<std::string>& uniqueExprs) {
+bool VlRandomizer::unigen2(VlRNG& rngr, VlSolverSession& sess,
+                           const std::vector<std::string>& uniqueExprs) {
     if (!m_softConstraints.empty()) return false;
 
     const size_t currentHash = hashConstraints(uniqueExprs);

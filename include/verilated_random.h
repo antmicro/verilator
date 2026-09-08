@@ -673,10 +673,8 @@ public:
 
     template <typename T>
     typename std::enable_if<VlContainsCustomStruct<T>::value, void>::type
-    update_struct_arr(T& var, const std::string& name, int /*dimension*/,
-                      std::vector<IData> indices, std::vector<size_t> idxWidths) {
-        const std::string indexedName = struct_arr_name(name, indices, idxWidths);
-        update_var(var, indexedName.c_str());
+    update_struct_arr(T& var, const std::string& name) {
+        update_var(var, name.c_str());
     }
 
     // Recursively process VlUnpacked of structs
@@ -695,15 +693,14 @@ public:
     }
 
     template <typename T, std::size_t N_Depth>
-    void update_struct_arr(VlUnpacked<T, N_Depth>& var, const std::string& name, int dimension,
-                           std::vector<IData> indices, std::vector<size_t> idxWidths) {
-        if (dimension > 0 && N_Depth != 0) {
+    void update_struct_arr(VlUnpacked<T, N_Depth>& var, const std::string& name) {
+        if (N_Depth != 0) {
             constexpr size_t idx_width = 1 << VL_CLOG2_CE_Q(VL_CLOG2_CE_Q(N_Depth) + 1);
-            idxWidths.push_back(idx_width);
             for (size_t i = 0; i < N_Depth; ++i) {
-                indices.push_back(i);
-                update_struct_arr(var.operator[](i), name, dimension - 1, indices, idxWidths);
-                indices.pop_back();
+                std::ostringstream oss;
+                oss << name << "." << std::hex << std::setw(int(idx_width / 4))
+                    << std::setfill('0') << static_cast<int>(i);
+                update_struct_arr(var.operator[](i), oss.str());
             }
         }
     }
@@ -723,15 +720,12 @@ public:
     }
 
     template <typename T, size_t N_MaxSize>
-    void update_struct_arr(VlQueue<T, N_MaxSize>& var, const std::string& name, int dimension,
-                           std::vector<IData> indices, std::vector<size_t> idxWidths) {
-        if ((dimension > 0) && (var.size() != 0)) {
-            idxWidths.push_back(32);
-            for (size_t i = 0; i < var.size(); ++i) {
-                indices.push_back(i);
-                update_struct_arr(var.atWrite(i), name, dimension - 1, indices, idxWidths);
-                indices.pop_back();
-            }
+    void update_struct_arr(VlQueue<T, N_MaxSize>& var, const std::string& name) {
+        for (size_t i = 0; i < var.size(); ++i) {
+            std::ostringstream oss;
+            oss << name << "." << std::hex << std::setw(8) << std::setfill('0')
+                << static_cast<int>(i);
+            update_struct_arr(var.atWrite(i), oss.str());
         }
     }
 
@@ -762,28 +756,23 @@ public:
     }
 
     template <typename T_Key, typename T_Value>
-    void update_struct_arr(VlAssocArray<T_Key, T_Value>& var, const std::string& name,
-                           int dimension, const std::vector<IData>& indices,
-                           const std::vector<size_t>& idxWidths) {
-        if ((dimension > 0) && (!var.empty())) {
-            for (auto it = var.begin(); it != var.end(); ++it) {
-                const T_Key& key = it->first;
+    void update_struct_arr(VlAssocArray<T_Key, T_Value>& var, const std::string& name) {
+        for (auto it = var.begin(); it != var.end(); ++it) {
+            const T_Key& key = it->first;
 
-                std::string indexed_name;
-                std::vector<size_t> integral_index;
-                size_t idx_width = 0;
+            std::string indexed_name;
+            std::vector<size_t> integral_index;
+            size_t idx_width = 0;
 
-                process_key(key, indexed_name, integral_index, name, idx_width);
-                std::ostringstream oss;
-                for (size_t i = 0; i < integral_index.size(); ++i) {
-                    oss << std::hex << static_cast<int>(integral_index[i]);
-                }
-
-                std::string result = oss.str();
-                result.insert(result.begin(), int(idx_width / 4) - result.size(), '0');
-                update_struct_arr(var.atWrite(key), name + "." + result, dimension - 1, indices,
-                                  idxWidths);
+            process_key(key, indexed_name, integral_index, name, idx_width);
+            std::ostringstream oss;
+            for (size_t i = 0; i < integral_index.size(); ++i) {
+                oss << std::hex << static_cast<int>(integral_index[i]);
             }
+
+            std::string result = oss.str();
+            result.insert(result.begin(), int(idx_width / 4) - result.size(), '0');
+            update_struct_arr(var.atWrite(key), name + "." + result);
         }
     }
 
@@ -820,7 +809,7 @@ public:
     template <typename T>
     typename std::enable_if<VlIsCustomStruct<T>::value, void>::type
     update_var(T& var, const char* name) {
-        modifyMembers(var, var.memberIndices(), name);
+        updateMembers(var, var.memberIndices(), name);
     }
 
     template <typename T, size_t N_MaxSize>
@@ -842,10 +831,7 @@ public:
     template <typename T, size_t N_MaxSize>
     typename std::enable_if<VlContainsCustomStruct<T>::value, void>::type
     update_var(VlQueue<T, N_MaxSize>& var, const char* name) {
-        auto it = m_vars.find(name);
-        if (it != m_vars.end() && it->second->dimension() > 0) {
-            record_struct_arr(var, name, it->second->dimension(), {}, {});
-        }
+        update_struct_arr(var, name);
     }
 
     template <typename T, std::size_t N_Depth>
@@ -867,10 +853,7 @@ public:
     template <typename T, std::size_t N_Depth>
     typename std::enable_if<VlContainsCustomStruct<T>::value, void>::type
     update_var(VlUnpacked<T, N_Depth>& var, const char* name) {
-        auto it = m_vars.find(name);
-        if (it != m_vars.end() && it->second->dimension() > 0) {
-            record_struct_arr(var, name, it->second->dimension(), {}, {});
-        }
+        update_struct_arr(var, name);
     }
 
     template <typename T_Key, typename T_Value>
@@ -894,10 +877,7 @@ public:
     template <typename T_Key, typename T_Value>
     typename std::enable_if<VlContainsCustomStruct<T_Value>::value, void>::type
     update_var(VlAssocArray<T_Key, T_Value>& var, const char* name) {
-        auto it = m_vars.find(name);
-        if (it != m_vars.end() && it->second->dimension() > 0) {
-            record_struct_arr(var, name, it->second->dimension(), {}, {});
-        }
+        update_struct_arr(var, name);
     }
 
     // Helper: Generate unique variable key from name and index

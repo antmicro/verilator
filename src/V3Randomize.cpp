@@ -4576,7 +4576,8 @@ class RandomizeVisitor final : public VNVisitor {
         nodep->addMembersp(updatep);
         nodep->hasUpdateRandVarsAfterCopy(true);
 
-        const auto cloneWriteVarStmts = [updatep](AstNodeFTask* const ftaskp) {
+        const auto cloneWriteVarStmts = [updatep](AstClass* const classp,
+                                                  AstNodeFTask* const ftaskp) {
             if (!ftaskp || !ftaskp->stmtsp()) return;
             for (AstNode* stmtp = ftaskp->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
                 bool foundClearConstraints = false;
@@ -4590,6 +4591,8 @@ class RandomizeVisitor final : public VNVisitor {
                     methodp->pinsp()->foreach([&](AstNodeVarRef* refp) {
                         AstVar* const refVarp = refp->varp();
                         if (refVarp->lifetime().isStatic() || !refVarp->isClassMember()) {
+                            hasNonMemberRef = true;
+                        } else if (refVarp->user2p() != classp) {
                             hasNonMemberRef = true;
                         }
                     });
@@ -4614,11 +4617,7 @@ class RandomizeVisitor final : public VNVisitor {
 
         for (AstClass* classp = nodep; classp;
              classp = classp->extendsp() ? classp->extendsp()->classp() : nullptr) {
-            cloneWriteVarStmts(VN_CAST(m_memberMap.findMember(classp, "new"), NodeFTask));
-            cloneWriteVarStmts(classp == nodep ? randomizep
-                                               : VN_CAST(m_memberMap.findMember(classp,
-                                                                                "randomize"),
-                                                         NodeFTask));
+            cloneWriteVarStmts(classp, VN_CAST(m_memberMap.findMember(classp, "new"), NodeFTask));
         }
     }
 

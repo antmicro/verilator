@@ -651,24 +651,19 @@ public:
         }
     }
 
-    std::string struct_arr_name(const std::string& name, const std::vector<IData>& indices,
-                                const std::vector<size_t>& idxWidths) {
+    // Register a single structArray element via write_var
+    template <typename T>
+    typename std::enable_if<VlContainsCustomStruct<T>::value, void>::type
+    record_struct_arr(T& var, const std::string& name, int /*dimension*/,
+                      std::vector<IData> indices, std::vector<size_t> idxWidths) {
         std::ostringstream oss;
         for (size_t i = 0; i < indices.size(); ++i) {
             oss << std::hex << std::setw(int(idxWidths[i] / 4)) << std::setfill('0')
                 << static_cast<int>(indices[i]);
             if (i < indices.size() - 1) oss << ".";
         }
-        return oss.str().length() > 0 ? name + "." + oss.str() : name;
-    }
-
-    // Register a single structArray element via write_var
-    template <typename T>
-    typename std::enable_if<VlContainsCustomStruct<T>::value, void>::type
-    record_struct_arr(T& var, const std::string& name, int /*dimension*/,
-                      std::vector<IData> indices, std::vector<size_t> idxWidths) {
-        const std::string indexedName = struct_arr_name(name, indices, idxWidths);
-        write_var(var, 1ULL, indexedName.c_str(), 1ULL);
+        write_var(var, 1ULL,
+                  oss.str().length() > 0 ? (name + "." + oss.str()).c_str() : name.c_str(), 1ULL);
     }
 
     template <typename T>
@@ -737,6 +732,7 @@ public:
         if ((dimension > 0) && (!var.empty())) {
             for (auto it = var.begin(); it != var.end(); ++it) {
                 const T_Key& key = it->first;
+                const T_Value& value = it->second;
 
                 std::string indexed_name;
                 std::vector<size_t> integral_index;

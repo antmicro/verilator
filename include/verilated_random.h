@@ -681,7 +681,7 @@ public:
             idxWidths.push_back(idx_width);
             for (size_t i = 0; i < N_Depth; ++i) {
                 indices.push_back(i);
-                record_struct_arr(var.operator[](i), name, dimension - 1, indices, idxWidths);
+                record_struct_arr(var[i], name, dimension - 1, indices, idxWidths);
                 indices.pop_back();
             }
         }
@@ -695,7 +695,7 @@ public:
                 std::ostringstream oss;
                 oss << name << "." << std::hex << std::setw(int(idx_width / 4))
                     << std::setfill('0') << static_cast<int>(i);
-                update_struct_arr(var.operator[](i), oss.str());
+                update_struct_arr(var[i], oss.str());
             }
         }
     }

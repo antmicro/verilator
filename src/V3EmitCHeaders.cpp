@@ -276,16 +276,23 @@ class EmitCHeader final : public EmitCConstInit {
                                       + className + "(*this); ");
                     if (classp->hasUpdateRandVarsAfterCopy()) {
                         AstCFunc* updatep = nullptr;
-                        for (AstNode* memberp = classp->membersp(); memberp;
-                             memberp = memberp->nextp()) {
-                            AstCFunc* const cfuncp = VN_CAST(memberp, CFunc);
-                            if (cfuncp && cfuncp->name() == "__VupdateRandVarsAfterCopy") {
-                                updatep = cfuncp;
-                                break;
+                        const auto findUpdateFunc = [&updatep](AstNode* nodep) {
+                            const string updateName = "__VupdateRandVarsAfterCopy";
+                            const string noInlineUpdateName = "__VnoInFunc_" + updateName;
+                            for (; nodep; nodep = nodep->nextp()) {
+                                AstCFunc* const cfuncp = VN_CAST(nodep, CFunc);
+                                if (cfuncp
+                                    && (cfuncp->name() == updateName
+                                        || cfuncp->name() == noInlineUpdateName)) {
+                                    updatep = cfuncp;
+                                    break;
+                                }
                             }
-                        }
+                        };
+                        findUpdateFunc(classp->membersp());
+                        if (!updatep) findUpdateFunc(classp->stmtsp());
                         UASSERT_OBJ(updatep, classp, "Missing update rand vars after copy method");
-                        puts("clonep->" + updatep->nameProtect() + "();\n");
+                        puts("clonep->" + updatep->nameProtect() + "(nullptr);\n");
                     }
                     for (const EmbeddedCovergroupVar& item : embeddedCovergroupVars) {
                         puts("clonep->" + EmitCUtil::prefixNameProtect(item.first)

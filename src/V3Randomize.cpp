@@ -4569,10 +4569,10 @@ class RandomizeVisitor final : public VNVisitor {
     void addUpdateRandVarsAfterCopyBody(AstClass* const nodep, AstFunc* const randomizep) {
         if (nodep->hasUpdateRandVarsAfterCopy()) return;
 
-        AstCFunc* const updatep
-            = new AstCFunc{nodep->fileline(), "__VupdateRandVarsAfterCopy", nullptr, "void"};
+        AstFunc* const updatep
+            = new AstFunc{nodep->fileline(), "__VupdateRandVarsAfterCopy", nullptr, nullptr};
+        updatep->classMethod(true);
         updatep->isVirtual(true);
-        updatep->isConst(false);
         nodep->addMembersp(updatep);
         nodep->hasUpdateRandVarsAfterCopy(true);
 

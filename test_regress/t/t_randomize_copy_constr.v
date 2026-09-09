@@ -4,7 +4,6 @@
 // SPDX-FileCopyrightText: 2026 Antmicro
 // SPDX-License-Identifier: CC0-1.0
 
-// Test that new <handle> rebinds copied randomizer variable pointers.
 
 // verilog_format: off
 `define check_rand(cl, field, cond) \
@@ -26,7 +25,7 @@ begin \
 end
 // verilog_format: on
 
-class Instr;
+class Base;
   typedef struct {
     rand bit [6:0] lo;
     rand bit [8:0] hi;
@@ -51,7 +50,7 @@ class Instr;
     pair_assoc["b"] = '{default: 0};
   endfunction
 
-  constraint instr_c {
+  constraint constr1 {
     x != 0;
     pair.lo != 0;
     pair.hi != 0;
@@ -70,9 +69,9 @@ class Instr;
   }
 endclass
 
-class CompressedInstr extends Instr;
+class Derv extends Base;
    rand int z;
-   constraint constr {
+   constraint constr2 {
       x != 1;
       y % 2 == 1;
       z inside {1, 5};
@@ -81,30 +80,30 @@ endclass
 
 module t;
   initial begin
-    Instr copied;
-    Instr instr_for_copy;
-    CompressedInstr compr;
-    compr = new;
-    instr_for_copy = compr;
-    copied = new instr_for_copy;
-    `check_rand(copied, copied.x, copied.x > 1 && compr.x == 0);
-    `check_rand(copied, copied.y, copied.y % 2 == 1 && compr.y == 0);
-    `check_rand(copied, copied.pair.lo, copied.pair.lo != 0 && compr.pair.lo == 0);
+    Base copied;
+    Base base_for_copy;
+    Derv derv;
+    derv = new;
+    base_for_copy = derv;
+    copied = new base_for_copy;
+    `check_rand(copied, copied.x, copied.x > 1 && derv.x == 0);
+    `check_rand(copied, copied.y, copied.y % 2 == 1 && derv.y == 0);
+    `check_rand(copied, copied.pair.lo, copied.pair.lo != 0 && derv.pair.lo == 0);
     `check_rand(copied, copied.fixed_arr[1],
-                copied.fixed_arr[1] != 0 && compr.fixed_arr[1] == 0);
+                copied.fixed_arr[1] != 0 && derv.fixed_arr[1] == 0);
     `check_rand(copied, copied.pair_fixed_arr[2].lo,
-                copied.pair_fixed_arr[2].lo != 0 && compr.pair_fixed_arr[2].lo == 0);
-    `check_rand(copied, copied.queue[0], copied.queue[0] != 0 && compr.queue[0] == 0);
+                copied.pair_fixed_arr[2].lo != 0 && derv.pair_fixed_arr[2].lo == 0);
+    `check_rand(copied, copied.queue[0], copied.queue[0] != 0 && derv.queue[0] == 0);
     `check_rand(copied, copied.pair_queue[1].lo,
-                copied.pair_queue[1].lo != 0 && compr.pair_queue[1].lo == 0);
+                copied.pair_queue[1].lo != 0 && derv.pair_queue[1].lo == 0);
     `check_rand(copied, copied.assoc["a"],
-                copied.assoc["a"] >= 50 && copied.assoc["a"] <= 70 && compr.assoc["a"] == 0);
+                copied.assoc["a"] >= 50 && copied.assoc["a"] <= 70 && derv.assoc["a"] == 0);
     `check_rand(copied, copied.pair_assoc["a"].hi,
-                copied.pair_assoc["a"].hi != 0 && compr.pair_assoc["a"].hi == 0);
+                copied.pair_assoc["a"].hi != 0 && derv.pair_assoc["a"].hi == 0);
 
-     if(compr.z != 0) $stop;
-     $cast(compr, copied);
-     `check_rand(compr, compr.z, compr.z == 1 || compr.z == 5);
+     if(derv.z != 0) $stop;
+     $cast(derv, copied);
+     `check_rand(derv, derv.z, derv.z == 1 || derv.z == 5);
 
     $write("*-* All Finished *-*\n");
     $finish;

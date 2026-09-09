@@ -32,10 +32,11 @@ class Instr;
     rand bit [8:0] hi;
   } pair_t;
 
-  rand bit [31:0] my_int;
+  rand bit [1:0] x;
+  rand bit [1:0] y;
   rand pair_t pair;
   rand bit [6:0] fixed_arr[3];
-  rand pair_t pair_fixed_arr[2];
+  rand pair_t pair_fixed_arr[3];
   rand int queue[$];
   rand pair_t pair_queue[$];
   rand int assoc[string];
@@ -51,18 +52,18 @@ class Instr;
   endfunction
 
   constraint instr_c {
-    my_int != 0;
+    x != 0;
     pair.lo != 0;
     pair.hi != 0;
     foreach (fixed_arr[i]) fixed_arr[i] != 0;
     foreach (pair_fixed_arr[i]) {
       pair_fixed_arr[i].lo != 0;
     }
-    foreach (queue[i]) {queue[i] inside {[1 : 127]};}
+     foreach (queue[i]) {queue[i] != 0; }
     foreach (pair_queue[i]) {
       pair_queue[i].lo != 0;
     }
-    foreach (assoc[key]) {assoc[key] inside {[1 : 127]};}
+    foreach (assoc[key]) {assoc[key] inside {[50 : 70]};}
     foreach (pair_assoc[key]) {
       pair_assoc[key].hi != 0;
     }
@@ -70,29 +71,40 @@ class Instr;
 endclass
 
 class CompressedInstr extends Instr;
+   rand int z;
+   constraint constr {
+      x != 1;
+      y % 2 == 1;
+      z inside {1, 5};
+   }
 endclass
 
 module t;
   initial begin
     Instr copied;
     Instr instr_for_copy;
-    CompressedInstr compressed_template;
-    compressed_template = new;
-    instr_for_copy = compressed_template;
+    CompressedInstr compr;
+    compr = new;
+    instr_for_copy = compr;
     copied = new instr_for_copy;
-    `check_rand(copied, copied.my_int, copied.my_int != 0 && compressed_template.my_int == 0);
-    `check_rand(copied, copied.pair.lo, copied.pair.lo != 0 && compressed_template.pair.lo == 0);
-    `check_rand(copied, copied.fixed_arr[0],
-                copied.fixed_arr[0] != 0 && compressed_template.fixed_arr[0] == 0);
-    `check_rand(copied, copied.pair_fixed_arr[0].lo,
-                copied.pair_fixed_arr[0].lo != 0 && compressed_template.pair_fixed_arr[0].lo == 0);
-    `check_rand(copied, copied.queue[0], copied.queue[0] != 0 && compressed_template.queue[0] == 0);
-    `check_rand(copied, copied.pair_queue[0].lo,
-                copied.pair_queue[0].lo != 0 && compressed_template.pair_queue[0].lo == 0);
+    `check_rand(copied, copied.x, copied.x > 1 && compr.x == 0);
+    `check_rand(copied, copied.y, copied.y % 2 == 1 && compr.y == 0);
+    `check_rand(copied, copied.pair.lo, copied.pair.lo != 0 && compr.pair.lo == 0);
+    `check_rand(copied, copied.fixed_arr[1],
+                copied.fixed_arr[1] != 0 && compr.fixed_arr[1] == 0);
+    `check_rand(copied, copied.pair_fixed_arr[2].lo,
+                copied.pair_fixed_arr[2].lo != 0 && compr.pair_fixed_arr[2].lo == 0);
+    `check_rand(copied, copied.queue[0], copied.queue[0] != 0 && compr.queue[0] == 0);
+    `check_rand(copied, copied.pair_queue[1].lo,
+                copied.pair_queue[1].lo != 0 && compr.pair_queue[1].lo == 0);
     `check_rand(copied, copied.assoc["a"],
-                copied.assoc["a"] != 0 && compressed_template.assoc["a"] == 0);
+                copied.assoc["a"] >= 50 && copied.assoc["a"] <= 70 && compr.assoc["a"] == 0);
     `check_rand(copied, copied.pair_assoc["a"].hi,
-                copied.pair_assoc["a"].hi != 0 && compressed_template.pair_assoc["a"].hi == 0);
+                copied.pair_assoc["a"].hi != 0 && compr.pair_assoc["a"].hi == 0);
+
+     if(compr.z != 0) $stop;
+     $cast(compr, copied);
+     `check_rand(compr, compr.z, compr.z == 1 || compr.z == 5);
 
     $write("*-* All Finished *-*\n");
     $finish;

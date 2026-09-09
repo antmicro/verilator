@@ -2208,20 +2208,22 @@ private:
             }
         } break;
         case FsmExpand::AUTO_EXPAND: {
-            arcCountWithExpansion = m_states.size() * m_states.size();
+            arcCountWithExpansion = m_states.size() * m_states.size() - m_states.size();
         } break;
         case FsmExpand::FULL: {
             const int width = m_graph.sampleVarScopep()->width();
             // 32 is derived from:
             // tranitionsCount <= std::numeric_limits<uint64_t>::max()
-            // (2^width)^2 <= 2^64 - 1
-            // (2^width)^2 < 2^64 since we operate on integral values we can trade 1 for =
+            // (2^width)^2 - (2^width) <= 2^64 - 1
+            // (2^width)^2 - (2^width) < 2^64 since we operate on integral values we can trade 1
+            // log_2((2^width)^2 - (2^width)) < 64
+            // log_2((2^width)^2) < 64 - `(2^width)` is negigible so, it may be dropped
             // 2width < 64
             if (width < 32) {
-                arcCountWithExpansion = ~0ULL;
-            } else {
                 const uint64_t combinationsCount = static_cast<size_t>(1) << width;
-                arcCountWithExpansion = combinationsCount * combinationsCount;
+                arcCountWithExpansion = combinationsCount * combinationsCount - combinationsCount;
+            } else {
+                arcCountWithExpansion = ~0ULL;
             }
         } break;
         }
@@ -2354,12 +2356,14 @@ public:
 
         {
             const size_t arcCountWithExpansion = getArcCountWithExpansion(expand);
-            if (VL_UNLIKELY(static_cast<int>(arcCountWithExpansion)
-                            > v3Global.opt.fsmMaxExpandableSize())) {
+            if (VL_UNLIKELY(v3Global.opt.coverageFsmMaxArcs() < 0
+                            || arcCountWithExpansion
+                                   > static_cast<size_t>(v3Global.opt.coverageFsmMaxArcs()))) {
                 sampleVscp->v3error("Exceeded size of max expandable fsm: "
-                                    << v3Global.opt.fsmMaxExpandableSize()
-                                    << " with: " << arcCountWithExpansion << sampleVscp->warnMore()
-                                    << "Use --fsm-max-expandable-size to change this value");
+                                    << v3Global.opt.coverageFsmMaxArcs()
+                                    << " with: " << arcCountWithExpansion << '\n'
+                                    << sampleVscp->warnMore()
+                                    << "Use --coverage-fsm-max-arcs <value> to change this value");
                 return;
             }
         }

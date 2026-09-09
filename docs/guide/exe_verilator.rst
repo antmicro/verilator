@@ -312,6 +312,48 @@ Summary:
 
    Enables native FSM state and arc coverage. See :ref:`FSM Coverage`.
 
+.. option:: --coverage-fsm-expand <mode>
+
+   Specifies the mode of FSM expansion for coverage.
+   One of the following modes may be chosen:
+
+    * `auto`
+      * count of how many times FSM was in a particular states
+      is counted for all used states
+      * count of how many times certain FSM transition occurred
+      is counted for:
+        * all defined transitions in the code,
+        * from all used states to a reset state,
+        * from any terminal state to default state.
+
+    * `auto_expand`
+      * count of how many times FSM was in a particular states
+      is counted for all used states
+      * count of how many times certain FSM transition occurred
+      is counted for all possible transitions between used states
+
+    * `full`
+      * count of how many times FSM was in a particular states
+      is counted for all possible states
+      * count of how many times certain FSM transition occurred
+      is counted for all possible transitions between all
+      possible states states
+
+   `all possible states` - means every value that variable of
+   a certain width representing an FSM may have i.e. 2^(width).
+
+   `all possible transitions between n-states` - all transitions
+   that may be created i.e. (2^n - n) - value is decreased because
+   transitions between same states are not counted.
+
+   Defaults to `auto`.
+
+.. option:: --coverage-fsm-max-arcs <value>
+
+   Specifies the maximum count of FSM transitions to be tracked by coverage for a single FSM.
+
+   Defaults to 4096.
+
 .. option:: --coverage-line
 
    Enables basic block line coverage analysis. See :ref:`Line Coverage`.
@@ -850,18 +892,6 @@ Summary:
 .. option:: --no-fourstate
 
    Disables four-state logic support which is the default. Exists for forward compatibility.
-
-.. option:: --fsm-max-expandable-size
-
-   TODO - outdated:
-   Sets the maximum size - maximum number of possible states - of expandable FSM.
-   When FSM is expanded Verilator generates coverage of every
-   teoritically possible transiztion. This allows to avoid getting ANY state
-   in coverage report. This flag makes sense only with fsm coverage enabled.
-   Note that amount of possible transition (therefore binary size) grows
-   with count of states squared.
-
-   Defaults to 256.
 
 .. option:: --fslice-element-limit
 

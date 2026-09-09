@@ -323,7 +323,7 @@ private:
     int         m_coverageMaxWidth = 256; // main switch: --coverage-max-width
     int         m_debugAllocRandom = 0;  // main switch: --debug-alloc-random <seed>
     int         m_expandLimit = 256;  // main switch: --expand-limit
-    int         m_fsmMaxExpandableSize = 256;  // main switch: --fsm-max-expandable-size
+    int         m_coverageFsmMaxArcs = 4096;  // main switch: --coverage-fsm-max-arcs
     int         m_gateStmts = 100;    // main switch: --gate-stmts
     int         m_hierChild = 0;      // main switch: --hierarchical-child
     int         m_hierThreads = 0;      // main switch: --hierarchical-threads
@@ -535,6 +535,7 @@ public:
     }
     bool coverageExpr() const { return m_coverageExpr; }
     bool coverageFsm() const { return m_coverageFsm; }
+    int coverageFsmMaxArcs() const { return m_coverageFsmMaxArcs; }
     bool coverageLine() const { return m_coverageLine; }
     bool coveragePerInstance() const { return m_coveragePerInstance; }
     bool coverageToggle() const { return m_coverageToggle; }
@@ -630,7 +631,6 @@ public:
     int debugAllocRandom() const { return m_debugAllocRandom; }
     bool dumpTreeAddrids() const VL_MT_SAFE;
     int expandLimit() const { return m_expandLimit; }
-    int fsmMaxExpandableSize() const { return m_fsmMaxExpandableSize; }
     int gateStmts() const { return m_gateStmts; }
     int ifDepth() const { return m_ifDepth; }
     int inlineCFuncs() const { return m_inlineCFuncs; }

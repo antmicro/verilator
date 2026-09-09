@@ -1373,6 +1373,7 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc,
     DECL_OPTION("-coverage-expr", OnOff, &m_coverageExpr);
     DECL_OPTION("-coverage-expr-max", Set, &m_coverageExprMax);
     DECL_OPTION("-coverage-fsm", OnOff, &m_coverageFsm);
+    DECL_OPTION("-coverage-fsm-max-arcs", Set, &m_coverageFsmMaxArcs);
     DECL_OPTION("-coverage-line", OnOff, &m_coverageLine);
     DECL_OPTION("-coverage-max-width", Set, &m_coverageMaxWidth);
     DECL_OPTION("-coverage-per-instance", OnOff, &m_coveragePerInstance);
@@ -1444,7 +1445,6 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc,
     DECL_OPTION("-exe", OnOff, &m_exe);
     DECL_OPTION("-expand-limit", CbVal,
                 [this](const char* valp) { m_expandLimit = std::atoi(valp); });
-    DECL_OPTION("-fsm-max-expandable-size", Set, &m_fsmMaxExpandableSize);
 
     DECL_OPTION("-F", CbVal, [this, fl, &optdir](const char* valp) VL_MT_DISABLED {
         parseOptsFile(fl, parseFileArg(optdir, valp), true);

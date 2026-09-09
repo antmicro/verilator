@@ -14,19 +14,12 @@ import vltest_bootstrap
 test.scenarios('simulator')
 test.top_filename = "t/t_cover_fsm_expand.v"
 
-test.compile(
-    verilator_flags2=['--binary', '--coverage-fsm', '--coverage-fsm-expand', 'auto-expand'])
-
-test.execute(all_run_flags=["+verilator+coverage+file+" + test.coverage_filename])
-
-test.run(cmd=[
-    os.environ["VERILATOR_ROOT"] + "/bin/verilator_coverage",
-    "--annotate",
-    test.obj_dir + "/annotated",
-    test.coverage_filename,
+test.compile(verilator_flags2=[
+    '--binary', '--coverage-fsm', '--coverage-fsm-expand', 'full', '--coverage-fsm-max-arcs', '50'
 ],
-         verilator_run=True)
+             expect_filename=test.golden_filename,
+             fails=True)
 
-test.files_identical(test.obj_dir + "/annotated/" + test.top_filename[2:], test.golden_filename)
+test.execute()
 
 test.passes()

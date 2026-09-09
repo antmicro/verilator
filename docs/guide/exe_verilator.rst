@@ -343,8 +343,8 @@ Summary:
    a certain width representing an FSM may have i.e. 2^(width).
 
    `all possible transitions between n-states` - all transitions
-   that may be created i.e. (2^n - n) - value is decreased because
-   transitions between same states are not counted.
+   that may be created i.e. (2^n - n) - value is decreased by n
+   because transitions between same states are not counted.
 
    Defaults to `auto`.
 

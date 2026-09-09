@@ -2150,7 +2150,7 @@ private:
                     } else {
                         UASSERT_OBJ(m_undefinedStates.insert(value).second,
                                     m_graph.sampleVarScopep(), "Two states has the same value?");
-                        if (m_undefinedStates.size() >= combinationsCount) {
+                        if (m_undefinedStates.size() * 2 >= combinationsCount) {
                             undefRolled = true;
                             rollUndefs();
                         }
@@ -2176,7 +2176,7 @@ private:
     }
 
     size_t getArcCountWithExpansion(const FsmExpand expand) const {
-        size_t arcCountWithExpansion;
+        size_t arcCountWithExpansion = ~0ULL;
         switch (expand) {
         case FsmExpand::AUTO: {
             arcCountWithExpansion = m_edgesCount;
@@ -2211,8 +2211,6 @@ private:
             if (width < 32) {
                 const uint64_t combinationsCount = static_cast<size_t>(1) << width;
                 arcCountWithExpansion = combinationsCount * combinationsCount - combinationsCount;
-            } else {
-                arcCountWithExpansion = ~0ULL;
             }
         } break;
         }
@@ -2302,15 +2300,12 @@ private:
     AstNodeStmt* buildUnxpandedTransitionHandler(const FsmStateVertex* const toStatep) {
         AstCase* const arcCasep = new AstCase{
             m_flp, VCaseType::CT_CASE, new AstVarRef{m_flp, m_prevVscp, VAccess::READ}, nullptr};
-        const FsmArcEdge* defaultArcp = nullptr;
         for (const V3GraphEdge& edge : toStatep->inEdges()) {
             const FsmArcEdge* const arcp = edge.as<FsmArcEdge>();
-            if (arcp->isReset()) continue;
-            if (arcp->isDefault()) {
-                UASSERT_OBJ(!defaultArcp, arcCasep, "More than one default?");
-                defaultArcp = arcp;
-                continue;
-            }
+            UASSERT_OBJ(!arcp->isReset(), m_graph.stateVarScopep(),
+                        "This function should never be called on a target of a reset arc");
+            UASSERT_OBJ(!arcp->isDefault(), m_graph.stateVarScopep(),
+                        "This function should never be called on a target of a default arc");
             const FsmStateVertex* const fromp = arcp->fromp()->as<FsmStateVertex>();
             if (fromp != toStatep) {
                 arcCasep->addItemsp(
@@ -2320,15 +2315,7 @@ private:
         }
         arcCasep->addItemsp(
             new AstCaseItem{m_flp, makeConst(toStatep->value().num().toUQuad()), nullptr});
-        AstNodeStmt* defaultp = nullptr;
-        if (defaultArcp) {
-            // Synthetic default arcs mean "none of the explicit
-            // source states matched", so rebuild that as a conjunction
-            // of previous-state != known-state tests.
-            const FsmVertex* const fromVertexp = defaultArcp->fromp()->as<FsmVertex>();
-            defaultp = buildCoverIncStmtp(fromVertexp->label(), toStatep->label(), "default");
-        }
-        arcCasep->addItemsp(new AstCaseItem{m_flp, nullptr, defaultp});
+        arcCasep->addItemsp(new AstCaseItem{m_flp, nullptr, nullptr});
         return arcCasep;
     }
 
@@ -2345,7 +2332,7 @@ public:
 
         {
             const size_t arcCountWithExpansion = getArcCountWithExpansion(expand);
-            if (VL_UNLIKELY(v3Global.opt.coverageFsmMaxArcs() < 0
+            if (VL_UNLIKELY(v3Global.opt.coverageFsmMaxArcs() < 0 || ~arcCountWithExpansion == 0ULL
                             || arcCountWithExpansion
                                    > static_cast<size_t>(v3Global.opt.coverageFsmMaxArcs()))) {
                 sampleVscp->v3error("Exceeded size of max expandable fsm: "

@@ -27,7 +27,7 @@
 %000001   logic rst;
 %000001   logic start;
           integer cyc;
-%000001   state_t state  /*verilator fsm_reset_arc*/;
+%000001   state_t state  /*verilator fsm_state*/;
 %000002   P::A a;
 %000001   logic done;
         

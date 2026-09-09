@@ -14,9 +14,7 @@ import vltest_bootstrap
 test.scenarios('linter')
 test.top_filename = "t/t_cover_fsm_expand.v"
 
-test.compile(verilator_flags2=[
-    '--binary', '--coverage-fsm', '--coverage-fsm-expand', 'full', '--coverage-fsm-max-arcs', '50'
-],
+test.compile(verilator_flags2=['--binary', '--coverage-fsm', '--coverage-fsm-expand', 'fulll'],
              expect_filename=test.golden_filename,
              fails=True)
 

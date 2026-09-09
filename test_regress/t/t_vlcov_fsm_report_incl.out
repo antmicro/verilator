@@ -20,7 +20,7 @@
 %000001   logic rst;
 %000001   logic start;
 %000003   state_t state_default  /*verilator fsm_arc_include_cond*/;
-%000001   state_t state_reset_incl  /*verilator fsm_reset_arc*/;
+%000001   state_t state_reset_incl  /*verilator fsm_state*/;
 %000001   state_t state_reset_excl;
         
 %000001   initial begin

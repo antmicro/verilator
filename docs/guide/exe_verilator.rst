@@ -326,7 +326,7 @@ Summary:
         * from all used states to a reset state,
         * from any terminal state to default state.
 
-    * `auto_expand`
+    * `auto-expand`
       * count of how many times FSM was in a particular states
       is counted for all used states
       * count of how many times certain FSM transition occurred

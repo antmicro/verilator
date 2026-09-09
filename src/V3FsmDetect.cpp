@@ -187,7 +187,6 @@ class FsmRegisterCandidate final {
     FsmResetCondDesc m_resetCond;  // Saved reset predicate, if any.
     std::vector<FsmResetArcDesc> m_resetArcs;  // Reset target arcs recovered during detect.
     bool m_hasResetCond = false;  // Whether the FSM had a modeled reset predicate.
-    bool m_resetInclude = false;  // Whether reset arcs count toward summary totals.
     bool m_inclCond = false;  // Whether conditional/default arcs are kept explicitly.
     FileLine* m_flp = nullptr;  // Representative source location.
 
@@ -210,8 +209,6 @@ public:
     std::vector<FsmResetArcDesc>& resetArcs() { return m_resetArcs; }
     bool hasResetCond() const { return m_hasResetCond; }
     void hasResetCond(bool flag) { m_hasResetCond = flag; }
-    bool resetInclude() const { return m_resetInclude; }
-    void resetInclude(bool flag) { m_resetInclude = flag; }
     bool inclCond() const { return m_inclCond; }
     void inclCond(bool flag) { m_inclCond = flag; }
     FileLine* fileline() const { return m_flp; }
@@ -336,7 +333,6 @@ class FsmGraph final : public V3Graph {
     std::vector<FsmSenDesc> m_senses;  // Saved event controls for recreated active blocks.
     FsmResetCondDesc m_resetCond;  // Saved reset predicate shape, if one exists.
     bool m_hasResetCond = false;  // Whether the detected FSM had a reset branch.
-    bool m_resetInclude = false;  // Whether reset arcs count toward coverage totals.
     bool m_inclCond = false;  // Whether conditional arcs should be kept explicitly.
     FileLine* m_flp = nullptr;  // Representative source location for declarations/arcs.
     std::unordered_map<FsmStateValue, FsmStateVertex*, FsmStateValueHash>
@@ -369,8 +365,6 @@ public:
     FsmResetCondDesc& resetCond() { return m_resetCond; }
     bool hasResetCond() const { return m_hasResetCond; }
     void hasResetCond(bool flag) { m_hasResetCond = flag; }
-    bool resetInclude() const { return m_resetInclude; }
-    void resetInclude(bool flag) { m_resetInclude = flag; }
     bool inclCond() const { return m_inclCond; }
     void inclCond(bool flag) { m_inclCond = flag; }
     FileLine* fileline() const { return m_flp; }
@@ -694,7 +688,6 @@ class FsmDetectVisitor final : public VNVisitor {
             reg.senses() = FsmDetectVisitor::describeSenTree(alwaysp->sentreep());
             reg.resetCond() = FsmDetectVisitor::describeResetCond(resetCondp);
             reg.hasResetCond(reg.resetCond().varScopep != nullptr);
-            reg.resetInclude(vscp->varp()->attrFsmResetArc());
             reg.inclCond(vscp->varp()->attrFsmArcInclCond());
             AstIf* const firstIfp = VN_CAST(alwaysp->stmtsp(), If);
             if (firstIfp && reg.hasResetCond()) {
@@ -797,7 +790,6 @@ class FsmDetectVisitor final : public VNVisitor {
         cand.stateVscp(stateVscp);
         cand.sampleVscp(childRoleVarScope(cellp, roles.qPort));
         cand.nextVscp(nextVscp);
-        cand.resetInclude(stateVscp->varp()->attrFsmResetArc());
         cand.inclCond(stateVscp->varp()->attrFsmArcInclCond());
         cand.fileline(cellp->fileline());
         return true;
@@ -1460,7 +1452,6 @@ class FsmDetectVisitor final : public VNVisitor {
         cand.sampleVscp(stateVscp);
         cand.nextVscp(nextVscp);
         cand.senses() = describeSenTree(alwaysp->sentreep());
-        cand.resetInclude(stateVscp->varp()->attrFsmResetArc());
         cand.inclCond(stateVscp->varp()->attrFsmArcInclCond());
         cand.fileline(alwaysp->fileline());
         return true;
@@ -1785,7 +1776,6 @@ class FsmDetectVisitor final : public VNVisitor {
             entry.graphp->senses() = reg.senses();
             entry.graphp->resetCond() = reg.resetCond();
             entry.graphp->hasResetCond(reg.hasResetCond());
-            entry.graphp->resetInclude(reg.resetInclude());
             entry.graphp->inclCond(reg.inclCond());
             entry.graphp->fileline(casep->fileline());
             for (const std::pair<string, FsmStateValue>& state : stateSpace.states) {
@@ -1821,7 +1811,6 @@ class FsmDetectVisitor final : public VNVisitor {
         entry.graphp->senses() = reg.senses();
         entry.graphp->resetCond() = reg.resetCond();
         entry.graphp->hasResetCond(reg.hasResetCond());
-        entry.graphp->resetInclude(reg.resetInclude());
         entry.graphp->inclCond(reg.inclCond());
         entry.graphp->fileline(chain.ifp->fileline());
         for (const std::pair<string, FsmStateValue>& state : stateSpace.states) {

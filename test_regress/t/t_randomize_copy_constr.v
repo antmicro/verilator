@@ -41,6 +41,8 @@ class Base;
   rand int assoc[string];
   rand pair_t pair_assoc[string];
 
+  rand static int stat_int;
+
   function new();
     queue = '{0, 0, 0};
     pair_queue = '{'{default: 0}, '{default: 0}};
@@ -52,6 +54,7 @@ class Base;
 
   constraint constr1 {
     x != 0;
+    stat_int % 5 == 1;
     pair.lo != 0;
     pair.hi != 0;
     foreach (fixed_arr[i]) fixed_arr[i] != 0;
@@ -87,6 +90,7 @@ module t;
     base_for_copy = derv;
     copied = new base_for_copy;
     `check_rand(copied, copied.x, copied.x > 1 && derv.x == 0);
+    `check_rand(copied, copied.stat_int, copied.stat_int % 5 == 1 && copied.stat_int == derv.stat_int);
     `check_rand(copied, copied.y, copied.y % 2 == 1 && derv.y == 0);
     `check_rand(copied, copied.pair.lo, copied.pair.lo != 0 && derv.pair.lo == 0);
     `check_rand(copied, copied.fixed_arr[1],

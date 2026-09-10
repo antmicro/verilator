@@ -214,6 +214,7 @@ public:
     }
 
     static bool isBitwiseDType(const AstNode* nodep) {
+        if (!nodep) return false;
         const AstBasicDType* const basicp = nodep->dtypep()->skipRefp()->basicp();
         return basicp && !basicp->isDouble() && !basicp->isString() && !basicp->isOpaque();
     }

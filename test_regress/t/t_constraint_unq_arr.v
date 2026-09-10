@@ -54,6 +54,7 @@ module t;
     rand bit [15:0] queue[$];
     rand bit [15:0] queue_c[$:3];
     rand bit [15:0] assoc[int];
+    rand bit [3:0] multiarr0[4], multiarr1[4];
 
     constraint c {
       unique {arr};
@@ -61,6 +62,7 @@ module t;
       unique {queue};
       unique {queue_c};
       unique {assoc};
+      unique {multiarr0, multiarr1};
     }
 
     function new;
@@ -115,6 +117,37 @@ module t;
           end
           if (assoc[i] == assoc[j]) begin
             $error("UNIQUENESS VIOLATION: assoc[%0d] == assoc[%0d] == 0x%h", i, j, assoc[i]);
+            return 0;
+          end
+        end
+      end
+      // multiple arrays
+      foreach (multiarr0[i]) begin
+        foreach (multiarr0[j]) begin
+          if (i == j) begin
+            continue;
+          end
+          if (multiarr0[i] == multiarr0[j]) begin
+            $error("UNIQUENESS VIOLATION: multiarr0[%0d] == multiarr0[%0d] == 0x%h", i, j, assoc[i]);
+            return 0;
+          end
+        end
+      end
+      foreach (multiarr1[i]) begin
+        foreach (multiarr1[j]) begin
+          if (i == j) begin
+            continue;
+          end
+          if (multiarr1[i] == multiarr1[j]) begin
+            $error("UNIQUENESS VIOLATION: multiarr1[%0d] == multiarr1[%0d] == 0x%h", i, j, assoc[i]);
+            return 0;
+          end
+        end
+      end
+      foreach (multiarr1[i]) begin
+        foreach (multiarr0[j]) begin
+          if (multiarr0[i] == multiarr1[j]) begin
+            $error("UNIQUENESS VIOLATION: multiarr0[%0d] == multiarr1[%0d] == 0x%h", i, j, assoc[i]);
             return 0;
           end
         end

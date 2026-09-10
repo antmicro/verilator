@@ -818,19 +818,29 @@ std::vector<std::string> VlRandomizer::buildUniqueExprs() const {
     std::vector<std::string> exprs;
     if (m_unique_arrays.empty()) return exprs;
     const auto arrVarsp = std::make_shared<const ArrayInfoMap>(m_arr_vars);
-    for (const std::string& baseName : m_unique_arrays) {
-        const auto it = m_vars.find(baseName);
-        if (it == m_vars.end()) continue;
-        const VlRandomVar& var = *it->second;
-        // Select the elements the array actually holds now, by their own index
-        // or key, rather than by ordinal position
-        var.setArrayInfo(arrVarsp);
-        // 'distinct' needs at least two operands; fewer elements are trivially unique
-        if (var.countMatchingElements(*arrVarsp, baseName) < 2) continue;
+    for (auto iter = m_unique_arrays.begin(); iter != m_unique_arrays.end();) {
+        const uint32_t key = iter->first;
+        uint32_t matchingElementsCount = 0;
+        std::ostringstream varsString;
+        while (iter != m_unique_arrays.end() && iter->first == key) {
+            const std::string& baseName = iter->second;
+            const auto it = m_vars.find(baseName);
+            if (it == m_vars.end()) {
+                iter++;
+                continue;
+            }
+            const VlRandomVar& var = *it->second;
+            // Select the elements the array actually holds now, by their own index
+            // or key, rather than by ordinal position
+            var.setArrayInfo(arrVarsp);
+            // 'distinct' needs at least two operands; fewer elements are trivially unique
+            matchingElementsCount += var.countMatchingElements(*arrVarsp, baseName);
+            var.emitGetValue(varsString);
+            iter++;
+        }
+        if (matchingElementsCount < 2) continue;
         std::ostringstream os;
-        os << "(__Vbv (distinct ";
-        var.emitGetValue(os);
-        os << "))";
+        os << "(__Vbv (distinct " << varsString.str() << "))";
         exprs.push_back(os.str());
     }
     return exprs;

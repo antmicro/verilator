@@ -262,7 +262,9 @@ class VlRandomizer VL_NOT_FINAL {
     std::set<std::string> m_disabledVars;  // Variables with rand_mode off (skip write-back)
                                            // variables
     ArrayInfoMap m_arr_vars;  // Tracks each element in array structures for iteration
-    std::vector<std::string> m_unique_arrays;  // Arrays whose elements must be distinct
+    std::multimap<uint32_t, std::string>
+        m_unique_arrays;  // Arrays whose elements must be distinct with id
+                          // being the same for elements in the same unique
     const VlQueue<CData>* m_randmodep = nullptr;  // rand_mode state;
     const VlQueue<CData>* m_static_randmodep = nullptr;  // Static rand_mode state (shared)
     std::unordered_set<std::string> m_staticVars;  // Names of static rand vars
@@ -598,7 +600,13 @@ public:
     // This is the "Sender" API for the generated code.
     // The elements to make distinct are taken from the array element table at
     // solve time, so a container resized by the solver is handled correctly.
-    void rand_unique(const std::string& name) { m_unique_arrays.push_back(name); }
+    void rand_unique(const std::string& name, const uint32_t key) {
+        auto range = m_unique_arrays.equal_range(key);
+        for (auto it = range.first; it != range.second; ++it) {
+            if (it->second == name) return;
+        }
+        m_unique_arrays.insert({key, name});
+    }
 
     // Recursively record all elements in an unpacked array
     template <typename T, std::size_t N_Depth>

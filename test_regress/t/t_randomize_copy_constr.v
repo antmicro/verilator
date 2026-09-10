@@ -41,7 +41,7 @@ class Base;
   rand int assoc[string];
   rand pair_t pair_assoc[string];
 
-  rand static int stat_int;
+  rand static bit [5:0] stat_int;
 
   function new();
     queue = '{0, 0, 0};

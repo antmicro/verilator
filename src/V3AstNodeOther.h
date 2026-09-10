@@ -2950,6 +2950,7 @@ class AstClass final : public AstNodeModule {
     // @astgen ptr := m_covergroupEnclosingClassp : Optional[AstClass]  // Lexical enclosing class
     uint32_t m_declTokenNum;  // Declaration token number
     VBaseOverride m_baseOverride;  // BaseOverride (inital/final/extends)
+    // dist-ast-dump-suppress
     bool m_needsRandVarsUpdate = false;  // Needs to update pointers to rand variables in clone()
     bool m_covergroup = false;  // Is covergroup (TODO perhaps make a new Ast node type for CG?)
     bool m_extended = false;  // Is extension or extended by other classes

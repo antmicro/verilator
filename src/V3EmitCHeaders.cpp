@@ -268,15 +268,15 @@ class EmitCHeader final : public EmitCConstInit {
                         }
                     });
                 const string className = EmitCUtil::prefixNameProtect(classp);
-                if (embeddedCovergroupVars.empty() && !classp->hasUpdateRandVarsAfterCopy()) {
+                if (embeddedCovergroupVars.empty() && !classp->needsRandVarsUpdate()) {
                     putns(classp,
                           "VlClass* clone() const { return new " + className + "(*this); }\n");
                 } else {
                     putns(classp, "VlClass* clone() const { " + className + "* const clonep = new "
                                       + className + "(*this); ");
-                    if (classp->hasUpdateRandVarsAfterCopy()) {
+                    if (classp->needsRandVarsUpdate()) {
                         AstCFunc* updatep = nullptr;
-                        const string updateName = "__VupdateRandVarsAfterCopy";
+                        const string updateName = "__VupdateRandVars";
                         const string noInlineUpdateName = "__VnoInFunc_" + updateName;
                         for (AstNode* memberp = classp->membersp(); memberp; memberp = memberp->nextp()) {
                             AstCFunc* const cfuncp = VN_CAST(memberp, CFunc);
@@ -287,7 +287,7 @@ class EmitCHeader final : public EmitCConstInit {
                                 break;
                             }
                         }
-                        UASSERT_OBJ(updatep, classp, "Missing __VupdateRandVarsAfterCopy method");
+                        UASSERT_OBJ(updatep, classp, "Missing __VupdateRandVars method");
                         puts("clonep->" + updatep->nameProtect() + "(nullptr);\n");
                     }
                     for (const EmbeddedCovergroupVar& item : embeddedCovergroupVars) {

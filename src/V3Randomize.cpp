@@ -4565,15 +4565,15 @@ class RandomizeVisitor final : public VNVisitor {
         return resExprp;
     }
 
-    void addUpdateRandVarsAfterCopyBody(AstClass* const nodep, AstFunc* const randomizep) {
-        if (nodep->hasUpdateRandVarsAfterCopy()) return;
+    void addUpdateRandVarsBody(AstClass* const nodep, AstFunc* const randomizep) {
+        if (nodep->needsRandVarsUpdate()) return;
 
         AstFunc* const updatep
-            = new AstFunc{nodep->fileline(), "__VupdateRandVarsAfterCopy", nullptr, nullptr};
+            = new AstFunc{nodep->fileline(), "__VupdateRandVars", nullptr, nullptr};
         updatep->classMethod(true);
         updatep->isVirtual(true);
         nodep->addMembersp(updatep);
-        nodep->hasUpdateRandVarsAfterCopy(true);
+        nodep->needsRandVarsUpdate(true);
 
         const auto cloneWriteVarStmts
             = [updatep](AstClass* const classp, AstNodeFTask* const ftaskp) {
@@ -5819,7 +5819,7 @@ class RandomizeVisitor final : public VNVisitor {
             beginValp = new AstConst{fl, AstConst::WidthedValue{}, 32, 1};
         }
 
-        addUpdateRandVarsAfterCopyBody(nodep, randomizep);
+        addUpdateRandVarsBody(nodep, randomizep);
 
         AstFunc* const basicRandomizep
             = V3Randomize::newRandomizeFunc(m_memberMap, nodep, BASIC_RANDOMIZE_FUNC_NAME);

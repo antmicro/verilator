@@ -4464,9 +4464,8 @@ class RandomizeVisitor final : public VNVisitor {
         if (derefFromp) {
             sizeNodeExprp = buildMemberSelExprp(derefFromp, sizeVarp);
         } else {
-            AstVarRef* const sizeVarRefp = new AstVarRef{fl, sizeVarp, VAccess::READ};
-            sizeVarRefp->classOrPackagep(VN_AS(sizeVarp->user2p(), NodeModule));
-            sizeNodeExprp = sizeVarRefp;
+            sizeNodeExprp = new AstVarRef{fl, VN_AS(sizeVarp->user2p(), NodeModule), sizeVarp,
+                                          VAccess::READ};
         }
         sizeNodeExprp->user1(true);
         AstGteS* const sizeGtep = new AstGteS{fl, sizeNodeExprp, new AstConst{fl, 0}};
@@ -4576,44 +4575,44 @@ class RandomizeVisitor final : public VNVisitor {
         nodep->addMembersp(updatep);
         nodep->hasUpdateRandVarsAfterCopy(true);
 
-        const auto cloneWriteVarStmts = [updatep](AstClass* const classp,
-                                                  AstNodeFTask* const ftaskp) {
-            if (!ftaskp || !ftaskp->stmtsp()) return;
-            for (AstNode* stmtp = ftaskp->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
-                bool foundClearConstraints = false;
-                stmtp->foreach([&](AstCMethodHard* methodp) {
-                    if (methodp->method() == VCMethod::RANDOMIZER_CLEARCONSTRAINTS) {
-                        foundClearConstraints = true;
-                    }
-                    if (methodp->method() != VCMethod::RANDOMIZER_WRITE_VAR) return;
+        const auto cloneWriteVarStmts
+            = [updatep](AstClass* const classp, AstNodeFTask* const ftaskp) {
+                  if (!ftaskp || !ftaskp->stmtsp()) return;
+                  for (AstNode* stmtp = ftaskp->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+                      bool foundClearConstraints = false;
+                      stmtp->foreach([&](AstCMethodHard* methodp) {
+                          if (methodp->method() == VCMethod::RANDOMIZER_CLEARCONSTRAINTS) {
+                              foundClearConstraints = true;
+                          }
+                          if (methodp->method() != VCMethod::RANDOMIZER_WRITE_VAR) return;
 
-                    bool hasNonMemberRef = false;
-                    methodp->pinsp()->foreach([&](AstNodeVarRef* refp) {
-                        AstVar* const refVarp = refp->varp();
-                        if (refVarp->lifetime().isStatic() || !refVarp->isClassMember()) {
-                            hasNonMemberRef = true;
-                        } else if (refVarp->user2p() != classp) {
-                            hasNonMemberRef = true;
-                        }
-                    });
-                    if (hasNonMemberRef) return;
+                          bool hasNonMemberRef = false;
+                          methodp->pinsp()->foreach([&](AstNodeVarRef* refp) {
+                              AstVar* const refVarp = refp->varp();
+                              if (refVarp->lifetime().isStatic() || !refVarp->isClassMember()) {
+                                  hasNonMemberRef = true;
+                              } else if (refVarp->user2p() != classp) {
+                                  hasNonMemberRef = true;
+                              }
+                          });
+                          if (hasNonMemberRef) return;
 
-                    AstCMethodHard* const updateMethodp = methodp->cloneTree(false);
-                    updateMethodp->method(VCMethod::RANDOMIZER_UPDATE_VAR);
+                          AstCMethodHard* const updateMethodp = methodp->cloneTree(false);
+                          updateMethodp->method(VCMethod::RANDOMIZER_UPDATE_VAR);
 
-                    AstNodeExpr* const varp = updateMethodp->pinsp();
-                    AstNodeExpr* const widthp = VN_AS(varp->nextp(), NodeExpr);
-                    AstNodeExpr* const namep = VN_AS(widthp->nextp(), NodeExpr);
-                    varp->unlinkFrBack();
-                    namep->unlinkFrBack();
-                    updateMethodp->pinsp()->unlinkFrBackWithNext()->deleteTree();
-                    updateMethodp->addPinsp(varp);
-                    updateMethodp->addPinsp(namep);
-                    updatep->addStmtsp(updateMethodp->makeStmt());
-                });
-                if (foundClearConstraints) break;
-            }
-        };
+                          AstNodeExpr* const varp = updateMethodp->pinsp();
+                          AstNodeExpr* const widthp = VN_AS(varp->nextp(), NodeExpr);
+                          AstNodeExpr* const namep = VN_AS(widthp->nextp(), NodeExpr);
+                          varp->unlinkFrBack();
+                          namep->unlinkFrBack();
+                          updateMethodp->pinsp()->unlinkFrBackWithNext()->deleteTree();
+                          updateMethodp->addPinsp(varp);
+                          updateMethodp->addPinsp(namep);
+                          updatep->addStmtsp(updateMethodp->makeStmt());
+                      });
+                      if (foundClearConstraints) break;
+                  }
+              };
 
         for (AstClass* classp = nodep; classp;
              classp = classp->extendsp() ? classp->extendsp()->classp() : nullptr) {
@@ -6377,8 +6376,8 @@ class RandomizeVisitor final : public VNVisitor {
                             = newResizeConstrainedArrayTask(classp, m_constraintp->name());
                         m_constraintp->user3p(resizerTaskp);
                     }
-                    AstVarRef* const sizeVarRefp = new AstVarRef{fl, sizeVarp, VAccess::READ};
-                    sizeVarRefp->classOrPackagep(VN_AS(sizeVarp->user2p(), NodeModule));
+                    AstVarRef* const sizeVarRefp = new AstVarRef{
+                        fl, VN_AS(sizeVarp->user2p(), NodeModule), sizeVarp, VAccess::READ};
                     AstCMethodHard* const resizep = new AstCMethodHard{
                         fl, nodep->fromp()->unlinkFrBack(), VCMethod::DYN_RESIZE, sizeVarRefp};
                     resizep->dtypep(nodep->findVoidDType());
@@ -6389,8 +6388,8 @@ class RandomizeVisitor final : public VNVisitor {
                 // to make sure it is always >= 0.
                 m_constraintp->addItemsp(createSizeGteZeroConstraint(fl, sizeVarp));
             }
-            AstVarRef* const sizeVarRefp = new AstVarRef{fl, sizeVarp, VAccess::READ};
-            sizeVarRefp->classOrPackagep(VN_AS(sizeVarp->user2p(), NodeModule));
+            AstVarRef* const sizeVarRefp = new AstVarRef{fl, VN_AS(sizeVarp->user2p(), NodeModule),
+                                                         sizeVarp, VAccess::READ};
             sizeVarRefp->user1(true);
             nodep->replaceWith(sizeVarRefp);
             VL_DO_DANGLING(nodep->deleteTree(), nodep);

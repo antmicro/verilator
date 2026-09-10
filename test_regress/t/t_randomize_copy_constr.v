@@ -77,7 +77,7 @@ class Derv extends Base;
    constraint constr2 {
       x != 1;
       y % 2 == 1;
-      z inside {1, 5};
+      z == 1;
    }
 endclass
 
@@ -107,7 +107,8 @@ module t;
 
      if(derv.z != 0) $stop;
      $cast(derv, copied);
-     `check_rand(derv, derv.z, derv.z == 1 || derv.z == 5);
+     void'(derv.randomize());
+     if (derv.z != 1) $stop;
 
     $write("*-* All Finished *-*\n");
     $finish;

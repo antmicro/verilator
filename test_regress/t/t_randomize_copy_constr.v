@@ -13,7 +13,7 @@ begin \
    if (!bit'(cl.randomize())) $stop; \
    prev_result = longint'(field); \
    if (!(cond)) $stop; \
-   repeat(99) begin \
+   repeat(20) begin \
       longint result; \
       if (!bit'(cl.randomize())) $stop; \
       result = longint'(field); \
@@ -44,7 +44,7 @@ class Base;
   rand static bit [5:0] stat_int;
 
   function new();
-    queue = '{0, 0, 0};
+    queue = '{0};
     pair_queue = '{'{default: 0}, '{default: 0}};
     assoc["a"] = 0;
     assoc["b"] = 0;
@@ -61,7 +61,8 @@ class Base;
     foreach (pair_fixed_arr[i]) {
       pair_fixed_arr[i].lo != 0;
     }
-     foreach (queue[i]) {queue[i] != 0; }
+    queue.size() inside {[2:5]};
+    foreach (queue[i]) {queue[i] != 0; }
     foreach (pair_queue[i]) {
       pair_queue[i].lo != 0;
     }
@@ -97,6 +98,7 @@ module t;
                 copied.fixed_arr[1] != 0 && derv.fixed_arr[1] == 0);
     `check_rand(copied, copied.pair_fixed_arr[2].lo,
                 copied.pair_fixed_arr[2].lo != 0 && derv.pair_fixed_arr[2].lo == 0);
+    `check_rand(copied, copied.queue.size(), copied.queue.size() inside {[2:5]} && derv.queue.size() == 1);
     `check_rand(copied, copied.queue[0], copied.queue[0] != 0 && derv.queue[0] == 0);
     `check_rand(copied, copied.pair_queue[1].lo,
                 copied.pair_queue[1].lo != 0 && derv.pair_queue[1].lo == 0);

@@ -278,7 +278,8 @@ class EmitCHeader final : public EmitCConstInit {
                         AstCFunc* updatep = nullptr;
                         const string updateName = "__VupdateRandVars";
                         const string noInlineUpdateName = "__VnoInFunc_" + updateName;
-                        for (AstNode* memberp = classp->membersp(); memberp; memberp = memberp->nextp()) {
+                        for (AstNode* memberp = classp->membersp(); memberp;
+                             memberp = memberp->nextp()) {
                             AstCFunc* const cfuncp = VN_CAST(memberp, CFunc);
                             if (cfuncp
                                 && (cfuncp->name() == updateName

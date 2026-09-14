@@ -259,6 +259,40 @@ public:
         return m_currentFTaskRefPortps.empty() ? nullptr : m_currentFTaskRefPortps.back();
     }
 };
+class FourstateDTypeInfo final {
+    union {
+        struct {
+            const bool m_initialized;  // Whether below values are initialized
+            const bool m_isSupported;  // Whether is supported
+            const bool m_isFourstate;  // Whether is fourstate
+            const bool m_hasFourstateInSubDType;  //Whether any subtype is four-state
+        };
+        const int m_encoded;  // encoded version of two above
+    };
+
+public:
+    explicit FourstateDTypeInfo(int encoded)
+        : m_encoded{encoded} {}
+    FourstateDTypeInfo(bool isSupported, bool isFourstate, bool hasFourstateInDSub)
+        : m_initialized{true}
+        , m_isSupported{isSupported}
+        , m_isFourstate{isFourstate}
+        , m_hasFourstateInSubDType{hasFourstateInDSub} {}
+    bool isInitialized() const { return m_initialized; }
+    bool isSupported() const {
+        UASSERT(m_initialized, "Tried to access an uninitialized value");
+        return m_isSupported;
+    }
+    bool isFourstate() const {
+        UASSERT(m_initialized, "Tried to access an uninitialized value");
+        return m_isFourstate;
+    }
+    bool hasFourstateInSubDType() const {
+        UASSERT(m_initialized, "Tried to access an uninitialized value");
+        return m_hasFourstateInSubDType;
+    }
+    int toInt() const { return m_encoded; }
+};
 }  // namespace
 
 // Propagates the logic type (two or four-state) on AstNodeExpr
@@ -333,6 +367,12 @@ class FourstateLogicTypePropagator final : public VNVisitor {
         } else {
             setFourstate(nodep, true, m_fourstateInSubtree);
         }
+        m_fourstateInSubtree |= isFourstate(nodep);
+    }
+    void visit(AstNodeSel* const nodep) override {
+        iterateChildrenSeparately(nodep);
+        setFourstate(nodep, needsSplitting(nodep->fromp()->dtypep()->subDTypep()),
+                     m_fourstateInSubtree);
         m_fourstateInSubtree |= isFourstate(nodep);
     }
     void visit(AstNodeTriop* const nodep) override {
@@ -477,13 +517,17 @@ class FourstateVisitor final : public VNVisitor {
     const VNUser3InUse m_user3InUse;
     const VNUser4InUse m_user4InUse;
     // Node status
-    // AstVar::user1p           ->  AstVar*.        Where is value part of splitted variable - xz
-    // AstNodeExpr::user1p      ->  AstNodeExpr*.   Expression evaluating value component
-    // AstNodeExpr::user2p      ->  AstNodeExpr*.   Expression evaluating xz component
-    // AstSel::user3            ->  bool.           Was processed
-    // AstNodeFTaskRef::user3   ->  bool.           Was processed
-    // AstNodeExpr::user4       ->  LogicType.      Expression logic type (whether it is four
-    //                                              or two state)
+    // AstVar::user1p           ->  AstVar*.                Where is value part of splitted
+    //                                                      variable - xz
+    // AstNodeExpr::user1p      ->  AstNodeExpr*.           Expression evaluating value component
+    // AstNodeDType::user1p     ->  AstNodeDType*.          Maps complex DType with four-state
+    //                                                      constructs
+    // AstNodeExpr::user2p      ->  AstNodeExpr*.           Expression evaluating xz component
+    // AstNodeDType::user2p     ->  FourstateDTypeInfo*.    DType support info
+    // AstSel::user3            ->  bool.                   Was processed
+    // AstNodeFTaskRef::user3   ->  bool.                   Was processed
+    // AstNodeExpr::user4       ->  LogicType.              Expression logic type (whether it is
+    //                                                      four or two state)
 
     static void setValuePartVarp(AstVar* const varp, AstVar* const valuep) {
         varp->user1p(valuep);
@@ -504,6 +548,18 @@ class FourstateVisitor final : public VNVisitor {
     }
     static AstNodeExpr* getExprXZp(const AstNodeExpr* const fourstateExprp) {
         return VN_AS(fourstateExprp->user2p(), NodeExpr);
+    }
+    static void setComplexDTypeMapping(AstNodeDType* const nodep, AstNodeDType* const dtypep) {
+        nodep->user1p(dtypep);
+    }
+    static AstNodeDType* getComplexDTypeMapping(const AstNodeDType* const nodep) {
+        return VN_AS(nodep->user1p(), NodeDType);
+    }
+    static void setDTypeInfo(AstNodeDType* const nodep, const FourstateDTypeInfo& info) {
+        nodep->user2(info.toInt());
+    }
+    static FourstateDTypeInfo getDTypeInfo(const AstNodeDType* const nodep) {
+        return FourstateDTypeInfo{static_cast<int>(nodep->user2())};
     }
     static void castFourstateWarn(const AstNodeExpr* const exprp) {
         exprp->v3warn(CASTFOURSTATE, "Unsupported: Implicitly casting to two-state logic\n"
@@ -664,41 +720,68 @@ class FourstateVisitor final : public VNVisitor {
         return resultp;
     }
 
-    // {whether supported, whether four state} - second is needed for the recursion
-    static std::pair<bool, bool> isDTypepSupported(const AstNodeDType* const dtypep) {
+    static FourstateDTypeInfo isDTypepSupported(AstNodeDType* const dtypep) {
+        FourstateDTypeInfo cachedValue = getDTypeInfo(dtypep);
+        if (cachedValue.isInitialized()) return cachedValue;
         if (const AstBasicDType* const basicp = VN_CAST(dtypep, BasicDType)) {
-            return {true, basicp->isFourstate()};
+            const bool isFourstate = basicp->isFourstate();
+            FourstateDTypeInfo result{true, isFourstate, isFourstate};
+            setDTypeInfo(dtypep, result);
+            return result;
         }
         if (const AstNodeUOrStructDType* const containerDTypep
             = VN_CAST(dtypep, NodeUOrStructDType)) {
-            return {!containerDTypep->isFourstate(), containerDTypep->isFourstate()};
+            const bool isFourstate = containerDTypep->isFourstate();
+            FourstateDTypeInfo result{!isFourstate, isFourstate, isFourstate};
+            setDTypeInfo(dtypep, result);
+            return result;
         }
         if (const AstSampleQueueDType* const containerDTypep = VN_CAST(dtypep, SampleQueueDType)) {
-            std::pair<bool, bool> subDtype
+            const FourstateDTypeInfo subDtype
                 = isDTypepSupported(containerDTypep->subDTypep()->skipRefp());
-            return {subDtype.first && !subDtype.second, false};
+            FourstateDTypeInfo result{subDtype.isSupported() && !subDtype.isFourstate(), false,
+                                      subDtype.hasFourstateInSubDType()};
+            setDTypeInfo(dtypep, result);
+            return result;
         }
         if (const AstQueueDType* const containerDTypep = VN_CAST(dtypep, QueueDType)) {
-            std::pair<bool, bool> subDtype
+            const FourstateDTypeInfo subDtype
                 = isDTypepSupported(containerDTypep->subDTypep()->skipRefp());
-            return {subDtype.first && !subDtype.second, false};
+            FourstateDTypeInfo result{subDtype.isSupported() && !subDtype.isFourstate(), false,
+                                      subDtype.hasFourstateInSubDType()};
+            setDTypeInfo(dtypep, result);
+            return result;
         }
         if (const AstAssocArrayDType* const containerDTypep = VN_CAST(dtypep, AssocArrayDType)) {
-            std::pair<bool, bool> subDtype
+            const FourstateDTypeInfo subDtype
                 = isDTypepSupported(containerDTypep->subDTypep()->skipRefp());
-            return {subDtype.first && !subDtype.second, false};
+            const FourstateDTypeInfo subDtype2
+                = isDTypepSupported(containerDTypep->keyDTypep()->skipRefp());
+            FourstateDTypeInfo result{
+                subDtype.isSupported() && !subDtype.isFourstate() && subDtype2.isSupported(),
+                false, subDtype.hasFourstateInSubDType() || subDtype2.hasFourstateInSubDType()};
+            setDTypeInfo(dtypep, result);
+            return result;
         }
         if (const AstUnpackArrayDType* const containerDTypep = VN_CAST(dtypep, UnpackArrayDType)) {
-            std::pair<bool, bool> subDtype
+            const FourstateDTypeInfo subDtype
                 = isDTypepSupported(containerDTypep->subDTypep()->skipRefp());
-            return {subDtype.first && !subDtype.second, false};
+            FourstateDTypeInfo result{subDtype.isSupported() && !subDtype.isFourstate(), false,
+                                      subDtype.hasFourstateInSubDType()};
+            setDTypeInfo(dtypep, result);
+            return result;
         }
         if (const AstPackArrayDType* const containerDTypep = VN_CAST(dtypep, PackArrayDType)) {
-            std::pair<bool, bool> subDtype
+            const FourstateDTypeInfo subDtype
                 = isDTypepSupported(containerDTypep->subDTypep()->skipRefp());
-            return {subDtype.first && !subDtype.second, false};
+            FourstateDTypeInfo result{subDtype.isSupported() && !subDtype.isFourstate(), false,
+                                      subDtype.hasFourstateInSubDType()};
+            setDTypeInfo(dtypep, result);
+            return result;
         }
-        return {true, false};
+        FourstateDTypeInfo result{true, false, false};
+        setDTypeInfo(dtypep, result);
+        return result;
     }
 
     void assignWConflictResolution(AstVar* const varp, AstAssignW* const assignwValuep,
@@ -914,6 +997,37 @@ class FourstateVisitor final : public VNVisitor {
     void addCleanup(AstNodeStmt* const nodep) {
         FourstateLogicTypePropagator{nodep};
         m_currentStmtp->addNextHere(nodep);
+    }
+
+    static AstNodeDType* handleComplexDTypeWithFourstate(AstNodeDType* const dtypep) {
+        {
+            FourstateDTypeInfo info = getDTypeInfo(dtypep);
+            UASSERT_OBJ(info.isInitialized(), dtypep,
+                        "First call isDTypepSupported() on this dtypep");
+            UASSERT_OBJ(info.isSupported(), dtypep,
+                        "This shouldn't be call on unsupported dtypeps");
+            UASSERT_OBJ(info.hasFourstateInSubDType(), dtypep,
+                        "There is no point in calling this func - no four-state constructs");
+        }
+        if (AstNodeDType* const resultp = getComplexDTypeMapping(dtypep)) return resultp;
+        if (AstAssocArrayDType* const assocArrayp = VN_CAST(dtypep, AssocArrayDType)) {
+            AstAssocArrayDType* const resultp = assocArrayp->cloneTree(false);
+            assocArrayp->addNextHere(resultp);
+            AstNodeDType* const keyDTypep = assocArrayp->keyDTypep();
+            // AstNodeDType* const storedDTypep = assocArrayp->subDTypep();
+            if (needsSplitting(keyDTypep)) {
+                const bool isWide = keyDTypep->isWide();
+                resultp->keyDTypep(dtypep->findBitDType(
+                    keyDTypep->width() << !isWide,  // Times two (bitshift by one) if not wide
+                    keyDTypep->widthMin() << !isWide,  // Times two (bitshift by one) if not wide
+                    keyDTypep->numeric(), isWide));
+            } else if (isDTypepSupported(keyDTypep).hasFourstateInSubDType()) {
+                resultp->keyDTypep(handleComplexDTypeWithFourstate(keyDTypep));
+            }
+            setComplexDTypeMapping(dtypep, resultp);
+            return resultp;
+        }
+        return dtypep;
     }
 
     AstNodeExpr* getFourstateExpressionLValueSelLsbp(AstNodeExpr* const lsbp,
@@ -2343,6 +2457,14 @@ class FourstateVisitor final : public VNVisitor {
         }
         iterateChildren(nodep);
     }
+    void visit(AstNodeVarRef* const nodep) override {
+        AstNodeDType* const dtypep = nodep->dtypep()->skipRefp();
+        FourstateDTypeInfo info = isDTypepSupported(dtypep);
+        if (info.isSupported() && info.hasFourstateInSubDType()) {
+            nodep->dtypep(handleComplexDTypeWithFourstate(dtypep));
+        }
+        iterateChildren(nodep);
+    }
     void visit(AstNodeFTaskRef* const nodep) override {
         if (!isFTaskRefHandled(nodep)) {
             setFTaskRefHandled(nodep);
@@ -2450,6 +2572,32 @@ class FourstateVisitor final : public VNVisitor {
         } else {
             iterateChildren(nodep);
         }
+    }
+    void visit(AstAssocSel* const nodep) override {
+        AstNodeDType* const keyDTypep
+            = VN_AS(nodep->fromp()->dtypep(), AssocArrayDType)->keyDTypep();
+        if (needsSplitting(keyDTypep)) {
+            AstNodeExpr* const bitp = nodep->bitp()->unlinkFrBack();
+            FileLine* const flp = bitp->fileline();
+            if (isFourstate(bitp)) {
+                pushDeletep(bitp);
+                if (keyDTypep->isWide()) {
+                    nodep->bitp(new AstFourstateExpr{flp, getFourstateExpressionValue(bitp),
+                                                     getFourstateExpressionXZ(bitp)});
+                } else {
+                    nodep->bitp(new AstConcat{flp, getFourstateExpressionValue(bitp),
+                                              getFourstateExpressionXZ(bitp)});
+                }
+            } else {
+                if (keyDTypep->isWide()) {
+                    nodep->bitp(new AstFourstateExpr{flp, bitp, createZeroOrOnesp(bitp)});
+                    pushDeletep(bitp);
+                } else {
+                    nodep->bitp(new AstConcat{flp, bitp, createZeroOrOnesp(bitp)});
+                }
+            }
+        }
+        iterateChildren(nodep);
     }
     void visit(AstLogOr* const nodep) override {
         if (!hasFourstateInSubtree(nodep->rhsp())) {
@@ -2617,12 +2765,16 @@ class FourstateVisitor final : public VNVisitor {
         iterateChildren(nodep);
     }
     void visit(AstVar* const nodep) override {
-        if (VL_UNLIKELY(!isDTypepSupported(nodep->dtypep()->skipRefp()).first)) {
+        AstNodeDType* const dtypep = nodep->dtypep()->skipRefp();
+        FourstateDTypeInfo info = isDTypepSupported(dtypep);
+        if (VL_UNLIKELY(!info.isSupported())) {
             nodep->v3warn(E_UNSUPPORTED,
                           "Unsupported: Variable of type: " << nodep->dtypep()->prettyDTypeNameQ()
                                                             << " with --fourstate");
-        } else if (needsSplitting(nodep->dtypep())) {
+        } else if (needsSplitting(dtypep)) {
             splitVar(nodep);
+        } else if (info.hasFourstateInSubDType()) {
+            nodep->dtypep(handleComplexDTypeWithFourstate(dtypep));
         }
         iterateChildren(nodep);
     }

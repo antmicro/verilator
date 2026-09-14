@@ -1577,12 +1577,22 @@ public:
 
 // === AstNodeUOrStructDType ===
 class AstStructDType final : public AstNodeUOrStructDType {
+    const bool m_isFourstatePair
+        = false;  // Whether is artificially generated to store four-state pairs
 public:
     // VSigning below is mispurposed to indicate if packed or not
-    AstStructDType(FileLine* fl, VSigning numericUnpack)
-        : ASTGEN_SUPER_StructDType(fl, numericUnpack) {}
+    AstStructDType(FileLine* fl, VSigning numericUnpack, bool isFourstatePair = false)
+        : ASTGEN_SUPER_StructDType(fl, numericUnpack)
+        , m_isFourstatePair{isFourstatePair} {}
     ASTGEN_MEMBERS_AstStructDType;
+    bool isFourstatePair() const { return m_isFourstatePair; }
     string verilogKwd() const override { return "struct"; }
+    const char* broken() const override {
+        BROKEN_RTN(m_isFourstatePair && !v3Global.opt.fourstate());
+        return nullptr;
+    }
+    void dump(std::ostream& str) const override;
+    void dumpJson(std::ostream& str) const override;
 };
 class AstUnionDType final : public AstNodeUOrStructDType {
     bool m_isSoft;  // Is a "union soft"

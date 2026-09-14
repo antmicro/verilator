@@ -3722,6 +3722,14 @@ void AstUdpTableLine::dumpJson(std::ostream& str) const {
     dumpJsonBoolFuncIf(str, udpIsCombo);
     dumpJsonGen(str);
 }
+void AstStructDType::dump(std::ostream& str) const {
+    Super::dump(str);
+    if (isFourstatePair()) str << " [4STATEPAIR]";
+}
+void AstStructDType::dumpJson(std::ostream& str) const {
+    Super::dumpJson(str);
+    dumpJsonBoolFuncIf(str, isFourstatePair);
+}
 void AstUnionDType::dump(std::ostream& str) const {
     Super::dump(str);
     if (isSoft()) str << " [soft]";

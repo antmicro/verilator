@@ -11,10 +11,6 @@
                                                     : ... note: In instance 't'
    74 |   logic unpackedArr [13];
       |         ^~~~~~~~~~~
-%Error-UNSUPPORTED: t/t_fourstate_multi_unsup.v:75:9: Unsupported: Variable of type: 'logic$[integer]' with --fourstate
-                                                    : ... note: In instance 't'
-   75 |   logic assocArr [integer];
-      |         ^~~~~~~~
 %Error-UNSUPPORTED: t/t_fourstate_multi_unsup.v:77:21: Unsupported: Variable of type: 'logic[13:0][13:0]' with --fourstate
                                                      : ... note: In instance 't'
    77 |   long_logic [13:0] packedArr;

@@ -87,6 +87,20 @@ static AstVar* getRandomGenerator(AstClass* const classp) {
     return nullptr;
 }
 
+// Create __Vsetup_constraints function if non existant inside memberMap,
+// if existant return one already present
+static AstTask* getCreateConstraintSetupFunc(AstClass* classp, VMemberMap& memberMap) {
+    static const char* const name = "__Vsetup_constraints";
+    AstTask* setupAllTaskp = VN_AS(memberMap.findMember(classp, name), Task);
+    if (setupAllTaskp) return setupAllTaskp;
+    setupAllTaskp = new AstTask{classp->fileline(), "__Vsetup_constraints", nullptr};
+    setupAllTaskp->classMethod(true);
+    setupAllTaskp->isVirtual(true);
+    classp->addMembersp(setupAllTaskp);
+    memberMap.insert(classp, setupAllTaskp);
+    return setupAllTaskp;
+}
+
 // ######################################################################
 // Establishes the target of a rand_mode() call
 
@@ -872,6 +886,26 @@ class ConstraintExprVisitor final : public VNVisitor {
         }
     };
     NestedAccessPath* m_nestedAccess = nullptr;  // Indicates state of nested access
+
+    // Emit enum range hard constraint for a single variable
+    AstNodeExpr* createEnumConstraint(FileLine* const fl, const std::string& smtName,
+                                      AstEnumDType* const enumDtp, AstVar* const genVarp) {
+        AstNodeModule* const genModp = VN_AS(genVarp->user2p(), NodeModule);
+        const int width = enumDtp->width();
+        std::string constraint = "(__Vbv (or";
+        for (AstEnumItem* itemp = enumDtp->itemsp(); itemp;
+             itemp = VN_AS(itemp->nextp(), EnumItem)) {
+            const AstConst* const vconstp = VN_AS(itemp->valuep(), Const);
+            constraint += " (= " + smtName + " (_ bv" + cvtToStr(vconstp->toUInt()) + " "
+                          + cvtToStr(width) + "))";
+        }
+        constraint += "))";
+        AstCMethodHard* const callp = new AstCMethodHard{
+            fl, new AstVarRef{fl, genModp, genVarp, VAccess::READWRITE}, VCMethod::RANDOMIZER_HARD,
+            new AstCExpr{fl, AstCExpr::Pure{}, "\"" + constraint + "\""}};
+        callp->dtypeSetVoid();
+        return callp;
+    };
 
     // Routes nested sub-objects with static rand vars when the outer class has none.
     AstVar* findStaticRandModeVarMember(AstClass* classp) const {
@@ -1734,6 +1768,20 @@ class ConstraintExprVisitor final : public VNVisitor {
         AstNodeModule* const classOrPackagep = nodep->classOrPackagep();
         const RandomizeMode randMode = {.asUQuad = varp->user1()};
         if (!randMode.usesMode && editFormat(nodep)) return;
+
+        AstEnumDType* enumDtp = VN_CAST(nodep->dtypep()->skipRefToEnump(), EnumDType);
+        if (!nodep->varp()->user3() && enumDtp) {
+            AstVar* genVarp = m_genp;
+            if (m_classp && m_classp->user3p()) genVarp = VN_AS(m_classp->user3p(), Var);
+            UASSERT_OBJ(genVarp, nodep, "No 'randomize' variable in m_genp or m_classp");
+            AstNodeExpr* enumRangeExprp
+                = createEnumConstraint(nodep->fileline(), varp->name(), enumDtp, genVarp);
+            AstNodeFTask* targetTaskp = m_inlineInitTaskp;
+            if (!targetTaskp) targetTaskp = getCreateConstraintSetupFunc(m_classp, m_memberMap);
+            UASSERT_OBJ(targetTaskp, nodep, "No function to inline enum range constraint into");
+            targetTaskp->addStmtsp(enumRangeExprp->makeStmt());
+            nodep->varp()->user3();
+        }
 
         VNRelinker relinker;
         nodep->unlinkFrBack(&relinker);
@@ -3801,17 +3849,6 @@ class RandomizeVisitor final : public VNVisitor {
         }
         return it->second;
     }
-    AstTask* getCreateConstraintSetupFunc(AstClass* classp) {
-        static const char* const name = "__Vsetup_constraints";
-        AstTask* setupAllTaskp = VN_AS(m_memberMap.findMember(classp, name), Task);
-        if (setupAllTaskp) return setupAllTaskp;
-        setupAllTaskp = new AstTask{classp->fileline(), "__Vsetup_constraints", nullptr};
-        setupAllTaskp->classMethod(true);
-        setupAllTaskp->isVirtual(true);
-        classp->addMembersp(setupAllTaskp);
-        m_memberMap.insert(classp, setupAllTaskp);
-        return setupAllTaskp;
-    }
     AstTask* getCreateAggrResizeTask(AstClass* const classp) {
         static const char* const name = "__Vresize_constrained_arrays";
         AstTask* resizeTaskp = VN_AS(m_memberMap.findMember(classp, name), Task);
@@ -5059,7 +5096,7 @@ class RandomizeVisitor final : public VNVisitor {
         } else {
             AstNodeModule* const genModp = VN_AS(classGenp->user2p(), NodeModule);
             funcp->addStmtsp(implementConstraintsClear(fl, classGenp));
-            AstTask* const setupAllTaskp = getCreateConstraintSetupFunc(classp);
+            AstTask* const setupAllTaskp = getCreateConstraintSetupFunc(classp, m_memberMap);
             funcp->addStmtsp((new AstTaskRef{fl, setupAllTaskp})->makeStmt());
             AstCExpr* const solverCallp = new AstCExpr{fl};
             solverCallp->dtypeSetBit();
@@ -5771,7 +5808,7 @@ class RandomizeVisitor final : public VNVisitor {
                 nodep->foreachMember([&](AstClass* const, AstConstraint* const constrp) {
                     maxDepth = std::max(maxDepth, constraintDepth(constrp));
                 });
-                AstTask* const setupAllTaskp = getCreateConstraintSetupFunc(nodep);
+                AstTask* const setupAllTaskp = getCreateConstraintSetupFunc(nodep, m_memberMap);
                 for (int d = maxDepth; d >= 0; --d) {
                     nodep->foreachMember(
                         [&](AstClass* const classp, AstConstraint* const constrp) {
@@ -5822,68 +5859,7 @@ class RandomizeVisitor final : public VNVisitor {
             }
             randomizep->addStmtsp(implementConstraintsClear(fl, genp));
 
-            // Restrict enum variables in solver to valid members only
-            {
-                AstNodeModule* const genModp = VN_AS(genp->user2p(), NodeModule);
-                // Emit enum range hard constraint for a single variable
-                const auto emitEnumConstraint = [&](const std::string& smtName,
-                                                    AstEnumDType* const enumDtp) {
-                    const int width = enumDtp->width();
-                    std::string constraint = "(__Vbv (or";
-                    for (AstEnumItem* itemp = enumDtp->itemsp(); itemp;
-                         itemp = VN_AS(itemp->nextp(), EnumItem)) {
-                        const AstConst* const vconstp = VN_AS(itemp->valuep(), Const);
-                        constraint += " (= " + smtName + " (_ bv" + cvtToStr(vconstp->toUInt())
-                                      + " " + cvtToStr(width) + "))";
-                    }
-                    constraint += "))";
-                    AstCMethodHard* const callp = new AstCMethodHard{
-                        fl, new AstVarRef{fl, genModp, genp, VAccess::READWRITE},
-                        VCMethod::RANDOMIZER_HARD,
-                        new AstCExpr{fl, AstCExpr::Pure{}, "\"" + constraint + "\""}};
-                    callp->dtypeSetVoid();
-                    randomizep->addStmtsp(callp->makeStmt());
-                };
-                // Recursively emit enum constraints for sub-object members
-                std::function<void(AstClass*, const std::string&)> addSubObjEnumConstraints
-                    = [&](AstClass* classp, const std::string& pathPrefix) {
-                          classp->foreachMember([&](AstClass*, AstVar* subVarp) {
-                              if (!subVarp->rand().isRandomizable()) return;
-                              const std::string smtName = pathPrefix + "." + subVarp->name();
-                              AstEnumDType* const enumDtp
-                                  = VN_CAST(subVarp->dtypep()->skipRefToEnump(), EnumDType);
-                              if (enumDtp) {
-                                  // Do not emit when enum isn't constrained
-                                  if (!subVarp->user3()) return;
-                                  emitEnumConstraint(smtName, enumDtp);
-                                  return;
-                              }
-                              if (!subVarp->globalConstrained()) return;
-                              const AstNodeDType* const subDtypep = subVarp->dtypep()->skipRefp();
-                              const AstClassRefDType* const subClassRefp
-                                  = VN_CAST(subDtypep, ClassRefDType);
-                              if (!subClassRefp) return;
-                              addSubObjEnumConstraints(subClassRefp->classp(), smtName);
-                          });
-                      };
-                nodep->foreachMember([&](AstClass*, AstVar* memberVarp) {
-                    // Direct enum members
-                    if (memberVarp->user3()) {
-                        AstEnumDType* const enumDtp
-                            = VN_CAST(memberVarp->dtypep()->skipRefToEnump(), EnumDType);
-                        if (enumDtp) emitEnumConstraint(memberVarp->name(), enumDtp);
-                    }
-                    // Enum members inside globalConstrained sub-objects
-                    if (memberVarp->globalConstrained()) {
-                        const AstNodeDType* const dtypep = memberVarp->dtypep()->skipRefp();
-                        const AstClassRefDType* const classRefp = VN_CAST(dtypep, ClassRefDType);
-                        if (!classRefp) return;
-                        addSubObjEnumConstraints(classRefp->classp(), memberVarp->name());
-                    }
-                });
-            }
-
-            AstTask* setupAllTaskp = getCreateConstraintSetupFunc(nodep);
+            AstTask* setupAllTaskp = getCreateConstraintSetupFunc(nodep, m_memberMap);
             AstTaskRef* const setupTaskRefp = new AstTaskRef{fl, setupAllTaskp};
             randomizep->addStmtsp(setupTaskRefp->makeStmt());
 
@@ -6354,7 +6330,7 @@ class RandomizeVisitor final : public VNVisitor {
 
         // Copy (derive) class constraints if present
         if (classGenp) {
-            AstTask* const constrSetupFuncp = getCreateConstraintSetupFunc(classp);
+            AstTask* const constrSetupFuncp = getCreateConstraintSetupFunc(classp, m_memberMap);
             AstTaskRef* const callp = new AstTaskRef{nodep->fileline(), constrSetupFuncp};
             randomizeFuncp->addStmtsp(callp->makeStmt());
             randomizeFuncp->addStmtsp(new AstAssign{

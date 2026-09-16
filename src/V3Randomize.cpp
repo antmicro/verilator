@@ -2888,7 +2888,8 @@ class ConstraintExprVisitor final : public VNVisitor {
                 if (VN_IS(pinp, SFormatF) && m_structSel) VN_AS(pinp, SFormatF)->name("%x");
                 AstSFormatF* newp;
                 if (m_structSel) {
-                    AstNodeExpr* const argsp = AstNode::addNext(nodep->fromp()->unlinkFrBack(), pinp);
+                    AstNodeExpr* const argsp
+                        = AstNode::addNext(nodep->fromp()->unlinkFrBack(), pinp);
                     sizep->dtypeSetInt();
                     AstLogAnd* const condp
                         = new AstLogAnd{fl,
@@ -2910,7 +2911,8 @@ class ConstraintExprVisitor final : public VNVisitor {
                 return;
             }
             nodep->user1(false);
-            UASSERT_OBJ(editFormat(nodep), nodep, "editFormat should return true when user1 is false");
+            UASSERT_OBJ(editFormat(nodep), nodep,
+                        "editFormat should return true when user1 is false");
             return;
         }
 
@@ -4802,10 +4804,9 @@ class RandomizeVisitor final : public VNVisitor {
         for (AstClass* classp = nodep; classp;
              classp = classp->extendsp() ? classp->extendsp()->classp() : nullptr) {
             cloneWriteVarStmts(VN_CAST(m_memberMap.findMember(classp, "new"), NodeFTask));
-            cloneWriteVarStmts(classp == nodep ? randomizep
-                                               : VN_CAST(m_memberMap.findMember(classp,
-                                                                                "randomize"),
-                                                         NodeFTask));
+            cloneWriteVarStmts(
+                classp == nodep ? randomizep
+                                : VN_CAST(m_memberMap.findMember(classp, "randomize"), NodeFTask));
         }
     }
 

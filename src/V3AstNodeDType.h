@@ -257,6 +257,7 @@ class AstNodeUOrStructDType VL_NOT_FINAL : public AstNodeDType {
     const int m_uniqueNum;  // Unique ID distinguishing this dtype instance, for hashing/naming
     bool m_packed;  // Packed struct/union, else unpacked
     bool m_isFourstate = false;  // V3Width computes; true if any member is 4-state
+    bool m_mimicsFourstate = false;  // Optimized to 2-state from an originally 4-state type
     bool m_constrainedRand = false;  // True if struct has constraint expression
     bool m_emitToString = false;  // Generate to_string() for this struct/union if set
 
@@ -274,7 +275,8 @@ protected:
         , m_typedefName{other.m_typedefName}
         , m_uniqueNum{uniqueNumInc()}
         , m_packed{other.m_packed}
-        , m_isFourstate{other.m_isFourstate} {}
+        , m_isFourstate{other.m_isFourstate}
+        , m_mimicsFourstate{other.m_mimicsFourstate} {}
 
 public:
     ASTGEN_MEMBERS_AstNodeUOrStructDType;
@@ -286,11 +288,16 @@ public:
     // For basicp() we reuse the size to indicate a "fake" basic type of same size
     AstBasicDType* basicp() const override VL_MT_STABLE {
         if (!m_packed) return nullptr;
-        return (isFourstate()
-                    ? VN_AS(findLogicRangeDType(VNumRange{width() - 1, 0}, width(), numeric()),
-                            BasicDType)
-                    : VN_AS(findBitRangeDType(VNumRange{width() - 1, 0}, width(), numeric()),
-                            BasicDType));
+        if (isFourstate()) {
+            return VN_AS(findLogicRangeDType(VNumRange{width() - 1, 0}, width(), numeric()),
+                         BasicDType);
+        } else if (mimicsFourstate()) {
+            return VN_AS(findLogic2StateRangeDType(VNumRange{width() - 1, 0}, width(), numeric()),
+                         BasicDType);
+        } else {
+            return VN_AS(findBitRangeDType(VNumRange{width() - 1, 0}, width(), numeric()),
+                         BasicDType);
+        }
     }
     // (Slow) recurses - Structure alignment 1,2,4 or 8 bytes (arrays affect this)
     int widthAlignBytes() const override;
@@ -307,6 +314,8 @@ public:
     static bool packedUnsup() { return true; }
     void isFourstate(bool flag) { m_isFourstate = flag; }
     bool isFourstate() const override VL_MT_SAFE { return m_isFourstate; }
+    void mimicsFourstate(bool flag) { m_mimicsFourstate = flag; }
+    bool mimicsFourstate() const VL_MT_SAFE { return m_mimicsFourstate; }
     static int lo() VL_MT_STABLE { return 0; }
     int hi() const VL_MT_STABLE {
         return dtypep()->width() - 1;
@@ -521,7 +530,8 @@ public:
         return keyword() == VBasicDTypeKwd::BIT && isRanged();
     }
     bool isDpiLogicVec() const {  // DPI uses svLogicVecVal
-        return keyword().isFourstate() && !(keyword() == VBasicDTypeKwd::LOGIC && !isRanged());
+        return (keyword().isFourstate() || keyword().mimicsFourstate())
+               && !(keyword().isSameish(VBasicDTypeKwd::LOGIC) && !isRanged());
     }
     bool isDpiPrimitive() const {  // DPI uses a primitive type
         return !isDpiBitVec() && !isDpiLogicVec();

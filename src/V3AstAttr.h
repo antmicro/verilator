@@ -710,6 +710,9 @@ public:
         default: return m_e == other.m_e;
         }
     }
+    bool mimicsFourstate() const {
+        return m_e == LOGIC2STATE || m_e == INTEGER2STATE || m_e == TIME2STATE;
+    }
     // Does this represent a C++ LiteralType? (can be constexpr)
     bool isLiteralType() const VL_MT_SAFE {
         switch (m_e) {

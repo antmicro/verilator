@@ -39,6 +39,9 @@
 #include <string>
 #include <utility>
 
+class VlClass;
+template <typename T_Class>
+class VlClassRef;
 class VlProcess;
 template <typename T_Value, std::size_t N_Depth>
 class VlUnpacked;
@@ -327,6 +330,7 @@ class VlProcess final {
         = nullptr;  // Optional fork..join counter to decrement on kill
     bool m_forkSyncOnKillDone = false;  // Ensure on-kill callback fires only once
     VlRNG m_rng;  // Per-process RNG (IEEE 1800-2023 18.14)
+    VlClass* m_selfp = nullptr;  // std::process object of this process, not owned
 
     // Thread-local current process pointer for hierarchical object seeding
     static thread_local VlProcess* t_currentp;
@@ -379,6 +383,15 @@ public:
         for (const VlProcess* const childp : m_children)
             if (!childp->completed()) return false;
         return true;
+    }
+    VlClass* self() const { return m_selfp; }
+    void self(VlClass* selfp) { m_selfp = selfp; }
+
+    // Called from the std::process destructor.
+    // The destroyed object may have waited in VlDeleter while self() returned null and a newer
+    // object was created, so only clear m_selfp if it points to the destroyed object.
+    void clearSelf(const VlClass* selfp) {
+        if (m_selfp == selfp) m_selfp = nullptr;
     }
 
     // Random state (IEEE 1800-2023 9.7, 18.14)
@@ -2177,9 +2190,12 @@ public:
         : m_objp{new T_Class{args}} {
         m_objp->m_deleterp = &deleter;
     }
-    // Explicit to avoid implicit conversion from 0
+    // Explicit to avoid implicit conversion from 0.
+    // Objects with 0 references may be waiting in VlDeleter, so don't assign it to avoid
+    // use-after-free. This can happen with std::process if self() gets called after the current
+    // std::process gets queued in VlDeleter.
     explicit VlClassRef(T_Class* objp)
-        : m_objp{objp} {
+        : m_objp{(objp && objp->m_counter > 0) ? objp : nullptr} {
         refCountInc();
     }
     // cppcheck-suppress noExplicitConstructor

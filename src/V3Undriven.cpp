@@ -39,9 +39,20 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 // Class for every variable we may process
 
 class UndrivenVarEntry final {
+    // TYPES
+    enum : uint8_t {
+        FLAG_USED = 0,  // Signal or bit has been read/observed
+        FLAG_DRIVEN = 1,  // Signal or bit has been written/driven
+        FLAG_DRIVEN_ALWCOMB = 2,  // Whole signal has been driven from always_comb
+        FLAG_DRIVEN_ALWFF = 3,  // Whole signal has been driven from always_ff
+        FLAG_DRIVEN_ALWPLAIN = 4,  // Whole signal has been driven from a plain always
+        FLAG_DRIVEN_CLOCKING = 5,  // Whole signal has been driven as a clocking block output
+        FLAGS_PER_BIT = 6  // Number of flags stored for each tracked bit
+    };
+
     // MEMBERS
     AstVar* const m_varp;  // Variable this tracks
-    std::vector<bool> m_wholeFlags;  // Used/Driven on whole vector
+    std::array<bool, FLAGS_PER_BIT> m_wholeFlags{};  // Used/Driven on whole vector
     std::vector<bool> m_bitFlags;  // Used/Driven on each subbit
     const AstNode* m_usedNotDrivenp = nullptr;  // First read before any write
     const AstAlways* m_alwCombp
@@ -59,26 +70,11 @@ class UndrivenVarEntry final {
 
     const AstNodeFTaskRef* m_callNodep = nullptr;  // Call node if driven via writeSummary
 
-    enum : uint8_t {
-        FLAG_USED = 0,  // Signal or bit has been read/observed
-        FLAG_DRIVEN = 1,  // Signal or bit has been written/driven
-        FLAG_DRIVEN_ALWCOMB = 2,  // Whole signal has been driven from always_comb
-        FLAG_DRIVEN_ALWFF = 3,  // Whole signal has been driven from always_ff
-        FLAG_DRIVEN_ALWPLAIN = 4,  // Whole signal has been driven from a plain always
-        FLAG_DRIVEN_CLOCKING = 5,  // Whole signal has been driven as a clocking block output
-        FLAGS_PER_BIT = 6  // Number of flags stored for each tracked bit
-    };
-
 public:
     // CONSTRUCTORS
     explicit UndrivenVarEntry(AstVar* varp)
-        : m_varp{varp} {  // Construction for when a var is used
-        UINFO(9, "create " << varp);
-        m_wholeFlags.resize(FLAGS_PER_BIT);
-        for (int i = 0; i < FLAGS_PER_BIT; i++) m_wholeFlags[i] = false;
-        m_bitFlags.resize(varp->width() * FLAGS_PER_BIT);
-        for (int i = 0; i < varp->width() * FLAGS_PER_BIT; i++) m_bitFlags[i] = false;
-    }
+        : m_varp{varp}
+        , m_bitFlags(static_cast<std::size_t>(m_varp->width()) * FLAGS_PER_BIT, false) {}
     ~UndrivenVarEntry() = default;
 
 private:

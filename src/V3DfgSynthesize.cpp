@@ -2027,75 +2027,73 @@ static void dfgSelectLogicForSynthesis(DfgGraph& dfg) {
 
     // Otherwise figure out which vertices are likely worth synthesizing.
 
+    std::vector<DfgVertexVar*> circularVarps;
     // Synthesize all drivers of circular variables
     {
         DfgUserMap<uint64_t> scc = dfg.makeUserMap<uint64_t>();
         V3DfgPasses::colorStronglyConnectedComponents(dfg, scc);
         for (DfgVertexVar& var : dfg.varVertices()) {
             if (!scc.at(var)) continue;
-            var.srcp()->as<DfgUnresolved>()->foreachSource([&](DfgVertex& driver) {
-                driver.as<DfgLogic>()->setSelectedForSynthesis();
-                return false;
-            });
+            // This is a circular variable
+            circularVarps.emplace_back(&var);
         }
     }
 
     // To cover all drivers, use a work list
-    std::vector<DfgLogic*> worklist;
-    DfgUserMap<bool> isVisited = dfg.makeUserMap<bool>();
+    DfgWorklist worklist{dfg};
+
+    // Synthesize all drivers of circular variables
+    for (const DfgVertexVar* const varp : circularVarps) {
+        varp->srcp()->as<DfgUnresolved>()->foreachSource([&](DfgVertex& driver) {
+            worklist.push_front(*driver.as<DfgLogic>());
+            return false;
+        });
+    }
 
     // Choose some simple special cases to always synthesize
     for (DfgVertex& vtx : dfg.opVertices()) {
         DfgLogic* const logicp = vtx.cast<DfgLogic>();
-        if (!logicp) continue;
+        if (!logicp || worklist.contains(*logicp)) continue;
         // If drives an unused variable, synthesize it so the partial logic can be removed
         if (logicp->drivesUnusedVars()) {
-            isVisited[logicp] = true;
-            worklist.push_back(logicp);
+            worklist.push_front(*logicp);
             continue;
         }
         // Blocks corresponding to continuous assignments
         if (logicp->nodep()->keyword() == VAlwaysKwd::CONT_ASSIGN) {
-            isVisited[logicp] = true;
-            worklist.push_back(logicp);
+            worklist.push_front(*logicp);
             continue;
         }
         const CfgGraph& cfg = logicp->cfg();
         // Straight line code with no branches
         if (cfg.nBlocks() == 1) {
-            isVisited[logicp] = true;
-            worklist.push_back(logicp);
+            worklist.push_front(*logicp);
             continue;
         }
         // Blocks driving exactly 1 variable
-        if (!logicp->hasMultipleSinks()) {
-            isVisited[logicp] = true;
-            worklist.push_back(logicp);
-        }
+        if (!logicp->hasMultipleSinks()) worklist.push_front(*logicp);
     }
 
+    std::unordered_set<DfgUnresolved*> isVisited;
+
     // Now expand to cover all logic driving the same set of variables and mark
-    while (!worklist.empty()) {
-        DfgLogic& logic = *worklist.back();
-        worklist.pop_back();
-        UASSERT_OBJ(!logic.selectedForSynthesis(), &logic, "Should not be visited twice");
+    worklist.foreach([&](DfgVertex& vtx) {
+        DfgLogic& logic = *vtx.as<DfgLogic>();
+        UASSERT_OBJ(!logic.selectedForSynthesis(), &vtx, "Should not be visited twice");
         // Mark as selected for synthesis
         logic.setSelectedForSynthesis();
         // Enqueue all other logic driving the same variables as this one
         logic.foreachSink([&](DfgVertex& sink) {
-            DfgUnresolved* const currentp = sink.as<DfgUnresolved>();
-            if (isVisited[currentp]) return false;
-            isVisited[currentp] = true;
-            currentp->foreachSource([&](DfgVertex& sibling) {
-                DfgLogic* siblingLogic = sibling.as<DfgLogic>();
-                if (!siblingLogic->selectedForSynthesis() && !isVisited[siblingLogic]) {
-                    worklist.push_back(siblingLogic);
-                }
+            DfgUnresolved* unresolved = sink.as<DfgUnresolved>();
+            if (!isVisited.insert(unresolved).second) return false;
+            unresolved->foreachSource([&](DfgVertex& sibling) {
+                DfgLogic& siblingLogic = *sibling.as<DfgLogic>();
+                if (!siblingLogic.selectedForSynthesis()) worklist.push_front(siblingLogic);
                 return false;
             });
             return false;
         });
-    }
+    });
 }
 
 void V3DfgPasses::synthesize(DfgGraph& dfg, V3DfgContext& ctx) {

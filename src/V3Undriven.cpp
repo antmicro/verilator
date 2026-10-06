@@ -73,8 +73,9 @@ class UndrivenVarEntry final {
 public:
     // CONSTRUCTORS
     explicit UndrivenVarEntry(AstVar* varp)
-        : m_varp{varp}
-        , m_bitFlags(static_cast<std::size_t>(m_varp->width()) * FLAGS_PER_BIT, false) {}
+        : m_varp{varp} {
+        m_bitFlags = std::vector(static_cast<std::size_t>(m_varp->width()) * FLAGS_PER_BIT, false);
+    }
     ~UndrivenVarEntry() = default;
 
 private:

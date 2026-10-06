@@ -23,9 +23,7 @@ MIN_SECONDS = 0.1
 
 def lint_time(size):
     mdir = test.obj_dir + "/obj_" + str(size)
-    test.lint(verilator_flags2=[
-        "--stats", "--no-debug-check", "-GN=" + str(size), "-Mdir", mdir
-    ])
+    test.lint(verilator_flags2=["--stats", "--no-debug-check", "-GN=" + str(size), "-Mdir", mdir])
     stats_filename = mdir + "/V" + test.name + "__stats.txt"
     stats = test.file_contents(stats_filename)
     match = re.search(r'Stage, Elapsed time \(sec\), \d+_undriven\s+(\S+)', stats)

@@ -22,11 +22,9 @@ MIN_SECONDS = 0.01
 
 def compile_time(size):
     mdir = test.obj_dir + "/obj_" + str(size)
-    test.lint(verilator_flags2=[
-        "--stats", "--no-debug-check", "-GN=" + str(size), "-Mdir", mdir
-    ],
-                 make_main=False,
-                 verilator_make_gmake=False)
+    test.lint(verilator_flags2=["--stats", "--no-debug-check", "-GN=" + str(size), "-Mdir", mdir],
+              make_main=False,
+              verilator_make_gmake=False)
     stats_filename = mdir + "/V" + test.name + "__stats.txt"
     stats = test.file_contents(stats_filename)
     match = re.search(r'Stage, Elapsed time \(sec\), \d+_dfg-synthesize\s+(\S+)', stats)

@@ -386,6 +386,7 @@ public:
             if (!childp->completed()) return false;
         return true;
     }
+    bool isKilled() const { return state() == KILLED; }
 
     // Random state (IEEE 1800-2023 9.7, 18.14)
     void srandom(uint64_t seed) VL_MT_UNSAFE { m_rng.srandom(seed); }

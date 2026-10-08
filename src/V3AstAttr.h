@@ -961,6 +961,7 @@ inline std::ostream& operator<<(std::ostream& os, const VBranchPred& rhs) {
     macro(FORK_ON_KILL,                       "onKill",                 false,  "r") \
     macro(NBA_COMMIT,                         "commit",                 false,  "w") \
     macro(NBA_ENQUEUE,                        "enqueue",                false,  "r+") \
+    macro(PROCESS_IS_KILLED,                  "isKilled",               PURE,   "") \
     macro(RANDOMIZER_BASIC_STD_RANDOMIZATION, "basicStdRandomization",  false,  "mr") \
     macro(RANDOMIZER_CLEARCONSTRAINTS,        "clearConstraints",       false,  "") \
     macro(RANDOMIZER_CLEARALL,                "clearAll",               false,  "") \

@@ -306,6 +306,7 @@ class TimingSuspendableVisitor final : public VNVisitor {
         m_procp = nodep;
         iterateChildren(nodep);
         if (nodep->needProcess()) addFlags(nodep, T_FORCES_PROC | T_NEEDS_PROC);
+        if (nodep->isProcessKill()) addFlags(nodep, T_SUSPENDEE | T_SUSPENDER | T_NEEDS_PROC);
         DepVtx* const sVxp = getSuspendDepVtx(nodep);
         DepVtx* const pVxp = getNeedsProcDepVtx(nodep);
         if (!m_classp) return;
@@ -975,6 +976,28 @@ class TimingControlVisitor final : public VNVisitor {
         if (!(hasFlags(nodep, T_SUSPENDEE))) return;
 
         nodep->rtnType("VlCoroutine");
+
+        if (nodep->isProcessKill()) {
+            FileLine* const flp = nodep->fileline();
+            AstCExpr* const processp = new AstCExpr{flp, "vlProcess"};
+            processp->dtypeSetVoid();
+            AstCMethodHard* const isKilledp
+                = new AstCMethodHard{flp, processp, VCMethod::PROCESS_IS_KILLED};
+            isKilledp->usePtr(true);
+            isKilledp->dtypeSetBit();
+            AstIf* const ifp = new AstIf{flp, isKilledp};
+
+            AstCMethodHard* const foreverMethodp = new AstCMethodHard{
+                flp, new AstVarRef{flp, getCreateDelayScheduler(), VAccess::WRITE},
+                VCMethod::SCHED_WAIT_FOREVER};
+            foreverMethodp->dtypeSetVoid();
+            addProcessInfo(foreverMethodp);
+            addDebugInfo(foreverMethodp);
+            AstCAwait* const awaitp = new AstCAwait{flp, foreverMethodp};
+            ifp->addThensp(awaitp);
+
+            nodep->addStmtsp(ifp);
+        }
         // If in a class, create a shared pointer to 'this'
         if (m_classp) {
             AstCStmt* const cstmtp = new AstCStmt{nodep->fileline(), "VL_KEEP_THIS;"};

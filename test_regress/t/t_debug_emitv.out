@@ -1893,6 +1893,8 @@ package std;
         endtask
         task killQueue;
             ref process processQueue[$];
+            process current;
+            current = self();
             begin : unnamedblk1_1
                 int __Vrepeat0;
                 __Vrepeat0 = processQueue.size();
@@ -1901,11 +1903,14 @@ package std;
                         process p;
                         p = processQueue.pop_front();
                         if ((null != p)) begin
-                            p.kill();
+                            $c(p.m_process->disable(););
                         end
                     end
                     __Vrepeat0 = (__Vrepeat0 - 32'h1);
                 end
+            end
+            if ((current.status() == process::KILLED)) begin
+                current.kill();
             end
         endtask
         function get_randstate;

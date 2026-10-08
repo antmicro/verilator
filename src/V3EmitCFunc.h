@@ -383,6 +383,9 @@ public:
         for (const AstClassExtends* const extp : classp->extendspList()) {
             if (extp->classp()->isInterfaceClass()) continue;
             if (extp->classp()->useVirtualPublic()) continue;
+            const AstCFunc* const ctorp
+                = VN_CAST(m_memberMap.findMember(extp->classp(), "new"), CFunc);
+            if (ctorp && ctorp->isCoroutine()) puts("co_await ");
             puts(EmitCUtil::prefixNameProtect(extp->classp()));
             puts("::init");
             if (constructorNeedsProcess(extp->classp())) {
@@ -846,6 +849,10 @@ public:
         emitCCallArgs(nodep, "", m_cfuncp->needProcess());
     }
     void visit(AstCAwait* nodep) override {
+        if (nodep->resultp()) {
+            iterateConst(nodep->resultp());
+            puts(" = ");
+        }
         putns(nodep, "co_await ");
         iterateConst(nodep->exprp());
         puts(";\n");
@@ -855,9 +862,15 @@ public:
             putsDecoration(nodep, "/*super.new*/");
             return;
         }
-        // assignment case;
-        putns(nodep, "VL_NEW(" + EmitCUtil::prefixNameProtect(nodep->dtypep()) + ", "
-                         + optionalProcArg(nodep->dtypep()) + "vlSymsp");
+        const bool isCoroutine = nodep->funcp()->isCoroutine();
+        const string className = EmitCUtil::prefixNameProtect(nodep->dtypep());
+        if (isCoroutine) {
+            putns(nodep, "VL_NEW_ASYNC(" + className + ", " + optionalProcArg(nodep->dtypep())
+                             + "vlSymsp");
+        } else {
+            putns(nodep,
+                  "VL_NEW(" + className + ", " + optionalProcArg(nodep->dtypep()) + "vlSymsp");
+        }
         putCommaIterateNext(nodep->argsp(), true);
         puts(")");
     }

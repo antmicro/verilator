@@ -886,6 +886,7 @@ void AstCFunc::dump(std::ostream& str) const {
     if (isVirtual()) str << " [VIRT]";
     if (isCoroutine()) str << " [CORO]";
     if (needsVlProcess()) str << " [NPRC]";
+    if (isProcessKill()) str << " [PROCESSKILL]";
     if (entryPoint()) str << " [ENTRY]";
     if (noLife()) str << " [NOLIFE]";
     if (voidSelf()) str << " [VOIDSELF]";
@@ -911,6 +912,7 @@ void AstCFunc::dumpJson(std::ostream& str) const {
     dumpJsonBoolFuncIf(str, isVirtual);
     dumpJsonBoolFuncIf(str, isCoroutine);
     dumpJsonBoolFuncIf(str, needsVlProcess);
+    dumpJsonBoolFuncIf(str, isProcessKill);
     dumpJsonBoolFuncIf(str, noLife);
     dumpJsonBoolFuncIf(str, voidSelf);
     dumpJsonStr(str, "isConst", isConst().ascii());
@@ -3268,6 +3270,7 @@ void AstNodeFTask::dump(std::ostream& str) const {
     if (verilogTask()) str << " [VTASK]";
     if (verilogFunction()) str << " [VFUNC]";
     if (needsVlProcess()) str << " [NPRC]";
+    if (isProcessKill()) str << " [PROCESSKILL]";
     if (!ifacePortName().empty()) str << " ifp=" << ifacePortName();
     if (!lifetime().isNone()) str << " [" << lifetime().ascii() << "] ";
     if ((dpiImport() || dpiExport()) && cname() != name()) str << " [c=" << cname() << "]";
@@ -3284,6 +3287,7 @@ void AstNodeFTask::dumpJson(std::ostream& str) const {
     dumpJsonBoolFuncIf(str, isVirtual);
     dumpJsonBoolFuncIf(str, keepAlive);
     dumpJsonBoolFuncIf(str, needsVlProcess);
+    dumpJsonBoolFuncIf(str, isProcessKill);
     dumpJsonBoolFuncIf(str, prototype);
     dumpJsonBoolFuncIf(str, recursive);
     dumpJsonBoolFuncIf(str, taskPublic);

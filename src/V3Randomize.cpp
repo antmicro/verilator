@@ -6663,6 +6663,13 @@ class RandomizeVisitor final : public VNVisitor {
         // so extract the underlying variable from the MemberSel chain.
         // Collect resize statements to add after solver call, guarded by success.
         AstNode* inlineResizeStmtsp = nullptr;
+        if (AstTask* const resizeAllTaskp
+            = VN_AS(m_memberMap.findMember(classp, "__Vresize_constrained_arrays"), Task)) {
+            AstTaskRef* const resizeTaskRefp
+                = new AstTaskRef{nodep->fileline(), resizeAllTaskp};
+            inlineResizeStmtsp = resizeTaskRefp->makeStmt();
+        }
+
         {
             std::vector<AstCMethodHard*> sizeMethodps;
             capturedTreep->foreachAndNext([&](AstCMethodHard* methodp) {

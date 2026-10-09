@@ -6665,8 +6665,7 @@ class RandomizeVisitor final : public VNVisitor {
         AstNode* inlineResizeStmtsp = nullptr;
         if (AstTask* const resizeAllTaskp
             = VN_AS(m_memberMap.findMember(classp, "__Vresize_constrained_arrays"), Task)) {
-            AstTaskRef* const resizeTaskRefp
-                = new AstTaskRef{nodep->fileline(), resizeAllTaskp};
+            AstTaskRef* const resizeTaskRefp = new AstTaskRef{nodep->fileline(), resizeAllTaskp};
             inlineResizeStmtsp = resizeTaskRefp->makeStmt();
         }
 

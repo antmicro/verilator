@@ -1,0 +1,9 @@
+%Error: t/t_param_x_struct_unsup.v:18:41: Expecting expression to be constant, but can't determine constant for FUNCREF 'select'
+                                        : ... note: In instance 't'
+        t/t_param_x_struct_unsup.v:14:17: ... Location of non-constant COND: Unexpected conditional result type
+        t/t_param_x_struct_unsup.v:18:41: ... Called from 'select()' with parameters:
+           cond = 1'bx
+   18 |   localparam unpacked_struct_t RESULT = select(1'bx);
+      |                                         ^~~~~~
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: Exiting due to

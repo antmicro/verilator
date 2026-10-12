@@ -50,7 +50,6 @@ constexpr int MAX_SPRINTF_DOUBLE_SIZE
 #define NUM_ASSERT_LOGIC_ARGS2(arg1, arg2) \
     NUM_ASSERT_LOGIC_ARGS1(arg1); \
     NUM_ASSERT_LOGIC_ARGS1(arg2)
-
 #define NUM_ASSERT_LOGIC_ARGS4(arg1, arg2, arg3, arg4) \
     NUM_ASSERT_LOGIC_ARGS1(arg1); \
     NUM_ASSERT_LOGIC_ARGS1(arg2); \
@@ -1806,6 +1805,30 @@ V3Number& V3Number::opLogIf(const V3Number& lhs, const V3Number& rhs) {
     V3Number lnot = lhs;
     lnot.opLogNot(lhs);
     return opLogOr(lnot, rhs);
+}
+
+V3Number& V3Number::opCond(const V3Number& cond, const V3Number& then, const V3Number& elseNum) {
+    NUM_ASSERT_OP_ARGS1(cond);
+    NUM_ASSERT_LOGIC_ARGS1(cond);
+    if (cond.isEqOne()) return opAssign(then);
+    if (cond.isEqZero()) return opAssign(elseNum);
+    if (then.isOpaque()) {
+        UASSERT(then.dataType() == elseNum.dataType(), "then and else must have same type");
+        if (then.isCaseEq(elseNum)) return opAssign(then);
+        if (then.isString()) return setString("");
+        return setDouble(0.0);
+    }
+    NUM_ASSERT_LOGIC_ARGS2(then, elseNum);
+    UASSERT(then.width() == elseNum.width(), "then and else must have same width");
+    m_data.resize(then.width());
+    for (int word = 0; word < then.words(); ++word) {
+        const uint32_t mask
+            = (then.m_data.num()[word].m_value ^ elseNum.m_data.num()[word].m_value)
+              | then.m_data.num()[word].m_valueX | elseNum.m_data.num()[word].m_valueX;
+        m_data.num()[word].m_value = then.m_data.num()[word].m_value | mask;
+        m_data.num()[word].m_valueX = then.m_data.num()[word].m_valueX | mask;
+    }
+    return *this;
 }
 
 V3Number& V3Number::opLogEq(const V3Number& lhs, const V3Number& rhs) {

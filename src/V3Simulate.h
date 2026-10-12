@@ -288,6 +288,33 @@ private:
         m_reclaimValuesp.push_back(newp);
         return newp;
     }
+    AstNodeExpr* conditionalMerge(FileLine* fl, const V3Number& cond, const AstNodeExpr* thenp,
+                                  const AstNodeExpr* elsep, AstNodeDType* dtypep) {
+        if (const AstConst* const thenConstp = VN_CAST(thenp, Const)) {
+            const AstConst* const elseConstp = VN_CAST(elsep, Const);
+            if (!elseConstp) return nullptr;
+            V3Number result{thenConstp->num()};
+            result.opCond(cond, thenConstp->num(), elseConstp->num());
+            return new AstConst{fl, result};
+        }
+        const AstInitArray* const thenArrayp = VN_CAST(thenp, InitArray);
+        const AstInitArray* const elseArrayp = VN_CAST(elsep, InitArray);
+        const AstUnpackArrayDType* const arrayDTypep
+            = VN_CAST(dtypep->skipRefp(), UnpackArrayDType);
+        if (!thenArrayp || !elseArrayp || !arrayDTypep) return nullptr;
+        AstInitArray* const resultp = new AstInitArray{fl, dtypep, nullptr};
+        for (int index = 0; index < arrayDTypep->elementsConst(); ++index) {
+            AstNodeExpr* const valuep = conditionalMerge(
+                fl, cond, thenArrayp->getIndexDefaultedValuep(index),
+                elseArrayp->getIndexDefaultedValuep(index), arrayDTypep->subDTypep());
+            if (!valuep) {
+                resultp->deleteTree();
+                return nullptr;
+            }
+            resultp->addIndexValuep(index, valuep);
+        }
+        return resultp;
+    }
     AstConst* newConst(AstNode* nodep) {
         // Set a constant value for this node
         if (!VN_IS(m_varAux(nodep).valuep, Const)) {
@@ -681,12 +708,19 @@ private:
         } else {
             iterateConst(nodep->lhsp());
             if (!optimizable()) return;
-            if (fetchConst(nodep->lhsp())->num().isNeqZero()) {
+            V3Number num{nodep, 1, 0};
+            num.opRedOr(fetchConst(nodep->lhsp())->num());
+            if (num.isEqZero()) {
+                const AstConst result{nodep->fileline(), num};
+                newValue(nodep, &result);  // a zero
+            } else {
                 iterateConst(nodep->rhsp());
                 if (!optimizable()) return;
-                newValue(nodep, fetchValue(nodep->rhsp()));
-            } else {
-                newValue(nodep, fetchValue(nodep->lhsp()));  // a zero
+                V3Number rhs{nodep, 1, 0};
+                rhs.opRedOr(fetchConst(nodep->rhsp())->num());
+                num.opLogAnd(V3Number{num}, rhs);
+                const AstConst result{nodep->fileline(), num};
+                newValue(nodep, &result);
             }
         }
     }
@@ -699,12 +733,19 @@ private:
         } else {
             iterateConst(nodep->lhsp());
             if (!optimizable()) return;
-            if (fetchConst(nodep->lhsp())->num().isNeqZero()) {
-                newValue(nodep, fetchValue(nodep->lhsp()));  // a one
+            V3Number num{nodep, 1, 0};
+            num.opRedOr(fetchConst(nodep->lhsp())->num());
+            if (num.isEqOne()) {
+                const AstConst result{nodep->fileline(), num};
+                newValue(nodep, &result);  // a one
             } else {
                 iterateConst(nodep->rhsp());
                 if (!optimizable()) return;
-                newValue(nodep, fetchValue(nodep->rhsp()));
+                V3Number rhs{nodep, 1, 0};
+                rhs.opRedOr(fetchConst(nodep->rhsp())->num());
+                num.opLogOr(V3Number{num}, rhs);
+                const AstConst result{nodep->fileline(), num};
+                newValue(nodep, &result);
             }
         }
     }
@@ -717,13 +758,20 @@ private:
         } else {
             iterateConst(nodep->lhsp());
             if (!optimizable()) return;
-            if (fetchConst(nodep->lhsp())->num().isEqZero()) {
-                const AstConst cnst{nodep->fileline(), AstConst::WidthedValue{}, 1, 1};  // a one
-                newValue(nodep, &cnst);  // a one
+            V3Number num{nodep, 1, 0};
+            num.opRedOr(fetchConst(nodep->lhsp())->num());
+            num.opLogNot(V3Number{num});
+            if (num.isEqOne()) {
+                const AstConst result{nodep->fileline(), num};
+                newValue(nodep, &result);  // a one
             } else {
                 iterateConst(nodep->rhsp());
                 if (!optimizable()) return;
-                newValue(nodep, fetchValue(nodep->rhsp()));
+                V3Number rhs{nodep, 1, 0};
+                rhs.opRedOr(fetchConst(nodep->rhsp())->num());
+                num.opLogOr(V3Number{num}, rhs);
+                const AstConst result{nodep->fileline(), num};
+                newValue(nodep, &result);
             }
         }
     }
@@ -738,14 +786,32 @@ private:
         } else {
             iterateConst(nodep->condp());
             if (!optimizable()) return;
-            if (fetchConst(nodep->condp())->num().isNeqZero()) {
+            V3Number cond{nodep->fileline(), 1, 0};
+            cond.opRedOr(fetchConst(nodep->condp())->num());
+            if (cond.isEqOne()) {
                 iterateConst(nodep->thenp());
                 if (!optimizable()) return;
                 newValue(nodep, fetchValue(nodep->thenp()));
-            } else {
+            } else if (cond.isEqZero()) {
                 iterateConst(nodep->elsep());
                 if (!optimizable()) return;
                 newValue(nodep, fetchValue(nodep->elsep()));
+            } else {
+                AstNodeExpr* valuep = nullptr;
+                AstNodeDType* const dtypep = nodep->dtypep()->skipRefp();
+                if (dtypep->basicp() || VN_IS(dtypep, UnpackArrayDType)) {
+                    iterateConst(nodep->thenp());
+                    iterateConst(nodep->elsep());
+                    if (!optimizable()) return;
+                    valuep = conditionalMerge(nodep->fileline(), cond, fetchValue(nodep->thenp()),
+                                              fetchValue(nodep->elsep()), nodep->dtypep());
+                }
+                if (!valuep) {
+                    clearOptimizable(nodep, "Unexpected conditional result type");
+                    return;
+                }
+                newValue(nodep, valuep);
+                VL_DO_DANGLING(valuep->deleteTree(), valuep);
             }
         }
     }
@@ -949,6 +1015,8 @@ private:
                                             + cvtToStr(offset));
             } else if (AstConst* const constp = VN_CAST(itemp, Const)) {
                 setValue(nodep, constp);
+            } else if (VN_IS(itemp, InitArray)) {
+                setValue(nodep, itemp);
             } else {
                 setValue(nodep, fetchValue(itemp));
             }
@@ -1033,7 +1101,7 @@ private:
     }
 
     void visit(AstCaseItem* nodep) override {
-        // Real handling is in AstNodeCase
+        // Real handling is in AstCase
         if (jumpingOver()) return;
         checkNodeInfo(nodep);
         iterateChildrenConst(nodep);
@@ -1115,7 +1183,7 @@ private:
         checkNodeInfo(nodep);
         iterateConst(nodep->condp());
         if (m_checkOnly || !optimizable()) return;
-        if (fetchConst(nodep->condp())->num().isEqZero()) {
+        if (!fetchConst(nodep->condp())->num().isNeqZero()) {
             UINFO(5, "   LOOP TEST GO " << nodep);
             UASSERT_OBJ(!m_jumptargetp, nodep, "Jump inside jump");
             m_jumptargetp = nodep->loopp();

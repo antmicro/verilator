@@ -5384,7 +5384,7 @@ public:
     ASTGEN_MEMBERS_AstCond;
     void numberOperate(V3Number& out, const V3Number& lhs, const V3Number& rhs,
                        const V3Number& ths) override {
-        out.opAssign(lhs.isNeqZero() ? rhs : ths);
+        out.opCond(lhs, rhs, ths);
     }
     string emitVerilog() override { return "%k(%l %f? %r %k: %t)"; }
     string emitC() override { return "VL_COND_%nq%lq%rq%tq(%nw, %P, %li, %ri, %ti)"; }

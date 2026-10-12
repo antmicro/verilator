@@ -245,14 +245,14 @@
     {"type":"VAR","name":"t.cell2.q","addr":"(SB)","loc":"d,64:23,64:24","dtypep":"(I)","origName":"q","verilogName":"q","direction":"NONE","declDirection":"OUTPUT","icoMaybeWritten":true,"lifetime":"VSTATICI","varType":"WIRE","dtypeName":"logic"},
     {"type":"VAR","name":"t.cell1.WIDTH","addr":"(VB)","loc":"d,48:15,48:20","dtypep":"(UB)","origName":"WIDTH","verilogName":"WIDTH","direction":"NONE","declDirection":"NONE","isConst":true,"lifetime":"VSTATICI","varType":"GPARAM","dtypeName":"bit","isGParam":true,"isParam":true,"hasUserInit":true,
      "valuep": [
-      {"type":"CONST","name":"32'sh4","addr":"(CF)","loc":"d,32:14,32:15","dtypep":"(UB)"}
+      {"type":"CONST","name":"32'h4","addr":"(CF)","loc":"d,32:14,32:15","dtypep":"(UB)"}
     ]},
     {"type":"VAR","name":"t.cell1.clk","addr":"(XB)","loc":"d,50:11,50:14","dtypep":"(K)","origName":"clk","verilogName":"clk","direction":"NONE","declDirection":"INPUT","lifetime":"VSTATICI","varType":"PORT","dtypeName":"logic"},
     {"type":"VAR","name":"t.cell1.d","addr":"(ZB)","loc":"d,51:23,51:24","dtypep":"(I)","origName":"d","verilogName":"d","direction":"NONE","declDirection":"INPUT","lifetime":"VSTATICI","varType":"PORT","dtypeName":"logic"},
     {"type":"VAR","name":"t.cell1.q","addr":"(BC)","loc":"d,52:30,52:31","dtypep":"(I)","origName":"q","verilogName":"q","direction":"NONE","declDirection":"OUTPUT","icoMaybeWritten":true,"lifetime":"VSTATICI","varType":"PORT","dtypeName":"logic"},
     {"type":"VAR","name":"t.cell1.IGNORED","addr":"(DC)","loc":"d,55:14,55:21","dtypep":"(UB)","origName":"IGNORED","verilogName":"IGNORED","direction":"NONE","declDirection":"NONE","isConst":true,"lifetime":"VSTATICI","varType":"LPARAM","dtypeName":"bit","isParam":true,"hasUserInit":true,
      "valuep": [
-      {"type":"CONST","name":"32'sh1","addr":"(DF)","loc":"d,55:24,55:25","dtypep":"(UB)"}
+      {"type":"CONST","name":"32'h1","addr":"(DF)","loc":"d,55:24,55:25","dtypep":"(UB)"}
     ]}
   ]},
   {"type":"PACKAGE","name":"$unit","addr":"(E)","loc":"a,0:0,0:0","origName":"__024unit","verilogName":"\\$unit ","level":3,"depth":3,"inLibrary":true,"unconnectedDrive":"DEFAULT_FALSE","lifetime":"NONE","timeunit":"1ps"},

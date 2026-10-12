@@ -1,0 +1,14 @@
+%Error-UNSUPPORTED: t/t_param_x_unique_unsup.v:18:7: Unsupported: String range item in case inside constant function
+                                                   : ... note: In instance 't'
+   18 |       ["b":"d"]: eval_case_inside_range_string = 1;
+      |       ^
+                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
+%Error: t/t_param_x_unique_unsup.v:14:41: Expecting expression to be constant, but can't determine constant for FUNCREF 'select'
+                                        : ... note: In instance 't'
+        t/t_param_x_unique_unsup.v:24:17: ... Location of non-constant COND: Unexpected conditional result type
+        t/t_param_x_unique_unsup.v:14:41: ... Called from 'select()' with parameters:
+           cond = 1'bx
+   14 |   localparam unpacked_struct_t RESULT = select(1'bx);
+      |                                         ^~~~~~
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: Exiting due to

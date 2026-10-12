@@ -140,14 +140,14 @@
    "stmtsp": [
     {"type":"VAR","name":"WIDTH","addr":"(WC)","loc":"d,48:15,48:20","dtypep":"(XC)","origName":"WIDTH","verilogName":"WIDTH","direction":"NONE","declDirection":"NONE","isConst":true,"lifetime":"VSTATICI","varType":"GPARAM","dtypeName":"bit","isGParam":true,"isParam":true,"hasUserInit":true,
      "valuep": [
-      {"type":"CONST","name":"32'sh4","addr":"(YC)","loc":"d,32:14,32:15","dtypep":"(XC)"}
+      {"type":"CONST","name":"32'h4","addr":"(YC)","loc":"d,32:14,32:15","dtypep":"(XC)"}
     ]},
     {"type":"VAR","name":"clk","addr":"(CC)","loc":"d,50:11,50:14","dtypep":"(J)","origName":"clk","verilogName":"clk","direction":"INPUT","declDirection":"INPUT","lifetime":"VSTATICI","varType":"PORT","dtypeName":"logic"},
     {"type":"VAR","name":"d","addr":"(FC)","loc":"d,51:23,51:24","dtypep":"(H)","origName":"d","verilogName":"d","direction":"INPUT","declDirection":"INPUT","lifetime":"VSTATICI","varType":"PORT","dtypeName":"logic"},
     {"type":"VAR","name":"q","addr":"(ZB)","loc":"d,52:30,52:31","dtypep":"(H)","origName":"q","verilogName":"q","direction":"OUTPUT","declDirection":"OUTPUT","icoMaybeWritten":true,"lifetime":"VSTATICI","varType":"PORT","dtypeName":"logic"},
     {"type":"VAR","name":"IGNORED","addr":"(ZC)","loc":"d,55:14,55:21","dtypep":"(XC)","origName":"IGNORED","verilogName":"IGNORED","direction":"NONE","declDirection":"NONE","isConst":true,"lifetime":"VSTATICI","varType":"LPARAM","dtypeName":"bit","isParam":true,"hasUserInit":true,
      "valuep": [
-      {"type":"CONST","name":"32'sh1","addr":"(AD)","loc":"d,55:24,55:25","dtypep":"(XC)"}
+      {"type":"CONST","name":"32'h1","addr":"(AD)","loc":"d,55:24,55:25","dtypep":"(XC)"}
     ]},
     {"type":"ALWAYS","addr":"(BD)","loc":"d,57:3,57:9","keyword":"always",
      "sentreep": [

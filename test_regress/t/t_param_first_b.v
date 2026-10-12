@@ -17,7 +17,9 @@ module t_param_first_b (  /*AUTOARG*/
   output [4:0] par;
   output [X:0] varwidth;
 
+  // verilator lint_off WIDTHTRUNC
   wire [4:0] par = X;
   wire [X:0] varwidth = (FIVE == 5) ? TWO : 0;
+  // verilator lint_on WIDTHTRUNC
 
 endmodule

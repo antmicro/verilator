@@ -78,6 +78,17 @@
 
 VL_DEFINE_DEBUG_FUNCTIONS;
 
+static void cleanTwoStateParamValue(AstVar* varp) {
+    const AstBasicDType* const basicp = varp->dtypeSkipRefp()->basicp();
+    if (AstConst* const valuep = VN_CAST(varp->valuep(), Const)) {
+        if (basicp && basicp->isIntegralOrPacked() && basicp->isZeroInit()) {
+            V3Number value{valuep, valuep->width()};
+            value.opBitsOne(valuep->num());
+            valuep->num() = value;
+        }
+    }
+}
+
 // Walk a class-typed node through typedef/RefDType chains to its ClassRefDType, or null.
 static AstClassRefDType* classRefDTypeOfNode(AstNode* nodep) {
     while (AstTypedef* const tdp = VN_CAST(nodep, Typedef)) nodep = tdp->subDTypep();
@@ -251,24 +262,22 @@ public:
                 var = varNum.toDouble();
             }
             return V3Number::epsilonEqual(var, hierOptParamp->num().toDouble());
-        } else {  // Now integer type is assumed
-            // Bitwidth of hierOptParamp is accurate because V3Width already calculated in the
-            // previous run. Bitwidth of pinValuep is before width analysis, so pinValuep is casted
-            // to hierOptParamp width.
-            V3Number varNum{pinValuep, hierOptParamp->num().width()};
-            if (pinValuep->isDouble()) {  // Need to cast to int
-                // Parameter is actually an integral type, but passed value is floating point.
-                // Conversion from real to integer uses rounding in V3Width.cpp
-                varNum.opRToIRoundS(pinValuep->num());
-            } else if (pinValuep->isSigned()) {
-                varNum.opExtendS(pinValuep->num(), pinValuep->num().width());
-            } else {
-                varNum.opAssign(pinValuep->num());
-            }
-            V3Number isEq{pinValuep, 1};
-            isEq.opEq(varNum, hierOptParamp->num());
-            return isEq.isNeqZero();
         }
+        // Now integer type is assumed
+        // Bitwidth of hierOptParamp is accurate because V3Width already calculated in the
+        // previous run. Bitwidth of pinValuep is before width analysis, so pinValuep is casted
+        // to hierOptParamp width.
+        V3Number varNum{pinValuep, hierOptParamp->num().width()};
+        if (pinValuep->isDouble()) {  // Need to cast to int
+            // Parameter is actually an integral type, but passed value is floating point.
+            // Conversion from real to integer uses rounding in V3Width.cpp
+            varNum.opRToIRoundS(pinValuep->num());
+        } else if (pinValuep->isSigned()) {
+            varNum.opExtendS(pinValuep->num(), pinValuep->num().width());
+        } else {
+            varNum.opAssign(pinValuep->num());
+        }
+        return varNum.isCaseEq(hierOptParamp->num());
     }
 };
 
@@ -1212,6 +1221,7 @@ class ParamProcessor final {
         // Resolve class-scoped references and any member selections they expose.
         resolveDeferredDotsReachableFrom(varp->valuep(), m_modp);
         V3Const::constifyParamsEdit(varp);
+        cleanTwoStateParamValue(varp);
         inProgress.erase(varp);
     }
 
@@ -1459,9 +1469,7 @@ class ParamProcessor final {
         } else {
             origNum.opAssign(origp->num());
         }
-        V3Number isEq{exprp, 1};
-        isEq.opEq(exprNum, origNum);
-        return isEq.isNeqZero();
+        return exprNum.isCaseEq(origNum);
     }
 
     // Rewrite placeholder __VGIfaceParam pins emitted by
@@ -1667,6 +1675,7 @@ class ParamProcessor final {
                     }
                     if (!cloneVarpUnresolved) {
                         V3Const::constifyParamsEdit(cloneVarp);
+                        cleanTwoStateParamValue(cloneVarp);
                         if (AstConst* const widthedp = VN_CAST(cloneVarp->valuep(), Const)) {
                             // Stamp the port's type so equal values hash the same.
                             if (cloneVarp->dtypep()) widthedp->dtypep(cloneVarp->dtypep());
@@ -3052,6 +3061,7 @@ class ParamVisitor final : public VNVisitor {
                         if (AstVar* const varp = VN_CAST(sp, Var)) {
                             if (varp->isParam() && varp->valuep()) {
                                 V3Const::constifyParamsEdit(varp);
+                                cleanTwoStateParamValue(varp);
                             }
                         }
                     }
@@ -3438,6 +3448,7 @@ class ParamVisitor final : public VNVisitor {
                 }
                 m_processor.resolveDeferredDotsReachableFrom(nodep, m_modp);
                 V3Const::constifyParamsEdit(nodep);
+                cleanTwoStateParamValue(nodep);
             }
         }
     }
@@ -3464,6 +3475,7 @@ class ParamVisitor final : public VNVisitor {
                     // caller's hasUnresolvedLparamXRef check sees a Const.
                     if (varp->isParam() && varp->valuep() && !VN_IS(varp->valuep(), Const)) {
                         V3Const::constifyParamsEdit(varp);
+                        cleanTwoStateParamValue(varp);
                     }
                     nodep->varp(varp);
                     return true;
@@ -3999,6 +4011,7 @@ void V3Param::finalizeDeferredParams(AstNetlist* rootp) {
     // Constify params whose Dot RHS was resolved by V3LinkDot::linkDotParamed.
     for (AstVar* const varp : rootp->deferredParamVarps()) {
         if (varp->valuep() && !VN_IS(varp->valuep(), Const)) V3Const::constifyParamsEdit(varp);
+        cleanTwoStateParamValue(varp);
     }
     rootp->clearDeferredParamVarps();
 }

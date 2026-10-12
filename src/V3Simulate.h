@@ -266,11 +266,20 @@ private:
         // Allocate a constant with this dtype. Reuse them across a 'clear()' call for efficiency.
         return m_constps[nodep->dtypep()].allocate(m_constGeneration, nodep);
     }
+    static void assignValueNumber(AstNode* nodep, V3Number& out, const V3Number& value) {
+        const AstBasicDType* const basicp = nodep->dtypep()->skipRefp()->basicp();
+        if ((VN_IS(nodep, Var) || VN_IS(nodep, VarScope)) && basicp && basicp->isIntegralOrPacked()
+            && basicp->isZeroInit()) {
+            out.opBitsOne(value);
+        } else {
+            out.opAssign(value);
+        }
+    }
 
 public:
     void newValue(AstNode* nodep, const AstNodeExpr* valuep) {
         if (const AstConst* const constp = VN_CAST(valuep, Const)) {
-            newConst(nodep)->num().opAssign(constp->num());
+            assignValueNumber(nodep, newConst(nodep)->num(), constp->num());
             UINFO(9, "     new val " << valuep->name() << " on " << nodep);
         } else if (fetchValueNull(nodep) != valuep) {
             // const_cast, as clonep() is set on valuep, but nothing should care
@@ -279,7 +288,7 @@ public:
     }
     void newOutValue(AstNode* nodep, const AstNodeExpr* valuep) {
         if (const AstConst* const constp = VN_CAST(valuep, Const)) {
-            newOutConst(nodep)->num().opAssign(constp->num());
+            assignValueNumber(nodep, newOutConst(nodep)->num(), constp->num());
             UINFO(9, "     new oval " << valuep->name() << " on " << nodep);
         } else if (fetchOutValueNull(nodep) != valuep) {
             // const_cast, as clonep() is set on valuep, but nothing should care
@@ -292,6 +301,33 @@ private:
         AstNodeExpr* const newp = nodep->cloneTree(false);
         m_reclaimValuesp.push_back(newp);
         return newp;
+    }
+    AstNodeExpr* conditionalMerge(FileLine* fl, const V3Number& cond, const AstNodeExpr* thenp,
+                                  const AstNodeExpr* elsep, AstNodeDType* dtypep) {
+        if (const AstConst* const thenConstp = VN_CAST(thenp, Const)) {
+            const AstConst* const elseConstp = VN_CAST(elsep, Const);
+            if (!elseConstp) return nullptr;
+            V3Number result{thenConstp->num()};
+            result.opCond(cond, thenConstp->num(), elseConstp->num());
+            return new AstConst{fl, result};
+        }
+        const AstConsArray* const thenArrayp = VN_CAST(thenp, ConsArray);
+        const AstConsArray* const elseArrayp = VN_CAST(elsep, ConsArray);
+        const AstUnpackArrayDType* const arrayDTypep
+            = VN_CAST(dtypep->skipRefp(), UnpackArrayDType);
+        if (!thenArrayp || !elseArrayp || !arrayDTypep) return nullptr;
+        AstConsArray* const resultp = new AstConsArray{fl, dtypep};
+        for (int index = 0; index < arrayDTypep->elementsConst(); ++index) {
+            AstNodeExpr* const valuep
+                = conditionalMerge(fl, cond, thenArrayp->valuep(index), elseArrayp->valuep(index),
+                                   arrayDTypep->subDTypep());
+            if (!valuep) {
+                resultp->deleteTree();
+                return nullptr;
+            }
+            resultp->valuep(index, valuep);
+        }
+        return resultp;
     }
     AstConst* newConst(AstNode* nodep) {
         // Set a constant value for this node
@@ -629,7 +665,9 @@ private:
         } else {
             iterateAndNextConstNull(nodep->condp());
             if (optimizable()) {
-                if (fetchConst(nodep->condp())->num().isNeqZero()) {
+                V3Number cond{nodep, 1, 0};
+                cond.opRedOr(fetchConst(nodep->condp())->num());
+                if (cond.isEqOne()) {
                     iterateAndNextConstNull(nodep->thensp());
                 } else {
                     iterateAndNextConstNull(nodep->elsesp());
@@ -814,12 +852,19 @@ private:
         } else {
             iterateConst(nodep->lhsp());
             if (!optimizable()) return;
-            if (fetchConst(nodep->lhsp())->num().isNeqZero()) {
+            V3Number num{nodep, 1, 0};
+            num.opRedOr(fetchConst(nodep->lhsp())->num());
+            if (num.isEqZero()) {
+                const AstConst result{nodep->fileline(), num};
+                newValue(nodep, &result);  // a zero
+            } else {
                 iterateConst(nodep->rhsp());
                 if (!optimizable()) return;
-                newValue(nodep, fetchValue(nodep->rhsp()));
-            } else {
-                newValue(nodep, fetchValue(nodep->lhsp()));  // a zero
+                V3Number rhs{nodep, 1, 0};
+                rhs.opRedOr(fetchConst(nodep->rhsp())->num());
+                num.opLogAnd(V3Number{num}, rhs);
+                const AstConst result{nodep->fileline(), num};
+                newValue(nodep, &result);
             }
         }
     }
@@ -832,12 +877,19 @@ private:
         } else {
             iterateConst(nodep->lhsp());
             if (!optimizable()) return;
-            if (fetchConst(nodep->lhsp())->num().isNeqZero()) {
-                newValue(nodep, fetchValue(nodep->lhsp()));  // a one
+            V3Number num{nodep, 1, 0};
+            num.opRedOr(fetchConst(nodep->lhsp())->num());
+            if (num.isEqOne()) {
+                const AstConst result{nodep->fileline(), num};
+                newValue(nodep, &result);  // a one
             } else {
                 iterateConst(nodep->rhsp());
                 if (!optimizable()) return;
-                newValue(nodep, fetchValue(nodep->rhsp()));
+                V3Number rhs{nodep, 1, 0};
+                rhs.opRedOr(fetchConst(nodep->rhsp())->num());
+                num.opLogOr(V3Number{num}, rhs);
+                const AstConst result{nodep->fileline(), num};
+                newValue(nodep, &result);
             }
         }
     }
@@ -850,13 +902,20 @@ private:
         } else {
             iterateConst(nodep->lhsp());
             if (!optimizable()) return;
-            if (fetchConst(nodep->lhsp())->num().isEqZero()) {
-                const AstConst cnst{nodep->fileline(), AstConst::WidthedValue{}, 1, 1};  // a one
-                newValue(nodep, &cnst);  // a one
+            V3Number num{nodep, 1, 0};
+            num.opRedOr(fetchConst(nodep->lhsp())->num());
+            num.opLogNot(V3Number{num});
+            if (num.isEqOne()) {
+                const AstConst result{nodep->fileline(), num};
+                newValue(nodep, &result);  // a one
             } else {
                 iterateConst(nodep->rhsp());
                 if (!optimizable()) return;
-                newValue(nodep, fetchValue(nodep->rhsp()));
+                V3Number rhs{nodep, 1, 0};
+                rhs.opRedOr(fetchConst(nodep->rhsp())->num());
+                num.opLogOr(V3Number{num}, rhs);
+                const AstConst result{nodep->fileline(), num};
+                newValue(nodep, &result);
             }
         }
     }
@@ -871,14 +930,32 @@ private:
         } else {
             iterateConst(nodep->condp());
             if (!optimizable()) return;
-            if (fetchConst(nodep->condp())->num().isNeqZero()) {
+            V3Number cond{nodep->fileline(), 1, 0};
+            cond.opRedOr(fetchConst(nodep->condp())->num());
+            if (cond.isEqOne()) {
                 iterateConst(nodep->thenp());
                 if (!optimizable()) return;
                 newValue(nodep, fetchValue(nodep->thenp()));
-            } else {
+            } else if (cond.isEqZero()) {
                 iterateConst(nodep->elsep());
                 if (!optimizable()) return;
                 newValue(nodep, fetchValue(nodep->elsep()));
+            } else {
+                AstNodeExpr* valuep = nullptr;
+                AstNodeDType* const dtypep = nodep->dtypep()->skipRefp();
+                if (dtypep->basicp() || VN_IS(dtypep, UnpackArrayDType)) {
+                    iterateConst(nodep->thenp());
+                    iterateConst(nodep->elsep());
+                    if (!optimizable()) return;
+                    valuep = conditionalMerge(nodep->fileline(), cond, fetchValue(nodep->thenp()),
+                                              fetchValue(nodep->elsep()), nodep->dtypep());
+                }
+                if (!valuep) {
+                    clearOptimizable(nodep, "Unexpected conditional result type");
+                    return;
+                }
+                newValue(nodep, valuep);
+                VL_DO_DANGLING(valuep->deleteTree(), valuep);
             }
         }
     }
@@ -907,7 +984,6 @@ private:
             clearOptimizable(fromp, "Array select LHS isn't simple variable");
             return;
         }
-        if (m_checkOnly || !optimizable()) return;
         AstNode* const vscp = varOrScope(varrefp);
         AstNodeExpr* rootp = fetchOutValueNull(vscp);
         if (!rootp) rootp = fetchValueNull(vscp);
@@ -920,7 +996,9 @@ private:
         for (AstNodeExpr* const selp : vlstd::reverse_view(selps)) {
             if (const AstArraySel* const aselp = VN_CAST(selp, ArraySel)) {
                 AstConsArray* const consp = VN_AS(itemp, ConsArray);
-                const uint32_t index = fetchConst(aselp->bitp())->toUInt();
+                const AstConst* const indexp = fetchConst(aselp->bitp());
+                if (indexp->num().isFourState()) return;
+                const uint32_t index = indexp->toUInt();
                 const int elements
                     = VN_AS(consp->dtypep()->skipRefp(), UnpackArrayDType)->elementsConst();
                 if (index >= static_cast<uint32_t>(elements)) {
@@ -1088,6 +1166,16 @@ private:
         iterateChildrenConst(nodep);
         if (const AstConsArray* const consp = VN_CAST(fetchValueNull(nodep->fromp()), ConsArray)) {
             const AstConst* const indexp = fetchConst(nodep->bitp());
+            if (indexp->num().isFourState()) {
+                AstNodeExpr* const valuep = newInitValuep(nodep, nodep->dtypep());
+                if (!valuep) {
+                    clearOptimizable(nodep, "Unsupported array element type");
+                    return;
+                }
+                newValue(nodep, valuep);
+                VL_DO_DANGLING(valuep->deleteTree(), valuep);
+                return;
+            }
             const uint32_t offset = indexp->num().toUInt();
             AstNodeExpr* const itemp = consp->valuep(offset);
             if (!itemp) {
@@ -1144,6 +1232,89 @@ private:
         checkNodeInfo(nodep);
         iterateChildrenConst(nodep);
     }
+    static bool caseItemMatches(const AstCase* casep, const V3Number& expr, const V3Number& item) {
+        if (casep->caseSimple() || expr.isOpaque() || item.isOpaque()) {
+            return expr.isCaseEq(item);
+        }
+        UASSERT_OBJ(expr.width() == item.width(), casep, "Case item width mismatch");
+        FileLine* const flp = casep->fileline();
+        if (casep->caseInside()) return V3Number{flp, 1, 0}.opWildEq(expr, item).isEqOne();
+        if (casep->casex() || casep->casez()) {
+            V3Number num1{expr};
+            V3Number num2{expr};
+            V3Number mask{expr};
+            if (casep->casex()) {
+                num1.opBitsXZ(expr);
+                num2.opBitsXZ(item);
+            } else {
+                num1.opBitsZ(expr);
+                num2.opBitsZ(item);
+            }
+            mask.opOr(num1, num2);
+            num1.opOr(expr, mask);
+            num2.opOr(item, mask);
+            return num1.isCaseEq(num2);
+        }
+        return expr.isCaseEq(item);
+    }
+    static bool insideRangeBoundMatches(AstNode* nodep, const V3Number& expr,
+                                        const AstNodeExpr* exprp, const V3Number& bound,
+                                        const AstNodeExpr* boundp, bool lowerBound) {
+        V3Number match{nodep, 1};
+        if (expr.isDouble() || bound.isDouble()) {
+            if (lowerBound) {
+                match.opGteD(expr, bound);
+            } else {
+                match.opLteD(expr, bound);
+            }
+        } else if (expr.isString() || bound.isString()) {
+            if (lowerBound) {
+                match.opGteN(expr, bound);
+            } else {
+                match.opLteN(expr, bound);
+            }
+        } else if (exprp->isSigned() && boundp->isSigned()) {
+            if (lowerBound) {
+                match.opGteS(expr, bound);
+            } else {
+                match.opLteS(expr, bound);
+            }
+        } else if (lowerBound) {
+            match.opGte(expr, bound);
+        } else {
+            match.opLte(expr, bound);
+        }
+
+        return match.isEqOne();
+    }
+    bool caseInsideRangeMatches(AstCase* casep, AstInsideRange* rangep) {
+        UASSERT_OBJ(casep->caseInside(), rangep, "Range item outside case inside");
+        if (casep->exprp()->dtypep()->skipRefp()->isString()) {
+            rangep->v3warn(E_UNSUPPORTED,
+                           "Unsupported: String range item in case inside constant function");
+            return false;
+        }
+        const AstConst* const exprp = fetchConst(casep->exprp());
+        if (!VN_IS(rangep->lhsp(), Unbounded)) {
+            iterateConst(rangep->lhsp());
+            if (!optimizable()) return false;
+            if (!insideRangeBoundMatches(rangep, exprp->num(), casep->exprp(),
+                                         fetchConst(rangep->lhsp())->num(), rangep->lhsp(),
+                                         true)) {
+                return false;
+            }
+        }
+        if (!VN_IS(rangep->rhsp(), Unbounded)) {
+            iterateConst(rangep->rhsp());
+            if (!optimizable()) return false;
+            if (!insideRangeBoundMatches(rangep, exprp->num(), casep->exprp(),
+                                         fetchConst(rangep->rhsp())->num(), rangep->rhsp(),
+                                         false)) {
+                return false;
+            }
+        }
+        return true;
+    }
     void visit(AstCase* nodep) override {
         if (jumpingOver()) return;
         UINFO(5, "   CASE " << nodep);
@@ -1158,11 +1329,22 @@ private:
                 if (!itemp->isDefault()) {
                     for (AstNode* ep = itemp->condsp(); ep; ep = ep->nextp()) {
                         if (hit) break;
-                        iterateAndNextConstNull(ep);
+                        bool match = false;
+                        AstInsideRange* rangep = VN_CAST(ep, InsideRange);
+                        if (const AstCvtPackString* const cvtp = VN_CAST(ep, CvtPackString)) {
+                            rangep = VN_CAST(cvtp->lhsp(), InsideRange);
+                        }
+                        if (rangep) {
+                            match = caseInsideRangeMatches(nodep, rangep);
+                        } else {
+                            iterateAndNextConstNull(ep);
+                            if (optimizable()) {
+                                match = caseItemMatches(nodep, fetchConst(nodep->exprp())->num(),
+                                                        fetchConst(ep)->num());
+                            }
+                        }
                         if (optimizable()) {
-                            V3Number match{nodep, 1};
-                            match.opEq(fetchConst(nodep->exprp())->num(), fetchConst(ep)->num());
-                            if (match.isNeqZero()) {
+                            if (match) {
                                 iterateAndNextConstNull(itemp->stmtsp());
                                 hit = true;
                             }
@@ -1183,8 +1365,12 @@ private:
     }
 
     void visit(AstCaseItem* nodep) override {
-        // Real handling is in AstNodeCase
+        // Real handling is in AstCase
         if (jumpingOver()) return;
+        checkNodeInfo(nodep);
+        iterateChildrenConst(nodep);
+    }
+    void visit(AstInsideRange* nodep) override {
         checkNodeInfo(nodep);
         iterateChildrenConst(nodep);
     }
@@ -1265,7 +1451,9 @@ private:
         checkNodeInfo(nodep);
         iterateConst(nodep->condp());
         if (m_checkOnly || !optimizable()) return;
-        if (fetchConst(nodep->condp())->num().isEqZero()) {
+        V3Number cond{nodep, 1, 0};
+        cond.opRedOr(fetchConst(nodep->condp())->num());
+        if (!cond.isEqOne()) {
             UINFO(5, "   LOOP TEST GO " << nodep);
             UASSERT_OBJ(!m_jumptargetp, nodep, "Jump inside jump");
             m_jumptargetp = nodep->loopp();

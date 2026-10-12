@@ -806,6 +806,19 @@ string V3Number::displayed(FileLine* fl, const string& vformat,
         }
         switch (fmt) {
         case 'b': {
+            if (bit == width() - 1) {
+                if (bit && (left || !fmtsize.empty())) {
+                    if (bitIsX(bit)) {
+                        while (bit && bitIsX(bit)) --bit;
+                        if (bit || !bitIsX(0)) str += 'x';
+                    } else if (bitIsZ(bit)) {
+                        while (bit && bitIsZ(bit)) --bit;
+                        if (bit || !bitIsZ(0)) str += 'z';
+                    }
+                }
+            } else if (bitIsXZ(bit)) {
+                str += '0';
+            }
             for (; bit >= 0; --bit) {
                 if (bitIs0(bit)) {
                     str += '0';
@@ -820,7 +833,24 @@ string V3Number::displayed(FileLine* fl, const string& vformat,
             break;
         }
         case 'o': {
+            if (bit == width() - 1) {
+                if (bit && (left || !fmtsize.empty())) {
+                    if (bitIsX(bit)) {
+                        while (bit && bitIsX(bit)) --bit;
+                    } else if (bitIsZ(bit)) {
+                        while (bit && bitIsZ(bit)) --bit;
+                    }
+                }
+            }
             while ((bit % 3) != 2) ++bit;
+            if (bit < width() - 1) {
+                const char prev = bitIs0(bit + 1) ? '0' : (bitIsX(bit + 1) ? 'x' : 'z');
+                const int numX = countX(bit - 2, 3);
+                const int numZ = countZ(bit - 2, 3);
+                const char next
+                    = numX ? (numX == 3 ? 'x' : 'X') : (numZ ? (numZ == 3 ? 'z' : 'Z') : '0');
+                if (prev != next) str += prev;
+            }
             for (; bit > 0; bit -= 3) {
                 const int numX = countX(bit - 2, 3);
                 const int numZ = countZ(bit - 2, 3);
@@ -846,7 +876,24 @@ string V3Number::displayed(FileLine* fl, const string& vformat,
             break;
         }
         default: {  // h/x
+            if (bit == width() - 1) {
+                if (bit && (left || !fmtsize.empty())) {
+                    if (bitIsX(bit)) {
+                        while (bit && bitIsX(bit)) --bit;
+                    } else if (bitIsZ(bit)) {
+                        while (bit && bitIsZ(bit)) --bit;
+                    }
+                }
+            }
             while ((bit % 4) != 3) ++bit;
+            if (bit < width() - 1) {
+                const char prev = bitIs0(bit + 1) ? '0' : (bitIsX(bit + 1) ? 'x' : 'z');
+                const int numX = countX(bit - 3, 4);
+                const int numZ = countZ(bit - 3, 4);
+                const char next
+                    = numX ? (numX == 4 ? 'x' : 'X') : (numZ ? (numZ == 4 ? 'z' : 'Z') : '0');
+                if (prev != next) str += prev;
+            }
             for (; bit > 0; bit -= 4) {
                 const int numX = countX(bit - 3, 4);
                 const int numZ = countZ(bit - 3, 4);
@@ -1389,22 +1436,31 @@ V3Number& V3Number::opBitsNonXZ(const V3Number& lhs) {  // 0/1->1, X/Z->0
 }
 V3Number& V3Number::opBitsOne(const V3Number& lhs) {  // 1->1, 0/X/Z->0
     // op i, L(lhs) bit return
-    NUM_ASSERT_OP_ARGS1(lhs);
-    NUM_ASSERT_LOGIC_ARGS1(lhs);
-    setZero();
-    for (int bit = 0; bit < width(); ++bit) {
-        if (lhs.bitIs1(bit)) setBit(bit, 1);
+    const int total_words = std::min(words(), lhs.words());
+    for (int word = 0; word < total_words; ++word) {
+        m_data.num()[word].m_value
+            = lhs.m_data.num()[word].m_value & ~lhs.m_data.num()[word].m_valueX;
+        m_data.num()[word].m_valueX = 0;
     }
+    if (const int mod = std::min(width(), lhs.width()) % 32) {
+        m_data.num()[total_words - 1].m_value &= (1u << mod) - 1;
+        m_data.num()[total_words - 1].m_valueX &= (1u << mod) - 1;
+    }
+    for (int word = total_words; word < words(); ++word) m_data.num()[word] = {0, 0};
     return *this;
 }
-V3Number& V3Number::opBitsXZ(const V3Number& lhs) {  // 0/1->1, X/Z->0
+V3Number& V3Number::opBitsXZ(const V3Number& lhs) {  // 0/1->0, X/Z->1
     // op i, L(lhs) bit return
-    NUM_ASSERT_OP_ARGS1(lhs);
-    NUM_ASSERT_LOGIC_ARGS1(lhs);
-    setZero();
-    for (int bit = 0; bit < width(); ++bit) {
-        if (lhs.bitIsXZ(bit)) setBit(bit, 1);
+    const int total_words = std::min(words(), lhs.words());
+    for (int word = 0; word < total_words; ++word) {
+        m_data.num()[word].m_value = lhs.m_data.num()[word].m_valueX;
+        m_data.num()[word].m_valueX = 0;
     }
+    if (const int mod = std::min(width(), lhs.width()) % 32) {
+        m_data.num()[total_words - 1].m_value &= (1u << mod) - 1;
+        m_data.num()[total_words - 1].m_valueX &= (1u << mod) - 1;
+    }
+    for (int word = total_words; word < words(); ++word) m_data.num()[word] = {0, 0};
     return *this;
 }
 V3Number& V3Number::opBitsZ(const V3Number& lhs) {  // 0/1->1, X/Z->0
@@ -1799,6 +1855,30 @@ V3Number& V3Number::opLogIf(const V3Number& lhs, const V3Number& rhs) {
     V3Number lnot = lhs;
     lnot.opLogNot(lhs);
     return opLogOr(lnot, rhs);
+}
+
+V3Number& V3Number::opCond(const V3Number& cond, const V3Number& then, const V3Number& elseNum) {
+    NUM_ASSERT_OP_ARGS1(cond);
+    NUM_ASSERT_LOGIC_ARGS1(cond);
+    if (cond.isEqOne()) return opAssign(then);
+    if (cond.isEqZero()) return opAssign(elseNum);
+    if (then.isOpaque()) {
+        UASSERT(then.dataType() == elseNum.dataType(), "then and else must have same type");
+        if (then.isCaseEq(elseNum)) return opAssign(then);
+        if (then.isString()) return setString("");
+        return setDouble(0.0);
+    }
+    NUM_ASSERT_LOGIC_ARGS2(then, elseNum);
+    UASSERT(then.width() == elseNum.width(), "then and else must have same width");
+    m_data.resize(then.width());
+    for (int word = 0; word < then.words(); ++word) {
+        const uint32_t mask
+            = (then.m_data.num()[word].m_value ^ elseNum.m_data.num()[word].m_value)
+              | then.m_data.num()[word].m_valueX | elseNum.m_data.num()[word].m_valueX;
+        m_data.num()[word].m_value = then.m_data.num()[word].m_value | mask;
+        m_data.num()[word].m_valueX = then.m_data.num()[word].m_valueX | mask;
+    }
+    return *this;
 }
 
 V3Number& V3Number::opLogEq(const V3Number& lhs, const V3Number& rhs) {
@@ -2619,6 +2699,7 @@ V3Number& V3Number::opSel(const V3Number& lhs, uint32_t msbval, uint32_t lsbval)
 }
 
 V3Number& V3Number::opSelInto(const V3Number& lhs, const V3Number& lsb, int width) {
+    if (lsb.isFourState()) return *this;
     return opSelInto(lhs, lsb.toSInt(), width);
 }
 

@@ -798,6 +798,7 @@ public:
     V3Number& opLogOr(const V3Number& lhs, const V3Number& rhs);
     V3Number& opLogEq(const V3Number& lhs, const V3Number& rhs);
     V3Number& opLogIf(const V3Number& lhs, const V3Number& rhs);
+    V3Number& opCond(const V3Number& cond, const V3Number& then, const V3Number& elseNum);
     V3Number& opNegate(const V3Number& lhs);
     V3Number& opAdd(const V3Number& lhs, const V3Number& rhs);
     V3Number& opSub(const V3Number& lhs, const V3Number& rhs);

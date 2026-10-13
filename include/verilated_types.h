@@ -39,6 +39,7 @@
 #include <new>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 class VlClass;
@@ -598,455 +599,246 @@ public:
 template <typename T_Class>
 class VlClassRef;
 
-template <typename T_Value>
-class VlDeque final {
+// Type-erased backing storage for VlDeque
+class VlDequeImpl final {
 public:
-    using value_type = T_Value;
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
+    struct Ops final {
+        void (*construct)(void*);
+        void (*copyConstruct)(void*, const void*);
+        void (*moveConstruct)(void*, void*);
+        void (*copyAssign)(void*, const void*);
+        void (*moveAssign)(void*, void*);
+        void (*destroy)(void*);
+    };
 
 private:
-    static constexpr size_type BLOCK_BYTES = 512;
-    static constexpr size_type BLOCK_SIZE
-        = sizeof(T_Value) < BLOCK_BYTES ? BLOCK_BYTES / sizeof(T_Value) : 1;
-    static constexpr size_type INITIAL_MAP_CAPACITY = 8;
     struct Block final {
-        alignas(T_Value) unsigned char m_storage[BLOCK_SIZE * sizeof(T_Value)];
+        const size_type m_elementSize;  // Element size in bytes
+        const size_type m_capacity;  // Elements per block
+        unsigned char* const m_storagep;  // Elements storage
+        Block(size_type elementSize, size_type capacity);
+        ~Block();
     };
 
 public:
-    class const_iterator;
-
     class iterator final {
-    public:
-        using iterator_category = std::random_access_iterator_tag;
-        using value_type = T_Value;
-        using difference_type = std::ptrdiff_t;
-        using pointer = T_Value*;
-        using reference = T_Value&;
-
-    private:
-        friend class VlDeque;
-        friend class const_iterator;
+        friend class VlDequeImpl;
         Block* const* m_blockpp = nullptr;  // Current block
-        pointer m_currentp = nullptr;  // Current element
-        iterator(Block* const* blockpp, pointer currentp)
+        unsigned char* m_currentp = nullptr;  // Current element address
+        iterator(Block* const* blockpp, unsigned char* currentp)
             : m_blockpp{blockpp}
             , m_currentp{currentp} {}
 
     public:
         iterator() = default;
-        reference operator*() const { return *m_currentp; }
-        pointer operator->() const { return m_currentp; }
-        reference operator[](difference_type offset) const { return *(*this + offset); }
-        iterator& operator++() {
-            ++m_currentp;
-            if (m_currentp == reinterpret_cast<pointer>((*m_blockpp)->m_storage) + BLOCK_SIZE
-                && m_blockpp[1]) {
-                ++m_blockpp;
-                m_currentp = reinterpret_cast<pointer>((*m_blockpp)->m_storage);
-            }
-            return *this;
-        }
-        iterator operator++(int) {
-            iterator old = *this;
-            ++*this;
-            return old;
-        }
-        iterator& operator--() {
-            if (m_currentp == reinterpret_cast<pointer>((*m_blockpp)->m_storage)) {
-                --m_blockpp;
-                m_currentp = reinterpret_cast<pointer>((*m_blockpp)->m_storage) + BLOCK_SIZE;
-            }
-            --m_currentp;
-            return *this;
-        }
-        iterator operator--(int) {
-            iterator old = *this;
-            --*this;
-            return old;
-        }
-        iterator& operator+=(difference_type offset) {
-            if (!offset) return *this;
-            const difference_type blockSize = static_cast<difference_type>(BLOCK_SIZE);
-            const difference_type index
-                = m_currentp - reinterpret_cast<pointer>((*m_blockpp)->m_storage) + offset;
-            const difference_type blocks
-                = index >= 0 ? index / blockSize : (index + 1) / blockSize - 1;
-            m_blockpp += blocks;
-            if (!*m_blockpp) {
-                --m_blockpp;
-                m_currentp = reinterpret_cast<pointer>((*m_blockpp)->m_storage) + BLOCK_SIZE;
-            } else {
-                m_currentp = reinterpret_cast<pointer>((*m_blockpp)->m_storage)
-                             + (index - blocks * blockSize);
-            }
-            return *this;
-        }
-        iterator& operator-=(difference_type offset) { return *this += -offset; }
-        iterator operator+(difference_type offset) const {
-            iterator out = *this;
-            return out += offset;
-        }
-        iterator operator-(difference_type offset) const {
-            iterator out = *this;
-            return out -= offset;
-        }
-        friend iterator operator+(difference_type offset, iterator rhs) { return rhs += offset; }
-        difference_type operator-(const iterator& rhs) const {
-            if (*this == rhs) return 0;
-            return (m_blockpp - rhs.m_blockpp) * static_cast<difference_type>(BLOCK_SIZE)
-                   + (m_currentp - reinterpret_cast<pointer>((*m_blockpp)->m_storage))
-                   - (rhs.m_currentp - reinterpret_cast<pointer>((*rhs.m_blockpp)->m_storage));
-        }
+        void* datap() const { return m_currentp; }
+        iterator& operator++();
+        iterator& operator--();
+        iterator& operator+=(difference_type offset);
+        difference_type operator-(const iterator& rhs) const;
         bool operator==(const iterator& rhs) const {
             return m_blockpp == rhs.m_blockpp && m_currentp == rhs.m_currentp;
-        }
-        bool operator!=(const iterator& rhs) const { return !(*this == rhs); }
-        bool operator<(const iterator& rhs) const { return (*this - rhs) < 0; }
-        bool operator<=(const iterator& rhs) const { return (*this - rhs) <= 0; }
-        bool operator>(const iterator& rhs) const { return (*this - rhs) > 0; }
-        bool operator>=(const iterator& rhs) const { return (*this - rhs) >= 0; }
-    };
-
-    class const_iterator final {
-    public:
-        using iterator_category = std::random_access_iterator_tag;
-        using value_type = T_Value;
-        using difference_type = std::ptrdiff_t;
-        using pointer = const T_Value*;
-        using reference = const T_Value&;
-
-    private:
-        friend class VlDeque;
-        Block* const* m_blockpp = nullptr;  // Current block
-        pointer m_currentp = nullptr;  // Current element
-        const_iterator(Block* const* blockpp, pointer currentp)
-            : m_blockpp{blockpp}
-            , m_currentp{currentp} {}
-
-    public:
-        const_iterator() = default;
-        const_iterator(const iterator& rhs)
-            : m_blockpp{rhs.m_blockpp}
-            , m_currentp{rhs.m_currentp} {}
-        reference operator*() const { return *m_currentp; }
-        pointer operator->() const { return m_currentp; }
-        reference operator[](difference_type offset) const { return *(*this + offset); }
-        const_iterator& operator++() {
-            ++m_currentp;
-            if (m_currentp == reinterpret_cast<pointer>((*m_blockpp)->m_storage) + BLOCK_SIZE
-                && m_blockpp[1]) {
-                ++m_blockpp;
-                m_currentp = reinterpret_cast<pointer>((*m_blockpp)->m_storage);
-            }
-            return *this;
-        }
-        const_iterator operator++(int) {
-            const_iterator old = *this;
-            ++*this;
-            return old;
-        }
-        const_iterator& operator--() {
-            if (m_currentp == reinterpret_cast<pointer>((*m_blockpp)->m_storage)) {
-                --m_blockpp;
-                m_currentp = reinterpret_cast<pointer>((*m_blockpp)->m_storage) + BLOCK_SIZE;
-            }
-            --m_currentp;
-            return *this;
-        }
-        const_iterator operator--(int) {
-            const_iterator old = *this;
-            --*this;
-            return old;
-        }
-        const_iterator& operator+=(difference_type offset) {
-            if (!offset) return *this;
-            const difference_type blockSize = static_cast<difference_type>(BLOCK_SIZE);
-            const difference_type index
-                = m_currentp - reinterpret_cast<pointer>((*m_blockpp)->m_storage) + offset;
-            const difference_type blocks
-                = index >= 0 ? index / blockSize : (index + 1) / blockSize - 1;
-            m_blockpp += blocks;
-            if (!*m_blockpp) {
-                --m_blockpp;
-                m_currentp = reinterpret_cast<pointer>((*m_blockpp)->m_storage) + BLOCK_SIZE;
-            } else {
-                m_currentp = reinterpret_cast<pointer>((*m_blockpp)->m_storage)
-                             + (index - blocks * blockSize);
-            }
-            return *this;
-        }
-        const_iterator& operator-=(difference_type offset) { return *this += -offset; }
-        const_iterator operator+(difference_type offset) const {
-            const_iterator out = *this;
-            return out += offset;
-        }
-        const_iterator operator-(difference_type offset) const {
-            const_iterator out = *this;
-            return out -= offset;
-        }
-        friend const_iterator operator+(difference_type offset, const_iterator rhs) {
-            return rhs += offset;
-        }
-        difference_type operator-(const const_iterator& rhs) const {
-            if (*this == rhs) return 0;
-            return (m_blockpp - rhs.m_blockpp) * static_cast<difference_type>(BLOCK_SIZE)
-                   + (m_currentp - reinterpret_cast<pointer>((*m_blockpp)->m_storage))
-                   - (rhs.m_currentp - reinterpret_cast<pointer>((*rhs.m_blockpp)->m_storage));
-        }
-        bool operator==(const const_iterator& rhs) const {
-            return m_blockpp == rhs.m_blockpp && m_currentp == rhs.m_currentp;
-        }
-        bool operator!=(const const_iterator& rhs) const { return !(*this == rhs); }
-        bool operator<(const const_iterator& rhs) const { return (*this - rhs) < 0; }
-        bool operator<=(const const_iterator& rhs) const { return (*this - rhs) <= 0; }
-        bool operator>(const const_iterator& rhs) const { return (*this - rhs) > 0; }
-        bool operator>=(const const_iterator& rhs) const { return (*this - rhs) >= 0; }
-        friend difference_type operator-(const iterator& lhs, const const_iterator& rhs) {
-            return const_iterator{lhs} - rhs;
-        }
-        friend bool operator==(const iterator& lhs, const const_iterator& rhs) {
-            return const_iterator{lhs} == rhs;
-        }
-        friend bool operator!=(const iterator& lhs, const const_iterator& rhs) {
-            return const_iterator{lhs} != rhs;
-        }
-        friend bool operator<(const iterator& lhs, const const_iterator& rhs) {
-            return const_iterator{lhs} < rhs;
-        }
-        friend bool operator<=(const iterator& lhs, const const_iterator& rhs) {
-            return const_iterator{lhs} <= rhs;
-        }
-        friend bool operator>(const iterator& lhs, const const_iterator& rhs) {
-            return const_iterator{lhs} > rhs;
-        }
-        friend bool operator>=(const iterator& lhs, const const_iterator& rhs) {
-            return const_iterator{lhs} >= rhs;
         }
     };
 
 private:
-    Block** m_blocksp = nullptr;  // array of blocks
-    size_type m_mapCapacity = 0;  // size of m_blocksp
-    size_type m_firstBlock = 0;  // first used block
-    size_type m_frontOffset = 0;  // offset of the first used slot in its block
-    size_type m_size = 0;  //  used slots
+    static constexpr size_type INITIAL_MAP_CAPACITY = 8;
+    size_type m_elementSize;  // Element size in bytes
+    size_type m_blockSize;  // Elements per block
+    const Ops* m_opsp;  // Element operations
+    Block** m_blocksp = nullptr;  // Array of blocks
+    size_type m_mapCapacity = 0;  // Size of m_blocksp
+    size_type m_firstBlock = 0;  // First used block
+    size_type m_frontOffset = 0;  // Offset of the first used slot in its block
+    size_type m_size = 0;  // Used slots
 
-    size_type blockIndex(size_type slot) const { return m_firstBlock + slot / BLOCK_SIZE; }
-    const T_Value* slotp(size_type index) const {
-        const size_type slot = m_frontOffset + index;
-        return reinterpret_cast<const T_Value*>(m_blocksp[blockIndex(slot)]->m_storage
-                                                + (slot % BLOCK_SIZE) * sizeof(T_Value));
-    }
-    T_Value* slotp(size_type index) {
-        const size_type slot = m_frontOffset + index;
-        return reinterpret_cast<T_Value*>(m_blocksp[blockIndex(slot)]->m_storage
-                                          + (slot % BLOCK_SIZE) * sizeof(T_Value));
-    }
+    size_type blockIndex(size_type slot) const { return m_firstBlock + slot / m_blockSize; }
+    unsigned char* slotp(size_type index) const;
+    void reserveMap(bool atFront);
+    void ensureBackSlot();
+    void ensureFrontSlot();
+    void swap(VlDequeImpl& rhs) noexcept;
 
-    void reserveMap(bool atFront) {
-        const size_type used_blocks = m_size ? (m_frontOffset + m_size - 1) / BLOCK_SIZE + 1 : 0;
-        const size_type new_capacity
-            = used_blocks + 2 > m_mapCapacity
-                  ? (m_mapCapacity ? m_mapCapacity * 2 : INITIAL_MAP_CAPACITY)
-                  : m_mapCapacity;
-        const size_type first_block = (new_capacity - used_blocks - 2) / 2 + (atFront ? 1 : 0);
-        if (new_capacity != m_mapCapacity) {
-            Block** const blocksp = new Block* [new_capacity] {};
-            for (size_type i = 0; i < used_blocks; ++i)
-                blocksp[first_block + i] = m_blocksp[m_firstBlock + i];
-            delete[] m_blocksp;
-            m_blocksp = blocksp;
-            m_mapCapacity = new_capacity;
-        } else {
-            std::memmove(m_blocksp + first_block, m_blocksp + m_firstBlock,
-                         used_blocks * sizeof(Block*));
-            std::fill(m_blocksp, m_blocksp + first_block, nullptr);
-            std::fill(m_blocksp + first_block + used_blocks, m_blocksp + m_mapCapacity, nullptr);
-        }
-        m_firstBlock = first_block;
+public:
+    VlDequeImpl(size_type elementSize, const Ops& ops);
+    VlDequeImpl(const VlDequeImpl& rhs);
+    VlDequeImpl(VlDequeImpl&& rhs) noexcept;
+    ~VlDequeImpl();
+    VlDequeImpl& operator=(const VlDequeImpl& rhs);
+    VlDequeImpl& operator=(VlDequeImpl&& rhs) noexcept;
+    size_type size() const { return m_size; }
+    bool empty() const { return !m_size; }
+    void clear();
+    void* at(size_type index) { return slotp(index); }
+    const void* at(size_type index) const {
+        assert(index < m_size);
+        return slotp(index);
     }
-    void ensureBackSlot() {
-        const size_type slot = m_frontOffset + m_size;
-        const size_type last = slot / BLOCK_SIZE;
-        if (!m_mapCapacity || m_firstBlock + last + 1 >= m_mapCapacity) reserveMap(false);
-        Block*& blockp = m_blocksp[blockIndex(slot)];
-        if (!blockp) blockp = new Block;
-    }
-    void ensureFrontSlot() {
-        if (empty()) {
-            ensureBackSlot();
-            return;
-        }
-        if (!m_frontOffset) {
-            if (!m_firstBlock) reserveMap(true);
-            --m_firstBlock;
-            assert(!m_blocksp[m_firstBlock]);
-            m_blocksp[m_firstBlock] = new Block;
-            m_frontOffset = BLOCK_SIZE;
-        }
-        --m_frontOffset;
-    }
-    void swap(VlDeque& rhs) noexcept {
-        std::swap(m_blocksp, rhs.m_blocksp);
-        std::swap(m_mapCapacity, rhs.m_mapCapacity);
-        std::swap(m_firstBlock, rhs.m_firstBlock);
-        std::swap(m_frontOffset, rhs.m_frontOffset);
-        std::swap(m_size, rhs.m_size);
+    void push_front(const void* valuep);
+    void push_back(const void* valuep);
+    void push_back_move(void* valuep);
+    void pop_front();
+    void pop_back();
+    void resize(size_type size);
+    void resize(size_type size, const void* valuep);
+    iterator insert(iterator position, const void* valuep);
+    iterator erase(iterator position);
+    iterator begin() const;
+    iterator end() const;
+};
+
+template <typename T_Value>
+class VlDeque final {
+    VlDequeImpl m_deque;  // Type-erased backing storage
+    static const VlDequeImpl::Ops& ops() {
+        static const VlDequeImpl::Ops s_ops{
+            [](void* p) { new (p) T_Value{}; },
+            [](void* p, const void* valuep) {
+                new (p) T_Value{*static_cast<const T_Value*>(valuep)};
+            },
+            [](void* p, void* valuep) {
+                new (p) T_Value{std::move(*static_cast<T_Value*>(valuep))};
+            },
+            [](void* p, const void* valuep) {
+                *static_cast<T_Value*>(p) = *static_cast<const T_Value*>(valuep);
+            },
+            [](void* p, void* valuep) {
+                *static_cast<T_Value*>(p) = std::move(*static_cast<T_Value*>(valuep));
+            },
+            [](void* p) { static_cast<T_Value*>(p)->~T_Value(); }};
+        return s_ops;
     }
 
 public:
-    VlDeque() = default;
-    VlDeque(const VlDeque& rhs) {
-        for (const T_Value& value : rhs) push_back(value);
-    }
-    VlDeque(VlDeque&& rhs) noexcept { swap(rhs); }
-    ~VlDeque() { clear(); }
-    VlDeque& operator=(const VlDeque& rhs) {
-        if (this != &rhs) {
-            VlDeque copy{rhs};
-            swap(copy);
-        }
-        return *this;
-    }
-    VlDeque& operator=(VlDeque&& rhs) noexcept {
-        if (this != &rhs) {
-            clear();
-            swap(rhs);
-        }
-        return *this;
-    }
+    using value_type = T_Value;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    template <bool N_Const>
+    class Iterator final {
+        friend class VlDeque;
+        template <bool>
+        friend class Iterator;
+        VlDequeImpl::iterator m_iterator;  // Type-erased iterator
+        explicit Iterator(VlDequeImpl::iterator iterator)
+            : m_iterator{iterator} {}
 
-    size_type size() const { return m_size; }
-    bool empty() const { return !m_size; }
-    void clear() {
-        for (size_type i = 0; i < m_size; ++i) (*this)[i].~T_Value();
-        for (size_type i = 0; i < m_mapCapacity; ++i) delete m_blocksp[i];
-        delete[] m_blocksp;
-        m_blocksp = nullptr;
-        m_mapCapacity = m_firstBlock = m_frontOffset = m_size = 0;
-    }
-    T_Value& operator[](size_type index) { return *slotp(index); }
+    public:
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type = T_Value;
+        using difference_type = std::ptrdiff_t;
+        using pointer = typename std::conditional<N_Const, const T_Value*, T_Value*>::type;
+        using reference = typename std::conditional<N_Const, const T_Value&, T_Value&>::type;
+        Iterator() = default;
+        template <bool M_Const, typename std::enable_if<N_Const && !M_Const, int>::type = 0>
+        Iterator(const Iterator<M_Const>& rhs)
+            : m_iterator{rhs.m_iterator} {}
+        reference operator*() const { return *static_cast<pointer>(m_iterator.datap()); }
+        pointer operator->() const { return static_cast<pointer>(m_iterator.datap()); }
+        reference operator[](difference_type offset) const { return *(*this + offset); }
+        Iterator& operator++() {
+            ++m_iterator;
+            return *this;
+        }
+        Iterator& operator--() {
+            --m_iterator;
+            return *this;
+        }
+        Iterator operator++(int) {
+            Iterator old = *this;
+            ++*this;
+            return old;
+        }
+        Iterator operator--(int) {
+            Iterator old = *this;
+            --*this;
+            return old;
+        }
+        Iterator& operator+=(difference_type offset) {
+            m_iterator += offset;
+            return *this;
+        }
+        Iterator& operator-=(difference_type offset) { return *this += -offset; }
+        Iterator operator+(difference_type offset) const {
+            Iterator out = *this;
+            return out += offset;
+        }
+        Iterator operator-(difference_type offset) const {
+            Iterator out = *this;
+            return out -= offset;
+        }
+        friend Iterator operator+(difference_type offset, Iterator rhs) { return rhs += offset; }
+        template <bool M_Const>
+        difference_type operator-(const Iterator<M_Const>& rhs) const {
+            return m_iterator - rhs.m_iterator;
+        }
+        template <bool M_Const>
+        bool operator==(const Iterator<M_Const>& rhs) const {
+            return m_iterator == rhs.m_iterator;
+        }
+        template <bool M_Const>
+        bool operator!=(const Iterator<M_Const>& rhs) const {
+            return !(*this == rhs);
+        }
+        template <bool M_Const>
+        bool operator<(const Iterator<M_Const>& rhs) const {
+            return (*this - rhs) < 0;
+        }
+        template <bool M_Const>
+        bool operator<=(const Iterator<M_Const>& rhs) const {
+            return (*this - rhs) <= 0;
+        }
+        template <bool M_Const>
+        bool operator>(const Iterator<M_Const>& rhs) const {
+            return (*this - rhs) > 0;
+        }
+        template <bool M_Const>
+        bool operator>=(const Iterator<M_Const>& rhs) const {
+            return (*this - rhs) >= 0;
+        }
+    };
+    using iterator = Iterator<false>;
+    using const_iterator = Iterator<true>;
+
+    VlDeque()
+        : m_deque{sizeof(T_Value), ops()} {}
+    size_type size() const { return m_deque.size(); }
+    bool empty() const { return m_deque.empty(); }
+    void clear() { m_deque.clear(); }
+    T_Value& operator[](size_type index) { return *static_cast<T_Value*>(m_deque.at(index)); }
     const T_Value& operator[](size_type index) const {
-        assert(index < m_size);
-        return *slotp(index);
+        return *static_cast<const T_Value*>(m_deque.at(index));
     }
     T_Value& front() { return (*this)[0]; }
     const T_Value& front() const { return (*this)[0]; }
-    T_Value& back() { return (*this)[m_size - 1]; }
-    const T_Value& back() const { return (*this)[m_size - 1]; }
-
-    void push_front(const T_Value& value) {
-        ensureFrontSlot();
-        new (slotp(0)) T_Value{value};
-        ++m_size;
-    }
-    void push_back(const T_Value& value) {
-        ensureBackSlot();
-        new (slotp(m_size)) T_Value{value};
-        ++m_size;
-    }
-    void push_back(T_Value&& value) {
-        ensureBackSlot();
-        new (slotp(m_size)) T_Value{std::move(value)};
-        ++m_size;
-    }
-    void pop_front() {
-        assert(!empty());
-        front().~T_Value();
-        --m_size;
-        ++m_frontOffset;
-        if (m_frontOffset == BLOCK_SIZE || empty()) {
-            delete m_blocksp[m_firstBlock];
-            m_blocksp[m_firstBlock] = nullptr;
-            ++m_firstBlock;
-            m_frontOffset = 0;
-        }
-        if (empty()) m_firstBlock = m_mapCapacity / 2;
-    }
-    void pop_back() {
-        assert(!empty());
-        const size_type block = blockIndex(m_frontOffset + m_size - 1);
-        back().~T_Value();
-        --m_size;
-        if (empty() || block != blockIndex(m_frontOffset + m_size - 1)) {
-            delete m_blocksp[block];
-            m_blocksp[block] = nullptr;
-        }
-        if (empty()) {
-            m_firstBlock = m_mapCapacity / 2;
-            m_frontOffset = 0;
-        }
-    }
-    void resize(size_type size) {
-        while (m_size > size) pop_back();
-        while (m_size < size) {
-            ensureBackSlot();
-            new (slotp(m_size)) T_Value{};
-            ++m_size;
-        }
-    }
+    T_Value& back() { return (*this)[size() - 1]; }
+    const T_Value& back() const { return (*this)[size() - 1]; }
+    void push_front(const T_Value& value) { m_deque.push_front(std::addressof(value)); }
+    void push_back(const T_Value& value) { m_deque.push_back(std::addressof(value)); }
+    void push_back(T_Value&& value) { m_deque.push_back_move(std::addressof(value)); }
+    void pop_front() { m_deque.pop_front(); }
+    void pop_back() { m_deque.pop_back(); }
+    void resize(size_type size) { m_deque.resize(size); }
     void resize(size_type size, const T_Value& value) {
-        while (m_size > size) pop_back();
-        while (m_size < size) push_back(value);
+        m_deque.resize(size, std::addressof(value));
     }
     iterator insert(iterator position, const T_Value& value) {
-        const size_type index = static_cast<size_type>(position - begin());
-        assert(index <= m_size);
-        if (index == m_size) {
-            push_back(value);
-        } else if (index == 0) {
-            push_front(value);
-        } else {
+        if (position != begin() && position != end()) {
             const T_Value copy{value};
-            if (index < m_size / 2) {
-                push_front(front());
-                for (size_type i = 1; i < index; ++i) (*this)[i] = std::move((*this)[i + 1]);
-            } else {
-                push_back(back());
-                for (size_type i = m_size - 2; i > index; --i)
-                    (*this)[i] = std::move((*this)[i - 1]);
-            }
-            (*this)[index] = copy;
+            return iterator{m_deque.insert(position.m_iterator, std::addressof(copy))};
         }
-        return begin() + static_cast<difference_type>(index);
+        return iterator{m_deque.insert(position.m_iterator, std::addressof(value))};
     }
-    iterator erase(iterator position) {
-        const size_type index = static_cast<size_type>(position - begin());
-        assert(index < m_size);
-        if (index < m_size / 2) {
-            for (size_type i = index; i > 0; --i) (*this)[i] = std::move((*this)[i - 1]);
-            pop_front();
-        } else {
-            for (size_type i = index; i + 1 < m_size; ++i) (*this)[i] = std::move((*this)[i + 1]);
-            pop_back();
-        }
-        return begin() + static_cast<difference_type>(index);
-    }
-
-    iterator begin() { return m_size ? iterator{m_blocksp + m_firstBlock, slotp(0)} : iterator{}; }
-    iterator end() {
-        return m_size ? iterator{m_blocksp + blockIndex(m_frontOffset + m_size - 1),
-                                 slotp(m_size - 1) + 1}
-                      : iterator{};
-    }
-    const_iterator begin() const {
-        return m_size ? const_iterator{m_blocksp + m_firstBlock, slotp(0)} : const_iterator{};
-    }
-    const_iterator end() const {
-        return m_size ? const_iterator{m_blocksp + blockIndex(m_frontOffset + m_size - 1),
-                                       slotp(m_size - 1) + 1}
-                      : const_iterator{};
-    }
+    iterator erase(iterator position) { return iterator{m_deque.erase(position.m_iterator)}; }
+    iterator begin() { return iterator{m_deque.begin()}; }
+    iterator end() { return iterator{m_deque.end()}; }
+    const_iterator begin() const { return const_iterator{m_deque.begin()}; }
+    const_iterator end() const { return const_iterator{m_deque.end()}; }
     const_iterator cbegin() const { return begin(); }
     const_iterator cend() const { return end(); }
     bool operator==(const VlDeque& rhs) const {
-        if (m_size != rhs.m_size) return false;
-        for (size_type i = 0; i < m_size; ++i) {
-            if (!((*this)[i] == rhs[i])) return false;
-        }
-        return true;
+        return size() == rhs.size() && std::equal(begin(), end(), rhs.begin());
     }
     bool operator!=(const VlDeque& rhs) const { return !(*this == rhs); }
 };

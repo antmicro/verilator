@@ -616,7 +616,6 @@ private:
 
 public:
     class const_iterator;
-    class const_reverse_iterator;
 
     class iterator final {
     public:
@@ -824,165 +823,6 @@ public:
         }
         friend bool operator>=(const iterator& lhs, const const_iterator& rhs) {
             return const_iterator{lhs} >= rhs;
-        }
-    };
-
-    class reverse_iterator final {
-    public:
-        using iterator_category = std::random_access_iterator_tag;
-        using value_type = T_Value;
-        using difference_type = std::ptrdiff_t;
-        using pointer = T_Value*;
-        using reference = T_Value&;
-
-    private:
-        iterator m_base;  // Underlying iterator
-
-    public:
-        reverse_iterator() = default;
-        explicit reverse_iterator(iterator base)
-            : m_base{base} {}
-        iterator base() const { return m_base; }
-        reference operator*() const { return m_base[-1]; }
-        pointer operator->() const { return std::addressof(operator*()); }
-        reference operator[](difference_type offset) const { return *(*this + offset); }
-        reverse_iterator& operator++() {
-            --m_base;
-            return *this;
-        }
-        reverse_iterator operator++(int) {
-            reverse_iterator old = *this;
-            ++*this;
-            return old;
-        }
-        reverse_iterator& operator--() {
-            ++m_base;
-            return *this;
-        }
-        reverse_iterator operator--(int) {
-            reverse_iterator old = *this;
-            --*this;
-            return old;
-        }
-        reverse_iterator& operator+=(difference_type offset) {
-            m_base -= offset;
-            return *this;
-        }
-        reverse_iterator& operator-=(difference_type offset) {
-            m_base += offset;
-            return *this;
-        }
-        reverse_iterator operator+(difference_type offset) const {
-            reverse_iterator out = *this;
-            return out += offset;
-        }
-        reverse_iterator operator-(difference_type offset) const {
-            reverse_iterator out = *this;
-            return out -= offset;
-        }
-        friend reverse_iterator operator+(difference_type offset, reverse_iterator rhs) {
-            return rhs += offset;
-        }
-        difference_type operator-(const reverse_iterator& rhs) const {
-            return rhs.m_base - m_base;
-        }
-        bool operator==(const reverse_iterator& rhs) const { return m_base == rhs.m_base; }
-        bool operator!=(const reverse_iterator& rhs) const { return m_base != rhs.m_base; }
-        bool operator<(const reverse_iterator& rhs) const { return rhs.m_base < m_base; }
-        bool operator<=(const reverse_iterator& rhs) const { return rhs.m_base <= m_base; }
-        bool operator>(const reverse_iterator& rhs) const { return rhs.m_base > m_base; }
-        bool operator>=(const reverse_iterator& rhs) const { return rhs.m_base >= m_base; }
-    };
-
-    class const_reverse_iterator final {
-    public:
-        using iterator_category = std::random_access_iterator_tag;
-        using value_type = T_Value;
-        using difference_type = std::ptrdiff_t;
-        using pointer = const T_Value*;
-        using reference = const T_Value&;
-
-    private:
-        const_iterator m_base;  // Underlying iterator
-
-    public:
-        const_reverse_iterator() = default;
-        explicit const_reverse_iterator(const_iterator base)
-            : m_base{base} {}
-        const_iterator base() const { return m_base; }
-        const_reverse_iterator(const reverse_iterator& rhs)
-            : m_base{rhs.base()} {}
-        reference operator*() const { return m_base[-1]; }
-        pointer operator->() const { return std::addressof(operator*()); }
-        reference operator[](difference_type offset) const { return *(*this + offset); }
-        const_reverse_iterator& operator++() {
-            --m_base;
-            return *this;
-        }
-        const_reverse_iterator operator++(int) {
-            const_reverse_iterator old = *this;
-            ++*this;
-            return old;
-        }
-        const_reverse_iterator& operator--() {
-            ++m_base;
-            return *this;
-        }
-        const_reverse_iterator operator--(int) {
-            const_reverse_iterator old = *this;
-            --*this;
-            return old;
-        }
-        const_reverse_iterator& operator+=(difference_type offset) {
-            m_base -= offset;
-            return *this;
-        }
-        const_reverse_iterator& operator-=(difference_type offset) {
-            m_base += offset;
-            return *this;
-        }
-        const_reverse_iterator operator+(difference_type offset) const {
-            const_reverse_iterator out = *this;
-            return out += offset;
-        }
-        const_reverse_iterator operator-(difference_type offset) const {
-            const_reverse_iterator out = *this;
-            return out -= offset;
-        }
-        friend const_reverse_iterator operator+(difference_type offset,
-                                                const_reverse_iterator rhs) {
-            return rhs += offset;
-        }
-        difference_type operator-(const const_reverse_iterator& rhs) const {
-            return rhs.m_base - m_base;
-        }
-        bool operator==(const const_reverse_iterator& rhs) const { return m_base == rhs.m_base; }
-        bool operator!=(const const_reverse_iterator& rhs) const { return m_base != rhs.m_base; }
-        bool operator<(const const_reverse_iterator& rhs) const { return rhs.m_base < m_base; }
-        bool operator<=(const const_reverse_iterator& rhs) const { return rhs.m_base <= m_base; }
-        bool operator>(const const_reverse_iterator& rhs) const { return rhs.m_base > m_base; }
-        bool operator>=(const const_reverse_iterator& rhs) const { return rhs.m_base >= m_base; }
-        friend difference_type operator-(const reverse_iterator& lhs,
-                                         const const_reverse_iterator& rhs) {
-            return const_reverse_iterator{lhs} - rhs;
-        }
-        friend bool operator==(const reverse_iterator& lhs, const const_reverse_iterator& rhs) {
-            return const_reverse_iterator{lhs} == rhs;
-        }
-        friend bool operator!=(const reverse_iterator& lhs, const const_reverse_iterator& rhs) {
-            return const_reverse_iterator{lhs} != rhs;
-        }
-        friend bool operator<(const reverse_iterator& lhs, const const_reverse_iterator& rhs) {
-            return const_reverse_iterator{lhs} < rhs;
-        }
-        friend bool operator<=(const reverse_iterator& lhs, const const_reverse_iterator& rhs) {
-            return const_reverse_iterator{lhs} <= rhs;
-        }
-        friend bool operator>(const reverse_iterator& lhs, const const_reverse_iterator& rhs) {
-            return const_reverse_iterator{lhs} > rhs;
-        }
-        friend bool operator>=(const reverse_iterator& lhs, const const_reverse_iterator& rhs) {
-            return const_reverse_iterator{lhs} >= rhs;
         }
     };
 
@@ -1201,12 +1041,6 @@ public:
     }
     const_iterator cbegin() const { return begin(); }
     const_iterator cend() const { return end(); }
-    reverse_iterator rbegin() { return reverse_iterator{end()}; }
-    reverse_iterator rend() { return reverse_iterator{begin()}; }
-    const_reverse_iterator rbegin() const { return const_reverse_iterator{end()}; }
-    const_reverse_iterator rend() const { return const_reverse_iterator{begin()}; }
-    const_reverse_iterator crbegin() const { return rbegin(); }
-    const_reverse_iterator crend() const { return rend(); }
     bool operator==(const VlDeque& rhs) const {
         if (m_size != rhs.m_size) return false;
         for (size_type i = 0; i < m_size; ++i) {
@@ -1455,13 +1289,16 @@ public:
             return with_func(0, a) < with_func(0, b);
         });
     }
-    void rsort() { std::sort(m_deque.rbegin(), m_deque.rend()); }
+    void rsort() {
+        std::sort(m_deque.begin(), m_deque.end(),
+                  [](const T_Value& a, const T_Value& b) { return b < a; });
+    }
     template <typename T_Func>
     void rsort(T_Func with_func) {
         // with_func returns arbitrary type to use for the sort comparison
-        std::sort(m_deque.rbegin(), m_deque.rend(), [=](const T_Value& a, const T_Value& b) {
+        std::sort(m_deque.begin(), m_deque.end(), [=](const T_Value& a, const T_Value& b) {
             // index number is meaningless with sort, as it changes
-            return with_func(0, a) < with_func(0, b);
+            return with_func(0, b) < with_func(0, a);
         });
     }
     void reverse() { std::reverse(m_deque.begin(), m_deque.end()); }
@@ -1563,19 +1400,20 @@ public:
     }
     template <typename T_Func>
     VlQueue find_last(T_Func with_func) const {
-        IData index = m_deque.size() - 1;
-        for (auto& item : vlstd::reverse_view(m_deque)) {
-            if (with_func(index, item)) return VlQueue::consV(item);
+        for (size_t index = m_deque.size(); index > 0;) {
             --index;
+            const T_Value& item = m_deque[index];
+            if (with_func(static_cast<IData>(index), item)) return VlQueue::consV(item);
         }
         return VlQueue{};
     }
     template <typename T_Func>
     VlQueue<IData> find_last_index(T_Func with_func) const {
-        IData index = m_deque.size() - 1;
-        for (auto& item : vlstd::reverse_view(m_deque)) {
-            if (with_func(index, item)) return VlQueue<IData>::consV(index);
+        for (size_t index = m_deque.size(); index > 0;) {
             --index;
+            const T_Value& item = m_deque[index];
+            if (with_func(static_cast<IData>(index), item))
+                return VlQueue<IData>::consV(static_cast<IData>(index));
         }
         return VlQueue<IData>{};
     }

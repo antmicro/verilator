@@ -203,6 +203,7 @@ set(HEADERS
     V3UniqueNames.h
     V3Unknown.h
     V3Unroll.h
+    V3Upward.h
     V3VariableOrder.h
     V3Waiver.h
     V3Width.h
@@ -384,6 +385,7 @@ set(COMMON_SOURCES
     V3Unknown.cpp
     V3Unroll.cpp
     V3UnrollGen.cpp
+    V3Upward.cpp
     V3VariableOrder.cpp
     V3Waiver.cpp
     V3Width.cpp

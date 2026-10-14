@@ -242,12 +242,12 @@ module t_constraint_global_arr_nested;
 
     foreach (o.m_mid_arr3[i])
       foreach (o.m_mid_arr3[i][j])
-        if (o.m_mid_arr3[i][j].m_obj.m_x != i - j) $stop;
+        `checkd(o.m_mid_arr3[i][j].m_obj.m_x, i - j);
     foreach (o.m_mid_arr4[i])
-      if (o.m_mid_arr4[i][1].m_obj.m_x != i) $stop;
+      `checkd(o.m_mid_arr4[i][1].m_obj.m_x, i);
     foreach (o.m_mid_arr5[i])
       foreach (o.m_mid_arr5[i][j])
-        if (o.m_mid_arr5[i][j].m_obj.m_x != i + j) $stop;
+        `checkd(o.m_mid_arr5[i][j].m_obj.m_x, i + j);
     foreach (o.m_mid_arr5[i]) begin
       `checkd(o.m_mid_arr5[i][0].m_obj.m_y, i);
       foreach (o.m_mid_arr5[i][j]) `checkd(o.m_mid_arr5[i][j].m_obj.m_x, i + j);

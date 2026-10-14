@@ -5707,6 +5707,12 @@ class LinkDotResolveVisitor final : public VNVisitor {
 
         VL_RESTORER(m_randSymp);
 
+        // Relink after V3Param specialization so the reference resolves in the cloned hierarchy.
+        if (m_statep->forParamed() && nodep->upwardReference()) {
+            nodep->taskp(nullptr);
+            nodep->classOrPackagep(nullptr);
+        }
+
         bool first = !m_ds.m_dotp || m_ds.m_dotPos == DP_FIRST;
         bool staticAccess = false;
         if (m_ds.m_unresolvedClass) {
@@ -5848,8 +5854,16 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 // which may find std::randomize and overwrite classOrPackagep
                 return;
             }
-            VSymEnt* const foundp
-                = m_statep->findSymPrefixed(dotSymp, nodep->name(), baddot, first);
+            VSymEnt* foundp = m_statep->findSymPrefixed(dotSymp, nodep->name(), baddot, first);
+            bool foundUpward = false;
+            // IEEE 1800-2023 23.8.1 A simple task/function name uses upward
+            // hierarchical name resolution.
+            if (!foundp && first && nodep->dotted().empty() && !nodep->classOrPackagep()) {
+                VSymEnt* okSymp = nullptr;
+                foundp = m_statep->findDotted(nodep->fileline(), dotSymp, nodep->name(), baddot,
+                                              okSymp, true);
+                foundUpward = foundp != nullptr;
+            }
             AstNodeFTask* const taskp = foundp ? VN_CAST(foundp->nodep(), NodeFTask) : nullptr;
             AstNodeModule* const taskModulep = foundp ? foundp->classOrPackagep() : nullptr;
             // Ignore deferring linking of functions inside params of classes extending
@@ -5875,6 +5889,10 @@ class LinkDotResolveVisitor final : public VNVisitor {
             }
 
             if (taskp) {
+                if (foundUpward) {
+                    nodep->upwardReference(true);
+                    m_modp->hasUpwardRef(true);
+                }
                 if (staticAccess && !taskp->isStatic()) {
                     // TODO bug4077
                     // nodep->v3error("Static access to non-static task/function "

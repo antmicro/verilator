@@ -373,6 +373,12 @@ class ParamProcessor final {
     bool m_visitBaseQueued = false;  // ParamVisitor queued m_visitModp's base, to specialize it
     std::unordered_set<const AstNode*> m_inheritBaseps;  // Bases specialized for a lookup
 
+    // Module definitions already used for an upward-reference cell
+    std::unordered_set<const AstNodeModule*> m_upwardReusedOriginalDef;
+    // Paths of module variants
+    std::unordered_map<const AstNodeModule*, std::string> m_hierarchyPaths;
+    std::string m_hierarchyPath;  // Path of the current upward reference module variant
+
     // METHODS
 
     static void makeSmallNames(AstNodeModule* modp) {
@@ -2109,6 +2115,17 @@ class ParamProcessor final {
         cellInterfaceCleanup(pinsp, srcModp, longname /*ref*/, any_overrides /*ref*/,
                              ifaceRefRefs /*ref*/);
 
+        // Specialize module if its hierarchy contains an upward ref and reuse
+        // original module definition for a first occurrence.
+        if (VN_IS(nodep, Cell) && srcModp->hasUpwardRef()) {
+            if (!m_upwardReusedOriginalDef.emplace(srcModp).second) {
+                UASSERT_OBJ(!m_hierarchyPath.empty(), nodep,
+                            "Missing upward module hierarchy path");
+                longname = "__Vupward_" + m_hierarchyPath;
+                any_overrides = true;
+            }
+        }
+
         // Template classes with type parameters need specialization even when types match
         // defaults. This is required for UVM parameterized classes. However, interfaces should NOT
         // be specialized when type params match defaults (needed for nested interface ports).
@@ -2479,7 +2496,7 @@ public:
                 if (baseRefp->paramsp() && classp == m_visitModp && m_visitBaseQueued) break;
                 if (!m_inheritBaseps.emplace(baseRefp).second) break;
                 VL_RESTORER(m_modp);
-                nodeDeparam(baseRefp, baseRefp->classp(), classp, classp->someInstanceName());
+                nodeDeparam(baseRefp, baseRefp->classp(), classp, classp->someInstanceName(), "");
                 m_inheritBaseps.erase(baseRefp);
             }
             classp = baseRefp->classp();
@@ -2526,9 +2543,10 @@ public:
     }
 
     AstNodeModule* nodeDeparam(AstNode* nodep, AstNodeModule* srcModp, AstNodeModule* modp,
-                               const string& someInstanceName) {
+                               const string& someInstanceName, const string& generateHierName) {
         // Return new or reused de-parameterized module
         m_modp = modp;
+        VL_RESTORER_COPY(m_hierarchyPath);
         // Cell: Check for parameters in the instantiation.
         // We always run this, even if no parameters, as need to look for interfaces,
         // and remove any recursive references
@@ -2541,13 +2559,19 @@ public:
                      << " parentMod=" << (modp ? modp->prettyNameQ() : "'<null>'")
                      << " parentSomeInstanceName='"
                      << (modp ? modp->someInstanceName() : string("<null>")) << "'"
-                     << " inputSomeInstanceName='" << someInstanceName << "'");
+                     << " inputSomeInstanceName='" << someInstanceName << "'"
+                     << " generateHierName='" << generateHierName << "'");
         string nodeName = nodep->name();
         if (AstIfaceRefDType* const ifaceRefp = VN_CAST(nodep, IfaceRefDType)) {
             if (nodeName.empty()) nodeName = ifaceRefp->cellName();
         }
         const string instanceName
             = nodeName.empty() ? someInstanceName : (someInstanceName + "." + nodeName);
+        if (VN_IS(nodep, Cell) && srcModp->hasUpwardRef()) {
+            const auto it = m_hierarchyPaths.find(modp);
+            const string parentPath = it == m_hierarchyPaths.end() ? modp->origName() : it->second;
+            m_hierarchyPath = parentPath + generateHierName + "." + srcModp->origName();
+        }
 
         if (AstCell* const cellp = VN_CAST(nodep, Cell)) {
             for (AstPin* const pinp : cellp->paramspList()) {
@@ -2608,6 +2632,7 @@ public:
 
         // Set name for later warnings
         newModp->someInstanceName(instanceName);
+        if (!m_hierarchyPath.empty()) m_hierarchyPaths.emplace(newModp, m_hierarchyPath);
 
         UINFO(9, "nodeDeparam EXIT  node=<"
                      << AstNode::nodeAddr(nodep) << ">" << " type=" << nodep->typeName()
@@ -3044,8 +3069,8 @@ class ParamVisitor final : public VNVisitor {
                 const string someInstanceName = modp->someInstanceName() + genHierName;
 
                 // Apply parameter specialization
-                if (AstNodeModule* const newModp
-                    = m_processor.nodeDeparam(cellp, srcModp, modp, someInstanceName)) {
+                if (AstNodeModule* const newModp = m_processor.nodeDeparam(
+                        cellp, srcModp, modp, someInstanceName, genHierName)) {
 
                     if (VN_IS(srcModp, Iface)) {
                         logTemplateLeakRefs(modp, srcModp, "after queued nodeDeparam", cellp);
@@ -3211,7 +3236,7 @@ class ParamVisitor final : public VNVisitor {
 
             AstNodeModule* const nestedSrcModp = nestedCellp->modp();
             if (AstNodeModule* const nestedNewModp = m_processor.nodeDeparam(
-                    nestedCellp, nestedSrcModp, ifaceModp, ifaceModp->someInstanceName())) {
+                    nestedCellp, nestedSrcModp, ifaceModp, ifaceModp->someInstanceName(), "")) {
                 if (nestedNewModp != nestedSrcModp) {
                     // Constify the nested clone's params so its types have correct widths.
                     for (AstNode* const sp : nestedNewModp->stmtspList()) {
@@ -3336,7 +3361,8 @@ class ParamVisitor final : public VNVisitor {
             if (!cellParamsReferenceIfacePorts(cellp)) {
                 AstNodeModule* const srcModp = cellp->modp();
                 AstNodeModule* const newModp = m_processor.nodeDeparam(
-                    cellp, srcModp, m_modp, m_modp->someInstanceName() + m_generateHierName);
+                    cellp, srcModp, m_modp, m_modp->someInstanceName() + m_generateHierName,
+                    m_generateHierName);
                 // Retarget template REFDTYPEs to the clone's types.
                 if (V3LinkDotIfaceCapture::enabled() && cellp->modp() != srcModp) {
                     m_processor.retargetIfaceRefs(m_modp, cellp->name());
@@ -3659,8 +3685,8 @@ class ParamVisitor final : public VNVisitor {
         if (!cellp->paramsp()) return;
         if (!VN_IS(cellp->modp(), Iface)) return;
         AstNodeModule* const srcModp = cellp->modp();
-        AstNodeModule* const newModp
-            = m_processor.nodeDeparam(cellp, srcModp, m_modp, m_modp->someInstanceName());
+        AstNodeModule* const newModp = m_processor.nodeDeparam(
+            cellp, srcModp, m_modp, m_modp->someInstanceName(), m_generateHierName);
         if (newModp && newModp != srcModp) {
             if (V3LinkDotIfaceCapture::enabled()) {
                 m_processor.retargetIfaceRefs(m_modp, cellp->name());

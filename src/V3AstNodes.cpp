@@ -3316,6 +3316,7 @@ void AstNodeFTaskRef::dump(std::ostream& str) const {
     if (containsGenBlock()) str << " [GENBLK]";
     if (pli()) str << " [PLI]";
     if (superReference()) str << " [SUPERREF]";
+    if (upwardReference()) str << " [UPWARDREF]";
     str << " -> ";
     if (dotted() != "") str << ".=" << dotted() << " ";
     if (inlinedDots() != "") str << " inline.=" << inlinedDots() << " - ";
@@ -3329,6 +3330,7 @@ void AstNodeFTaskRef::dumpJson(std::ostream& str) const {
     dumpJsonBoolFuncIf(str, containsGenBlock);
     dumpJsonBoolFuncIf(str, pli);
     dumpJsonBoolFuncIf(str, superReference);
+    dumpJsonBoolFuncIf(str, upwardReference);
     dumpJsonStrFunc(str, dotted);
     dumpJsonStrFunc(str, inlinedDots);
     dumpJsonGen(str);
@@ -3388,6 +3390,7 @@ void AstNodeModule::dump(std::ostream& str) const {
     if (inLibrary()) str << " [LIB]";
     if (ctorVarReset()) str << " [CVRESET]";
     if (dead()) str << " [DEAD]";
+    if (hasUpwardRef()) str << " [HASUPWARDREF]";
     if (recursiveClone()) {
         str << " [RECURSIVE-CLONE]";
     } else if (recursive()) {
@@ -3410,6 +3413,7 @@ void AstNodeModule::dumpJson(std::ostream& str) const {
     dumpJsonBoolFuncIf(str, inLibrary);
     dumpJsonBoolFuncIf(str, ctorVarReset);
     dumpJsonBoolFuncIf(str, dead);
+    dumpJsonBoolFuncIf(str, hasUpwardRef);
     dumpJsonBoolFuncIf(str, recursiveClone);
     dumpJsonBoolFuncIf(str, recursive);
     dumpJsonBoolFuncIf(str, threadsGroup);

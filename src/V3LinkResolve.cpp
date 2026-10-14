@@ -497,6 +497,8 @@ class LinkBotupVisitor final : public VNVisitorConst {
     void visit(AstCell* nodep) override {
         // Parent module inherits child's publicity
         if (nodep->modp()->modPublic()) m_modp->modPublic(true);
+        // Propagate existence of an upward reference in parent subtree
+        if (nodep->modp()->hasUpwardRef()) m_modp->hasUpwardRef(true);
         //** No iteration for speed
     }
     void visit(AstNodeExpr*) override {}  // Accelerate

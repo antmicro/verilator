@@ -120,6 +120,7 @@ class V3Global final {
     bool m_useCovergroup = false;  // Has covergroup declarations
     bool m_useRandomizeMethods = false;  // Need to define randomize() class methods
     bool m_hasPrintedObjects = false;  // Design has format args printed with to_string()
+    bool m_hasUpwardReferences = false;  // Design has upward referenced tasks/functions.
     uint64_t m_currentHierBlockCost = 0;  // Total cost of this hier block, used for scheduling
 
     static std::atomic<uint64_t> s_opCount;  // Pseudo-instruction/operation count
@@ -243,6 +244,8 @@ public:
         s_opCount.fetch_add(inc, std::memory_order_relaxed);
 #endif
     }
+    void hasUpwardReferences(bool flag) { m_hasUpwardReferences = flag; }
+    bool hasUpwardReferences() const { return m_hasUpwardReferences; }
 };
 
 extern V3Global v3Global;

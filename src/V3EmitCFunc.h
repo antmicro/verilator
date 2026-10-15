@@ -814,11 +814,11 @@ public:
         const bool isCoroutine = nodep->funcp()->isCoroutine();
         const string className = EmitCUtil::prefixNameProtect(nodep->dtypep());
         if (isCoroutine) {
-            putns(nodep, "VL_NEW_AWAIT(" + className + ", "
-                             + optionalProcArg(nodep->dtypep()) + "vlSymsp");
-        } else {
-            putns(nodep, "VL_NEW(" + className + ", " + optionalProcArg(nodep->dtypep())
+            putns(nodep, "VL_NEW_AWAIT(" + className + ", " + optionalProcArg(nodep->dtypep())
                              + "vlSymsp");
+        } else {
+            putns(nodep,
+                  "VL_NEW(" + className + ", " + optionalProcArg(nodep->dtypep()) + "vlSymsp");
         }
         putCommaIterateNext(nodep->argsp(), true);
         puts(")");

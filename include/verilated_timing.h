@@ -520,7 +520,6 @@ VlNewAwaitable<T_Class> vlNewAsync(VlDeleter& deleter, T_Args&&... args) {
     return {deleter, std::forward<T_Args>(args)...};
 }
 
-#define VL_NEW_AWAIT(Class, ...) \
-    (co_await vlNewAsync<Class>(vlSymsp->__Vm_deleter, __VA_ARGS__))
+#define VL_NEW_AWAIT(Class, ...) (co_await vlNewAsync<Class>(vlSymsp->__Vm_deleter, __VA_ARGS__))
 
 #endif  // Guard

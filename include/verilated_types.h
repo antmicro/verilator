@@ -2153,6 +2153,8 @@ struct VlNull final {
     }
 };
 
+struct VlClassRefNoInit final {};
+
 template <class T>
 inline bool operator==(T* lhs, VlNull) {
     return !lhs;
@@ -2198,6 +2200,10 @@ public:
         : m_objp{new T_Class} {
         // Instantly init the object to presevrve RAII
         m_objp->init(std::forward<T_Args>(args)...);
+        m_objp->m_deleterp = &deleter;
+    }
+    VlClassRef(VlDeleter& deleter, VlClassRefNoInit)
+        : m_objp{new T_Class} {
         m_objp->m_deleterp = &deleter;
     }
     VlClassRef(VlDeleter& deleter, T_Class&& args)

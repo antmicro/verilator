@@ -380,6 +380,9 @@ public:
              extp = VN_AS(extp->nextp(), ClassExtends)) {
             if (extp->classp()->isInterfaceClass()) continue;
             if (extp->classp()->useVirtualPublic()) continue;
+            const AstCFunc* const ctorp
+                = VN_AS(m_memberMap.findMember(extp->classp(), "new"), CFunc);
+            if (ctorp->isCoroutine()) puts("co_await ");
             puts(EmitCUtil::prefixNameProtect(extp->classp()));
             puts("::init");
             if (constructorNeedsProcess(extp->classp())) {
@@ -808,9 +811,15 @@ public:
             putsDecoration(nodep, "/*super.new*/");
             return;
         }
-        // assignment case;
-        putns(nodep, "VL_NEW(" + EmitCUtil::prefixNameProtect(nodep->dtypep()) + ", "
-                         + optionalProcArg(nodep->dtypep()) + "vlSymsp");
+        const bool isCoroutine = nodep->funcp()->isCoroutine();
+        const string className = EmitCUtil::prefixNameProtect(nodep->dtypep());
+        if (isCoroutine) {
+            putns(nodep, "VL_NEW_AWAIT(" + className + ", "
+                             + optionalProcArg(nodep->dtypep()) + "vlSymsp");
+        } else {
+            putns(nodep, "VL_NEW(" + className + ", " + optionalProcArg(nodep->dtypep())
+                             + "vlSymsp");
+        }
         putCommaIterateNext(nodep->argsp(), true);
         puts(")");
     }

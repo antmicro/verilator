@@ -310,7 +310,7 @@ class TimingSuspendableVisitor final : public VNVisitor {
         if (nodep->isProcessKill()) addFlags(nodep, T_SUSPENDEE | T_SUSPENDER);
         DepVtx* const sVxp = getSuspendDepVtx(nodep);
         DepVtx* const pVxp = getNeedsProcDepVtx(nodep);
-        if (!m_classp) return;
+        if (!m_classp || nodep->isConstructor()) return;
 
         // Go over overridden functions
 
@@ -1012,6 +1012,10 @@ class TimingControlVisitor final : public VNVisitor {
 
         if (funcp->needProcess()) m_hasProcess = true;
         if (hasFlags(funcp, T_SUSPENDEE) && !nodep->user1SetOnce()) {  // If suspendable
+            if (VN_IS(nodep, CNew)) {
+                iterateChildren(nodep);
+                return;
+            }
             // Calls to suspendables are always void return type, hence parent must be StmtExpr
             AstStmtExpr* const stmtp = VN_AS(nodep->backp(), StmtExpr);
             stmtp->replaceWith(new AstCAwait{nodep->fileline(), nodep->unlinkFrBack()});

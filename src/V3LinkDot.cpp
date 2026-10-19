@@ -585,7 +585,7 @@ public:
         if (resolvedVarp) {
             AstIfaceRefDType* const irefp = ifaceRefFromArray(resolvedVarp->subDTypep());
             if (irefp && irefp->ifaceViaCellp() && !irefp->ifaceViaCellp()->dead()) {
-                resultp = irefp->ifaceViaCellp();
+                resultp = VN_CAST(irefp->ifaceViaCellp(), Iface);
             }
         }
         return resultp;
@@ -1336,7 +1336,7 @@ class LinkDotFindVisitor final : public VNVisitor {
     void visit(AstIfaceRefDType* nodep) override {  // FindVisitor::
         if (!m_statep->forScopeCreation() && nodep->isVirtual() && nodep->ifacep()
             && !nodep->ifacep()->user3()) {
-            m_virtIfaces.push_back(nodep->ifacep());
+            m_virtIfaces.push_back(VN_AS(nodep->ifacep(), Iface));
             nodep->ifacep()->user3(true);
         }
         iterateChildren(nodep);
@@ -2493,7 +2493,9 @@ class LinkDotFindIfaceVisitor final : public VNVisitor {
         m_declp = nodep;
         iterateChildren(nodep);
         AstIfaceRefDType* const ifacerefp = LinkDotState::ifaceRefFromArray(nodep->subDTypep());
-        if (ifacerefp && m_statep->existsNodeSym(nodep)) {
+        // Module references are not interface aliases
+        if (ifacerefp && m_statep->existsNodeSym(nodep)
+            && !VN_IS(ifacerefp->ifaceViaCellp(), Module)) {
             // Can't resolve until interfaces and modport names are
             // known; see notes at top
             UINFO(9, "  FindIfc Var IfaceRef " << ifacerefp);
@@ -3126,7 +3128,7 @@ class LinkDotIfaceVisitor final : public VNVisitor {
                 if (varp->isIfaceRef()) {
                     if (const AstIfaceRefDType* const ifaceRefp
                         = LinkDotState::ifaceRefFromArray(varp->dtypep())) {
-                        ifacep = ifaceRefp->ifaceViaCellp();
+                        ifacep = VN_CAST(ifaceRefp->ifaceViaCellp(), Iface);
                     }
                 }
             }
@@ -5789,6 +5791,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
             // 'Class::method()' names that class's implementation, so like 'super.' it is
             // not dispatched virtually (IEEE 1800-2023 8.23)
             if (VN_IS(nodep->classOrPackagep(), Class)) nodep->superReference(true);
+            // inst.cls::f(), cls declared in the module of inst
+            nodep->dotted(m_ds.m_dotText);
             // Class/package :: HERE function() . method_called_on_function_return_value()
             m_ds.m_dotPos = DP_MEMBER;
         } else if (m_ds.m_dotp && m_ds.m_dotPos == DP_FINAL) {
@@ -7006,7 +7010,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
         LINKDOT_VISIT_START();
         if (nodep->paramsp()) {
             // If there is no parameters, there is no need to visit this node.
-            AstIface* const ifacep = nodep->ifacep();
+            AstIface* const ifacep = VN_AS(nodep->ifacep(), Iface);
             UASSERT_OBJ(ifacep, nodep, "Port parameters of AstIfaceRefDType without ifacep()");
             if (ifacep->dead()) return;
             checkNoDot(nodep);

@@ -88,7 +88,7 @@ void addTriggeredIface(const AstVarScope* vscp, const VirtIfaceTriggers::VscpTri
                        const VirtIfaceTriggers& virtIfaceTriggers, std::set<uint32_t>& triggers) {
     if (vscp->varp()->isVirtIface()) {
         // Virtual interface variable -- sensitive to all member triggers of this interface type
-        const AstIface* const ifacep = VN_AS(vscp->varp()->dtypep(), IfaceRefDType)->ifacep();
+        const AstNodeModule* const ifacep = VN_AS(vscp->varp()->dtypep(), IfaceRefDType)->ifacep();
         for (const auto& entry : virtIfaceTriggers.m_triggers) {
             if (entry.m_ifacep == ifacep) {
                 const auto it = vscpToTrig.find(entry.m_vscp);

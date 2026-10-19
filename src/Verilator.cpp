@@ -33,6 +33,7 @@
 #include "V3Case.h"
 #include "V3Cast.h"
 #include "V3Class.h"
+#include "V3ClassContext.h"
 #include "V3Clean.h"
 #include "V3Coalesce.h"
 #include "V3Combine.h"
@@ -221,6 +222,9 @@ static void process() {
             if (v3Global.hierGraphp()) return;
         }
 
+        // Bind classes in modules with several instances to their instance
+        V3ClassContext::bindMembers(v3Global.rootp());
+
         // Calculate and check widths, edit tree to TRUNC/EXTRACT any width mismatches
         V3Width::width(v3Global.rootp());
 
@@ -235,6 +239,9 @@ static void process() {
         V3WidthCommit::widthCommit(v3Global.rootp());
         v3Global.assertDTypesResolved(true);
         v3Global.widthMinUsage(VWidthMinUsage::MATCHES_WIDTH);
+
+        // Pass the instance to new() of the classes bound above
+        V3ClassContext::bindCtorCalls(v3Global.rootp());
 
         // End of elaboration
         V3Stats::addStatPerf(V3Stats::STAT_WALLTIME_ELAB, elabWallTime.deltaTime());

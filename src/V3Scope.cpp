@@ -214,13 +214,17 @@ class ScopeVisitor final : public VNVisitor {
         // ***Note m_scopep is passed back to the caller of the routine (above)
     }
     void visit(AstClass* nodep) override {
+        // Scope once, even if under a module with several instances
+        if (m_classOrPackageScopes.count(nodep)) return;
         // Create required blocks and add to module
         VL_RESTORER(m_scopep);
         VL_RESTORER(m_aboveCellp);
         VL_RESTORER(m_aboveScopep);
         VL_RESTORER(m_modp);
+        VL_RESTORER(m_last);
         m_aboveScopep = m_scopep;
         m_modp = nodep;
+        m_last = true;
 
         string scopename;
         if (!m_aboveScopep) {

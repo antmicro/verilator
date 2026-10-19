@@ -77,7 +77,8 @@ private:
                     if (AstClass::isCacheableChild(itemp)) memberInsert(mmapr, itemp);
                 }
             }
-        } else if (const AstIface* const anodep = VN_CAST(nodep, Iface)) {
+        } else if (VN_IS(nodep, Iface) || VN_IS(nodep, Module)) {
+            const AstNodeModule* const anodep = VN_AS(nodep, NodeModule);
             for (AstNode* const itemp : anodep->stmtspList()) {
                 if (const AstScope* const scopep = VN_CAST(itemp, Scope)) {
                     for (AstNode* const blockp : scopep->blockspList()) {

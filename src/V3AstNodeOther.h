@@ -322,6 +322,8 @@ public:
     ASTGEN_MEMBERS_AstNodeGen;
 };
 class AstNodeModule VL_NOT_FINAL : public AstNode {
+    bool m_classCaptureTarget = false;  // Storage addressed by a class capture
+    bool m_hasGenericIface = false;  // Declaration contains a generic interface port
     // A module, package, program or interface declaration;
     // something that can live directly under the TOP,
     // excluding $unit package stuff
@@ -377,6 +379,10 @@ protected:
 
 public:
     ASTGEN_MEMBERS_AstNodeModule;
+    bool classCaptureTarget() const { return m_classCaptureTarget; }
+    void classCaptureTarget(bool flag) { m_classCaptureTarget = flag; }
+    bool hasGenericIface() const { return m_hasGenericIface; }
+    void hasGenericIface(bool flag) { m_hasGenericIface = flag; }
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
     bool maybePointedTo() const override VL_MT_SAFE { return true; }
@@ -849,6 +855,35 @@ public:
     string name() const override VL_MT_STABLE { return m_name; }
     VCoverOptionType optType() const { return m_optType; }
     bool typeOption() const { return m_typeOption; }
+};
+class AstClassContext final : public AstNode {
+    // Symbolic class owner, relative to a lexical module, before instance scoping.
+    // @astgen ptr := m_anchorp : AstNodeModule // Lexical starting definition
+    // @astgen op1 := pathsp : List[AstClassContextPath]
+public:
+    AstClassContext(FileLine* fl, AstNodeModule* anchorp, const string& path);
+    ASTGEN_MEMBERS_AstClassContext;
+    AstNodeModule* anchorp() const { return m_anchorp; }
+    string path() const;
+    bool sameNode(const AstNode* otherp) const override {
+        return anchorp() == VN_DBG_AS(otherp, ClassContext)->anchorp();
+    }
+    void dump(std::ostream& str) const override { Super::dump(str); }
+    void dumpJson(std::ostream& str) const override { dumpJsonGen(str); }
+};
+class AstClassContextPath final : public AstNode {
+    // One lexical instance/port path component in a class owner reference.
+    string m_name;
+
+public:
+    AstClassContextPath(FileLine* fl, const string& name)
+        : ASTGEN_SUPER_ClassContextPath(fl)
+        , m_name{name} {}
+    ASTGEN_MEMBERS_AstClassContextPath;
+    string name() const override { return m_name; }
+    bool sameNode(const AstNode* otherp) const override { return name() == otherp->name(); }
+    void dump(std::ostream& str) const override { Super::dump(str); }
+    void dumpJson(std::ostream& str) const override { dumpJsonGen(str); }
 };
 class AstClassExtends final : public AstNode {
     // class extends class name, or class implements class name
@@ -2283,6 +2318,8 @@ public:
     string text() const VL_MT_SAFE { return m_text; }
 };
 class AstVar final : public AstNode {
+    // @astgen ptr := m_classCaptureArgp : Optional[AstVar] // Hidden constructor input
+    bool m_classContextMarker = false;  // Compile-time placeholder for a scope address
     // A variable (in/out/wire/reg/param) inside a module
     //
     // @astgen op1 := childDTypep : Optional[AstNodeDType]
@@ -2291,8 +2328,8 @@ class AstVar final : public AstNode {
     // @astgen op3 := valuep : Optional[AstNode<AstNodeExpr|AstNodeDType>]
     //     Value is a DType for type parameter defaults
     // @astgen op4 := attrsp : List[AstNode] // Attributes during early parse
-    // @astgen ptr := m_sensIfacep : Optional[AstIface]  // Interface type to which reads from this
-    //                                                      var are sensitive
+    // @astgen ptr := m_sensIfacep : Optional[AstNodeModule] // Interface or captured storage type
+    //                                                      to which reads from var are sensitive
 
     string m_name;  // Name of variable
     string m_origName;  // Original name before dot addition
@@ -2485,6 +2522,10 @@ public:
         dtypeFrom(examplep);
     }
     ASTGEN_MEMBERS_AstVar;
+    bool classContextMarker() const { return m_classContextMarker; }
+    void classContextMarker(bool flag) { m_classContextMarker = flag; }
+    AstVar* classCaptureArgp() const { return m_classCaptureArgp; }
+    void classCaptureArgp(AstVar* argp) { m_classCaptureArgp = argp; }
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
     inline bool sameNode(const AstNode* samep) const override;
@@ -2545,7 +2586,7 @@ public:
     }
     void ansi(bool flag) { m_ansi = flag; }
     void declTyped(bool flag) { m_declTyped = flag; }
-    void sensIfacep(AstIface* nodep) { m_sensIfacep = nodep; }
+    void sensIfacep(AstNodeModule* nodep) { m_sensIfacep = nodep; }
     void attrFileDescr(bool flag) { m_attrFileDescr = flag; }
     void attrScBv(bool flag) { m_attrScBv = flag; }
     void attrScBigUint(bool flag) { m_attrScBigUint = flag; }
@@ -2739,7 +2780,7 @@ public:
     bool attrFsmState() const { return m_attrFsmState; }
     bool attrFsmArcInclCond() const { return m_attrFsmArcInclCond; }
     VFsmExpandType attrFsmStateExpand() const { return m_attrFsmStateExpand; }
-    AstIface* sensIfacep() const { return m_sensIfacep; }
+    AstNodeModule* sensIfacep() const { return m_sensIfacep; }
     VRandAttr rand() const { return m_rand; }
     string verilogKwd() const override;
     void lifetime(const VLifetime& flag) { m_lifetime = flag; }
@@ -3385,7 +3426,6 @@ class AstModule final : public AstNodeModule {
     // A module declaration
     const bool m_isChecker;  // Module represents a checker
     const bool m_isProgram;  // Module represents a program
-    bool m_hasGenericIface = false;  // Module contains a generic interface
 
 public:
     class Checker {};  // for constructor type-overload selection
@@ -3409,8 +3449,6 @@ public:
     bool timescaleMatters() const override { return true; }
     bool isChecker() const { return m_isChecker; }
     bool isProgram() const { return m_isProgram; }
-    bool hasGenericIface() const { return m_hasGenericIface; }
-    void hasGenericIface(bool hasGenericIface) { m_hasGenericIface = hasGenericIface; }
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
 };

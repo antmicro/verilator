@@ -70,6 +70,7 @@
 #include "V3Assert.h"
 #include "V3Ast.h"
 #include "V3Begin.h"
+#include "V3ClassContext.h"
 #include "V3Const.h"
 #include "V3ConstPool.h"
 #include "V3Error.h"
@@ -3076,6 +3077,20 @@ class WidthVisitor final : public VNVisitor {
         UASSERT_OBJ(nodep->subDTypep(), nodep, "Unlinked");
         nodep->dtypeFrom(nodep->subDTypep());
         nodep->widthFromSub(nodep->subDTypep());
+        if (nodep->ownerp()) {
+            if (AstClassRefDType* const classp
+                = VN_CAST(nodep->subDTypep()->skipRefp(), ClassRefDType)) {
+                AstClassRefDType* const clonep = classp->cloneTree(false);
+                string path = nodep->ownerp()->path();
+                if (classp->ownerp()) path = VString::dot(path, ".", classp->ownerp()->path());
+                if (clonep->ownerp()) pushDeletep(clonep->ownerp()->unlinkFrBack());
+                clonep->ownerp(
+                    new AstClassContext{nodep->fileline(), nodep->ownerp()->anchorp(), path});
+                v3Global.rootp()->typeTablep()->addTypesp(clonep);
+                nodep->refDTypep(clonep);
+                nodep->dtypeFrom(clonep);
+            }
+        }
         UINFO(4, "dtWidthed " << nodep);
         // No nodep->typedefp(nullptr) for now; V3WidthCommit needs to check accesses
         nodep->doingWidth(false);
@@ -4148,6 +4163,7 @@ class WidthVisitor final : public VNVisitor {
         // though causes problems with t_class_forward.v, so for now avoided
         // userIterateChildren(nodep->classp(), nullptr);
     }
+    void visit(AstClassContext*) override {}
     void visit(AstClassOrPackageRef* nodep) override {
         if (nodep->didWidthAndSet()) return;
         userIterateChildren(nodep, nullptr);
@@ -4371,6 +4387,15 @@ class WidthVisitor final : public VNVisitor {
                 if (AstVar* const varp = VN_CAST(foundp, Var)) {
                     if (!varp->didWidth()) userIterate(varp, nullptr);
                     if (varp->lifetime().isStatic() || varp->isParam()) {
+                        if (!varp->isParam() && V3ClassContext::instanceOwnerp(classp)) {
+                            // Keep the receiver until runtime owner binding selects static
+                            // storage.
+                            nodep->varp(varp);
+                            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
+                            nodep->dtypeFrom(varp);
+                            nodep->didWidth(true);
+                            return true;
+                        }
                         // Static members are moved outside the class, so they shouldn't be
                         // accessed by member select on a class object
                         AstVarRef* const varRefp
@@ -5502,7 +5527,7 @@ class WidthVisitor final : public VNVisitor {
             if (AstNodeFTask* const ftaskp
                 = VN_CAST(m_memberMap.findMember(classp, nodep->name()), NodeFTask)) {
                 userIterate(ftaskp, nullptr);
-                if (ftaskp->isStatic()) {
+                if (ftaskp->isStatic() && !V3ClassContext::instanceOwnerp(classp)) {
                     AstArg* const argsp = nodep->argsp();
                     if (argsp) argsp->unlinkFrBackWithNext();
                     AstNodeFTaskRef* newp = nullptr;

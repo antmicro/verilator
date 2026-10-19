@@ -54,6 +54,9 @@ class CUseVisitor final : public VNVisitorConst {
     void visit(AstClassRefDType* nodep) override {
         addNewUse(nodep, VUseType::INT_FWD_CLASS, nodep->classp()->name());
     }
+    void visit(AstModuleRefDType* nodep) override {
+        addNewUse(nodep, VUseType::INT_FWD_CLASS, nodep->modp()->name());
+    }
     void visit(AstCFunc* nodep) override {
         if (nodep->user1SetOnce()) return;
         iterateAndNextConstNull(nodep->argsp());

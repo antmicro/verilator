@@ -116,6 +116,8 @@ class OrderGraphBuilder final : public VNVisitor {
     const V3Sched::CovergroupRefBindings& m_cgRefBindings;
     // Bindings reachable from the covergroup sample() being walked, nullptr when not in one
     const V3Sched::CovergroupRefBindings::Bindings* m_cgRefBoundps = nullptr;
+    // Potential concrete referents of a capture; handles may alias across owners.
+    const V3Sched::util::StorageScopes m_storageVscps;
 
     // METHODS
 
@@ -210,6 +212,13 @@ class OrderGraphBuilder final : public VNVisitor {
             }
         } else {
             accountVarAccess(varscp, nodep->access(), nodep);
+        }
+    }
+    void visit(AstMemberSel* nodep) override {
+        iterateChildren(nodep);
+        if (const std::vector<AstVarScope*>* const vscpsp
+            = V3Sched::util::capturedScopes(nodep, m_storageVscps)) {
+            for (AstVarScope* const vscp : *vscpsp) accountVarAccess(vscp, nodep->access(), nodep);
         }
     }
 
@@ -427,7 +436,8 @@ class OrderGraphBuilder final : public VNVisitor {
                       const V3Sched::CovergroupRefBindings& cgRefBindings, bool parallel)
         : m_graphp{new OrderGraph{trigKit, trigVscp}}
         , m_parallel{parallel}
-        , m_cgRefBindings{cgRefBindings} {
+        , m_cgRefBindings{cgRefBindings}
+        , m_storageVscps{V3Sched::util::collectStorageScopes(v3Global.rootp())} {
         // Build the graph
         for (const V3Sched::LogicByScope* const lbsp : coll) {
             for (const auto& entry : *lbsp) {

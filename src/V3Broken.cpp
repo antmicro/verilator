@@ -329,6 +329,10 @@ private:
         ++m_nCalls;
         processAndIterate(nodep);
     }
+    void visit(AstMemberSel* nodep) override {
+        processAndIterate(nodep);
+        if (nodep->access().isWriteOrRW()) ++m_nWriteRefs;
+    }
     void visit(AstCMethodHard* nodep) override {
         ++m_nCalls;
         processAndIterate(nodep);

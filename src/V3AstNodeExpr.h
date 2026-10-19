@@ -2603,6 +2603,31 @@ public:
     bool internal() const { return m_internal; }
     bool isSystemFunc() const override { return true; }
 };
+class AstScopeAddr final : public AstNodeExpr {
+    // Address of model-lifetime storage, resolved after scoped linking.
+    // @astgen ptr := m_scopep : Optional[AstScope] // Storage, until descoping
+    VSelfPointerText m_selfPointer{VSelfPointerText::Empty{}};  // Descoped storage address
+public:
+    AstScopeAddr(FileLine* fl, AstScope* scopep, AstNodeDType* dtypep)
+        : ASTGEN_SUPER_ScopeAddr(fl)
+        , m_scopep{scopep} {
+        this->dtypep(dtypep);
+    }
+    ASTGEN_MEMBERS_AstScopeAddr;
+    string emitVerilog() override { return "/*scope address*/"; }
+    AstScope* scopep() const { return m_scopep; }
+    void scopep(AstScope* scopep) { m_scopep = scopep; }
+    const VSelfPointerText& selfPointer() const { return m_selfPointer; }
+    void selfPointer(const VSelfPointerText& value) { m_selfPointer = value; }
+    bool sameNode(const AstNode* otherp) const override {
+        const AstScopeAddr* const other = VN_DBG_AS(otherp, ScopeAddr);
+        return scopep() == other->scopep() && selfPointer() == other->selfPointer();
+    }
+    bool cleanOut() const override { return true; }
+    string emitC() override { V3ERROR_NA_RETURN(""); }
+    void dump(std::ostream& str) const override;
+    void dumpJson(std::ostream& str) const override;
+};
 class AstScopeName final : public AstNodeExpr {
     // For display %m and DPI context imports
     // Parents:  AstSFormatF, AstNodeFTaskRef, AstNodeFTask, AstScope

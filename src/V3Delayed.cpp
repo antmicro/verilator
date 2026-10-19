@@ -1362,6 +1362,7 @@ class DelayedVisitor final : public VNVisitor {
             }
         });
         // The target variable of the NBA (there can only be one per NBA at this point)
+        UASSERT_OBJ(m_currNbaLhsRefp, nodep, "NBA target has no writable variable reference");
         AstVarScope* const vscp = m_currNbaLhsRefp->varScopep();
         // Record it on first encounter
         VarScopeInfo& vscpInfo = m_vscpInfo(vscp);

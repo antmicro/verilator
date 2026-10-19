@@ -218,7 +218,7 @@ class TraceVisitor final : public VNVisitor {
     // For activity set, what traces apply
     using TraceVec = std::multimap<ActCodeSet, TraceTraceVertex*>;
     // Candidate interface-member VarScopes keyed by (interface type, member name)
-    std::map<std::pair<const AstIface*, std::string>, std::vector<AstVarScope*>>
+    std::map<std::pair<const AstNodeModule*, std::string>, std::vector<AstVarScope*>>
         m_ifaceMemberVscps;
 
     class TraceInitDeclCollector final : public VNVisitor {
@@ -1179,7 +1179,7 @@ class TraceVisitor final : public VNVisitor {
     }
     void visit(AstVarScope* nodep) override {
         if (!m_finding) {
-            if (const AstIface* const ifacep = nodep->varp()->sensIfacep()) {
+            if (const AstNodeModule* const ifacep = nodep->varp()->sensIfacep()) {
                 m_ifaceMemberVscps[{ifacep, nodep->varp()->name()}].push_back(nodep);
             }
         }

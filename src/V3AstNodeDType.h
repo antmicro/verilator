@@ -626,6 +626,7 @@ public:
 class AstClassRefDType final : public AstNodeDType {
     // Reference to a class
     // @astgen op1 := paramsp: List[AstPin]
+    // @astgen op2 := ownerp: Optional[AstClassContext]
     //
     // @astgen ptr := m_classp : Optional[AstClass]  // data type pointed to, BELOW the AstTypedef
     // @astgen ptr := m_classOrPackagep : Optional[AstNodeModule]  // Package hierarchy
@@ -1161,6 +1162,28 @@ public:
     VRandAttr rand() const { return m_rand; }
     void rand(const VRandAttr flag) { m_rand = flag; }
 };
+class AstModuleRefDType final : public AstNodeDType {
+    // Non-owning pointer to model-lifetime module or class static storage.
+    // @astgen ptr := m_modp : AstNodeModule // Definition of the pointed-to storage
+public:
+    AstModuleRefDType(FileLine* fl, AstNodeModule* modp)
+        : ASTGEN_SUPER_ModuleRefDType(fl)
+        , m_modp{modp} {
+        dtypep(this);
+    }
+    ASTGEN_MEMBERS_AstModuleRefDType;
+    AstNodeModule* modp() const { return m_modp; }
+    AstBasicDType* basicp() const override { return nullptr; }
+    bool isCompound() const override { return true; }
+    int widthAlignBytes() const override { return 0; }
+    int widthTotalBytes() const override { return 0; }
+    bool sameNode(const AstNode* otherp) const override {
+        return modp() == VN_DBG_AS(otherp, ModuleRefDType)->modp();
+    }
+    bool similarDTypeNode(const AstNodeDType* otherp) const override { return sameNode(otherp); }
+    void dump(std::ostream& str) const override { Super::dump(str); }
+    void dumpJson(std::ostream& str) const override { dumpJsonGen(str); }
+};
 class AstNBACommitQueueDType final : public AstNodeDType {
     // @astgen ptr := m_subDTypep : AstNodeDType  // Type of the corresponding variable
     const bool m_partial;  // Partial element update required
@@ -1317,6 +1340,7 @@ class AstRefDType final : public AstNodeDType {
     // @astgen op1 := typeofp : Optional[AstNode<AstNodeExpr|AstNodeDType>]
     // @astgen op2 := classOrPackageOpp : Optional[AstNodeExpr]
     // @astgen op3 := paramsp : List[AstPin]
+    // @astgen op4 := ownerp : Optional[AstClassContext]
     //
     // Pre-Width must reference the Typeref, not what it points to, as some child
     // types like AstBracketArrayType will disappear and can't lose the handle

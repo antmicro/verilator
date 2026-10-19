@@ -39,8 +39,8 @@ namespace {
 class VirtIfaceVisitor final : public VNVisitor {
 private:
     // STATE
-    using IfaceMember = std::pair<const AstIface*, std::string>;
-    using IfaceCallable = std::pair<AstIface*, AstCFunc*>;
+    using IfaceMember = std::pair<const AstNodeModule*, std::string>;
+    using IfaceCallable = std::pair<AstNodeModule*, AstCFunc*>;
 
     // Set of (iface, member) pairs written through VIF -- defines which members need triggers
     std::set<IfaceMember> m_vifWrittenMembers;
@@ -60,6 +60,7 @@ private:
     static bool writesToVirtIface(const AstNode* const nodep) {
         return nodep->exists([](const AstMemberSel* const memberSelp) {
             if (!memberSelp->access().isWriteOrRW()) return false;
+            if (VN_IS(memberSelp->fromp()->dtypep()->skipRefp(), ModuleRefDType)) return true;
             AstIfaceRefDType* const dtypep
                 = VN_CAST(memberSelp->fromp()->dtypep()->skipRefp(), IfaceRefDType);
             return dtypep && dtypep->isVirtual();
@@ -71,6 +72,10 @@ private:
         // Detect writes through VIF: the MemberSel's fromp resolves to a virtual interface type.
         // Handles both direct VIF access (vif.member) and class chain (obj.vif.member).
         if (nodep->access().isWriteOrRW()) {
+            if (const AstModuleRefDType* const dtypep
+                = VN_CAST(nodep->fromp()->dtypep()->skipRefp(), ModuleRefDType)) {
+                m_vifWrittenMembers.emplace(dtypep->modp(), nodep->varp()->name());
+            }
             AstIfaceRefDType* const dtypep
                 = VN_CAST(nodep->fromp()->dtypep()->skipRefp(), IfaceRefDType);
             if (dtypep && dtypep->isVirtual()) {
@@ -80,6 +85,10 @@ private:
         iterateChildren(nodep);
     }
     void visit(AstCMethodCall* nodep) override {
+        if (const AstModuleRefDType* const dtypep
+            = VN_CAST(nodep->fromp()->dtypep()->skipRefp(), ModuleRefDType)) {
+            addReachableIfaceCallable(dtypep->modp(), nodep->funcp());
+        }
         if (const AstIfaceRefDType* const dtypep
             = VN_CAST(nodep->fromp()->dtypep()->skipRefp(), IfaceRefDType)) {
             if (VL_UNCOVERABLE(!dtypep->isVirtual())) {
@@ -96,7 +105,8 @@ private:
         AstVar* const varp = nodep->varp();
         if (varp->isTemp()) return;
         m_vscpsByVar[varp].push_back(nodep);
-        if (const AstIface* const ifacep = varp->sensIfacep()) addCandidateVscp(ifacep, nodep);
+        if (const AstNodeModule* const ifacep = varp->sensIfacep())
+            addCandidateVscp(ifacep, nodep);
     }
     void visit(AstNodeProcedure* nodep) override {
         // Disable lifetime optimization for variables in AlwaysPost blocks
@@ -108,13 +118,13 @@ private:
     }
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
-    void addCandidateVscp(const AstIface* const ifacep, AstVarScope* const vscp) {
+    void addCandidateVscp(const AstNodeModule* const ifacep, AstVarScope* const vscp) {
         const IfaceMember member{ifacep, vscp->varp()->name()};
         if (m_seenCandidateVscps.emplace(member, vscp).second)
             m_candidateVscps[member].push_back(vscp);
     }
 
-    void addReachableIfaceCallable(AstIface* const ifacep, AstCFunc* const funcp) {
+    void addReachableIfaceCallable(AstNodeModule* const ifacep, AstCFunc* const funcp) {
         const IfaceCallable callable{ifacep, funcp};
         if (m_seenReachableIfaceCallables.emplace(callable).second) {
             m_reachableIfaceCallables.push_back(callable);
@@ -127,7 +137,14 @@ private:
             const auto it = m_candidateVscps.find(written);
             if (it == m_candidateVscps.end()) continue;
             for (AstVarScope* const vscp : it->second) {
-                const AstIface* const ifacep = written.first;
+                // Captures may expose generated randomizer helpers. Do not create value-change
+                // triggers for these internal objects; their accesses still participate in
+                // ordering.
+                if (const AstBasicDType* const dtypep
+                    = VN_CAST(vscp->dtypep()->skipRefp(), BasicDType)) {
+                    if (dtypep->isRandomGenerator() || dtypep->isStdRandomGenerator()) continue;
+                }
+                const AstNodeModule* const ifacep = written.first;
                 m_triggers.addTrigger(ifacep, vscp->varp(), vscp);
             }
         }
@@ -145,7 +162,8 @@ public:
                     UASSERT_OBJ(refp->varScopep(), refp, "No var scope");
                     AstVar* const varp = refp->varp();
                     if (!refp->access().isWriteOrRW() || varp->isFuncLocal() || varp->isTemp()
-                        || varp->isEvent() || !VN_IS(refp->varScopep()->scopep()->modp(), Iface)) {
+                        || varp->isEvent()
+                        || refp->varScopep()->scopep()->modp() != callable.first) {
                         return;
                     }
                     varp->sensIfacep(callable.first);
@@ -173,11 +191,9 @@ public:
 VirtIfaceTriggers makeVirtIfaceTriggers(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ":");
     VirtIfaceTriggers triggers{};
-    if (v3Global.hasVirtIfaces()) {
-        triggers = VirtIfaceVisitor{nodep}.take_triggers();
-        // Dump after destructor so VNDeleter runs
-        V3Global::dumpCheckGlobalTree("sched_vif", 0, dumpTreeEitherLevel() >= 6);
-    }
+    // Captured model storage has indirect writes even in designs without a VIF.
+    triggers = VirtIfaceVisitor{nodep}.take_triggers();
+    V3Global::dumpCheckGlobalTree("sched_vif", 0, dumpTreeEitherLevel() >= 6);
     return triggers;
 }
 

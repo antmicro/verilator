@@ -289,6 +289,8 @@ class ScopeVisitor final : public VNVisitor {
         AstNodeFTask* const clonep = [&]() {
             VL_RESTORER(m_last);
             // Only one scope will be created, so avoid pointless cloning
+            // V3ClassContext has made external dependencies explicit captures;
+            // only method locals and object members bind to this shared scope.
             if (nodep->classMethod()) m_last = true;
             return cloneOrMove(nodep);
         }();

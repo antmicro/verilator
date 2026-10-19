@@ -604,6 +604,7 @@ inline bool isSupported(const AstVarScope* vscp) {
     if (DfgVertexVar::hasRWRefs(vscp)) return false;  // Referenced via READWRITE references
     // Check the AstVar
     AstVar* const varp = vscp->varp();
+    if (varp->sensIfacep()) return false;  // Indirect references are not scoped DFG edges
     if (varp->isIfaceRef()) return false;  // Cannot handle interface references
     if (varp->delayp()) return false;  // Cannot handle delayed variables
     if (varp->isSc()) return false;  // SystemC variables are special and rare, we can ignore

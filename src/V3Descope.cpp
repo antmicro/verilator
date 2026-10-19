@@ -275,6 +275,10 @@ class DescopeVisitor final : public VNVisitor {
     }
     void visit(AstCMethodCall* nodep) override { iterateChildren(nodep); }
     void visit(AstCNew* nodep) override { iterateChildren(nodep); }
+    void visit(AstScopeAddr* nodep) override {
+        nodep->selfPointer(scopeVlSyms(nodep->scopep()));
+        nodep->scopep(nullptr);
+    }
     void visit(AstCFunc* nodep) override {
         VL_RESTORER(m_funcp);
         if (!nodep->user1()) {

@@ -266,6 +266,7 @@ class InlineModGraphBuilder final : public VNVisitor {
         // TODO: All references are resolved by now, but AstIfaceRefDType::cellp and
         // the AstIntfRef records still name the interface instance, so keep it.
         if (VN_IS(nodep, Iface)) vtxp->setNoInlineHard("Interface");
+        if (nodep->classCaptureTarget()) vtxp->setNoInlineHard("Class capture target");
         // Never inline the constant pool, even if packages become inlineable
         if (nodep->isConstPool()) vtxp->setNoInlineHard("Constant pool");
         // Never inline packages - TODO: conceptually fine, but why not?

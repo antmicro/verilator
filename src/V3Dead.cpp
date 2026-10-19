@@ -491,6 +491,15 @@ class DeadVisitor final : public VNVisitor {
         if (nodep->fromp()->dtypep()) nodep->fromp()->dtypep()->user1Inc();  // classref
         checkAll(nodep);
     }
+    void visit(AstScopeAddr* nodep) override {
+        checkAll(nodep);
+        if (nodep->scopep()) nodep->scopep()->user1Inc();
+    }
+    void visit(AstModuleRefDType* nodep) override {
+        checkDType(nodep);
+        checkAll(nodep);
+        nodep->modp()->user1Inc();
+    }
     void visit(AstStructSel* nodep) override {
         iterateChildren(nodep);
         if (nodep->fromp()->dtypep()) nodep->fromp()->dtypep()->user1Inc();  // structdtype
@@ -531,6 +540,7 @@ class DeadVisitor final : public VNVisitor {
         iterateChildren(nodep);
         checkAll(nodep);
         if (m_foreachHeaderp) nodep->user1Inc();
+        if (nodep->sensIfacep()) nodep->sensIfacep()->user1Inc();
         // Keep formal arguments
         if (m_inFTask && nodep->isIO()) {
             nodep->user1Inc();

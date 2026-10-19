@@ -389,6 +389,16 @@ class ParamProcessor final {
         return VN_IS(nodep, ConsArray) || VN_IS(nodep, ConsStruct);
     }
 
+    static string classOwnerKey(const AstClassRefDType* dtypep) {
+        const AstClassContext* const ownerp = dtypep->ownerp();
+        if (!ownerp) return "";
+        const string anchor = ownerp->anchorp()->name();
+        const string path = ownerp->path();
+        if (path == anchor) return "";
+        const string prefix = anchor + ".";
+        return VString::startsWith(path, prefix) ? path : prefix + path;
+    }
+
     static string paramValueString(const AstNode* nodep) {
         if (const AstRefDType* const refp = VN_CAST(nodep, RefDType)) {
             nodep = refp->skipRefToNonRefp();
@@ -497,6 +507,9 @@ class ParamProcessor final {
                 classRefp->v3fatalSrc(  // LCOV_EXCL_LINE
                     "ClassRefDType has null classp in paramValueString");
             }
+            // The owner binding selects the static storage of a factory specialization.
+            const string owner = classOwnerKey(classRefp);
+            if (!owner.empty()) key += "@" + owner;
         } else if (const AstUnpackArrayDType* const dtypep = VN_CAST(nodep, UnpackArrayDType)) {
             // Name containers by their elements as above, not by prettyDTypeName(), which names
             // classes by parameter values that may be yet to be resolved
@@ -1758,7 +1771,13 @@ class ParamProcessor final {
                                   << " violates parameter's forwarding type '"
                                   << modvarp->fwdType().ascii() << "'");
                 }
-                if (exprp->similarDType(origp) || classTypeMatchesDefaultClone(exprp, origp)) {
+                const AstClassRefDType* const exprClassp = VN_CAST(exprp, ClassRefDType);
+                const AstClassRefDType* const origClassp = VN_CAST(origp, ClassRefDType);
+                const bool sameOwner = !exprClassp || !origClassp
+                                       || classOwnerKey(exprClassp) == classOwnerKey(origClassp);
+                if (sameOwner
+                    && (exprp->similarDType(origp)
+                        || classTypeMatchesDefaultClone(exprp, origp))) {
                     // Setting parameter to its default value.  Just ignore it.
                     // This prevents making additional modules, and makes coverage more
                     // obvious as it won't show up under a unique module page name.
@@ -1870,7 +1889,7 @@ class ParamProcessor final {
 
     // Set interfaces types inside generic modules
     // to the corresponding values of implicit parameters
-    void genericInterfaceVarSetup(const AstPin* const paramsp, const AstPin* const pinsp) {
+    void genericInterfaceVarSetup(const AstPin* const paramsp, AstNodeModule* modp) {
         std::unordered_map<string, const AstPin*> paramspMap;
         for (const AstPin* pinp = paramsp; pinp; pinp = VN_AS(pinp->nextp(), Pin)) {
             if (VString::startsWith(pinp->name(), "__VGIfaceParam")) {
@@ -1880,35 +1899,38 @@ class ParamProcessor final {
 
         if (paramspMap.empty()) return;
 
-        for (const AstNode* nodep = pinsp; nodep; nodep = nodep->nextp()) {
-            if (const AstPin* const pinp = VN_CAST(nodep, Pin)) {
-                if (AstVar* const varp = pinp->modVarp()) {
-                    AstNodeDType* dtypep = varp->childDTypep()->elemDTypep();
-                    if (AstIfaceGenericDType* const ifaceGDTypep
-                        = VN_CAST(dtypep, IfaceGenericDType)) {
-                        const auto iter = paramspMap.find(varp->name());
-                        if (iter == paramspMap.end()) continue;
-                        AstNode* const backp = ifaceGDTypep->backp();
-                        ifaceGDTypep->unlinkFrBack();
-                        const AstPin* const paramp = iter->second;
-                        paramspMap.erase(iter);
-                        const AstIfaceRefDType* const ifacerefp
-                            = VN_AS(paramp->exprp(), IfaceRefDType);
-                        AstIfaceRefDType* const newIfacerefp = new AstIfaceRefDType{
-                            ifaceGDTypep->fileline(), ifaceGDTypep->modportFileline(),
-                            ifaceGDTypep->name(), ifacerefp->ifaceName(),
-                            ifaceGDTypep->modportName()};
-                        newIfacerefp->ifacep(ifacerefp->ifacep());
-                        if (auto* const arrDtp = VN_CAST(backp, NodeArrayDType)) {
-                            arrDtp->childDTypep(newIfacerefp);
-                        } else if (auto* const arrDtp = VN_CAST(backp, BracketArrayDType)) {
-                            arrDtp->childDTypep(newIfacerefp);
-                        } else {
-                            varp->childDTypep(newIfacerefp);
-                        }
-                        VL_DO_DANGLING(m_deleter.pushDeletep(ifaceGDTypep), ifaceGDTypep);
-                        if (paramspMap.empty()) return;
+        for (AstNode* nodep = modp->stmtsp(); nodep; nodep = nodep->nextp()) {
+            if (AstVar* const varp = VN_CAST(nodep, Var)) {
+                AstNodeDType* dtypep = varp->childDTypep()->elemDTypep();
+                const auto iter = paramspMap.find(varp->name());
+                if (iter != paramspMap.end()) {
+                    // A reused specialization may already have converted this port.
+                    const AstIfaceGenericDType* const genericp
+                        = VN_CAST(dtypep, IfaceGenericDType);
+                    const AstIfaceRefDType* const typedp = VN_CAST(dtypep, IfaceRefDType);
+                    UASSERT_OBJ(genericp || typedp, dtypep,
+                                "Implicit interface parameter on non-interface port");
+                    AstNode* const backp = dtypep->backp();
+                    dtypep->unlinkFrBack();
+                    const AstPin* const paramp = iter->second;
+                    paramspMap.erase(iter);
+                    const AstIfaceRefDType* const ifacerefp
+                        = VN_AS(paramp->exprp(), IfaceRefDType);
+                    AstIfaceRefDType* const newIfacerefp = new AstIfaceRefDType{
+                        dtypep->fileline(),
+                        genericp ? genericp->modportFileline() : typedp->modportFileline(),
+                        varp->name(), ifacerefp->ifaceName(),
+                        genericp ? genericp->modportName() : typedp->modportName()};
+                    newIfacerefp->ifacep(ifacerefp->ifacep());
+                    if (auto* const arrDtp = VN_CAST(backp, NodeArrayDType)) {
+                        arrDtp->childDTypep(newIfacerefp);
+                    } else if (auto* const arrDtp = VN_CAST(backp, BracketArrayDType)) {
+                        arrDtp->childDTypep(newIfacerefp);
+                    } else {
+                        varp->childDTypep(newIfacerefp);
                     }
+                    VL_DO_DANGLING(m_deleter.pushDeletep(dtypep), dtypep);
+                    if (paramspMap.empty()) return;
                 }
             }
         }
@@ -2175,7 +2197,7 @@ class ParamProcessor final {
             }
         }
 
-        genericInterfaceVarSetup(paramsp, pinsp);
+        genericInterfaceVarSetup(paramsp, newModp);
 
         // Delete the parameters from the cell; they're not relevant any longer.
         if (paramsp) VL_DO_DANGLING(paramsp->unlinkFrBackWithNext()->deleteTree(), paramsp);

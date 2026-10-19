@@ -81,24 +81,24 @@ class ClassVisitor final : public VNVisitor {
         recurseImplements(nodep);
         // Make containing package
         // Note origName is the same as the class origName so errors look correct
-        AstClassPackage* const packagep
-            = new AstClassPackage{nodep->fileline(), nodep->origName(), nodep->libname()};
+        AstClassPackage* packagep = nodep->classOrPackagep();
+        const bool boundStorage = packagep;
+        if (!packagep) packagep = V3Class::newPackage(nodep, nodep->origName());
         packagep->name(nodep->name() + "__Vclpkg");
         nodep->editCountInc();
-        nodep->classOrPackagep(packagep);
-        packagep->classp(nodep);
-        packagep->timeunit(nodep->timeunit());
-        v3Global.rootp()->addModulesp(packagep);
         // Add package to hierarchy
-        AstCell* const cellp = new AstCell{packagep->fileline(),
-                                           packagep->fileline(),
-                                           packagep->name(),
-                                           packagep->name(),
-                                           nullptr,
-                                           nullptr,
-                                           nullptr};
-        cellp->modp(packagep);
-        v3Global.rootp()->topModulep()->addStmtsp(cellp);
+        if (!boundStorage) {
+            v3Global.rootp()->addModulesp(packagep);
+            AstCell* const cellp = new AstCell{packagep->fileline(),
+                                               packagep->fileline(),
+                                               packagep->name(),
+                                               packagep->name(),
+                                               nullptr,
+                                               nullptr,
+                                               nullptr};
+            cellp->modp(packagep);
+            v3Global.rootp()->topModulep()->addStmtsp(cellp);
+        }
         // Find class's scope
         // Alternative would be to move this and related to V3Scope
         const AstScope* classScopep = nullptr;
@@ -108,10 +108,17 @@ class ClassVisitor final : public VNVisitor {
         UASSERT_OBJ(classScopep, nodep, "No scope under class");
 
         // Add scope
-        AstScope* const scopep
-            = new AstScope{nodep->fileline(), packagep, classScopep->name(),
-                           classScopep->aboveScopep(), classScopep->aboveCellp()};
-        packagep->addStmtsp(scopep);
+        AstScope* scopep = nullptr;
+        if (boundStorage) {
+            for (AstNode* stmtp = packagep->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+                if ((scopep = VN_CAST(stmtp, Scope))) break;
+            }
+            UASSERT_OBJ(scopep, packagep, "Missing bound static storage scope");
+        } else {
+            scopep = new AstScope{nodep->fileline(), packagep, classScopep->name(),
+                                  classScopep->aboveScopep(), classScopep->aboveCellp()};
+            packagep->addStmtsp(scopep);
+        }
         // Iterate
         VL_RESTORER_CLEAR(m_prefix);
         VL_RESTORER(m_classPackagep);
@@ -281,6 +288,16 @@ public:
 
 //######################################################################
 // Class class functions
+
+AstClassPackage* V3Class::newPackage(AstClass* classp, const std::string& name) {
+    UASSERT_OBJ(!classp->classOrPackagep(), classp, "Class already has static storage");
+    AstClassPackage* const packagep
+        = new AstClassPackage{classp->fileline(), name, classp->libname()};
+    classp->classOrPackagep(packagep);
+    packagep->classp(classp);
+    packagep->timeunit(classp->timeunit());
+    return packagep;
+}
 
 void V3Class::classAll(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ":");

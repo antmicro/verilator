@@ -63,6 +63,7 @@ set(HEADERS
     V3Cast.h
     V3Cfg.h
     V3Class.h
+    V3ClassContext.h
     V3Clean.h
     V3Combine.h
     V3Common.h
@@ -240,6 +241,7 @@ set(COMMON_SOURCES
     V3CfgBuilder.cpp
     V3CfgLiveVariables.cpp
     V3Class.cpp
+    V3ClassContext.cpp
     V3Clean.cpp
     V3Combine.cpp
     V3Common.cpp

@@ -181,7 +181,7 @@ class ScopeVisitor final : public VNVisitor {
                 AstNodeModule* const modp = cellp->modp();
                 UASSERT_OBJ(modp, cellp, "Unlinked mod");
                 iterate(modp);  // Recursive call to visit(AstNodeModule)
-                if (VN_IS(modp, Iface)) {
+                if (VN_IS(modp, Iface) || cellp->hasIfaceVar()) {
                     // Remember newly created scope
                     cellp->user2p(m_scopep);
                 }
@@ -211,13 +211,17 @@ class ScopeVisitor final : public VNVisitor {
         // ***Note m_scopep is passed back to the caller of the routine (above)
     }
     void visit(AstClass* nodep) override {
+        // Scope once, even if under a module with several instances
+        if (m_classOrPackageScopes.count(nodep)) return;
         // Create required blocks and add to module
         VL_RESTORER(m_scopep);
         VL_RESTORER(m_aboveCellp);
         VL_RESTORER(m_aboveScopep);
         VL_RESTORER(m_modp);
+        VL_RESTORER(m_last);
         m_aboveScopep = m_scopep;
         m_modp = nodep;
+        m_last = true;
 
         string scopename;
         if (!m_aboveScopep) {

@@ -2045,13 +2045,13 @@ void AstIfaceRefDType::dumpSmall(std::ostream& str) const {
     str << "iface";
 }
 // We need these here, because the classes they point to aren't defined when we declare the class
-AstIface* AstIfaceRefDType::ifaceViaCellp() const {
-    return ((m_cellp && m_cellp->modp()) ? VN_AS(m_cellp->modp(), Iface) : m_ifacep);
+AstNodeModule* AstIfaceRefDType::ifaceViaCellp() const {
+    return ((m_cellp && m_cellp->modp()) ? m_cellp->modp() : m_ifacep);
 }
 string AstIfaceRefDType::prettyDTypeName(bool full) const {
     string result = isVirtual() ? "virtual interface " : "interface ";
     // Until V3Param specializes the interface for the parameters, just name the interface
-    const AstIface* const ifacep = paramsp() ? nullptr : ifaceViaCellp();
+    const AstIface* const ifacep = paramsp() ? nullptr : VN_CAST(ifaceViaCellp(), Iface);
     if (ifacep) {
         result += ifacep->dtypeName(full);
     } else {

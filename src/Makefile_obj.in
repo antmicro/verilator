@@ -254,6 +254,7 @@ RAW_OBJS_PCH_ASTNOMT = \
   V3CfgBuilder.o \
   V3CfgLiveVariables.o \
   V3Class.o \
+  V3ClassContext.o \
   V3Clean.o \
   V3Combine.o \
   V3Common.o \

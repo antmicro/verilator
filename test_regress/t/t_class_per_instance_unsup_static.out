@@ -1,0 +1,6 @@
+%Error-UNSUPPORTED: t/t_class_per_instance_unsup.v:32:52: Unsupported: static member of a class declared in a module with several instances, accessed outside the module
+                                                        : ... note: In instance 't'
+   32 |     $display("%0d", pkg::reader#(type(first.obj))::get());
+      |                                                    ^~~
+                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
+%Error: Exiting due to

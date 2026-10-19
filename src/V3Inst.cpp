@@ -74,9 +74,7 @@ class InstVisitor final : public VNVisitor {
             // A virtual interface method call is dispatched at run time, so the body of an
             // interface reached that way must use the signals of the instance it is called
             // on, not those of whichever instance this connection happens to be made to
-            if (const AstIface* const ifacep = VN_CAST(m_cellp->modp(), Iface)) {
-                if (ifacep->hasVirtualRef()) return false;
-            }
+            if (m_cellp->modp()->hasVirtualRef()) return false;
             // Forced signals must keep their own storage, the two sides can be forced separately
             if (modVarp->isForced() || exprVarp->isForced()) return false;
             // Same for public

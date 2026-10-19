@@ -192,7 +192,7 @@ private:
             }
         }
         // Interface declaring the clocking block, if driven through an interface reference
-        AstIface* const ifacep
+        AstNodeModule* const ifacep
             = memberRefp ? VN_AS(memberRefp->fromp()->dtypep()->skipRefp(), IfaceRefDType)
                                ->ifaceViaCellp()
                          : nullptr;

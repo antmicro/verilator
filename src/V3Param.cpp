@@ -1073,7 +1073,28 @@ class ParamProcessor final {
                && VN_AS(insertp->nextp(), NodeModule)->level() <= newModp->level()) {
             insertp = insertp->nextp();
         }
-        insertp->addNextHere(newModp);
+        // Class parameterized by a class declared in a module, e.g. Reg#(m::C):
+        // put it in that module, so V3ClassContext binds it to the instance
+        AstNodeModule* ownerp = nullptr;
+        if (VN_IS(newModp, Class)) {
+            for (AstPin* pinp = paramsp; pinp; pinp = VN_AS(pinp->nextp(), Pin)) {
+                const AstNodeDType* const dtypep = VN_CAST(pinp->exprp(), NodeDType);
+                const AstClassRefDType* const refp
+                    = dtypep ? VN_CAST(dtypep->skipRefp(), ClassRefDType) : nullptr;
+                for (AstNode* abovep = refp ? refp->classp()->aboveLoopp() : nullptr; abovep;
+                     abovep = abovep->aboveLoopp()) {
+                    if (VN_IS(abovep, Module) || VN_IS(abovep, Iface)) {
+                        ownerp = VN_AS(abovep, NodeModule);
+                        break;
+                    }
+                }
+            }
+        }
+        if (ownerp) {
+            ownerp->addStmtsp(newModp);
+        } else {
+            insertp->addNextHere(newModp);
+        }
 
         m_modNameMap.emplace(newModp->name(), ModInfo{newModp});
         const auto iter = m_modNameMap.find(newname);
@@ -3683,7 +3704,7 @@ class ParamVisitor final : public VNVisitor {
                         = VN_CAST(varp->subDTypep()->elemDTypep(), IfaceRefDType);
                     if (!ifacerefp) continue;
                     // Interfaces passed in on the port map have ifaces
-                    if (const AstIface* const ifacep = ifacerefp->ifacep()) {
+                    if (const AstIface* const ifacep = VN_CAST(ifacerefp->ifacep(), Iface)) {
                         if (dotted == backp->name()) {
                             UINFO(9, "Iface matching scope:  " << ifacep);
                             if (ifaceParamReplace(nodep, ifacep->stmtsp())) {  //

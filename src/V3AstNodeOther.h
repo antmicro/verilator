@@ -370,6 +370,7 @@ class AstNodeModule VL_NOT_FINAL : public AstNode {
                                        // width/type errors on the unresolved template.
     bool m_threadsGroup : 1;  // Partitioned as a group with --threads, marked by THREADS_GROUP
     bool m_verilatorLib : 1;  // Module is a stub for a Verilator produced --lib-create
+    bool m_hasVirtualRef : 1;  // A virtual interface reference to this module exists
 protected:
     AstNodeModule(VNType t, FileLine* fl, const string& name, const string& libname)
         : AstNode{t, fl}
@@ -390,7 +391,8 @@ protected:
         , m_recursiveClone{false}
         , m_parameterizedTemplate{false}
         , m_threadsGroup{false}
-        , m_verilatorLib{false} {}
+        , m_verilatorLib{false}
+        , m_hasVirtualRef{false} {}
 
 public:
     ASTGEN_MEMBERS_AstNodeModule;
@@ -440,6 +442,8 @@ public:
     void hierParams(bool flag) { m_hierParams = flag; }
     bool recursive() const { return m_recursive; }
     void recursive(bool flag) { m_recursive = flag; }
+    bool hasVirtualRef() const { return m_hasVirtualRef; }
+    void setHasVirtualRef() { m_hasVirtualRef = true; }
     void recursiveClone(bool flag) { m_recursiveClone = flag; }
     bool recursiveClone() const { return m_recursiveClone; }
     bool parameterizedTemplate() const { return m_parameterizedTemplate; }
@@ -2384,8 +2388,8 @@ class AstVar final : public AstNode {
     // @astgen op3 := valuep : Optional[AstNode<AstNodeExpr|AstNodeDType>]
     //     Value is a DType for type parameter defaults
     // @astgen op4 := attrsp : List[AstAttrOf] // Attributes during early parse
-    // @astgen ptr := m_sensIfacep : Optional[AstIface]  // Interface type to which reads from this
-    //                                                      var are sensitive
+    // @astgen ptr := m_sensIfacep : Optional[AstNodeModule]  // Interface or module type to which
+    //                                                      reads from this var are sensitive
     // @astgen ptr := m_forceRdVarp : Optional[AstVar]  // [AfterForce] Generated force read signal
     // @astgen ptr := m_forceEnVarp : Optional[AstVar]  // [AfterForce] Generated force enable
     // @astgen ptr := m_forceValVarp : Optional[AstVar]  // [AfterForce] Generated force value
@@ -2641,7 +2645,7 @@ public:
     }
     void ansi(bool flag) { m_ansi = flag; }
     void declTyped(bool flag) { m_declTyped = flag; }
-    void sensIfacep(AstIface* nodep) { m_sensIfacep = nodep; }
+    void sensIfacep(AstNodeModule* nodep) { m_sensIfacep = nodep; }
     void attrFileDescr(bool flag) { m_attrFileDescr = flag; }
     void attrScBv(bool flag) { m_attrScBv = flag; }
     void attrScBigUint(bool flag) { m_attrScBigUint = flag; }
@@ -2841,7 +2845,7 @@ public:
     bool attrFsmState() const { return m_attrFsmState; }
     bool attrFsmArcInclCond() const { return m_attrFsmArcInclCond; }
     VFsmExpandType attrFsmStateExpand() const { return m_attrFsmStateExpand; }
-    AstIface* sensIfacep() const { return m_sensIfacep; }
+    AstNodeModule* sensIfacep() const { return m_sensIfacep; }
     VRandAttr rand() const { return m_rand; }
     string verilogKwd() const override;
     void lifetime(const VLifetime& flag) { m_lifetime = flag; }
@@ -3362,6 +3366,8 @@ class AstClass final : public AstNodeModule {
     // MEMBERS
     // @astgen ptr := m_classOrPackagep : Optional[AstClassPackage]  // Package to be emitted with
     // @astgen ptr := m_covergroupEnclosingClassp : Optional[AstClass]  // Lexical enclosing class
+    // @astgen ptr := m_instancep : Optional[AstVar]  // Member '__Vinstance' (V3ClassContext)
+    // @astgen ptr := m_instanceArgp : Optional[AstVar]  // Constructor argument '__Vinstance'
     string m_dtypeNameFull;  // dtypeName(true) once frozen, as parameters may then be gone
     string m_dtypeNameShort;  // dtypeName(false) once frozen, as parameters may then be gone
     uint32_t m_declTokenNum;  // Declaration token number
@@ -3402,6 +3408,10 @@ public:
         return m_covergroupEnclosingClassp;
     }
     void covergroupEnclosingClassp(AstClass* classp) { m_covergroupEnclosingClassp = classp; }
+    AstVar* instancep() const { return m_instancep; }
+    void instancep(AstVar* varp) { m_instancep = varp; }
+    AstVar* instanceArgp() const { return m_instanceArgp; }
+    void instanceArgp(AstVar* varp) { m_instanceArgp = varp; }
     bool hasRandVarsUpdate() const { return m_hasRandVarsUpdate; }
     void hasRandVarsUpdate(bool flag) { m_hasRandVarsUpdate = flag; }
     bool isCovergroup() const { return m_covergroup; }
@@ -3512,7 +3522,6 @@ class AstIface final : public AstNodeModule {
     // An interface declaration
     string m_dtypeNameFull;  // dtypeName(true) once frozen, as parameter types may then be gone
     string m_dtypeNameShort;  // dtypeName(false) once frozen, as parameter types may then be gone
-    bool m_hasVirtualRef = false;  // There exists a virtual interface reference for this interface
 public:
     AstIface(FileLine* fl, const string& name, const string& libname)
         : ASTGEN_SUPER_Iface(fl, name, libname) {}
@@ -3523,8 +3532,6 @@ public:
     // Interfaces have `timescale applicability but lots of code seems to
     // get false warnings if we enable this
     bool timescaleMatters() const override { return false; }
-    bool hasVirtualRef() const { return m_hasVirtualRef; }
-    void setHasVirtualRef() { m_hasVirtualRef = true; }
     // Name of the interface as a data type, with the values of its parameters, e.g. 'ifc#(8)'
     string dtypeName(bool full) const;
     // Fix dtypeName(), as V3WidthCommit moves parameter types to the type table

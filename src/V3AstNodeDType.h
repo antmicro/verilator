@@ -1051,7 +1051,7 @@ class AstIfaceRefDType final : public AstNodeDType {
     // Reference to an interface, either for a port, or inside parent cell
     // @astgen op1 := paramsp : List[AstPin]
     //
-    // @astgen ptr := m_ifacep : Optional[AstIface]  // Interface; cellp() should override
+    // @astgen ptr := m_ifacep : Optional[AstNodeModule]  // Interface or module; cellp() overrides
     // @astgen ptr := m_cellp : Optional[AstCell]  // When exact parent cell known; not a guess
     // @astgen ptr := m_modportp : Optional[AstModport]  // nullptr = unlinked or no modport
     FileLine* m_modportFileline;  // Where modport token was
@@ -1114,9 +1114,9 @@ public:
     void ifaceName(const string& name) { m_ifaceName = name; }
     void modportName(const string& modportName) { m_modportName = modportName; }
     string modportName() const { return m_modportName; }
-    AstIface* ifaceViaCellp() const;  // Use cellp or ifacep
-    AstIface* ifacep() const { return m_ifacep; }
-    void ifacep(AstIface* nodep) { m_ifacep = nodep; }
+    AstNodeModule* ifaceViaCellp() const;  // Use cellp or ifacep
+    AstNodeModule* ifacep() const { return m_ifacep; }
+    void ifacep(AstNodeModule* nodep) { m_ifacep = nodep; }
     AstCell* cellp() const { return m_cellp; }
     void cellp(AstCell* nodep) { m_cellp = nodep; }
     AstModport* modportp() const { return m_modportp; }

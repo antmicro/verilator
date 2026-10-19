@@ -1,0 +1,6 @@
+%Error-UNSUPPORTED: t/t_class_per_instance_unsup.v:34:11: Unsupported: 'new' of a class declared in a module with several instances, outside the module
+                                                        : ... note: In instance 't'
+   34 |     obj = new;
+      |           ^~~
+                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
+%Error: Exiting due to

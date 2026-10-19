@@ -313,6 +313,11 @@ class InlineModGraphBuilder final : public VNVisitor {
         // Add containing-module/instantiated-module edges
         m_graphp->addEdge(*m_modVtxp, *vtxp);
         m_graphp->addEdge(*vtxp, *m_graphp->getInlineModModuleVertexp(nodep->modp()));
+        // Referenced by a __Viftop variable, must keep its scope
+        if (nodep->hasIfaceVar()) {
+            m_graphp->getInlineModModuleVertexp(nodep->modp())
+                ->setNoInlineHard("Referenced through an instance variable");
+        }
 
         // Iterate children
         iterateChildrenConst(nodep);

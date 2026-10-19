@@ -665,7 +665,7 @@ module t;
     `checks($typename(ifc2), "class $unit::Ifc2");
     `checks($typename(pc), "class pkg::Pc#(7)");
     `checks($typename(mcls), "class t.Mcls");
-    `checks($typename(bar_mcls), "class $unit::Bar#(class t.Mcls)");
+    `checks($typename(bar_mcls), "class t.Bar#(class t.Mcls)");
     `checks($typename(bar_uint), "class $unit::Bar#(int unsigned)");
     `checks($typename(bar_signed), "class $unit::Bar#(logic signed[6:0])");
     `checks($typename(bar_queue), "class $unit::Bar#(int$[$])");

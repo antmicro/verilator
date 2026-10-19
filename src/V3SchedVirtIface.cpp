@@ -40,8 +40,8 @@ namespace {
 class VirtIfaceVisitor final : public VNVisitor {
 private:
     // STATE
-    using IfaceMember = std::pair<const AstIface*, std::string>;
-    using IfaceCallable = std::pair<AstIface*, AstCFunc*>;
+    using IfaceMember = std::pair<const AstNodeModule*, std::string>;
+    using IfaceCallable = std::pair<AstNodeModule*, AstCFunc*>;
 
     // Set of (iface, member) pairs written through VIF -- defines which members need triggers
     std::set<IfaceMember> m_vifWrittenMembers;
@@ -101,7 +101,9 @@ private:
         AstVar* const varp = nodep->varp();
         if (varp->isTemp()) return;
         m_vscpsByVar[varp].push_back(nodep);
-        if (const AstIface* const ifacep = varp->sensIfacep()) addCandidateVscp(ifacep, nodep);
+        if (const AstNodeModule* const ifacep = varp->sensIfacep()) {
+            addCandidateVscp(ifacep, nodep);
+        }
     }
     void visit(AstNodeProcedure* nodep) override {
         // Disable lifetime optimization for variables in AlwaysPost blocks
@@ -113,13 +115,13 @@ private:
     }
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
-    void addCandidateVscp(const AstIface* const ifacep, AstVarScope* const vscp) {
+    void addCandidateVscp(const AstNodeModule* const ifacep, AstVarScope* const vscp) {
         const IfaceMember member{ifacep, vscp->varp()->name()};
         if (m_seenCandidateVscps.emplace(member, vscp).second)
             m_candidateVscps[member].push_back(vscp);
     }
 
-    void addReachableIfaceCallable(AstIface* const ifacep, AstCFunc* const funcp) {
+    void addReachableIfaceCallable(AstNodeModule* const ifacep, AstCFunc* const funcp) {
         const IfaceCallable callable{ifacep, funcp};
         if (m_seenReachableIfaceCallables.emplace(callable).second) {
             m_reachableIfaceCallables.push_back(callable);
@@ -132,7 +134,7 @@ private:
             const auto it = m_candidateVscps.find(written);
             if (it == m_candidateVscps.end()) continue;
             for (AstVarScope* const vscp : it->second) {
-                const AstIface* const ifacep = written.first;
+                const AstNodeModule* const ifacep = written.first;
                 m_triggers.addTrigger(ifacep, vscp->varp(), vscp);
             }
         }

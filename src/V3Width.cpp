@@ -4768,7 +4768,7 @@ class WidthVisitor final : public VNVisitor {
                     foundp = clockingp->ensureEventp();
                 if (AstVar* const varp = VN_CAST(foundp, Var)) {
                     if (!varp->didWidth()) userIterate(varp, nullptr);
-                    AstIface* const ifacep = adtypep->ifaceViaCellp();
+                    AstNodeModule* const ifacep = adtypep->ifaceViaCellp();
                     varp->sensIfacep(ifacep);
                     // Member of a non-virtual interface reference, e.g. an element selected
                     // from a whole array of interfaces: reference it through the interface,
@@ -4807,7 +4807,7 @@ class WidthVisitor final : public VNVisitor {
                 if (AstCell* const cellp = VN_CAST(foundp, Cell)) {
                     // Sub-interface cell selection (e.g. vif.tx): resolve to the
                     // companion __Viftop var created by V3LinkCells for its dtype.
-                    if (VN_IS(cellp->modp(), Iface)) {
+                    if (VN_IS(cellp->modp(), Iface) || VN_IS(cellp->modp(), Module)) {
                         const string viftopName = cellp->name() + "__Viftop";
                         AstNodeModule* const parentIfacep = adtypep->ifaceViaCellp();
                         AstVar* viftopVarp = nullptr;
@@ -4842,7 +4842,7 @@ class WidthVisitor final : public VNVisitor {
                         }
                         nodep->dtypep(subDtypep);
                         nodep->varp(viftopVarp);
-                        viftopVarp->sensIfacep(VN_AS(cellp->modp(), Iface));
+                        viftopVarp->sensIfacep(cellp->modp());
                         nodep->didWidth(true);
                         return;
                     }
@@ -5101,6 +5101,8 @@ class WidthVisitor final : public VNVisitor {
         // by sub-interface selection, enabling chained access (e.g. vif.tx.Tx).
         AstNodeModule* const ifacep = adtypep->ifaceViaCellp();
         UASSERT_OBJ(ifacep, nodep, "Unlinked");
+        // Linked by V3ClassContext, e.g. generate block member
+        if (nodep->varp()) return nodep->varp();
         VSpellCheck speller;
         for (AstNode* const itemp : ifacep->stmtspList()) {
             if (itemp->name() == nodep->name()) {
@@ -5897,23 +5899,32 @@ class WidthVisitor final : public VNVisitor {
                                                << "() should be handled");
         }
     }
+    // Set sensIfacep on vars, including under generate blocks
+    static void setSensIfaceRecurse(AstNode* itemsp, AstNodeModule* ifacep) {
+        for (AstNode* itemp = itemsp; itemp; itemp = itemp->nextp()) {
+            if (AstVar* const varp = VN_CAST(itemp, Var)) {
+                varp->sensIfacep(ifacep);
+            } else if (AstGenBlock* const genp = VN_CAST(itemp, GenBlock)) {
+                setSensIfaceRecurse(genp->itemsp(), ifacep);
+            }
+        }
+    }
     void methodCallIfaceRef(AstMethodCall* nodep, AstIfaceRefDType* adtypep) {
         // ifaceViaCellp() resolves the interface via cellp when ifacep is null,
         // as for a sub-interface selected through a virtual interface handle.
-        AstIface* const ifacep = adtypep->ifaceViaCellp();
+        AstNodeModule* const ifacep = adtypep->ifaceViaCellp();
         UINFO(5, __FUNCTION__ << ":" << nodep);
-        if (AstNodeFTask* const ftaskp
-            = VN_CAST(m_memberMap.findMember(ifacep, nodep->name()), NodeFTask)) {
+        // Linked by V3ClassContext, e.g. generate block function
+        AstNodeFTask* const ftaskp
+            = nodep->taskp() ? nodep->taskp()
+                             : VN_CAST(m_memberMap.findMember(ifacep, nodep->name()), NodeFTask);
+        if (ftaskp) {
             UINFO(5, __FUNCTION__ << "AstNodeFTask" << nodep);
             if (!modportAllowsItem(nodep, adtypep, ftaskp)) {
                 nodep->dtypeSetVoid();
                 return;
             }
-            if (adtypep->isVirtual()) {
-                for (AstNode* const itemp : ifacep->stmtspList()) {
-                    if (AstVar* const mvarp = VN_CAST(itemp, Var)) { mvarp->sensIfacep(ifacep); }
-                }
-            }
+            if (adtypep->isVirtual()) setSensIfaceRecurse(ifacep->stmtsp(), ifacep);
             userIterate(ftaskp, nullptr);
             if (ftaskp->isStatic()) {
                 AstArg* const argsp = nodep->argsp();

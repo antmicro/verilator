@@ -316,7 +316,7 @@ AstNodeModule* V3LinkDotIfaceCapture::followCellPath(AstNodeModule* startModp,
                         || AstNode::nameNoArray(varBaseName) == componentBase) {
                         if (AstIfaceRefDType* const irefp
                             = ifaceRefFromVarDType(varp->subDTypep())) {
-                            AstIface* const ifacep = irefp->ifaceViaCellp();
+                            AstIface* const ifacep = VN_CAST(irefp->ifaceViaCellp(), Iface);
                             if (ifacep) {
                                 nextModp = ifacep;
                                 break;

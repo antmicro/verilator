@@ -133,6 +133,7 @@ public:
         if (!mrefp) return false;
         const AstNodeExpr* const fromp = mrefp->fromp();
         if (!fromp || !fromp->dtypep()) return false;
+        if (VN_IS(fromp->dtypep()->skipRefp(), ModuleRefDType)) return true;
         const AstIfaceRefDType* const ifrefp = VN_CAST(fromp->dtypep()->skipRefp(), IfaceRefDType);
         return ifrefp && ifrefp->isVirtual();
     }
@@ -332,6 +333,17 @@ private:
         }
         m_initialps.clear();
         m_ctorp->prependStmtsp(insertp);
+        AstScope* const scopep = getScope(m_ctorp);
+        nodep->foreach([&](AstVar* varp) {
+            if (AstVar* const argp = varp->classCaptureArgp()) {
+                AstAssign* const assignp = new AstAssign{
+                    varp->fileline(),
+                    new AstVarRef{varp->fileline(), findVarScope(scopep, varp), VAccess::WRITE},
+                    new AstVarRef{argp->fileline(), findVarScope(scopep, argp), VAccess::READ}};
+                m_ctorp->prependStmtsp(assignp);
+                varp->classCaptureArgp(nullptr);
+            }
+        });
     }
     void visit(AstInitialAutomatic* nodep) override {
         m_initialps.push_back(nodep);
@@ -1982,9 +1994,7 @@ class TaskVisitor final : public VNVisitor {
         AstNode* beginp;
         AstCNew* cnewp = nullptr;
         // getScope() is safe here: TaskStateVisitor stamped all FTask scopes before this pass.
-        const bool virtualIfaceCall
-            = TaskStateVisitor::isVirtualIfaceMethodCall(nodep)
-              && TaskStateVisitor::isIfaceFTaskScope(m_statep->getScope(nodep->taskp()));
+        const bool virtualIfaceCall = TaskStateVisitor::isVirtualIfaceMethodCall(nodep);
         if (m_statep->ftaskNoInline(nodep->taskp()) || virtualIfaceCall) {
             processArgs(nodep);
             // This may share VarScope's with a public task, if any.  Yuk.

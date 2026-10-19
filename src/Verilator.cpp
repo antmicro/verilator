@@ -32,6 +32,7 @@
 #include "V3Case.h"
 #include "V3Cast.h"
 #include "V3Class.h"
+#include "V3ClassContext.h"
 #include "V3Clean.h"
 #include "V3Clock.h"
 #include "V3Combine.h"
@@ -298,6 +299,9 @@ static void process() {
             // Expand inouts, stage 2
             // Also simplify pin connections to always be AssignWs in prep for V3Unknown
             V3Tristate::tristateAll(v3Global.rootp());
+
+            // Select static owners before expression lifting separates receivers from calls.
+            V3ClassContext::prepare(v3Global.rootp());
         }
 
         if (!v3Global.opt.serializeOnly()) {
@@ -343,6 +347,8 @@ static void process() {
             // No more AstAlias after linkDotScope
             V3Scope::scopeAll(v3Global.rootp());
             V3LinkDot::linkDotScope(v3Global.rootp());
+            // Interface aliases now select concrete captures, before inlining targets.
+            V3ClassContext::bind(v3Global.rootp());
             V3Error::abortIfErrors();
 
             // FSM coverage needs scopes, but should otherwise run as early as possible before

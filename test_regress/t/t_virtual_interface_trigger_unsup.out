@@ -1,6 +1,6 @@
-%Error-UNSUPPORTED: t/t_virtual_interface_trigger_unsup.v:8:10: Unsupported: virtual interface trigger on 'string' type
+%Error-UNSUPPORTED: t/t_virtual_interface_trigger_unsup.v:8:11: Unsupported: virtual interface trigger on 'chandle' type
                                                               : ... note: In instance 't.sif'
-    8 |   string s;
-      |          ^
+    8 |   chandle c;
+      |           ^
                     ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
 %Error: Exiting due to

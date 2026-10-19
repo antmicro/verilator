@@ -1497,7 +1497,7 @@ EmitCSyms::TextStmts EmitCSyms::getSymCtorStmts() {
 
         const std::string protName = VIdProtect::protectWordsIf(scopep->name(), scopep->protect());
         std::string stmt = "vlSymsp->";
-        if (VN_IS(modp, ClassPackage)) {
+        if (VN_IS(modp, ClassPackage) && !modp->classCaptureTarget()) {
             // ClassPackage modules seem to be a bit out of place, so hard code...
             stmt += "vlInst.TOP";
         } else {

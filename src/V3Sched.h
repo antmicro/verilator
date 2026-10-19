@@ -37,6 +37,10 @@ namespace V3Sched {
 
 namespace util {
 using VarScopeSet = std::unordered_set<const AstVarScope*>;
+using StorageScopes = std::unordered_map<const AstVar*, std::vector<AstVarScope*>>;
+StorageScopes collectStorageScopes(AstNetlist* netlistp) VL_MT_DISABLED;
+const std::vector<AstVarScope*>* capturedScopes(const AstMemberSel* nodep,
+                                                const StorageScopes& scopes) VL_MT_DISABLED;
 
 inline bool isVlForceVec(const AstVarScope* vscp) {
     const AstCDType* const dtypep = VN_CAST(vscp->dtypep()->skipRefp(), CDType);
@@ -437,14 +441,14 @@ public:
     // One entry per VarScope of an interface member that may be written through a virtual
     // interface. Each gets its own extra trigger bit with value-change detection.
     struct TriggerEntry final {
-        const AstIface* m_ifacep;  // Interface type
+        const AstNodeModule* m_ifacep;  // Indirectly addressed storage type
         const AstVar* m_memberp;  // Member variable in the interface definition
         AstVarScope* m_vscp;  // VarScope to monitor
     };
 
     std::vector<TriggerEntry> m_triggers;
 
-    void addTrigger(const AstIface* ifacep, const AstVar* memberp, AstVarScope* vscp) {
+    void addTrigger(const AstNodeModule* ifacep, const AstVar* memberp, AstVarScope* vscp) {
         m_triggers.push_back(TriggerEntry{ifacep, memberp, vscp});
     }
 

@@ -1538,7 +1538,8 @@ private:
                     = new AstPast{flp, lhsp, nullptr, nullptr, /* propertyTiming */ true};
                 pastp->dtypeFrom(lhsp);
                 pastp->sentreep(newSenTree(nodep));
-                condp = pastp;
+                // The coroutine resumes after NBA updates; retain the previous tick's history.
+                condp = new AstSampled{flp, pastp, pastp->dtypep(), true};
             }
             // Wrap existing PExpr body: if (antecedent) { <original body> } else { /* vacuous pass
             // */ }

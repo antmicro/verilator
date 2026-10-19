@@ -206,6 +206,7 @@ class AwaitVisitor final : public VNVisitor {
     std::set<AstSenTree*> m_processDomains;  // Sentrees from the current process
     // Variables written by suspendable processes
     std::set<AstVarScope*> m_writtenBySuspendable;
+    const util::StorageScopes m_storageScopes;  // Possible concrete targets of capture writes
     struct CFuncCache final {
         std::set<AstSenTree*> m_processDomains;  // What shall be added to m_processDomains
         std::set<AstVarScope*>
@@ -359,6 +360,15 @@ class AwaitVisitor final : public VNVisitor {
             m_writtenBySuspendable.insert(nodep->varScopep());
         }
     }
+    void visit(AstMemberSel* nodep) override {
+        iterateChildren(nodep);
+        if (!m_gatherVars || !nodep->access().isWriteOrRW() || nodep->varp()->ignoreSchedWrite())
+            return;
+        if (const std::vector<AstVarScope*>* const vscpsp
+            = util::capturedScopes(nodep, m_storageScopes)) {
+            m_writtenBySuspendable.insert(vscpsp->begin(), vscpsp->end());
+        }
+    }
     void visit(AstNodeCCall* const nodep) override {
         iterateChildren(nodep);
         // We need to visit bodies of non-inlined functions
@@ -391,7 +401,8 @@ public:
         , m_lbs{lbs}
         , m_postUpdatesr{postUpdatesr}
         , m_externalDomains{externalDomains}
-        , m_classGraphp{V3ClassGraph::build(nodep)} {
+        , m_classGraphp{V3ClassGraph::build(nodep)}
+        , m_storageScopes{util::collectStorageScopes(nodep)} {
         iterate(nodep);
     }
     ~AwaitVisitor() override {

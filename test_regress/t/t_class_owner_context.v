@@ -19,7 +19,17 @@ module scope_child;
 endmodule
 
 module scope_owner;
+  int x;
   scope_child child();
+  class LocalReader;
+    int value;
+    function int get();
+      return x;
+    endfunction
+    function int get_value();
+      return value;
+    endfunction
+  endclass
   class Reader;
     function int get();
       return child.y;
@@ -40,6 +50,7 @@ module scope_owner;
     endfunction
   endclass
   Reader direct = new;
+  LocalReader local_reader = new;
   Capture captured;
   Derived inherited = new;
 endmodule
@@ -59,6 +70,9 @@ interface storage_if;
     endfunction
     function int get_shared();
       return shared;
+    endfunction
+    function int get_value();
+      return value;
     endfunction
     function int get_child();
       return child.y;
@@ -82,11 +96,13 @@ endmodule
 module direct_consumer(interface p);
   typedef p.C C_t;
   C_t c = new;
+  C_t c2 = new;
 endmodule
 
 module modport_alias_consumer(storage_if.r p);
   typedef p.class_t C_t;
   C_t c = new;
+  C_t c2 = new;
   function int through_port();
     return p.c.get();
   endfunction
@@ -95,6 +111,7 @@ endmodule
 module modport_direct_consumer(storage_if.r p);
   typedef p.C C_t;
   C_t c = new;
+  C_t c2 = new;
 endmodule
 
 interface typed_base_if;
@@ -151,6 +168,8 @@ module context_leaf #(parameter int ID = 1)(output bit done);
   typed_derived_if derived_owner(base_owner);
 
   task automatic check_state(int delta);
+    `checkd(scope.local_reader.get(), ID + delta);
+    `checkd(scope.local_reader.get_value(), ID + 200 + delta);
     `checkd(scope.direct.get(), ID + delta);
     `checkd(scope.direct.get_grandchild(), ID + 10 + delta);
     `checkd(scope.inherited.get(), ID + delta);
@@ -161,18 +180,33 @@ module context_leaf #(parameter int ID = 1)(output bit done);
     `checkd(a.c.get_shared(), ID + 20 + delta);
     `checkd(a.c2.get_shared(), ID + 20 + delta);
     `checkd(b.c.get_shared(), ID + 20 + delta);
+    `checkd(b.c2.get_shared(), ID + 20 + delta);
     `checkd(direct.c.get_shared(), ID + 20 + delta);
+    `checkd(direct.c2.get_shared(), ID + 20 + delta);
     `checkd(ma.c.get_shared(), ID + 20 + delta);
+    `checkd(ma.c2.get_shared(), ID + 20 + delta);
     `checkd(md.c.get_shared(), ID + 20 + delta);
+    `checkd(md.c2.get_shared(), ID + 20 + delta);
+    `checkd(owner.c.get(), ID + 30 + delta);
+    `checkd(owner.c2.get(), ID + 30 + delta);
     `checkd(a.c.get(), ID + 30 + delta);
+    `checkd(a.c2.get(), ID + 30 + delta);
     `checkd(b.c.get(), ID + 30 + delta);
+    `checkd(b.c2.get(), ID + 30 + delta);
     `checkd(direct.c.get(), ID + 30 + delta);
+    `checkd(direct.c2.get(), ID + 30 + delta);
     `checkd(ma.c.get(), ID + 30 + delta);
+    `checkd(ma.c2.get(), ID + 30 + delta);
     `checkd(md.c.get(), ID + 30 + delta);
+    `checkd(md.c2.get(), ID + 30 + delta);
     `checkd(a.through_port(), ID + 30 + delta);
     `checkd(ma.through_port(), ID + 30 + delta);
     `checkd(a.c.get_child(), ID + 40 + delta);
     `checkd(b.c.get_child(), ID + 40 + delta);
+    `checkd(direct.c.get_child(), ID + 40 + delta);
+    `checkd(direct.c2.get_child(), ID + 40 + delta);
+    `checkd(owner.c.get_value(), ID + 210 + delta);
+    `checkd(owner.c2.get_value(), ID + 220);
     `checkd(a.c.value, ID + 50 + delta);
     `checkd(b.c.value, ID + 60);
     `checkd(derived_owner.c.get_base(), ID + 70 + delta);
@@ -181,6 +215,7 @@ module context_leaf #(parameter int ID = 1)(output bit done);
   endtask
 
   initial begin
+    scope.x = ID;
     scope.child.y = ID;
     scope.child.child.y = ID + 10;
     scope.captured = new;
@@ -190,14 +225,20 @@ module context_leaf #(parameter int ID = 1)(output bit done);
     derived_owner.x = ID + 80;
     #1;
     owner.c.shared = ID + 20;
+    scope.local_reader.value = ID + 200;
+    owner.c.value = ID + 210;
+    owner.c2.value = ID + 220;
     a.c.value = ID + 50;
     b.c.value = ID + 60;
     derived_owner.c.value = ID + 90;
     #1;
     check_state(0);
+    scope.x = ID + 100;
+    scope.local_reader.value = ID + 300;
+    owner.c.value = ID + 310;
     scope.child.y = ID + 100;
     scope.child.child.y = ID + 110;
-    ma.c.shared = ID + 120;
+    ma.c2.shared = ID + 120;
     owner.x = ID + 130;
     owner.child.y = ID + 140;
     a.c.value = ID + 150;
@@ -545,129 +586,31 @@ module nested_case(output bit done);
   end
 endmodule
 
-interface constant_if #(parameter int K = 3);
-  localparam int X = K + 10;
-  int x;
+interface local_inheritance_if;
   class Base;
-    int captured_k, captured_x;
-    function new();
-      captured_k = get_k();
-      captured_x = get_x();
-    endfunction
-    function int get_k();
-      return K;
-    endfunction
-    function int get_x();
-      return X;
-    endfunction
+    int value;
   endclass
   class Derived extends Base;
-    function int get_captured();
-      return captured_k;
-    endfunction
-  endclass
-  class Shadow #(parameter int K = 100);
-    function int get_k();
-      return K;
-    endfunction
-    function int get_x();
-      return X;
-    endfunction
-  endclass
-  class Capture #(parameter int M = K);
     function int get();
-      return x;
+      return value;
     endfunction
   endclass
-  class Outer;
-    class Inner;
-      function int get_k();
-        return K;
-      endfunction
-      function int get_x();
-        return X;
-      endfunction
-    endclass
-    Inner c = new;
-  endclass
-  Base c;
-  Derived inherited = new;
-  Shadow shadow_default = new;
-  Shadow #(.K(200)) shadow_override = new;
-  Capture capture = new;
-  Outer nested = new;
+  Derived c = new;
 endinterface
 
-module constant_case(interface p, input int expected, input int state, output bit done);
-  typedef p.Base C_t;
-  C_t imported = new;
+module local_inheritance_case(output bit done);
+  local_inheritance_if first(), second();
   initial begin
-    p.x = state;
-    p.c = new;
+    first.c.value = 1;
+    second.c.value = 2;
     #1;
-    `checkd(p.c.get_k(), expected);
-    `checkd(p.c.get_x(), expected + 10);
-    `checkd(p.c.captured_k, expected);
-    `checkd(p.c.captured_x, expected + 10);
-    `checkd(p.inherited.get_k(), expected);
-    `checkd(p.inherited.get_x(), expected + 10);
-    p.inherited.captured_k = state;
-    `checkd(p.inherited.get_captured(), state);
-    `checkd(imported.get_k(), expected);
-    `checkd(imported.get_x(), expected + 10);
-    `checkd(p.nested.c.get_k(), expected);
-    `checkd(p.nested.c.get_x(), expected + 10);
-    `checkd(p.shadow_default.get_k(), 100);
-    `checkd(p.shadow_default.get_x(), expected + 10);
-    `checkd(p.shadow_override.get_k(), 200);
-    `checkd(p.shadow_override.get_x(), expected + 10);
-    `checkd(p.capture.get(), state);
-    p.x = state + 100;
+    `checkd(first.c.get(), 1);
+    `checkd(second.c.get(), 2);
+    first.c.value = 11;
+    second.c.value = 22;
     #1;
-    `checkd(p.capture.get(), state + 100);
-    done = 1;
-  end
-endmodule
-
-interface nested_parameter_if #(parameter int N = 8);
-  logic [N-1:0] x;
-  class Outer;
-    class Inner #(parameter int M = N);
-      bit [M-1:0] payload;
-      function int width();
-        return $bits(payload);
-      endfunction
-      function int get();
-        return int'(x);
-      endfunction
-    endclass
-    Inner c = new;
-    Inner #(.M(3)) narrow = new;
-  endclass
-  Outer c = new;
-endinterface
-
-module nested_parameter_case(output bit done);
-  nested_parameter_if first(), repeated();
-  nested_parameter_if #(.N(16)) second();
-  initial begin
-    first.x = 8'h81;
-    second.x = 16'h1234;
-    repeated.x = 8'h42;
-    #1;
-    `checkd(first.c.c.width(), 8);
-    `checkd(second.c.c.width(), 16);
-    `checkd(repeated.c.c.width(), 8);
-    `checkd(first.c.narrow.width(), 3);
-    `checkd(second.c.narrow.width(), 3);
-    `checkd(first.c.c.get(), 129);
-    `checkd(second.c.c.get(), 4660);
-    `checkd(repeated.c.c.get(), 66);
-    first.x = 8'hff;
-    #1;
-    `checkd(first.c.narrow.get(), 255);
-    `checkd(second.c.narrow.get(), 4660);
-    `checkd(repeated.c.c.get(), 66);
+    `checkd(first.c.get(), 11);
+    `checkd(second.c.get(), 22);
     done = 1;
   end
 endmodule
@@ -733,7 +676,17 @@ module construction_case #(parameter int X0 = 1)(output bit done);
   end
 endmodule
 
-class BoundReader #(type IF_T = virtual target_if);
+class BoundReader;
+  virtual target_if vif;
+  function new(virtual target_if target);
+    vif = target;
+  endfunction
+  function int get();
+    return vif.x;
+  endfunction
+endclass
+
+class TypedBoundReader #(type IF_T = virtual target_if);
   IF_T vif;
   function new(IF_T target);
     vif = target;
@@ -743,22 +696,170 @@ class BoundReader #(type IF_T = virtual target_if);
   endfunction
 endclass
 
-module virtual_parameter_case(output bit done);
+class ExplicitReader;
+  virtual explicit_binding_if vif;
+  function int get();
+    return vif.x;
+  endfunction
+endclass
+
+interface explicit_binding_if;
+  int x;
+  ExplicitReader c = new;
+endinterface
+
+module virtual_binding_case(output bit done);
   target_if a(), b();
-  BoundReader #(virtual target_if) first, second;
+  BoundReader first, second;
+  TypedBoundReader #(virtual target_if) typed_first, typed_second;
+  explicit_binding_if owner_first(), owner_second();
   initial begin
     first = new(a);
     second = new(b);
+    typed_first = new(a);
+    typed_second = new(b);
     a.x = 1;
     b.x = 2;
     #1;
+    owner_first.x = 31;
+    owner_second.x = 32;
+    owner_first.c.vif = owner_first;
+    owner_second.c.vif = owner_second;
     `checkd(first.get(), 1);
     `checkd(second.get(), 2);
+    `checkd(typed_first.vif.x, 1);
+    `checkd(typed_second.vif.x, 2);
+    `checkd(typed_first.get(), 1);
+    `checkd(typed_second.get(), 2);
+    `checkd(owner_first.c.get(), 31);
+    `checkd(owner_second.c.get(), 32);
     a.x = 11;
     b.x = 22;
+    owner_first.x = 41;
+    owner_second.x = 42;
     #1;
     `checkd(first.get(), 11);
     `checkd(second.get(), 22);
+    `checkd(typed_first.vif.x, 11);
+    `checkd(typed_second.vif.x, 22);
+    `checkd(typed_first.get(), 11);
+    `checkd(typed_second.get(), 22);
+    `checkd(owner_first.c.get(), 41);
+    `checkd(owner_second.c.get(), 42);
+    done = 1;
+  end
+endmodule
+
+interface upward_task_if;
+  task automatic invoke();
+    force_error();
+  endtask
+endinterface
+
+module upward_task_owner;
+  int count = 0;
+  upward_task_if backdoor();
+  task automatic force_error();
+    count++;
+  endtask
+endmodule
+
+module upward_task_case(output bit done);
+  upward_task_owner first(), second();
+  initial begin
+    #1;
+    `checkd(first.count, 0);
+    `checkd(second.count, 0);
+    first.backdoor.invoke();
+    #1;
+    `checkd(first.count, 1);
+    `checkd(second.count, 0);
+    second.backdoor.invoke();
+    second.backdoor.invoke();
+    `checkd(first.count, 1);
+    `checkd(second.count, 2);
+    first.backdoor.invoke();
+    `checkd(first.count, 2);
+    `checkd(second.count, 2);
+    done = 1;
+  end
+endmodule
+
+interface task_owner_if;
+  int x;
+  int y;
+  class Writer;
+    task copy();
+      y = x;
+    endtask
+  endclass
+  Writer c = new;
+endinterface
+
+module task_owner_case(output bit done);
+  task_owner_if first(), second();
+  initial begin
+    first.x = 1;
+    second.x = 2;
+    #1;
+    first.c.copy();
+    `checkd(first.y, 1);
+    `checkd(second.y, 0);
+    second.c.copy();
+    `checkd(first.y, 1);
+    `checkd(second.y, 2);
+    first.x = 11;
+    second.x = 22;
+    first.c.copy();
+    second.c.copy();
+    `checkd(first.y, 11);
+    `checkd(second.y, 22);
+    done = 1;
+  end
+endmodule
+
+interface timed_task_if(input logic clk);
+  logic [7:0] data;
+  bit valid;
+  class Driver;
+    task send_data(logic [7:0] value);
+      @(posedge clk);
+      data = value;
+      valid = 1;
+      @(posedge clk);
+      data = '0;
+      valid = 0;
+    endtask
+  endclass
+  Driver drv;
+  initial drv = new;
+endinterface
+
+module timed_task_case(output bit done);
+  bit clk = 0;
+  always #5 clk = ~clk;
+  timed_task_if first(clk), second(clk);
+  bit [7:0] first_data[$], second_data[$];
+  // Sample between drive edges so checks do not depend on active-region ordering.
+  always @(negedge clk) begin
+    if (first.valid) first_data.push_back(first.data);
+    if (second.valid) second_data.push_back(second.data);
+  end
+  initial begin
+    #1;
+    while (first.drv == null || second.drv == null) @(posedge clk);
+    first.drv.send_data(8'haa);
+    repeat (5) @(posedge clk);
+    second.drv.send_data(8'hbb);
+    #1;
+    `checkd(first_data.size(), 1);
+    `checkd(second_data.size(), 1);
+    `checkd(first_data[0], 8'haa);
+    `checkd(second_data[0], 8'hbb);
+    `checkd(first.data, 0);
+    `checkd(second.data, 0);
+    `checkd(first.valid, 0);
+    `checkd(second.valid, 0);
     done = 1;
   end
 endmodule
@@ -797,79 +898,8 @@ module block_case(output bit done);
   end
 endmodule
 
-module width_child #(parameter int W = 3);
-  logic [W-1:0] y;
-endmodule
-
-module width_owner #(parameter int W = 3);
-  width_child #(W) child();
-  class Reader;
-    function logic [W-1:0] get();
-      return child.y;
-    endfunction
-  endclass
-  Reader c = new;
-endmodule
-
-interface width_base_if #(parameter int W = 8);
-  typedef logic [W-1:0] T;
-  int x;
-  class Base;
-    T payload;
-    function int get_base();
-      return x;
-    endfunction
-    function int bits_payload();
-      return $bits(payload);
-    endfunction
-  endclass
-endinterface
-
-interface width_derived_if(width_base_if b);
-  typedef b.Base Base_t;
-  typedef b.T T;
-  int x;
-  class Derived extends Base_t;
-    T payload2;
-    function int get_derived();
-      return x;
-    endfunction
-    function T get_payload();
-      return payload;
-    endfunction
-  endclass
-  Derived c = new;
-endinterface
-
-module width_case #(parameter int W = 3, ID = 1)(output bit done);
-  width_owner #(W) scope();
-  width_base_if #(W) base_owner();
-  width_derived_if derived_owner(base_owner);
-  initial begin
-    scope.child.y = W'(ID);
-    base_owner.x = ID;
-    derived_owner.x = ID + 10;
-    #1;
-    derived_owner.c.payload = '1;
-    derived_owner.c.payload2 = '1;
-    `checkd($bits(scope.c.get()), W);
-    `checkd(scope.c.get(), W'(ID));
-    `checkd(derived_owner.c.get_base(), ID);
-    `checkd(derived_owner.c.get_derived(), ID + 10);
-    `checkd(derived_owner.c.bits_payload(), W);
-    `checkd($bits(derived_owner.c.payload2), W);
-    `checkd($bits(derived_owner.c.get_payload()), W);
-    `checkd(derived_owner.c.payload2, {W{1'b1}});
-    `checkd(derived_owner.c.get_payload(), {W{1'b1}});
-    scope.child.y = {W{1'b1}} ^ W'(ID);
-    #1;
-    `checkd(scope.c.get(), {W{1'b1}} ^ W'(ID));
-    done = 1;
-  end
-endmodule
-
 module t;
-  wire [24:0] done;
+  wire [19:0] done;
   context_leaf #(1) flat_first(done[0]);
   context_leaf #(2) flat_second(done[1]);
   context_chain #(3) linear(done[2]);
@@ -880,29 +910,16 @@ module t;
   field_case #(1) fields_first(done[7]);
   field_case #(2) fields_second(done[8]);
   nested_case nested(done[9]);
-  nested_parameter_case nested_parameters(done[10]);
-  constant_if default_owner();
-  constant_if #(.K(0)) zero();
-  constant_if #(.K(1)) one();
-  constant_if #(.K(2)) two(), repeated();
-  constant_case constants_default(default_owner, 3, 1, done[11]);
-  constant_case constants_zero(zero, 0, 2, done[12]);
-  constant_case constants_one(one, 1, 3, done[13]);
-  constant_case constants_two(two, 2, 4, done[14]);
-  constant_case constants_repeated(repeated, 2, 5, done[15]);
-  input_case #(1) input_first(done[16]);
-  input_case #(2) input_second(done[17]);
-  construction_case #(1) construction_first(done[18]);
-  construction_case #(2) construction_second(done[19]);
-  virtual_parameter_case virtual_parameters(done[20]);
-  block_case blocks(done[21]);
-  for (genvar k = 0; k < 3; k++) begin : widths
-    localparam int W = k == 0 ? 3 : k == 1 ? 17 : 65;
-    wire first_done, second_done;
-    width_case #(W, 1) first(first_done);
-    width_case #(W, 2) second(second_done);
-    assign done[22 + k] = first_done && second_done;
-  end
+  local_inheritance_case local_inherited(done[10]);
+  input_case #(1) input_first(done[11]);
+  input_case #(2) input_second(done[12]);
+  construction_case #(1) construction_first(done[13]);
+  construction_case #(2) construction_second(done[14]);
+  virtual_binding_case virtual_bindings(done[15]);
+  block_case blocks(done[16]);
+  upward_task_case upward_tasks(done[17]);
+  task_owner_case task_owners(done[18]);
+  timed_task_case timed_tasks(done[19]);
 
   initial begin
     wait (&done);

@@ -3327,6 +3327,9 @@ bool AstNodeFTask::getPurityRecurse() const {
                                 || varrefp->varp()->lifetime().isStatic())
                                && varrefp->access().isWriteOrRW();
                     }
+                    if (const AstMemberRef* const selp = VN_CAST(nodep, MemberRef)) {
+                        return selp->access().isWriteOrRW();
+                    }
                     return !nodep->isPure();
                 }))
                 return false;

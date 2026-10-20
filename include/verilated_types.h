@@ -842,7 +842,7 @@ public:
     }
     template <typename T_Func>
     VlQueue find_last(T_Func with_func) const {
-        for (IData index = static_cast<IData>(m_size) - 1; index >= 0; --index) {
+        for (int64_t index = static_cast<int64_t>(m_size) - 1; index >= 0; --index) {
             const auto& item = m_buf[m_head + index];
             if (with_func(index, item)) return VlQueue::consV(item);
         }
@@ -850,7 +850,7 @@ public:
     }
     template <typename T_Func>
     VlQueue<IData, 0> find_last_index(T_Func with_func) const {
-        for (IData index = static_cast<IData>(m_size) - 1; index >= 0; --index) {
+        for (int64_t index = static_cast<int64_t>(m_size) - 1; index >= 0; --index) {
             const auto& item = m_buf[m_head + index];
             if (with_func(index, item)) return VlQueue<IData, 0>::consV(index);
         }

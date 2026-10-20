@@ -1362,12 +1362,6 @@ VL_ATTR_NOINLINE std::string VlQueue<T_Value, 0>::to_string() const {
     return out + "}";
 }
 
-extern template class VlQueue<CData, 0>;
-extern template class VlQueue<SData, 0>;
-extern template class VlQueue<IData, 0>;
-extern template class VlQueue<QData, 0>;
-extern template class VlQueue<std::string, 0>;
-
 template <typename T_Value, size_t N_MaxSize>
 class VlQueue final : public VlQueue<T_Value, 0> {
 private:

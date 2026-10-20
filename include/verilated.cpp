@@ -4586,15 +4586,6 @@ void VlDeleter::deleteAll() VL_EXCLUDES(m_mutex) VL_EXCLUDES(m_deleteMutex) VL_M
 }
 
 //===========================================================================
-// VlQueue:: Explicit template instantiations
-
-template class VlQueue<CData, 0>;
-template class VlQueue<SData, 0>;
-template class VlQueue<IData, 0>;
-template class VlQueue<QData, 0>;
-template class VlQueue<std::string, 0>;
-
-//===========================================================================
 // OS functions (last, so we have minimal OS dependencies above)
 
 #define VL_ALLOW_VERILATEDOS_C

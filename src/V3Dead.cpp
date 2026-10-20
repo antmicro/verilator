@@ -491,6 +491,15 @@ class DeadVisitor final : public VNVisitor {
         if (nodep->fromp()->dtypep()) nodep->fromp()->dtypep()->user1Inc();  // classref
         checkAll(nodep);
     }
+    void visit(AstScopeAddr* nodep) override {
+        checkAll(nodep);
+        if (nodep->scopep()) nodep->scopep()->user1Inc();
+    }
+    void visit(AstModuleRefDType* nodep) override {
+        checkDType(nodep);
+        checkAll(nodep);
+        nodep->modp()->user1Inc();
+    }
     void visit(AstStructSel* nodep) override {
         iterateChildren(nodep);
         if (nodep->fromp()->dtypep()) nodep->fromp()->dtypep()->user1Inc();  // structdtype
@@ -695,7 +704,7 @@ class DeadVisitor final : public VNVisitor {
     }
     bool mightElimVar(const AstVar* nodep) const {
         if (nodep->isSigPublic()) return false;  // Can't elim publics!
-        if (nodep->isPrimaryIO() || nodep->isClassMember() || nodep->sensIfacep()) return false;
+        if (nodep->isPrimaryIO() || nodep->isClassMember() || nodep->sensStoragep()) return false;
         if (nodep->isTemp() && !nodep->isTrace()) return true;
         return m_elimUserVars;  // Post-Trace can kill most anything
     }

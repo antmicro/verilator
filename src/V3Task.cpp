@@ -131,11 +131,14 @@ public:
         if (!mrefp) return false;
         const AstNodeExpr* const fromp = mrefp->fromp();
         if (!fromp || !fromp->dtypep()) return false;
+        if (VN_IS(fromp->dtypep()->skipRefp(), ModuleRefDType)) return true;
         const AstIfaceRefDType* const ifrefp = VN_CAST(fromp->dtypep()->skipRefp(), IfaceRefDType);
         return ifrefp && ifrefp->isVirtual();
     }
     static bool isIfaceFTaskScope(const AstScope* scopep) {
-        return scopep && VN_IS(scopep->modp(), Iface);
+        return scopep
+               && (VN_IS(scopep->modp(), Iface) || VN_IS(scopep->modp(), Module)
+                   || VN_IS(scopep->modp(), ClassPackage));
     }
     AstScope* getScope(AstNodeFTask* nodep) {
         AstScope* const scopep = VN_AS(nodep->user3p(), Scope);
@@ -330,6 +333,17 @@ private:
         }
         m_initialps.clear();
         m_ctorp->prependStmtsp(insertp);
+        AstScope* const scopep = getScope(m_ctorp);
+        nodep->foreach([&](AstVar* varp) {
+            if (AstVar* const argp = varp->classCaptureArgp()) {
+                AstAssign* const assignp = new AstAssign{
+                    varp->fileline(),
+                    new AstVarRef{varp->fileline(), findVarScope(scopep, varp), VAccess::WRITE},
+                    new AstVarRef{argp->fileline(), findVarScope(scopep, argp), VAccess::READ}};
+                m_ctorp->prependStmtsp(assignp);
+                varp->classCaptureArgp(nullptr);
+            }
+        });
     }
     void visit(AstInitialAutomatic* nodep) override {
         m_initialps.push_back(nodep);
@@ -2100,7 +2114,7 @@ class TaskIfaceSensVisitor final : public VNVisitorConst {
         // Keep temps: the clocking event var is a MODULETEMP
         if (nodep->varp()->isFuncLocal()) return;
         if (AstIface* const ifacep = VN_CAST(nodep->varScopep()->scopep()->modp(), Iface)) {
-            nodep->varp()->sensIfacep(ifacep);
+            nodep->varp()->sensStoragep(ifacep);
         }
     }
     void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }

@@ -153,7 +153,7 @@ class NameVisitor final : public VNVisitorConst {
             // Same formula as V3Scope
             nodep->name(nodep->isTop()         ? "TOP"
                         : VN_IS(m_modp, Class) ? ("TOP." + m_modp->name())
-                        : VN_IS(m_modp, ClassPackage)
+                        : VN_IS(m_modp, ClassPackage) && !m_modp->classCaptureTarget()
                             ? ("TOP." + m_modp->name())
                             : (nodep->aboveScopep()->name() + "." + nodep->aboveCellp()->name()));
             nodep->editCountInc();

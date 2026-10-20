@@ -1094,6 +1094,23 @@ bool AstClass::isClassExtendedFrom(const AstClass* refClassp, const AstClass* ba
     if (!refClassp->extendsp()) return false;
     return isClassExtendedFrom(refClassp->extendsp()->classp(), baseClassp);
 }
+AstClassContext::AstClassContext(FileLine* fl, AstNodeModule* anchorp, const string& path)
+    : ASTGEN_SUPER_ClassContext(fl)
+    , m_anchorp{anchorp} {
+    std::istringstream parts{path};
+    for (string part; std::getline(parts, part, '.');) {
+        if (!part.empty()) addPathsp(new AstClassContextPath{fl, part});
+    }
+}
+string AstClassContext::path() const {
+    string result;
+    for (const AstClassContextPath* partp = pathsp(); partp;
+         partp = VN_AS(partp->nextp(), ClassContextPath)) {
+        if (!result.empty()) result += ".";
+        result += partp->name();
+    }
+    return result;
+}
 AstClass* AstClassExtends::classOrNullp() const {
     const AstNodeDType* const dtp = dtypep() ? dtypep() : childDTypep();
     const AstClassRefDType* const refp = VN_CAST(dtp, ClassRefDType);
@@ -2189,12 +2206,10 @@ void AstModule::dump(std::ostream& str) const {
     Super::dump(str);
     if (isChecker()) str << " [CHECKER]";
     if (isProgram()) str << " [PROGRAM]";
-    if (hasGenericIface()) str << " [HASGENERICIFACE]";
 }
 void AstModule::dumpJson(std::ostream& str) const {
     dumpJsonBoolFuncIf(str, isChecker);
     dumpJsonBoolFuncIf(str, isProgram);
-    dumpJsonBoolFuncIf(str, hasGenericIface);
     dumpJsonGen(str);
 }
 void AstMonitorOff::dump(std::ostream& str) const {
@@ -2578,6 +2593,8 @@ AstNodeDType::CTypeRecursed AstNodeDType::cTypeRecurse(bool compound, bool packe
         UASSERT_OBJ(!packed, this, "Unsupported type for packed struct or union");
         const string className = EmitCUtil::prefixNameProtect(adtypep);
         info.m_type = adtypep->rawPointer() ? className + "*" : "::VlClassRef<" + className + ">";
+    } else if (const AstModuleRefDType* const adtypep = VN_CAST(dtypep, ModuleRefDType)) {
+        info.m_type = EmitCUtil::prefixNameProtect(adtypep->modp()) + "*";
     } else if (const auto* const adtypep = VN_CAST(dtypep, IfaceRefDType)) {
         UASSERT_OBJ(!packed, this, "Unsupported type for packed struct or union");
         info.m_type = EmitCUtil::prefixNameProtect(adtypep->ifaceViaCellp()) + "*";
@@ -2813,6 +2830,7 @@ bool AstNodeDType::isTriviallyConstructible() const VL_MT_STABLE {
     if (VN_IS(dtypep, CoverCrossDType)) return true;
     if (VN_IS(dtypep, CoverpointDType)) return true;
     if (VN_IS(dtypep, IfaceRefDType)) return true;
+    if (VN_IS(dtypep, ModuleRefDType)) return true;
     // Others
     if (const auto* const adtypep = VN_CAST(dtypep, ClassRefDType)) {  //
         return adtypep->rawPointer();
@@ -3253,6 +3271,8 @@ string AstNodeModule::dtypeNameInnerScope(const string& outer) const {
     return dtypeNameIdent(origName()) + dtypeNameParams(this, true) + ".";
 }
 void AstNodeModule::dump(std::ostream& str) const {
+    if (hasGenericIface()) str << " [HASGENERICIFACE]";
+    if (classCaptureTarget()) str << " [CLASS_CAPTURE_TARGET]";
     Super::dump(str);
     str << "  L" << level();
     str << " D" << depth();
@@ -3273,6 +3293,8 @@ void AstNodeModule::dump(std::ostream& str) const {
     if (libname() != "work") str << " libname=" << libname();
 }
 void AstNodeModule::dumpJson(std::ostream& str) const {
+    dumpJsonBoolFuncIf(str, hasGenericIface);
+    dumpJsonBoolFuncIf(str, classCaptureTarget);
     dumpJsonStrFunc(str, origName);
     dumpJsonStrFunc(str, verilogName);
     dumpJsonNumFunc(str, level);
@@ -3674,6 +3696,7 @@ void AstRefDType::dumpSmall(std::ostream& str) const {
     str << "ref";
 }
 AstNodeDType* AstRefDType::subDTypep() const VL_MT_STABLE {
+    if (didWidth() && ownerp() && refDTypep()) return refDTypep();
     if (typedefp()) return typedefp()->subDTypep();
     return refDTypep();  // Maybe nullptr
 }
@@ -3782,6 +3805,14 @@ bool AstScope::sameNode(const AstNode* samep) const {
            && ((!aboveScopep() && !asamep->aboveScopep())
                || (aboveScopep() && asamep->aboveScopep()
                    && aboveScopep()->name() == asamep->aboveScopep()->name()));
+}
+void AstScopeAddr::dump(std::ostream& str) const {
+    Super::dump(str);
+    str << selfPointer().asString();
+}
+void AstScopeAddr::dumpJson(std::ostream& str) const {
+    dumpJsonStr(str, "selfPointer", selfPointer().asString());
+    dumpJsonGen(str);
 }
 void AstScopeName::dump(std::ostream& str) const {
     Super::dump(str);
@@ -4471,6 +4502,7 @@ string AstVar::dpiTmpVarType(const string& varName) const {
     return converter{varName}.convert(this);
 }
 void AstVar::dump(std::ostream& str) const {
+    if (classContextMarker()) str << " [CLASS_CONTEXT_MARKER]";
     Super::dump(str);
     if (libInoutId()) str << " libInoutId=" << libInoutId();
     if (libInoutEnable()) str << " [LIBINOUTEN]";
@@ -4519,6 +4551,7 @@ void AstVar::dump(std::ostream& str) const {
     str << " " << varType();
 }
 void AstVar::dumpJson(std::ostream& str) const {
+    dumpJsonBoolFuncIf(str, classContextMarker);
     if (libInoutId()) dumpJsonNumFunc(str, libInoutId);
     dumpJsonBoolFuncIf(str, libInoutEnable);
     dumpJsonStrFunc(str, origName);

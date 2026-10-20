@@ -1663,6 +1663,9 @@ public:
         }
         if (dereferenceCovergroupRef) puts(")");
     }
+    void visit(AstScopeAddr* nodep) override {
+        putns(nodep, nodep->selfPointer().protect(m_useSelfForThis, nodep->protect()));
+    }
     void visit(AstStructSel* nodep) override {
         iterateAndNextConstNull(nodep->fromp());
         putnbs(nodep, ".");

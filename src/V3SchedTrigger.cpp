@@ -424,6 +424,7 @@ void TriggerKit::addValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc*
             return;
         }
     } else if (!VN_IS(dtypep, PackArrayDType) && !VN_IS(dtypep, UnpackArrayDType)
+               && !VN_IS(dtypep, QueueDType) && !VN_IS(dtypep, DynArrayDType)
                && !VN_IS(dtypep, NodeUOrStructDType) && !VN_IS(dtypep, ClassRefDType)) {
         instVscp->v3warn(E_UNSUPPORTED, "Unsupported: virtual interface trigger on "
                                             << dtypep->prettyDTypeNameQ() << " type");
@@ -434,6 +435,7 @@ void TriggerKit::addValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc*
     const auto wrPrev = [flp](AstVarScope* vp) { return new AstVarRef{flp, vp, VAccess::WRITE}; };
     const auto rdPrev = [flp](AstVarScope* vp) { return new AstVarRef{flp, vp, VAccess::READ}; };
 
+    // Queues and dynamic arrays use VlQueue's value copy and content comparison.
     // Create prev variable
     const std::string prevName = "__Vtrigprevvif_" + m_name + "_"
                                  + instVscp->scopep()->nameDotless() + "__"

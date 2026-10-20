@@ -75,6 +75,7 @@
 #include "V3Assert.h"
 #include "V3Ast.h"
 #include "V3Begin.h"
+#include "V3ClassContext.h"
 #include "V3Const.h"
 #include "V3ConstPool.h"
 #include "V3Error.h"
@@ -5088,10 +5089,11 @@ class WidthVisitor final : public VNVisitor {
                 if (AstVar* const varp = VN_CAST(foundp, Var)) {
                     if (!varp->didWidth()) userIterate(varp, nullptr);
                     if (varp->lifetime().isStatic()) {
-                        if (!varp->isParam()) {
+                        if (!varp->isParam() && V3ClassContext::instanceOwnerp(classp)) {
                             // Keep the receiver until runtime owner binding selects static
                             // storage.
                             nodep->varp(varp);
+                            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
                             nodep->dtypeFrom(varp);
                             nodep->didWidth(true);
                             return true;
@@ -6244,6 +6246,20 @@ class WidthVisitor final : public VNVisitor {
             if (AstNodeFTask* const ftaskp
                 = VN_CAST(m_memberMap.findMember(classp, nodep->name()), NodeFTask)) {
                 userIterate(ftaskp, nullptr);
+                if (ftaskp->isStatic() && !V3ClassContext::instanceOwnerp(classp)) {
+                    AstArg* const argsp
+                        = nodep->argsp() ? nodep->argsp()->unlinkFrBackWithNext() : nullptr;
+                    AstNodeFTaskRef* const refp
+                        = m_vup ? static_cast<AstNodeFTaskRef*>(
+                                      new AstFuncRef{nodep->fileline(), nodep->name(), argsp})
+                                : static_cast<AstNodeFTaskRef*>(
+                                      new AstTaskRef{nodep->fileline(), nodep->name(), argsp});
+                    refp->taskp(ftaskp);
+                    refp->classOrPackagep(classp);
+                    nodep->replaceWith(refp);
+                    VL_DO_DANGLING(pushDeletep(nodep), nodep);
+                    return;
+                }
                 // Static calls also need the receiver until owner storage is selected.
                 nodep->taskp(ftaskp);
                 nodep->dtypeFrom(ftaskp);

@@ -15,8 +15,11 @@
 #include "config_build.h"
 #include "verilatedos.h"
 class AstNetlist;
+class AstClass;
+class AstNodeModule;
 class V3ClassContext final {
 public:
+    static AstNodeModule* instanceOwnerp(const AstClass* nodep) VL_MT_DISABLED;
     static void prepare(AstNetlist* nodep) VL_MT_DISABLED;
     static void bind(AstNetlist* nodep) VL_MT_DISABLED;
 };

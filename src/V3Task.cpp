@@ -145,9 +145,7 @@ public:
         return ifrefp && ifrefp->isVirtual();
     }
     static bool isIfaceFTaskScope(const AstScope* scopep) {
-        return scopep
-               && (VN_IS(scopep->modp(), Iface) || VN_IS(scopep->modp(), Module)
-                   || VN_IS(scopep->modp(), ClassPackage));
+        return scopep && VN_IS(scopep->modp(), Iface);
     }
     AstScope* getScope(AstNodeFTask* nodep) {
         AstScope* const scopep = VN_AS(nodep->user3p(), Scope);

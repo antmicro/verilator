@@ -21,11 +21,14 @@
 #include "verilatedos.h"
 
 class AstNetlist;
+class AstClass;
+class AstClassPackage;
 
 //============================================================================
 
 class V3Class final {
 public:
+    static AstClassPackage* newPackage(AstClass* classp, const std::string& name) VL_MT_DISABLED;
     static void classAll(AstNetlist* nodep) VL_MT_DISABLED;
 };
 

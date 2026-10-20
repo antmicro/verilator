@@ -5690,7 +5690,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 return;
             }
             VSymEnt* foundp = m_statep->findSymPrefixed(dotSymp, nodep->name(), baddot, first);
-            if (!foundp && first && nodep->dotted().empty() && m_statep->forScopeCreation()) {
+            if (!foundp && first && nodep->dotted().empty() && m_statep->forScopeCreation()
+                && VN_IS(m_modp, Iface) && (!m_ftaskp || !m_ftaskp->classMethod())) {
                 foundp = m_statep->findDotted(nodep->fileline(), dotSymp, nodep->name(), baddot,
                                               okSymp, true);
             }
@@ -6685,8 +6686,19 @@ class LinkDotResolveVisitor final : public VNVisitor {
         // Do NOT unwrap valid types here - leave that to V3Width.
         // Unwrapping here breaks type parameter resolution during cloning.
         // Allow Dot through to defer the handling until the dot expression is resolved.
+        bool deferredInterfaceType = false;
+        if (m_statep->forPrimary()) {
+            if (const AstMemberSel* const selp = VN_CAST(nodep->lhsp(), MemberSel)) {
+                if (const AstNodeVarRef* const refp = VN_CAST(selp->fromp(), NodeVarRef)) {
+                    const AstNodeDType* const dtypep = refp->varp()->subDTypep();
+                    deferredInterfaceType
+                        = VN_IS(dtypep, IfaceGenericDType)
+                          || (dtypep && VN_IS(dtypep->skipRefOrNullp(), IfaceRefDType));
+                }
+            }
+        }
         if (nodep->lhsp() && !VN_IS(nodep->lhsp(), NodeDType) && !VN_IS(nodep->lhsp(), Dot)
-            && !(m_statep->forPrimary() && VN_IS(nodep->lhsp(), MemberSel))) {
+            && !deferredInterfaceType) {
             // Not a type - emit error
             if (VN_IS(nodep->lhsp(), Const)) {
                 nodep->lhsp()->v3error("Expecting a data type, not a constant");

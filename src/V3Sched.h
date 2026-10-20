@@ -37,6 +37,10 @@ namespace V3Sched {
 
 namespace util {
 using VarScopeSet = std::unordered_set<const AstVarScope*>;
+using StorageScopes = std::unordered_map<const AstVar*, std::vector<AstVarScope*>>;
+StorageScopes collectStorageScopes(AstNetlist* netlistp) VL_MT_DISABLED;
+const std::vector<AstVarScope*>* capturedScopes(const AstMemberSel* nodep,
+                                                const StorageScopes& scopes) VL_MT_DISABLED;
 
 inline bool isVlForceVec(const AstVarScope* vscp) {
     const AstCDType* const dtypep = VN_CAST(vscp->dtypep()->skipRefp(), CDType);

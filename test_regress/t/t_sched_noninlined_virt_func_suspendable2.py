@@ -15,7 +15,8 @@ test.compile(verilator_flags2=['--binary', '--stats', '-fno-dfg'])
 
 test.execute()
 
+# Captured expected[] remains one storage object rather than five split variables.
 test.file_grep(test.stats,
-               r'Scheduling, count of non-inlined signal writes in suspendables\s+(\d+)', 16)
+               r'Scheduling, count of non-inlined signal writes in suspendables\s+(\d+)', 13)
 
 test.passes()

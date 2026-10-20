@@ -334,8 +334,9 @@ static void process() {
             // We're going to flatten the hierarchy, so as many optimizations that
             // can be done as possible should be before this....
 
-            // Convert instantiations to wassigns and always blocks
+            // Preserve symbolic owner dependencies before class methods get one scope.
             V3ClassContext::prepare(v3Global.rootp());
+            // Convert instantiations to wassigns and always blocks
             V3Inst::instAll(v3Global.rootp());
 
             // Inst may have made lots of concats; fix them
@@ -345,6 +346,7 @@ static void process() {
             // No more AstAlias after linkDotScope
             V3Scope::scopeAll(v3Global.rootp());
             V3LinkDot::linkDotScope(v3Global.rootp());
+            // Interface aliases now select concrete captures, before inlining targets.
             V3ClassContext::bind(v3Global.rootp());
             V3Error::abortIfErrors();
 

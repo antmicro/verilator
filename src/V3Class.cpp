@@ -84,16 +84,12 @@ class ClassVisitor final : public VNVisitor {
         // Note origName is the same as the class origName so errors look correct
         AstClassPackage* packagep = nodep->classOrPackagep();
         const bool boundStorage = packagep;
-        if (!packagep)
-            packagep = new AstClassPackage{nodep->fileline(), nodep->origName(), nodep->libname()};
+        if (!packagep) packagep = V3Class::newPackage(nodep, nodep->origName());
         packagep->name(nodep->name() + "__Vclpkg");
         nodep->editCountInc();
-        nodep->classOrPackagep(packagep);
-        packagep->classp(nodep);
-        packagep->timeunit(nodep->timeunit());
-        if (!boundStorage) v3Global.rootp()->addModulesp(packagep);
         // Add package to hierarchy
         if (!boundStorage) {
+            v3Global.rootp()->addModulesp(packagep);
             AstCell* const cellp = new AstCell{packagep->fileline(),
                                                packagep->fileline(),
                                                packagep->name(),
@@ -295,6 +291,16 @@ public:
 
 //######################################################################
 // Class class functions
+
+AstClassPackage* V3Class::newPackage(AstClass* classp, const std::string& name) {
+    UASSERT_OBJ(!classp->classOrPackagep(), classp, "Class already has static storage");
+    AstClassPackage* const packagep
+        = new AstClassPackage{classp->fileline(), name, classp->libname()};
+    classp->classOrPackagep(packagep);
+    packagep->classp(classp);
+    packagep->timeunit(classp->timeunit());
+    return packagep;
+}
 
 void V3Class::classAll(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ":");

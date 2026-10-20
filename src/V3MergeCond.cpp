@@ -247,9 +247,7 @@ class CodeMotionAnalysisVisitor final : public VNVisitorConst {
         }
     }
 
-    void analyzeVarRef(AstVarRef* nodep) {
-        const VAccess access = nodep->access();
-        AstVar* const varp = nodep->varp();
+    void analyzeAccess(AstVar* varp, VAccess access) {
         // Gather read and written variables
         if (access.isReadOrRW()) m_propsp->m_rdVars.insert(varp);
         if (access.isWriteOrRW()) m_propsp->m_wrVars.insert(varp);
@@ -309,7 +307,11 @@ class CodeMotionAnalysisVisitor final : public VNVisitorConst {
         if (AstNodeStmt* const stmtp = VN_CAST(nodep, NodeStmt)) {
             analyzeStmt(stmtp, /*tryCondMatch:*/ !singletonListStart);
         } else if (AstVarRef* const vrefp = VN_CAST(nodep, VarRef)) {
-            analyzeVarRef(vrefp);
+            analyzeAccess(vrefp->varp(), vrefp->access());
+        } else if (AstMemberSel* const selp = VN_CAST(nodep, MemberSel)) {
+            // Different receivers may alias the same storage; retain that dependency.
+            analyzeAccess(selp->varp(), selp->access());
+            analyzeNode(nodep);
         } else {
             analyzeNode(nodep);
         }

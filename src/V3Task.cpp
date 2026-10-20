@@ -136,9 +136,7 @@ public:
         return ifrefp && ifrefp->isVirtual();
     }
     static bool isIfaceFTaskScope(const AstScope* scopep) {
-        return scopep
-               && (VN_IS(scopep->modp(), Iface) || VN_IS(scopep->modp(), Module)
-                   || VN_IS(scopep->modp(), ClassPackage));
+        return scopep && VN_IS(scopep->modp(), Iface);
     }
     AstScope* getScope(AstNodeFTask* nodep) {
         AstScope* const scopep = VN_AS(nodep->user3p(), Scope);
@@ -1849,9 +1847,7 @@ class TaskVisitor final : public VNVisitor {
         AstNode* beginp;
         AstCNew* cnewp = nullptr;
         // getScope() is safe here: TaskStateVisitor stamped all FTask scopes before this pass.
-        const bool virtualIfaceCall
-            = TaskStateVisitor::isVirtualIfaceMethodCall(nodep)
-              && TaskStateVisitor::isIfaceFTaskScope(m_statep->getScope(nodep->taskp()));
+        const bool virtualIfaceCall = TaskStateVisitor::isVirtualIfaceMethodCall(nodep);
         if (m_statep->ftaskNoInline(nodep->taskp()) || virtualIfaceCall) {
             processArgs(nodep);
             // This may share VarScope's with a public task, if any.  Yuk.

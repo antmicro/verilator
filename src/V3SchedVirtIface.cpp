@@ -182,11 +182,9 @@ public:
 VirtIfaceTriggers makeVirtIfaceTriggers(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ":");
     VirtIfaceTriggers triggers{};
-    if (v3Global.hasVirtIfaces()) {
-        triggers = VirtIfaceVisitor{nodep}.take_triggers();
-        // Dump after destructor so VNDeleter runs
-        V3Global::dumpCheckGlobalTree("sched_vif", 0, dumpTreeEitherLevel() >= 6);
-    }
+    // Captured model storage has indirect writes even in designs without a VIF.
+    triggers = VirtIfaceVisitor{nodep}.take_triggers();
+    V3Global::dumpCheckGlobalTree("sched_vif", 0, dumpTreeEitherLevel() >= 6);
     return triggers;
 }
 

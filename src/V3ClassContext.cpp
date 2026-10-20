@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only OR Artistic-2.0
 //
 //*************************************************************************
-// Before scoping, turn external class dependencies into explicit receivers.
+// Before expression lifting, turn external class dependencies into explicit receivers.
 // Scope-address placeholders travel through ordinary scoped linking, including
 // interface aliases. After linking, replace them with typed scope addresses and
 // prohibit inlining their target definitions. Thus method bodies contain only
@@ -22,6 +22,7 @@
 // Static routines keep their lexical declarations and receive their own hidden
 // inputs; no object receiver exists in their bodies. Only mutable instance-owned
 // static fields move before scoping, through V3Class's single package factory.
+// Static selections use the receiver's type binding, never the handle value.
 //*************************************************************************
 
 #include "V3PchAstNoMT.h"
@@ -56,6 +57,13 @@ struct StaticCall final {
     AstNodeFTaskRef* refp;
     ClassContext* callerp;
     AstNodeModule* ownerp;
+    string path;
+};
+struct StaticSelection final {
+    AstMemberSel* refp;
+    ClassContext* callerp;
+    AstNodeModule* ownerp;
+    CaptureKey key;
 };
 
 class ContextPrepareVisitor final : public VNVisitor {
@@ -71,12 +79,18 @@ class ContextPrepareVisitor final : public VNVisitor {
     std::vector<ClassContext*> m_contexts;
     std::map<AstNodeModule*, AstVar*> m_markers;
     std::vector<std::pair<AstNew*, AstNodeModule*>> m_constructions;
-    std::vector<AstMemberSel*> m_staticSelections;
+    std::vector<StaticSelection> m_staticSelections;
     std::vector<std::pair<AstNodeVarRef*, AstNodeModule*>> m_staticVariables;
     std::vector<StaticCall> m_staticCalls;
     std::vector<std::pair<AstNodeFTaskRef*, AstNodeModule*>> m_externalCalls;
     bool m_collect = true;
-    unsigned m_receiverIndex = 0;  // Unique expression-local static-call receivers
+
+    static AstStmtExpr* newReceiverStmt(AstNodeExpr* exprp) {
+        FileLine* const fl = new FileLine{exprp->fileline()};
+        // The compiler intentionally discards the receiver value, like a void cast.
+        fl->warnOff(V3ErrorCode::IGNOREDRETURN, true);
+        return new AstStmtExpr{fl, exprp};
+    }
 
     static void transferCall(const AstNodeFTaskRef* fromp, AstNodeFTaskRef* top,
                              AstNodeModule* ownerp) {
@@ -163,6 +177,35 @@ class ContextPrepareVisitor final : public VNVisitor {
         const string path = dtypep->ownerp() ? dtypep->ownerp()->path() : "";
         return {VString::dot(path, ".", key.first), key.second};
     }
+    string receiverScopePath(const AstNodeExpr* nodep) {
+        if (const AstVarXRef* const refp = VN_CAST(nodep, VarXRef)) {
+            return refp->dotted();
+        } else if (const AstMethodCall* const callp = VN_CAST(nodep, MethodCall)) {
+            return receiverPath(callp->fromp(), VN_AS(m_declarations.at(callp->taskp()), Class));
+        } else if (const AstMemberSel* const selp = VN_CAST(nodep, MemberSel)) {
+            return receiverPath(selp->fromp(), VN_AS(m_declarations.at(selp->varp()), Class));
+        } else if (const AstNodeSel* const selp = VN_CAST(nodep, NodeSel)) {
+            return receiverScopePath(selp->fromp());
+        } else if (const AstCMethodHard* const callp = VN_CAST(nodep, CMethodHard)) {
+            return receiverScopePath(callp->fromp());
+        } else if (const AstNodeFTaskRef* const refp = VN_CAST(nodep, NodeFTaskRef)) {
+            return refp->dotted();
+        }
+        return "";
+    }
+    string receiverPath(const AstNodeExpr* nodep, const AstClass* declaringp) {
+        const AstClassRefDType* dtypep = VN_AS(nodep->dtypep()->skipRefp(), ClassRefDType);
+        string path = receiverScopePath(nodep);
+        if (dtypep->ownerp()) path = VString::dot(path, ".", dtypep->ownerp()->path());
+        // Inherited statics belong to the declaring base's independently bound owner.
+        while (dtypep->classp() != declaringp) {
+            const AstClassExtends* const basep = dtypep->classp()->extendsp();
+            UASSERT_OBJ(basep, nodep, "Static member declaring class is not a base");
+            dtypep = VN_AS(basep->dtypep()->skipRefp(), ClassRefDType);
+            if (dtypep->ownerp()) path = VString::dot(path, ".", dtypep->ownerp()->path());
+        }
+        return path;
+    }
     AstNodeExpr* address(FileLine* fl, AstNodeModule* fromp, const CaptureKey& key,
                          ClassContext* contextp, bool inCtor) {
         if (contextp) {
@@ -203,11 +246,12 @@ class ContextPrepareVisitor final : public VNVisitor {
             }
             for (const StaticCall& call : m_staticCalls) {
                 const ClassContext& target = m_routines.at(call.refp->taskp());
-                ClassContext* callerp = call.callerp;
-                if (VN_IS(call.refp, MethodCall)) callerp = &m_classes.at(target.classp);
+                ClassContext* const callerp = call.callerp;
                 if (callerp) {
                     for (const auto& item : target.captures) {
-                        changed |= require(*callerp, item.first, callerp->object);
+                        const CaptureKey key{VString::dot(call.path, ".", item.first.first),
+                                             item.first.second};
+                        changed |= require(*callerp, key, callerp->object);
                     }
                 }
             }
@@ -303,31 +347,15 @@ class ContextPrepareVisitor final : public VNVisitor {
             AstMethodCall* const methodp = VN_CAST(refp, MethodCall);
             AstNode* receiverStmtsp = nullptr;
             if (methodp && !methodp->fromp()->isPure()) {
-                // Hidden arguments must not duplicate side effects in the source receiver.
+                // Evaluate the source receiver once, without dereferencing its result.
                 AstNodeExpr* const exprp = methodp->fromp()->unlinkFrBack();
-                AstVar* const receiverp = new AstVar{
-                    refp->fileline(), VVarType::BLOCKTEMP,
-                    "__VstaticReceiver" + cvtToStr(m_receiverIndex++), exprp->dtypep()};
-                receiverp->funcLocal(true);
-                receiverp->lifetime(VLifetime::AUTOMATIC_IMPLICIT);
-                receiverStmtsp = receiverp;
-                receiverStmtsp->addNext(new AstAssign{
-                    refp->fileline(), new AstVarRef{refp->fileline(), receiverp, VAccess::WRITE},
-                    exprp});
-                methodp->fromp(new AstVarRef{refp->fileline(), receiverp, VAccess::READ});
+                receiverStmtsp = newReceiverStmt(exprp);
             }
             for (const auto& item : target.captures) {
-                AstNodeExpr* exprp;
-                if (methodp) {
-                    const Capture& capture = m_classes.at(target.classp).captures.at(item.first);
-                    AstMemberSel* const selp = new AstMemberSel{
-                        refp->fileline(), methodp->fromp()->cloneTree(false), capture.fieldp};
-                    selp->access(VAccess::READ);
-                    exprp = selp;
-                } else {
-                    exprp
-                        = address(refp->fileline(), call.ownerp, item.first, call.callerp, false);
-                }
+                const CaptureKey key{VString::dot(call.path, ".", item.first.first),
+                                     item.first.second};
+                AstNodeExpr* const exprp
+                    = address(refp->fileline(), call.ownerp, key, call.callerp, false);
                 refp->addArgsp(new AstArg{refp->fileline(), item.second.argp->name(), exprp});
             }
             if (methodp) {
@@ -349,16 +377,17 @@ class ContextPrepareVisitor final : public VNVisitor {
         }
     }
     void materializeStaticSelections() {
-        for (AstMemberSel* const selp : m_staticSelections) {
-            AstClass* const declaringp
-                = VN_AS(m_declarations.at(selp->varp()), ClassPackage)->classp();
-            const ClassContext& context = m_classes.at(declaringp);
-            const Capture& capture = context.captures.at({context.storagePath, context.packagep});
+        for (const StaticSelection& selection : m_staticSelections) {
+            AstMemberSel* const selp = selection.refp;
             AstNodeExpr* const objectp = selp->fromp()->unlinkFrBack();
-            selp->varp()->sensStoragep(context.packagep);
-            AstMemberSel* const storagep
-                = new AstMemberSel{selp->fileline(), objectp, capture.fieldp};
-            storagep->access(VAccess::READ);
+            selp->varp()->sensStoragep(selection.key.second);
+            AstNodeExpr* storagep = address(selp->fileline(), selection.ownerp, selection.key,
+                                            selection.callerp, false);
+            if (!objectp->isPure()) {
+                storagep = new AstExprStmt{selp->fileline(), newReceiverStmt(objectp), storagep};
+            } else {
+                pushDeletep(objectp);
+            }
             selp->fromp(storagep);
         }
     }
@@ -439,7 +468,11 @@ class ContextPrepareVisitor final : public VNVisitor {
         // DPI imports use a loose ABI wrapper, not a method on model storage.
         if (nodep->taskp()->dpiImport()) return;
         if (m_routines.count(nodep->taskp())) {
-            m_staticCalls.push_back({nodep, m_contextp, m_ownerp});
+            const AstMethodCall* const methodp = VN_CAST(nodep, MethodCall);
+            const string path
+                = methodp ? receiverPath(methodp->fromp(), m_routines.at(nodep->taskp()).classp)
+                          : "";
+            m_staticCalls.push_back({nodep, m_contextp, m_ownerp, path});
             return;
         }
         if (VN_IS(nodep, MethodCall)) return;
@@ -492,11 +525,14 @@ class ContextPrepareVisitor final : public VNVisitor {
         if (!m_collect && nodep->varp() && nodep->varp()->lifetime().isStatic()
             && !nodep->varp()->isParam()
             && VN_IS(m_declarations.at(nodep->varp()), ClassPackage)) {
-            m_staticSelections.push_back(nodep);
             const AstClassPackage* const packagep
                 = VN_AS(m_declarations.at(nodep->varp()), ClassPackage);
             ClassContext& context = m_classes.at(packagep->classp());
-            require(context, {context.storagePath, context.packagep}, true);
+            const CaptureKey key{VString::dot(receiverPath(nodep->fromp(), context.classp), ".",
+                                              context.storagePath),
+                                 context.packagep};
+            m_staticSelections.push_back({nodep, m_contextp, m_ownerp, key});
+            if (m_contextp) require(*m_contextp, key, true);
         }
     }
     void visit(AstClassContext*) override {}

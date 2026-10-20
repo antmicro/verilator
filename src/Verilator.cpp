@@ -299,6 +299,9 @@ static void process() {
             // Expand inouts, stage 2
             // Also simplify pin connections to always be AssignWs in prep for V3Unknown
             V3Tristate::tristateAll(v3Global.rootp());
+
+            // Select static owners before expression lifting separates receivers from calls.
+            V3ClassContext::prepare(v3Global.rootp());
         }
 
         if (!v3Global.opt.serializeOnly()) {
@@ -334,8 +337,6 @@ static void process() {
             // We're going to flatten the hierarchy, so as many optimizations that
             // can be done as possible should be before this....
 
-            // Preserve symbolic owner dependencies before class methods get one scope.
-            V3ClassContext::prepare(v3Global.rootp());
             // Convert instantiations to wassigns and always blocks
             V3Inst::instAll(v3Global.rootp());
 

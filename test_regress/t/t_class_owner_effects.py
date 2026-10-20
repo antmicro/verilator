@@ -15,5 +15,6 @@ for defines in ([], ['+define+UNRELATED_VIF']):
     if test.vlt_all:
         header = test.glob_one(test.obj_dir + '/*effect_owner__03a__03aWriter__Vclpkg.h')
         test.file_grep_count(header, r'effect_owner\* __PVT____Vcapture[0-9]+p;', 1)
+        test.file_grep_count(header, r'Writer__Vclpkg\* __PVT____Vcapture[0-9]+p;', 1)
     test.execute()
 test.passes()

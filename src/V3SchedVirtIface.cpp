@@ -135,6 +135,11 @@ private:
             const auto it = m_candidateVscps.find(written);
             if (it == m_candidateVscps.end()) continue;
             for (AstVarScope* const vscp : it->second) {
+                // Solver state has ordering dependencies, but no SV value-change semantics.
+                if (const AstBasicDType* const dtypep
+                    = VN_CAST(vscp->dtypep()->skipRefp(), BasicDType)) {
+                    if (dtypep->isRandomGenerator() || dtypep->isStdRandomGenerator()) continue;
+                }
                 const AstNodeModule* const ifacep = written.first;
                 m_triggers.addTrigger(ifacep, vscp->varp(), vscp);
             }

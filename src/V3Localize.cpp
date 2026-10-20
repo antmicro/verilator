@@ -188,7 +188,7 @@ class LocalizeVisitor final : public VNVisitor {
             && !nodep->varp()->isSigPublic()  // Not something the user wants to interact with
             && !nodep->varp()->isFuncLocal()  // Not already a function local (e.g.: argument)
             && !nodep->varp()->isClassMember()  // Statically exists in design hierarchy
-            && !nodep->varp()->sensIfacep()  // Not sensitive to an interface
+            && !nodep->varp()->sensStoragep()  // Not sensitive to an interface
             && !nodep->varp()->isVirtIface()  // Not interface pointer
             && !nodep->varp()->constPoolEntry()  // Not a const pool entry
             && nodep->varp() != v3Global.rootp()->activityp()  // Not read by the runtime

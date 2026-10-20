@@ -1,0 +1,51 @@
+// DESCRIPTION: Verilator: Static state follows the object's declaring owner
+//
+// This file ONLY is placed under the Creative Commons Public Domain.
+// SPDX-FileCopyrightText: 2026 Wilson Snyder
+// SPDX-License-Identifier: CC0-1.0
+
+// verilog_format: off
+`define stop $stop
+`define checkd(gotv,expv) do if ((gotv) !== (expv)) begin $write("%%Error: %s:%0d: %m got=%0d exp=%0d\n", `__FILE__,`__LINE__, (gotv), (expv)); `stop; end while(0)
+// verilog_format: on
+
+module static_owner;
+  int initializations;
+  function int initialize();
+    ++initializations;
+    return 10;
+  endfunction
+  class Counter;
+    static int shared = initialize();
+    function int local_count();
+      static int count = 20;
+      return ++count;
+    endfunction
+    static function int bump();
+      return ++shared;
+    endfunction
+  endclass
+  Counter a = new, b = new;
+endmodule
+
+module t;
+  static_owner first(), second();
+  initial begin
+    #1;
+    `checkd(first.initializations, 1);
+    `checkd(second.initializations, 1);
+    `checkd(first.a.local_count(), 21);
+    `checkd(first.b.local_count(), 22);
+    `checkd(second.a.local_count(), 21);
+    `checkd(first.a.bump(), 11);
+    `checkd(first.b.bump(), 12);
+    `checkd(second.a.bump(), 11);
+    first.a = new;
+    `checkd(first.a.bump(), 13);
+    `checkd(first.a.local_count(), 23);
+    `checkd(first.initializations, 1);
+    `checkd(second.initializations, 1);
+    $write("*-* All Finished *-*\n");
+    $finish;
+  end
+endmodule

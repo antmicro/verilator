@@ -3372,6 +3372,20 @@ class WidthVisitor final : public VNVisitor {
         UASSERT_OBJ(nodep->subDTypep(), nodep, "Unlinked");
         nodep->dtypeFrom(nodep->subDTypep());
         nodep->widthFromSub(nodep->subDTypep());
+        if (nodep->ownerp()) {
+            if (AstClassRefDType* const classp
+                = VN_CAST(nodep->subDTypep()->skipRefp(), ClassRefDType)) {
+                AstClassRefDType* const clonep = classp->cloneTree(false);
+                string path = nodep->ownerp()->path();
+                if (classp->ownerp()) path = VString::dot(path, ".", classp->ownerp()->path());
+                if (clonep->ownerp()) pushDeletep(clonep->ownerp()->unlinkFrBack());
+                clonep->ownerp(
+                    new AstClassContext{nodep->fileline(), nodep->ownerp()->anchorp(), path});
+                v3Global.rootp()->typeTablep()->addTypesp(clonep);
+                nodep->refDTypep(clonep);
+                nodep->dtypeFrom(clonep);
+            }
+        }
         UINFO(4, "dtWidthed " << nodep);
         // No nodep->typedefp(nullptr) for now; V3WidthCommit needs to check accesses
         nodep->doingWidth(false);
@@ -4848,6 +4862,7 @@ class WidthVisitor final : public VNVisitor {
         // though causes problems with t_class_forward.v, so for now avoided
         // userIterateChildren(nodep->classp(), nullptr);
     }
+    void visit(AstClassContext*) override {}
     void visit(AstClassOrPackageRef* nodep) override {
         if (nodep->didWidthAndSet()) return;
         userIterateChildren(nodep, nullptr);
@@ -4918,7 +4933,7 @@ class WidthVisitor final : public VNVisitor {
                 }
                 if (AstIfaceRefDType* const adtypep
                     = VN_CAST(nodep->fromp()->dtypep()->skipRefp(), IfaceRefDType)) {
-                    nodep->varp()->sensIfacep(adtypep->ifacep());
+                    nodep->varp()->sensStoragep(adtypep->ifacep());
                 }
                 UINFO(9, "     done clocking msel " << nodep);
                 nodep->didWidth(true);  // Must not visit again: will confuse scopes
@@ -4935,7 +4950,7 @@ class WidthVisitor final : public VNVisitor {
                 if (AstVar* const varp = VN_CAST(foundp, Var)) {
                     if (!varp->didWidth()) userIterate(varp, nullptr);
                     AstIface* const ifacep = adtypep->ifaceViaCellp();
-                    varp->sensIfacep(ifacep);
+                    varp->sensStoragep(ifacep);
                     // Member of a non-virtual interface reference, e.g. an element selected
                     // from a whole array of interfaces: reference it through the interface,
                     // as V3LinkDot does for 'iface.member'
@@ -5008,7 +5023,7 @@ class WidthVisitor final : public VNVisitor {
                         }
                         nodep->dtypep(subDtypep);
                         nodep->varp(viftopVarp);
-                        viftopVarp->sensIfacep(VN_AS(cellp->modp(), Iface));
+                        viftopVarp->sensStoragep(VN_AS(cellp->modp(), Iface));
                         nodep->didWidth(true);
                         return;
                     }
@@ -5073,6 +5088,14 @@ class WidthVisitor final : public VNVisitor {
                 if (AstVar* const varp = VN_CAST(foundp, Var)) {
                     if (!varp->didWidth()) userIterate(varp, nullptr);
                     if (varp->lifetime().isStatic()) {
+                        if (!varp->isParam()) {
+                            // Keep the receiver until runtime owner binding selects static
+                            // storage.
+                            nodep->varp(varp);
+                            nodep->dtypeFrom(varp);
+                            nodep->didWidth(true);
+                            return true;
+                        }
                         // Static members are moved outside the class, so they shouldn't be
                         // accessed by member select on a class object
                         AstVarRef* const varRefp
@@ -6080,7 +6103,7 @@ class WidthVisitor final : public VNVisitor {
             }
             if (adtypep->isVirtual()) {
                 for (AstNode* const itemp : ifacep->stmtspList()) {
-                    if (AstVar* const mvarp = VN_CAST(itemp, Var)) { mvarp->sensIfacep(ifacep); }
+                    if (AstVar* const mvarp = VN_CAST(itemp, Var)) { mvarp->sensStoragep(ifacep); }
                 }
             }
             userIterate(ftaskp, nullptr);
@@ -6221,38 +6244,19 @@ class WidthVisitor final : public VNVisitor {
             if (AstNodeFTask* const ftaskp
                 = VN_CAST(m_memberMap.findMember(classp, nodep->name()), NodeFTask)) {
                 userIterate(ftaskp, nullptr);
-                if (ftaskp->isStatic()) {
-                    AstArg* const argsp = nodep->argsp();
-                    if (argsp) argsp->unlinkFrBackWithNext();
-                    AstNodeFTaskRef* newp = nullptr;
-                    // We use m_vup to determine task or function, so that later error checks
-                    // for funcref->task and taskref->func will pick up properly
-                    if (!m_vup) {  // Called as task
-                        newp = new AstTaskRef{nodep->fileline(), nodep->name(), argsp};
-                    } else {
-                        newp = new AstFuncRef{nodep->fileline(), nodep->name(), argsp};
+                // Static calls also need the receiver until owner storage is selected.
+                nodep->taskp(ftaskp);
+                nodep->dtypeFrom(ftaskp);
+                nodep->classOrPackagep(classp);
+                if (VN_IS(ftaskp, Task)) {
+                    if (m_vup && m_vup->prelim() && !VN_IS(nodep->backp(), StmtExpr)) {
+                        nodep->v3error("Cannot call a task/void-function as a member function: "
+                                       << nodep->prettyNameQ());
                     }
-                    newp->taskp(ftaskp);  // Not passed above as might be func vs task mismatch
-                    newp->classOrPackagep(classp);
-                    nodep->replaceWith(newp);
-                    VL_DO_DANGLING(nodep->deleteTree(), nodep);
-                    // Resolved here, as a caller may not iterate the replacement
-                    userIterate(newp, m_vup);
-                } else {
-                    nodep->taskp(ftaskp);
-                    nodep->dtypeFrom(ftaskp);
-                    nodep->classOrPackagep(classp);
-                    if (VN_IS(ftaskp, Task)) {
-                        if (m_vup && m_vup->prelim() && !VN_IS(nodep->backp(), StmtExpr)) {
-                            nodep->v3error(
-                                "Cannot call a task/void-function as a member function: "
-                                << nodep->prettyNameQ());
-                        }
-                        nodep->dtypeSetVoid();
-                    }
-                    if (withp) nodep->withp(withp);
-                    processFTaskRefArgs(nodep);
+                    nodep->dtypeSetVoid();
                 }
+                if (withp) nodep->withp(withp);
+                processFTaskRefArgs(nodep);
                 return;
             } else if (nodep->name() == "get_randstate") {
                 methodOkArguments(nodep, 0, 0);

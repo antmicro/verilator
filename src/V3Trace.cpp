@@ -181,7 +181,7 @@ class TraceVisitor final : public VNVisitor {
             vscp->user1p(varVtxp);
 
             // Gather the interface members, so writes through a virtual interface can be recorded
-            if (varp->sensIfacep()) m_ifaceMemberVscps(varp).push_back(vscp);
+            if (varp->sensStoragep()) m_ifaceMemberVscps(varp).push_back(vscp);
         });
     }
 

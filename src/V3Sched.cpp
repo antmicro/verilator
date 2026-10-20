@@ -99,7 +99,7 @@ void addTriggeredIface(const AstVarScope* vscp, const VirtIfaceTriggers::VscpTri
         const auto it = vscpToTrig.find(vscp);
         if (it != vscpToTrig.end()) triggers.insert(it->second);
     }
-    // May add none if sensIfacep() is set but no VIF write targets this member
+    // May add none if sensStoragep() is set but no VIF write targets this member
 }
 
 //============================================================================
@@ -516,7 +516,7 @@ void createIcoRegion(AstNetlist* netlistp, AstCFunc* const initFuncp,
             // Add other triggers
             if (varp->isWrittenByDpi())
                 triggers.insert(trigKit.extraTriggerIndex(dpiExportTriggerIndex));
-            if (vscp->varp()->sensIfacep() || vscp->varp()->isVirtIface()) {
+            if (vscp->varp()->sensStoragep() || vscp->varp()->isVirtIface()) {
                 addTriggeredIface(vscp, vifVscpToTrigIco, virtIfaceTriggers, triggers);
             }
         });
@@ -886,7 +886,7 @@ void schedule(AstNetlist* netlistp) {
               if (vscp->varp()->isWrittenByDpi()) {
                   triggers.insert(trigKit.extraTriggerIndex(dpiExportTriggerIndex));
               }
-              if (vscp->varp()->sensIfacep() || vscp->varp()->isVirtIface()) {
+              if (vscp->varp()->sensStoragep() || vscp->varp()->isVirtIface()) {
                   addTriggeredIface(vscp, vifVscpToTrig, virtIfaceTriggers, triggers);
               }
           };

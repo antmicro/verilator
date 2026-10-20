@@ -33,6 +33,7 @@
 #include "V3Case.h"
 #include "V3Cast.h"
 #include "V3Class.h"
+#include "V3ClassContext.h"
 #include "V3Clean.h"
 #include "V3Coalesce.h"
 #include "V3Combine.h"
@@ -344,6 +345,7 @@ static void process() {
             // can be done as possible should be before this....
 
             // Convert instantiations to wassigns and always blocks
+            V3ClassContext::prepare(v3Global.rootp());
             V3Inst::instAll(v3Global.rootp());
 
             // Inst may have made lots of concats; fix them
@@ -353,6 +355,7 @@ static void process() {
             // No more AstAlias after linkDotScope
             V3Scope::scopeAll(v3Global.rootp());
             V3LinkDot::linkDotScope(v3Global.rootp());
+            V3ClassContext::bind(v3Global.rootp());
             V3Error::abortIfErrors();
 
             // Finish the run time model descriptors now they are scoped

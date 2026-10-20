@@ -898,8 +898,56 @@ module block_case(output bit done);
   end
 endmodule
 
+module captured_target;
+  int value;
+  int doubled;
+  always_comb doubled = 2 * value;
+endmodule
+
+module uncaptured_neighbor(input int value, output int result);
+  assign result = value + 3;
+endmodule
+
+module capture_pair_owner;
+  captured_target left(), right();
+  class Reader;
+    function void set_values(int l, int r);
+      left.value = l;
+      right.value = r;
+    endfunction
+    function int sum();
+      return left.doubled + right.doubled;
+    endfunction
+  endclass
+  Reader c = new;
+  Reader copied;
+endmodule
+
+module capture_pair_case(output bit done);
+  capture_pair_owner first(), second();
+  int value, result;
+  uncaptured_neighbor neighbor(value, result);
+  initial begin
+    first.c.set_values(1, 10);
+    second.c.set_values(2, 20);
+    value = 4;
+    #1;
+    `checkd(first.c.sum(), 22);
+    `checkd(second.c.sum(), 44);
+    `checkd(result, 7);
+    first.copied = new first.c;
+    first.c.set_values(3, 30);
+    value = 8;
+    #1;
+    `checkd(first.copied.sum(), 66);
+    `checkd(second.c.sum(), 44);
+    `checkd(result, 11);
+    done = 1;
+  end
+endmodule
+
 module t;
-  wire [19:0] done;
+  wire [20:0] done;
   context_leaf #(1) flat_first(done[0]);
   context_leaf #(2) flat_second(done[1]);
   context_chain #(3) linear(done[2]);
@@ -920,6 +968,7 @@ module t;
   upward_task_case upward_tasks(done[17]);
   task_owner_case task_owners(done[18]);
   timed_task_case timed_tasks(done[19]);
+  capture_pair_case capture_pairs(done[20]);
 
   initial begin
     wait (&done);

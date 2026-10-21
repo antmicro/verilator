@@ -682,8 +682,8 @@ public:
     VL_ATTR_NOINLINE void renew_copy(size_t size, const VlQueue& rhs);
     // Unpacked array new[]() becomes a renew_copy()
     template <typename T_UnpackedValue, std::size_t N_UnpackedDepth>
-    VL_ATTR_NOINLINE void
-    renew_copy(size_t size, const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs);
+    VL_ATTR_NOINLINE void renew_copy(size_t size,
+                                     const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs);
 
     VL_ATTR_NOINLINE void resize(size_t size);
 
@@ -721,9 +721,7 @@ public:
     VL_ATTR_NOINLINE void insert(int32_t index, const T_Value& value);
 
     // inside (set membership operator)
-    bool inside(const T_Value& value) const {
-        return std::find(begin(), end(), value) != end();
-    }
+    bool inside(const T_Value& value) const { return std::find(begin(), end(), value) != end(); }
 
     // Return slice q[lsb:msb]
     VL_ATTR_NOINLINE VlQueue slice(int32_t lsb, int32_t msb, size_t maxSize = 0) const;
@@ -873,20 +871,20 @@ public:
     template <typename T_Func>
     VlQueue min(T_Func with_func) const {
         if (empty()) return VlQueue{};
-        const auto it = std::min_element(begin(), end(),
-                                         [&with_func](const T_Value& a, const T_Value& b) {
-                                             return with_func(0, a) < with_func(0, b);
-                                         });
+        const auto it
+            = std::min_element(begin(), end(), [&with_func](const T_Value& a, const T_Value& b) {
+                  return with_func(0, a) < with_func(0, b);
+              });
         return VlQueue::consV(*it);
     }
     VL_ATTR_NOINLINE VlQueue max() const;
     template <typename T_Func>
     VlQueue max(T_Func with_func) const {
         if (empty()) return VlQueue{};
-        const auto it = std::max_element(begin(), end(),
-                                         [&with_func](const T_Value& a, const T_Value& b) {
-                                             return with_func(0, a) < with_func(0, b);
-                                         });
+        const auto it
+            = std::max_element(begin(), end(), [&with_func](const T_Value& a, const T_Value& b) {
+                  return with_func(0, a) < with_func(0, b);
+              });
         return VlQueue::consV(*it);
     }
 
@@ -1042,9 +1040,7 @@ VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(const VlQueue& rhs)
         m_buf = static_cast<T_Value*>(::operator new(rhs.m_size * sizeof(T_Value)));
         m_cap = rhs.m_size;
         m_size = rhs.m_size;
-        for (size_t i = 0; i < m_size; ++i) {
-            new (m_buf + i) T_Value(rhs.m_buf[rhs.m_head + i]);
-        }
+        for (size_t i = 0; i < m_size; ++i) { new (m_buf + i) T_Value(rhs.m_buf[rhs.m_head + i]); }
     }
 }
 
@@ -1057,8 +1053,7 @@ VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(VlQueue&& rhs)
     , m_defaultValue{std::move(rhs.m_defaultValue)} {}
 
 template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>&
-VlQueue<T_Value, 0>::operator=(const VlQueue& rhs) {
+VL_ATTR_NOINLINE VlQueue<T_Value, 0>& VlQueue<T_Value, 0>::operator=(const VlQueue& rhs) {
     if (this != &rhs) {
         assignFrom(rhs, 0);
         m_defaultValue = rhs.m_defaultValue;
@@ -1172,8 +1167,7 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::resize(size_t size) {
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::push_front(const T_Value& value,
-                                                      size_t maxSize) {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::push_front(const T_Value& value, size_t maxSize) {
     if (VL_UNLIKELY(m_head == 0)) reserveForPush(true);
     --m_head;
     new (m_buf + m_head) T_Value(value);
@@ -1186,8 +1180,7 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::push_front(const T_Value& value,
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::push_back(const T_Value& value,
-                                                     size_t maxSize) {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::push_back(const T_Value& value, size_t maxSize) {
     if (VL_LIKELY(maxSize == 0 || m_size < maxSize)) {
         if (VL_UNLIKELY(m_head + m_size == m_cap)) reserveForPush(false);
         new (m_buf + m_head + m_size) T_Value(value);
@@ -1228,8 +1221,7 @@ VL_ATTR_NOINLINE T_Value& VlQueue<T_Value, 0>::atWrite(int32_t index) {
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE T_Value& VlQueue<T_Value, 0>::atWriteAppend(int32_t index,
-                                                             size_t maxSize) {
+VL_ATTR_NOINLINE T_Value& VlQueue<T_Value, 0>::atWriteAppend(int32_t index, size_t maxSize) {
     // cppcheck-suppress variableScope
     static thread_local T_Value t_throwAway;
     if (static_cast<size_t>(index) == m_size) push_back(atDefault(), maxSize);
@@ -1407,9 +1399,7 @@ public:
     }
 
     // Construct new object from _V_alue and/or _C_ontainer child objects
-    VL_ATTR_ALWINLINE static Base consV(const T_Value& lhs) {
-        return Base::consV(lhs, N_MaxSize);
-    }
+    VL_ATTR_ALWINLINE static Base consV(const T_Value& lhs) { return Base::consV(lhs, N_MaxSize); }
     VL_ATTR_ALWINLINE static Base consVV(const T_Value& lhs, const T_Value& rhs) {
         return Base::consVV(lhs, rhs, N_MaxSize);
     }
@@ -1424,12 +1414,8 @@ public:
     }
 
     // METHODS
-    VL_ATTR_ALWINLINE void push_front(const T_Value& value) {
-        Base::push_front(value, N_MaxSize);
-    }
-    VL_ATTR_ALWINLINE void push_back(const T_Value& value) {
-        Base::push_back(value, N_MaxSize);
-    }
+    VL_ATTR_ALWINLINE void push_front(const T_Value& value) { Base::push_front(value, N_MaxSize); }
+    VL_ATTR_ALWINLINE void push_back(const T_Value& value) { Base::push_back(value, N_MaxSize); }
     VL_ATTR_ALWINLINE T_Value& atWriteAppend(int32_t index) {
         return Base::atWriteAppend(index, N_MaxSize);
     }
@@ -2232,8 +2218,9 @@ struct VlContainsCustomStruct<VlUnpacked<T_Value, N_Depth>> : VlContainsCustomSt
 
 template <typename T_Value>
 template <typename T_UnpackedValue, std::size_t N_UnpackedDepth>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::renew_copy(
-    size_t size, const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs) {
+VL_ATTR_NOINLINE void
+VlQueue<T_Value, 0>::renew_copy(size_t size,
+                                const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs) {
     clear();
     if (size == 0) return;
     resize(size);
@@ -2774,8 +2761,7 @@ inline T VL_NULL_CHECK(T t, const char* filename, int linenum) {
 
 template <typename T_Value>
 template <typename T_Subclass>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(
-    const VlQueue<VlClassRef<T_Subclass>, 0>& that)
+VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(const VlQueue<VlClassRef<T_Subclass>, 0>& that)
     : m_defaultValue{that.atDefault()} {
     const size_t n = that.size();
     if (n > 0) {

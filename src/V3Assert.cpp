@@ -1189,6 +1189,12 @@ class AssertVisitor final : public VNVisitor {
         } else {
             inp = getPastValue(exprp, initp, senTreep, ticks);
         }
+        if (m_inSampled) {
+            // History updates in NBA; an enclosing sample must retain its preponed value.
+            AstSampled* const sampledp = newSampledExpr(inp);
+            sampledp->user1(1);
+            inp = sampledp;
+        }
         nodep->replaceWith(inp);
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }

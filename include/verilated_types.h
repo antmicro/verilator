@@ -713,12 +713,7 @@ public:
     const T_Value& atBack(int32_t index) const { return at(m_size - 1 - index); }
 
     // function void q.insert(index, value);
-    // void insert(int32_t index, const T_Value& value) {
-    //     if (VL_UNLIKELY(index < 0 || index > m_deque.size())) return;
-    //     if (VL_UNLIKELY(N_MaxSize != 0 && m_deque.size() >= N_MaxSize)) return;
-    //     m_deque.insert(m_deque.begin() + index, value);
-    // }
-    VL_ATTR_NOINLINE void insert(int32_t index, const T_Value& value);
+    VL_ATTR_NOINLINE void insert(int32_t index, const T_Value& value, size_t maxSize = 0);
 
     // inside (set membership operator)
     bool inside(const T_Value& value) const {
@@ -1241,8 +1236,10 @@ VL_ATTR_NOINLINE T_Value& VlQueue<T_Value, 0>::atWriteAppend(int32_t index,
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::insert(int32_t index, const T_Value& value) {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::insert(int32_t index, const T_Value& value,
+                                                  size_t maxSize) {
     if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) > m_size)) return;
+    if (VL_UNLIKELY(maxSize != 0 && m_size >= maxSize)) return;
     const size_t idx = static_cast<size_t>(index);
     if (idx == 0) {
         push_front(value);
@@ -1429,6 +1426,9 @@ public:
     }
     VL_ATTR_ALWINLINE void push_back(const T_Value& value) {
         Base::push_back(value, N_MaxSize);
+    }
+    VL_ATTR_ALWINLINE void insert(int32_t index, const T_Value& value) {
+        Base::insert(index, value, N_MaxSize);
     }
     VL_ATTR_ALWINLINE T_Value& atWriteAppend(int32_t index) {
         return Base::atWriteAppend(index, N_MaxSize);

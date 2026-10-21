@@ -1967,7 +1967,7 @@ class TaskVisitor final : public VNVisitor {
         AstClassRefDType* const baseDTypep = new AstClassRefDType{flp, basep, nullptr};
         v3Global.rootp()->typeTablep()->addTypesp(baseDTypep);
         dispatcher.varp = new AstVar{flp, VVarType::MODULETEMP, "__VvifDispatcher", baseDTypep};
-        dispatcher.varp->sensStoragep(ifacep);  // Read via a virtual interface
+        dispatcher.varp->sensIfacep(ifacep);  // Read via a virtual interface
         ifacep->addStmtsp(dispatcher.varp);
         // Initialize the dispatcher variables first in the static initialization of the top
         // scope, which runs before that of any instance, as any may call through a handle

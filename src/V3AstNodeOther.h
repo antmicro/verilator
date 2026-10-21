@@ -2325,9 +2325,8 @@ class AstVar final : public AstNode {
     // @astgen op3 := valuep : Optional[AstNode<AstNodeExpr|AstNodeDType>]
     //     Value is a DType for type parameter defaults
     // @astgen op4 := attrsp : List[AstNode] // Attributes during early parse
-    // @astgen ptr := m_sensStoragep : Optional[AstNodeModule]  // Storage type to which reads from
-    // this
-    //                                                      var are sensitive
+    // @astgen ptr := m_sensIfacep : Optional[AstNodeModule] // Interface or captured storage type
+    //                                                      to which reads from var are sensitive
 
     string m_name;  // Name of variable
     string m_origName;  // Original name before dot addition
@@ -2585,7 +2584,7 @@ public:
     }
     void ansi(bool flag) { m_ansi = flag; }
     void declTyped(bool flag) { m_declTyped = flag; }
-    void sensStoragep(AstNodeModule* nodep) { m_sensStoragep = nodep; }
+    void sensIfacep(AstNodeModule* nodep) { m_sensIfacep = nodep; }
     void attrFileDescr(bool flag) { m_attrFileDescr = flag; }
     void attrScBv(bool flag) { m_attrScBv = flag; }
     void attrScBigUint(bool flag) { m_attrScBigUint = flag; }
@@ -2781,7 +2780,7 @@ public:
     bool attrFsmState() const { return m_attrFsmState; }
     bool attrFsmArcInclCond() const { return m_attrFsmArcInclCond; }
     VFsmExpandType attrFsmStateExpand() const { return m_attrFsmStateExpand; }
-    AstNodeModule* sensStoragep() const { return m_sensStoragep; }
+    AstNodeModule* sensIfacep() const { return m_sensIfacep; }
     VRandAttr rand() const { return m_rand; }
     string verilogKwd() const override;
     void lifetime(const VLifetime& flag) { m_lifetime = flag; }

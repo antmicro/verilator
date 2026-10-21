@@ -207,9 +207,9 @@ private:
                 // Mark the variable as read through an interface reference, as V3Width does for
                 // a member select. The mark is the interface declaring the variable, whose
                 // instances all share it, so drives through references to any instances agree.
-                UASSERT_OBJ(!varp->sensStoragep() || varp->sensStoragep() == ifacep, refp,
+                UASSERT_OBJ(!varp->sensIfacep() || varp->sensIfacep() == ifacep, refp,
                             "Variable read through references to different interfaces");
-                varp->sensStoragep(ifacep);
+                varp->sensIfacep(ifacep);
             }
             refp->replaceWith(newDriveRefp(refp->fileline(), drive, varp, refp->access()));
             VL_DO_DANGLING(pushDeletep(refp), refp);

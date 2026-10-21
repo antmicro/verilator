@@ -98,12 +98,12 @@ private:
         iterateChildren(nodep);
     }
     void visit(AstVarScope* nodep) override {
-        // Collect candidate VarScopes. sensStoragep() is set on interface members
+        // Collect candidate VarScopes. sensIfacep() is set on interface members
         // accessed via any MemberSel (virtual or non-virtual).
         AstVar* const varp = nodep->varp();
         if (varp->isTemp()) return;
         m_vscpsByVar[varp].push_back(nodep);
-        if (const AstNodeModule* const ifacep = varp->sensStoragep())
+        if (const AstNodeModule* const ifacep = varp->sensIfacep())
             addCandidateVscp(ifacep, nodep);
     }
     void visit(AstNodeProcedure* nodep) override {
@@ -162,7 +162,7 @@ public:
                         || refp->varScopep()->scopep()->modp() != callable.first) {
                         return;
                     }
-                    varp->sensStoragep(callable.first);
+                    varp->sensIfacep(callable.first);
                     m_vifWrittenMembers.emplace(callable.first, varp->name());
                     const auto it = m_vscpsByVar.find(varp);
                     UASSERT_OBJ(it != m_vscpsByVar.end(), varp,

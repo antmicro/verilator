@@ -2110,7 +2110,7 @@ class TaskIfaceSensVisitor final : public VNVisitorConst {
         // Keep temps: the clocking event var is a MODULETEMP
         if (nodep->varp()->isFuncLocal()) return;
         if (AstIface* const ifacep = VN_CAST(nodep->varScopep()->scopep()->modp(), Iface)) {
-            nodep->varp()->sensStoragep(ifacep);
+            nodep->varp()->sensIfacep(ifacep);
         }
     }
     void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }

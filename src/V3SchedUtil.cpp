@@ -32,7 +32,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 V3Sched::util::StorageScopes V3Sched::util::collectStorageScopes(AstNetlist* netlistp) {
     StorageScopes scopes;
     netlistp->foreach([&](AstVarScope* vscp) {
-        if (vscp->varp()->sensStoragep()) scopes[vscp->varp()].push_back(vscp);
+        if (vscp->varp()->sensIfacep()) scopes[vscp->varp()].push_back(vscp);
     });
     return scopes;
 }

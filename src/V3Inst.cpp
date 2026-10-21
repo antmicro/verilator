@@ -99,7 +99,7 @@ class InstVisitor final : public VNVisitor {
         // A ref port must become an alias
         if (!modVarp->direction().isRef()) {
             // Indirect accesses must keep the storage addressed by their receiver.
-            if (modVarp->sensStoragep() || exprVarp->sensStoragep()) return false;
+            if (modVarp->sensIfacep() || exprVarp->sensIfacep()) return false;
             // V3FsmDetect recognizes the registers of an fsm_register_wrapper instance via
             // the assignments of its pins, so leave those as assignments
             AstNodeModule* const cellModp = m_cellp->modp();

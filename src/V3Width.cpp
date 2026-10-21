@@ -4231,7 +4231,7 @@ class WidthVisitor final : public VNVisitor {
                 }
                 if (AstIfaceRefDType* const adtypep
                     = VN_CAST(nodep->fromp()->dtypep()->skipRefp(), IfaceRefDType)) {
-                    nodep->varp()->sensStoragep(adtypep->ifacep());
+                    nodep->varp()->sensIfacep(adtypep->ifacep());
                 }
                 UINFO(9, "     done clocking msel " << nodep);
                 nodep->didWidth(true);  // Must not visit again: will confuse scopes
@@ -4248,7 +4248,7 @@ class WidthVisitor final : public VNVisitor {
                 if (AstVar* const varp = VN_CAST(foundp, Var)) {
                     if (!varp->didWidth()) userIterate(varp, nullptr);
                     AstIface* const ifacep = adtypep->ifaceViaCellp();
-                    varp->sensStoragep(ifacep);
+                    varp->sensIfacep(ifacep);
                     // Member of a non-virtual interface reference, e.g. an element selected
                     // from a whole array of interfaces: reference it through the interface,
                     // as V3LinkDot does for 'iface.member'
@@ -4322,7 +4322,7 @@ class WidthVisitor final : public VNVisitor {
                         }
                         nodep->dtypep(subDtypep);
                         nodep->varp(viftopVarp);
-                        viftopVarp->sensStoragep(VN_AS(cellp->modp(), Iface));
+                        viftopVarp->sensIfacep(VN_AS(cellp->modp(), Iface));
                         nodep->didWidth(true);
                         return;
                     }
@@ -5322,7 +5322,7 @@ class WidthVisitor final : public VNVisitor {
             }
             if (adtypep->isVirtual()) {
                 for (AstNode* itemp = ifacep->stmtsp(); itemp; itemp = itemp->nextp()) {
-                    if (AstVar* const mvarp = VN_CAST(itemp, Var)) { mvarp->sensStoragep(ifacep); }
+                    if (AstVar* const mvarp = VN_CAST(itemp, Var)) { mvarp->sensIfacep(ifacep); }
                 }
             }
             userIterate(ftaskp, nullptr);

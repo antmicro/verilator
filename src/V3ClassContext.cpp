@@ -287,7 +287,7 @@ class ContextPrepareVisitor final : public VNVisitor {
             const ClassContext& context = *contextp;
             for (const auto& item : context.vars) {
                 AstNodeVarRef* const refp = item.first;
-                refp->varp()->sensStoragep(item.second.second);
+                refp->varp()->sensIfacep(item.second.second);
                 AstMemberSel* const selp = new AstMemberSel{
                     refp->fileline(),
                     address(refp->fileline(), context.ownerp, item.second, contextp, false),
@@ -329,7 +329,7 @@ class ContextPrepareVisitor final : public VNVisitor {
             AstNodeVarRef* const refp = item.first;
             AstClassPackage* const packagep = VN_AS(m_declarations.at(refp->varp()), ClassPackage);
             const ClassContext& context = m_classes.at(packagep->classp());
-            refp->varp()->sensStoragep(packagep);
+            refp->varp()->sensIfacep(packagep);
             AstMemberSel* const selp
                 = new AstMemberSel{refp->fileline(),
                                    address(refp->fileline(), item.second,
@@ -380,7 +380,7 @@ class ContextPrepareVisitor final : public VNVisitor {
         for (const StaticSelection& selection : m_staticSelections) {
             AstMemberSel* const selp = selection.refp;
             AstNodeExpr* const objectp = selp->fromp()->unlinkFrBack();
-            selp->varp()->sensStoragep(selection.key.second);
+            selp->varp()->sensIfacep(selection.key.second);
             AstNodeExpr* storagep = address(selp->fileline(), selection.ownerp, selection.key,
                                             selection.callerp, false);
             if (!objectp->isPure()) {

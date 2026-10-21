@@ -1181,7 +1181,7 @@ class TraceVisitor final : public VNVisitor {
     }
     void visit(AstVarScope* nodep) override {
         if (!m_finding) {
-            if (const AstNodeModule* const ifacep = nodep->varp()->sensStoragep()) {
+            if (const AstNodeModule* const ifacep = nodep->varp()->sensIfacep()) {
                 m_ifaceMemberVscps[{ifacep, nodep->varp()->name()}].push_back(nodep);
             }
         }

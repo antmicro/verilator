@@ -631,8 +631,8 @@ class AssertVisitor final : public VNVisitor {
                              AstNodeExpr* initp) {
         FileLine* const flp = exprp->fileline();
         AstVar* const varp = new AstVar{flp, VVarType::MODULETEMP, name, exprp->dtypep()};
-        // TODO: this lifetime seems nonsene (can't have NBAs to automatics), but is as before
-        varp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
+        // Sampling history belongs to the generated process, not an object or call frame.
+        varp->lifetime(VLifetime::STATIC_EXPLICIT);
         m_modp->addStmtsp(varp);
         // Before enough clock ticks, $past returns the expression's default sampled value.
         if (initp) {
@@ -710,6 +710,7 @@ class AssertVisitor final : public VNVisitor {
             varpr = new AstVar{flp, VVarType::MODULETEMP,
                                "_Vpast_" + cvtToStr(m_modPastNum++) + "_t",
                                m_modp->findUInt64DType()};
+            varpr->lifetime(VLifetime::STATIC_EXPLICIT);
             m_modp->addStmtsp(varpr);
             AstNodeExpr* const timep = new AstCExpr{flp, "vlSymsp->_vm_contextp__->time()", 64};
             alwaysp->addStmtsp(

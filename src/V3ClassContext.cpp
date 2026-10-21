@@ -23,6 +23,7 @@
 // inputs; no object receiver exists in their bodies. Only mutable instance-owned
 // static fields move before scoping, through V3Class's single package factory.
 // Static selections use the receiver's type binding, never the handle value.
+// Class-level generated processes live with static state; they have no object receiver.
 //*************************************************************************
 
 #include "V3PchAstNoMT.h"
@@ -52,6 +53,7 @@ struct ClassContext final {
     std::vector<std::pair<AstNodeVarRef*, CaptureKey>> vars;
     std::vector<std::pair<AstNodeFTaskRef*, CaptureKey>> calls;
     std::vector<AstNew*> constructions;
+    std::vector<AstNodeProcedure*> processes;
 };
 struct StaticCall final {
     AstNodeFTaskRef* refp;
@@ -114,10 +116,10 @@ class ContextPrepareVisitor final : public VNVisitor {
             for (AstNode* nodep = classp->stmtsp(); nodep; nodep = nodep->nextp()) {
                 if (const AstVar* const varp = VN_CAST(nodep, Var)) {
                     if (varp->lifetime().isStatic() && !varp->isParam()) moves.push_back(nodep);
-                } else if (VN_IS(nodep, InitialStatic) || VN_IS(nodep, Initial)) {
-                    moves.push_back(nodep);
                 }
             }
+            // Assertion monitors can also be nested in methods before scoping hoists them.
+            moves.insert(moves.end(), context.processes.begin(), context.processes.end());
             if (moves.empty()) continue;
             AstClassPackage* const packagep
                 = V3Class::newPackage(classp, "__VclassStatic" + cvtToStr(index) + "__Vclpkg");
@@ -419,6 +421,12 @@ class ContextPrepareVisitor final : public VNVisitor {
     }
     void visit(AstVar* nodep) override {
         if (m_collect) m_declarations[nodep] = m_modp;
+        iterateChildren(nodep);
+    }
+    void visit(AstNodeProcedure* nodep) override {
+        if (m_collect && m_classp && !VN_IS(nodep, InitialAutomatic)) {
+            m_classes.at(m_classp).processes.push_back(nodep);
+        }
         iterateChildren(nodep);
     }
     void visit(AstNodeFTask* nodep) override {

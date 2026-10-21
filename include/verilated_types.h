@@ -622,32 +622,32 @@ protected:
     T_Value m_defaultValue{};  // Default value
 
     VL_ATTR_NOINLINE void reserveForPush(bool front);
-    VL_ATTR_NOINLINE void destroyElements() noexcept;
-    VL_ATTR_NOINLINE void truncate(size_t size) noexcept;
-    VL_ATTR_NOINLINE void assignFrom(const VlQueue& rhs, size_t maxSize) noexcept;
-    VL_ATTR_NOINLINE void assignFrom(VlQueue&& rhs, size_t maxSize) noexcept;
+    VL_ATTR_NOINLINE void destroyElements();
+    VL_ATTR_NOINLINE void truncate(size_t size);
+    VL_ATTR_NOINLINE void assignFrom(const VlQueue& rhs, size_t maxSize);
+    VL_ATTR_NOINLINE void assignFrom(VlQueue&& rhs, size_t maxSize);
 
 public:
     // CONSTRUCTORS
     // cppcheck-suppress uninitMemberVar // m_defaultValue isn't defaulted, caller must
-    VL_ATTR_NOINLINE VlQueue() noexcept;
-    VL_ATTR_NOINLINE ~VlQueue() noexcept;
-    VL_ATTR_NOINLINE VlQueue(const VlQueue& rhs) noexcept;
-    VL_ATTR_NOINLINE VlQueue(VlQueue&& rhs) noexcept;
-    VL_ATTR_NOINLINE VlQueue& operator=(const VlQueue& rhs) noexcept;
-    VL_ATTR_NOINLINE VlQueue& operator=(VlQueue&& rhs) noexcept;
+    VL_ATTR_NOINLINE VlQueue();
+    VL_ATTR_NOINLINE ~VlQueue();
+    VL_ATTR_NOINLINE VlQueue(const VlQueue& rhs);
+    VL_ATTR_NOINLINE VlQueue(VlQueue&& rhs);
+    VL_ATTR_NOINLINE VlQueue& operator=(const VlQueue& rhs);
+    VL_ATTR_NOINLINE VlQueue& operator=(VlQueue&& rhs);
 
     // Template constuctors that construct from containers holding sub-classes
     template <typename T_Subclass>
-    VL_ATTR_NOINLINE VlQueue(const VlQueue<VlClassRef<T_Subclass>, 0>&) noexcept;
+    VL_ATTR_NOINLINE VlQueue(const VlQueue<VlClassRef<T_Subclass>, 0>&);
     template <typename T_Subclass>
-    VL_ATTR_NOINLINE VlQueue(VlQueue<VlClassRef<T_Subclass>, 0>&&) noexcept;
+    VL_ATTR_NOINLINE VlQueue(VlQueue<VlClassRef<T_Subclass>, 0>&&);
 
-    bool operator==(const VlQueue& rhs) const noexcept {
+    bool operator==(const VlQueue& rhs) const {
         return m_size == rhs.m_size && std::equal(begin(), end(), rhs.begin());
     }
-    bool operator!=(const VlQueue& rhs) const noexcept { return !(*this == rhs); }
-    bool operator<(const VlQueue& rhs) const noexcept {
+    bool operator!=(const VlQueue& rhs) const { return !(*this == rhs); }
+    bool operator<(const VlQueue& rhs) const {
         for (size_t index = 0; index < m_size; ++index) {
             if (m_buf[m_head + index] < rhs.m_buf[rhs.m_head + index]) return true;
         }
@@ -655,62 +655,62 @@ public:
     }
 
     // Construct new object from _V_alue and/or _C_ontainer child objects
-    VL_ATTR_NOINLINE static VlQueue consV(const T_Value& lhs, size_t maxSize = 0) noexcept;
+    VL_ATTR_NOINLINE static VlQueue consV(const T_Value& lhs, size_t maxSize = 0);
     VL_ATTR_NOINLINE static VlQueue consVV(const T_Value& lhs, const T_Value& rhs,
-                                           size_t maxSize = 0) noexcept;
+                                           size_t maxSize = 0);
     VL_ATTR_NOINLINE static VlQueue consCV(const VlQueue& lhs, const T_Value& rhs,
-                                           size_t maxSize = 0) noexcept;
+                                           size_t maxSize = 0);
     VL_ATTR_NOINLINE static VlQueue consVC(const T_Value& lhs, const VlQueue& rhs,
-                                           size_t maxSize = 0) noexcept;
+                                           size_t maxSize = 0);
     VL_ATTR_NOINLINE static VlQueue consCC(const VlQueue& lhs, const VlQueue& rhs,
-                                           size_t maxSize = 0) noexcept;
+                                           size_t maxSize = 0);
 
     // METHODS
-    T_Value& atDefault() noexcept { return m_defaultValue; }
-    const T_Value& atDefault() const noexcept { return m_defaultValue; }
+    T_Value& atDefault() { return m_defaultValue; }
+    const T_Value& atDefault() const { return m_defaultValue; }
 
     // Size. Verilog: function int size(), or int num()
-    int size() const noexcept { return static_cast<int>(m_size); }
-    bool empty() const noexcept { return m_size == 0; }
+    int size() const { return static_cast<int>(m_size); }
+    bool empty() const { return m_size == 0; }
     // Clear array. Verilog: function void delete([input index])
-    VL_ATTR_NOINLINE void clear() noexcept;
-    VL_ATTR_NOINLINE void erase(int32_t index) noexcept;
+    VL_ATTR_NOINLINE void clear();
+    VL_ATTR_NOINLINE void erase(int32_t index);
 
     // Dynamic array new[] becomes a renew()
-    VL_ATTR_NOINLINE void renew(size_t size) noexcept;
+    VL_ATTR_NOINLINE void renew(size_t size);
     // Dynamic array new[]() becomes a renew_copy()
-    VL_ATTR_NOINLINE void renew_copy(size_t size, const VlQueue& rhs) noexcept;
+    VL_ATTR_NOINLINE void renew_copy(size_t size, const VlQueue& rhs);
     // Unpacked array new[]() becomes a renew_copy()
     template <typename T_UnpackedValue, std::size_t N_UnpackedDepth>
     VL_ATTR_NOINLINE void
-    renew_copy(size_t size, const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs) noexcept;
+    renew_copy(size_t size, const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs);
 
-    VL_ATTR_NOINLINE void resize(size_t size) noexcept;
+    VL_ATTR_NOINLINE void resize(size_t size);
 
     // function void q.push_front(value)
-    VL_ATTR_NOINLINE void push_front(const T_Value& value, size_t maxSize = 0) noexcept;
+    VL_ATTR_NOINLINE void push_front(const T_Value& value, size_t maxSize = 0);
     // function void q.push_back(value)
-    VL_ATTR_NOINLINE void push_back(const T_Value& value, size_t maxSize = 0) noexcept;
+    VL_ATTR_NOINLINE void push_back(const T_Value& value, size_t maxSize = 0);
     // function value_t q.pop_front();
-    VL_ATTR_NOINLINE T_Value pop_front() noexcept;
+    VL_ATTR_NOINLINE T_Value pop_front();
     // function value_t q.pop_back();
-    VL_ATTR_NOINLINE T_Value pop_back() noexcept;
+    VL_ATTR_NOINLINE T_Value pop_back();
 
     // Setting. Verilog: assoc[index] = v (should only be used by dynamic arrays)
-    VL_ATTR_NOINLINE T_Value& atWrite(int32_t index) noexcept;
+    VL_ATTR_NOINLINE T_Value& atWrite(int32_t index);
     // Setting. Verilog: assoc[index] = v (should only be used by queues)
-    VL_ATTR_NOINLINE T_Value& atWriteAppend(int32_t index, size_t maxSize = 0) noexcept;
+    VL_ATTR_NOINLINE T_Value& atWriteAppend(int32_t index, size_t maxSize = 0);
     // Accessing. Verilog: v = assoc[index]
-    const T_Value& at(int32_t index) const noexcept {
+    const T_Value& at(int32_t index) const {
         // Needs to work for dynamic arrays, so does not use N_MaxSize
         if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_size)) return atDefault();
         return m_buf[m_head + index];
     }
     // Access with an index counted from end (e.g. q[$])
-    T_Value& atWriteAppendBack(int32_t index, size_t maxSize = 0) noexcept {
+    T_Value& atWriteAppendBack(int32_t index, size_t maxSize = 0) {
         return atWriteAppend(m_size - 1 - index, maxSize);
     }
-    const T_Value& atBack(int32_t index) const noexcept { return at(m_size - 1 - index); }
+    const T_Value& atBack(int32_t index) const { return at(m_size - 1 - index); }
 
     // function void q.insert(index, value);
     // void insert(int32_t index, const T_Value& value) {
@@ -718,35 +718,35 @@ public:
     //     if (VL_UNLIKELY(N_MaxSize != 0 && m_deque.size() >= N_MaxSize)) return;
     //     m_deque.insert(m_deque.begin() + index, value);
     // }
-    VL_ATTR_NOINLINE void insert(int32_t index, const T_Value& value) noexcept;
+    VL_ATTR_NOINLINE void insert(int32_t index, const T_Value& value);
 
     // inside (set membership operator)
-    bool inside(const T_Value& value) const noexcept {
+    bool inside(const T_Value& value) const {
         return std::find(begin(), end(), value) != end();
     }
 
     // Return slice q[lsb:msb]
-    VL_ATTR_NOINLINE VlQueue slice(int32_t lsb, int32_t msb, size_t maxSize = 0) const noexcept;
-    VlQueue sliceFrontBack(int32_t lsb, int32_t msb, size_t maxSize = 0) const noexcept {
+    VL_ATTR_NOINLINE VlQueue slice(int32_t lsb, int32_t msb, size_t maxSize = 0) const;
+    VlQueue sliceFrontBack(int32_t lsb, int32_t msb, size_t maxSize = 0) const {
         return slice(lsb, m_size - 1 - msb, maxSize);
     }
-    VlQueue sliceBackBack(int32_t lsb, int32_t msb, size_t maxSize = 0) const noexcept {
+    VlQueue sliceBackBack(int32_t lsb, int32_t msb, size_t maxSize = 0) const {
         return slice(m_size - 1 - lsb, m_size - 1 - msb, maxSize);
     }
     // Assign src elements to q[lsb:msb]
-    VL_ATTR_NOINLINE void sliceAssign(int32_t lsb, int32_t msb, const VlQueue& src) noexcept;
-    void sliceAssignFrontBack(int32_t lsb, int32_t msb, const VlQueue& src) noexcept {
+    VL_ATTR_NOINLINE void sliceAssign(int32_t lsb, int32_t msb, const VlQueue& src);
+    void sliceAssignFrontBack(int32_t lsb, int32_t msb, const VlQueue& src) {
         sliceAssign(lsb, m_size - 1 - msb, src);
     }
-    void sliceAssignBackBack(int32_t lsb, int32_t msb, const VlQueue& src) noexcept {
+    void sliceAssignBackBack(int32_t lsb, int32_t msb, const VlQueue& src) {
         sliceAssign(m_size - 1 - lsb, m_size - 1 - msb, src);
     }
 
     // For save/restore and range iteration
-    T_Value* begin() noexcept { return m_buf + m_head; }
-    const_iterator begin() const noexcept { return m_buf + m_head; }
-    T_Value* end() noexcept { return m_buf + m_head + m_size; }
-    const_iterator end() const noexcept { return m_buf + m_head + m_size; }
+    T_Value* begin() { return m_buf + m_head; }
+    const_iterator begin() const { return m_buf + m_head; }
+    T_Value* end() { return m_buf + m_head + m_size; }
+    const_iterator end() const { return m_buf + m_head + m_size; }
 
     // Methods
     VL_ATTR_NOINLINE void sort();
@@ -767,7 +767,7 @@ public:
             return with_func(0, b) < with_func(0, a);
         });
     }
-    VL_ATTR_NOINLINE void reverse() noexcept;
+    VL_ATTR_NOINLINE void reverse();
     VL_ATTR_NOINLINE void shuffle();
     VL_ATTR_NOINLINE VlQueue unique() const;
     template <typename T_Func>
@@ -891,7 +891,7 @@ public:
     }
 
     template <typename U = T_Value>
-    T_Value r_sum() const noexcept {
+    T_Value r_sum() const {
         T_Value out(0);  // Type must have assignment operator
         for (const auto& i : *this) out += i;
         return out;
@@ -904,7 +904,7 @@ public:
         return out;
     }
     template <typename U = T_Value>
-    T_Value r_product() const noexcept {
+    T_Value r_product() const {
         if (empty()) return T_Value(0);  // The big three do it this way
         T_Value out = T_Value(1);
         for (const auto& i : *this) out *= i;
@@ -919,7 +919,7 @@ public:
         return out;
     }
     template <typename U = T_Value>
-    T_Value r_and() const noexcept {
+    T_Value r_and() const {
         if (empty()) return T_Value(0);  // The big three do it this way
         T_Value out = ~T_Value(0);
         for (const auto& i : *this) out &= i;
@@ -934,7 +934,7 @@ public:
         return out;
     }
     template <typename U = T_Value>
-    T_Value r_or() const noexcept {
+    T_Value r_or() const {
         T_Value out = T_Value(0);
         for (const auto& i : *this) out |= i;
         return out;
@@ -947,7 +947,7 @@ public:
         return out;
     }
     template <typename U = T_Value>
-    T_Value r_xor() const noexcept {
+    T_Value r_xor() const {
 #ifdef VERILATOR_BIG3_NULLARY_ARITHMETICS_QUIRKS
         if (empty()) return T_Value(0);
 #endif
@@ -968,7 +968,7 @@ public:
 };
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::destroyElements() noexcept {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::destroyElements() {
     for (size_t i = 0; i < m_size; ++i) (m_buf + m_head + i)->~T_Value();
     m_head = 0;
     m_size = 0;
@@ -990,12 +990,12 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::reserveForPush(bool front) {
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::truncate(size_t size) noexcept {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::truncate(size_t size) {
     while (m_size > size) pop_back();
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::assignFrom(const VlQueue& rhs, size_t maxSize) noexcept {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::assignFrom(const VlQueue& rhs, size_t maxSize) {
     if (this != &rhs) {
         destroyElements();
         const size_t copyCount = (maxSize && maxSize <= rhs.m_size) ? maxSize - 1 : rhs.m_size;
@@ -1014,7 +1014,7 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::assignFrom(const VlQueue& rhs, size_t
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::assignFrom(VlQueue&& rhs, size_t maxSize) noexcept {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::assignFrom(VlQueue&& rhs, size_t maxSize) {
     if (this != &rhs) {
         destroyElements();
         ::operator delete(m_buf);
@@ -1027,16 +1027,16 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::assignFrom(VlQueue&& rhs, size_t maxS
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue() noexcept {}
+VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue() {}
 
 template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>::~VlQueue() noexcept {
+VL_ATTR_NOINLINE VlQueue<T_Value, 0>::~VlQueue() {
     destroyElements();
     ::operator delete(m_buf);
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(const VlQueue& rhs) noexcept
+VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(const VlQueue& rhs)
     : m_defaultValue{rhs.m_defaultValue} {
     if (rhs.m_size) {
         m_buf = static_cast<T_Value*>(::operator new(rhs.m_size * sizeof(T_Value)));
@@ -1049,7 +1049,7 @@ VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(const VlQueue& rhs) noexcept
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(VlQueue&& rhs) noexcept
+VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(VlQueue&& rhs)
     : m_buf{std::exchange(rhs.m_buf, nullptr)}
     , m_cap{std::exchange(rhs.m_cap, 0)}
     , m_head{std::exchange(rhs.m_head, 0)}
@@ -1058,7 +1058,7 @@ VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(VlQueue&& rhs) noexcept
 
 template <typename T_Value>
 VL_ATTR_NOINLINE VlQueue<T_Value, 0>&
-VlQueue<T_Value, 0>::operator=(const VlQueue& rhs) noexcept {
+VlQueue<T_Value, 0>::operator=(const VlQueue& rhs) {
     if (this != &rhs) {
         assignFrom(rhs, 0);
         m_defaultValue = rhs.m_defaultValue;
@@ -1067,7 +1067,7 @@ VlQueue<T_Value, 0>::operator=(const VlQueue& rhs) noexcept {
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>& VlQueue<T_Value, 0>::operator=(VlQueue&& rhs) noexcept {
+VL_ATTR_NOINLINE VlQueue<T_Value, 0>& VlQueue<T_Value, 0>::operator=(VlQueue&& rhs) {
     if (this != &rhs) {
         assignFrom(std::move(rhs), 0);
         m_defaultValue = std::move(rhs.m_defaultValue);
@@ -1077,7 +1077,7 @@ VL_ATTR_NOINLINE VlQueue<T_Value, 0>& VlQueue<T_Value, 0>::operator=(VlQueue&& r
 
 template <typename T_Value>
 VL_ATTR_NOINLINE VlQueue<T_Value, 0> VlQueue<T_Value, 0>::consV(const T_Value& lhs,
-                                                                size_t maxSize) noexcept {
+                                                                size_t maxSize) {
     VlQueue out;
     out.push_back(lhs, maxSize);
     return out;
@@ -1085,7 +1085,7 @@ VL_ATTR_NOINLINE VlQueue<T_Value, 0> VlQueue<T_Value, 0>::consV(const T_Value& l
 
 template <typename T_Value>
 VL_ATTR_NOINLINE VlQueue<T_Value, 0>
-VlQueue<T_Value, 0>::consVV(const T_Value& lhs, const T_Value& rhs, size_t maxSize) noexcept {
+VlQueue<T_Value, 0>::consVV(const T_Value& lhs, const T_Value& rhs, size_t maxSize) {
     VlQueue out;
     out.push_back(rhs, maxSize);
     out.push_back(lhs, maxSize);
@@ -1094,7 +1094,7 @@ VlQueue<T_Value, 0>::consVV(const T_Value& lhs, const T_Value& rhs, size_t maxSi
 
 template <typename T_Value>
 VL_ATTR_NOINLINE VlQueue<T_Value, 0>
-VlQueue<T_Value, 0>::consCV(const VlQueue& lhs, const T_Value& rhs, size_t maxSize) noexcept {
+VlQueue<T_Value, 0>::consCV(const VlQueue& lhs, const T_Value& rhs, size_t maxSize) {
     VlQueue out = lhs;
     out.push_front(rhs, maxSize);
     return out;
@@ -1102,7 +1102,7 @@ VlQueue<T_Value, 0>::consCV(const VlQueue& lhs, const T_Value& rhs, size_t maxSi
 
 template <typename T_Value>
 VL_ATTR_NOINLINE VlQueue<T_Value, 0>
-VlQueue<T_Value, 0>::consVC(const T_Value& lhs, const VlQueue& rhs, size_t maxSize) noexcept {
+VlQueue<T_Value, 0>::consVC(const T_Value& lhs, const VlQueue& rhs, size_t maxSize) {
     VlQueue out = rhs;
     out.push_back(lhs, maxSize);
     return out;
@@ -1110,19 +1110,19 @@ VlQueue<T_Value, 0>::consVC(const T_Value& lhs, const VlQueue& rhs, size_t maxSi
 
 template <typename T_Value>
 VL_ATTR_NOINLINE VlQueue<T_Value, 0>
-VlQueue<T_Value, 0>::consCC(const VlQueue& lhs, const VlQueue& rhs, size_t maxSize) noexcept {
+VlQueue<T_Value, 0>::consCC(const VlQueue& lhs, const VlQueue& rhs, size_t maxSize) {
     VlQueue out = rhs;
     for (const auto& i : lhs) out.push_back(i, maxSize);
     return out;
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::clear() noexcept {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::clear() {
     destroyElements();
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::erase(int32_t index) noexcept {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::erase(int32_t index) {
     if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_size)) return;
     const size_t idx = static_cast<size_t>(index);
     if (idx == 0) {
@@ -1140,7 +1140,7 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::erase(int32_t index) noexcept {
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::renew(size_t size) noexcept {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::renew(size_t size) {
     destroyElements();
     if (size > m_cap) {
         ::operator delete(m_buf);
@@ -1152,7 +1152,7 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::renew(size_t size) noexcept {
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::renew_copy(size_t size, const VlQueue& rhs) noexcept {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::renew_copy(size_t size, const VlQueue& rhs) {
     if (size == 0) {
         clear();
     } else {
@@ -1162,7 +1162,7 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::renew_copy(size_t size, const VlQueue
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::resize(size_t size) noexcept {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::resize(size_t size) {
     while (m_size > size) {
         --m_size;
         (m_buf + m_head + m_size)->~T_Value();
@@ -1173,7 +1173,7 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::resize(size_t size) noexcept {
 
 template <typename T_Value>
 VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::push_front(const T_Value& value,
-                                                      size_t maxSize) noexcept {
+                                                      size_t maxSize) {
     if (VL_UNLIKELY(m_head == 0)) reserveForPush(true);
     --m_head;
     new (m_buf + m_head) T_Value(value);
@@ -1187,7 +1187,7 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::push_front(const T_Value& value,
 
 template <typename T_Value>
 VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::push_back(const T_Value& value,
-                                                     size_t maxSize) noexcept {
+                                                     size_t maxSize) {
     if (VL_LIKELY(maxSize == 0 || m_size < maxSize)) {
         if (VL_UNLIKELY(m_head + m_size == m_cap)) reserveForPush(false);
         new (m_buf + m_head + m_size) T_Value(value);
@@ -1196,7 +1196,7 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::push_back(const T_Value& value,
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE T_Value VlQueue<T_Value, 0>::pop_front() noexcept {
+VL_ATTR_NOINLINE T_Value VlQueue<T_Value, 0>::pop_front() {
     if (empty()) return m_defaultValue;
     T_Value v = std::move(m_buf[m_head]);
     (m_buf + m_head)->~T_Value();
@@ -1206,7 +1206,7 @@ VL_ATTR_NOINLINE T_Value VlQueue<T_Value, 0>::pop_front() noexcept {
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE T_Value VlQueue<T_Value, 0>::pop_back() noexcept {
+VL_ATTR_NOINLINE T_Value VlQueue<T_Value, 0>::pop_back() {
     if (empty()) return m_defaultValue;
     --m_size;
     T_Value v = std::move(m_buf[m_head + m_size]);
@@ -1216,7 +1216,7 @@ VL_ATTR_NOINLINE T_Value VlQueue<T_Value, 0>::pop_back() noexcept {
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE T_Value& VlQueue<T_Value, 0>::atWrite(int32_t index) noexcept {
+VL_ATTR_NOINLINE T_Value& VlQueue<T_Value, 0>::atWrite(int32_t index) {
     // cppcheck-suppress variableScope
     static thread_local T_Value t_throwAway;
     // Needs to work for dynamic arrays, so does not use N_MaxSize
@@ -1229,7 +1229,7 @@ VL_ATTR_NOINLINE T_Value& VlQueue<T_Value, 0>::atWrite(int32_t index) noexcept {
 
 template <typename T_Value>
 VL_ATTR_NOINLINE T_Value& VlQueue<T_Value, 0>::atWriteAppend(int32_t index,
-                                                             size_t maxSize) noexcept {
+                                                             size_t maxSize) {
     // cppcheck-suppress variableScope
     static thread_local T_Value t_throwAway;
     if (static_cast<size_t>(index) == m_size) push_back(atDefault(), maxSize);
@@ -1241,7 +1241,7 @@ VL_ATTR_NOINLINE T_Value& VlQueue<T_Value, 0>::atWriteAppend(int32_t index,
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::insert(int32_t index, const T_Value& value) noexcept {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::insert(int32_t index, const T_Value& value) {
     if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) > m_size)) return;
     const size_t idx = static_cast<size_t>(index);
     if (idx == 0) {
@@ -1263,7 +1263,7 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::insert(int32_t index, const T_Value& 
 
 template <typename T_Value>
 VL_ATTR_NOINLINE VlQueue<T_Value, 0> VlQueue<T_Value, 0>::slice(int32_t lsb, int32_t msb,
-                                                                size_t maxSize) const noexcept {
+                                                                size_t maxSize) const {
     VlQueue out;
     if (VL_UNLIKELY(lsb < 0)) lsb = 0;
     if (VL_UNLIKELY(lsb >= static_cast<int32_t>(m_size))) lsb = static_cast<int32_t>(m_size) - 1;
@@ -1274,7 +1274,7 @@ VL_ATTR_NOINLINE VlQueue<T_Value, 0> VlQueue<T_Value, 0>::slice(int32_t lsb, int
 
 template <typename T_Value>
 VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::sliceAssign(int32_t lsb, int32_t msb,
-                                                       const VlQueue& src) noexcept {
+                                                       const VlQueue& src) {
     const int32_t sz = static_cast<int32_t>(m_size);
     const int32_t srcSz = static_cast<int32_t>(src.m_size);
     if (VL_UNLIKELY(sz <= 0 || srcSz <= 0)) return;
@@ -1297,7 +1297,7 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::rsort() {
 }
 
 template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::reverse() noexcept {
+VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::reverse() {
     std::reverse(begin(), end());
 }
 
@@ -1369,80 +1369,80 @@ private:
 
 public:
     // CONSTRUCTORS
-    VL_ATTR_ALWINLINE VlQueue() noexcept = default;
-    VL_ATTR_ALWINLINE ~VlQueue() noexcept = default;
-    VL_ATTR_ALWINLINE VlQueue(const VlQueue&) noexcept = default;
-    VL_ATTR_ALWINLINE VlQueue(VlQueue&&) noexcept = default;
+    VL_ATTR_ALWINLINE VlQueue() = default;
+    VL_ATTR_ALWINLINE ~VlQueue() = default;
+    VL_ATTR_ALWINLINE VlQueue(const VlQueue&) = default;
+    VL_ATTR_ALWINLINE VlQueue(VlQueue&&) = default;
     // cppcheck-suppress noExplicitConstructor
-    VL_ATTR_ALWINLINE VlQueue(const Base& rhs) noexcept
+    VL_ATTR_ALWINLINE VlQueue(const Base& rhs)
         : Base{rhs} {
         if (VL_UNLIKELY(N_MaxSize < this->m_size)) this->truncate(N_MaxSize - 1);
     }
     // cppcheck-suppress noExplicitConstructor
-    VL_ATTR_ALWINLINE VlQueue(Base&& rhs) noexcept
+    VL_ATTR_ALWINLINE VlQueue(Base&& rhs)
         : Base{std::move(rhs)} {
         if (VL_UNLIKELY(N_MaxSize < this->m_size)) this->truncate(N_MaxSize - 1);
     }
-    VL_ATTR_ALWINLINE VlQueue& operator=(const VlQueue&) noexcept = default;
-    VL_ATTR_ALWINLINE VlQueue& operator=(VlQueue&&) noexcept = default;
-    VL_ATTR_ALWINLINE VlQueue& operator=(const Base& rhs) noexcept {
+    VL_ATTR_ALWINLINE VlQueue& operator=(const VlQueue&) = default;
+    VL_ATTR_ALWINLINE VlQueue& operator=(VlQueue&&) = default;
+    VL_ATTR_ALWINLINE VlQueue& operator=(const Base& rhs) {
         this->assignFrom(rhs, N_MaxSize);
         return *this;
     }
-    VL_ATTR_ALWINLINE VlQueue& operator=(Base&& rhs) noexcept {
+    VL_ATTR_ALWINLINE VlQueue& operator=(Base&& rhs) {
         this->assignFrom(std::move(rhs), N_MaxSize);
         return *this;
     }
 
     // Template constuctors that construct from containers holding sub-classes
     template <typename T_Subclass>
-    VL_ATTR_ALWINLINE VlQueue(const VlQueue<VlClassRef<T_Subclass>, 0>& that) noexcept
+    VL_ATTR_ALWINLINE VlQueue(const VlQueue<VlClassRef<T_Subclass>, 0>& that)
         : Base{that} {
         if (VL_UNLIKELY(N_MaxSize < this->m_size)) this->truncate(N_MaxSize);
     }
     template <typename T_Subclass>
-    VL_ATTR_ALWINLINE VlQueue(VlQueue<VlClassRef<T_Subclass>, 0>&& that) noexcept
+    VL_ATTR_ALWINLINE VlQueue(VlQueue<VlClassRef<T_Subclass>, 0>&& that)
         : Base{std::move(that)} {
         if (VL_UNLIKELY(N_MaxSize < this->m_size)) this->truncate(N_MaxSize);
     }
 
     // Construct new object from _V_alue and/or _C_ontainer child objects
-    VL_ATTR_ALWINLINE static Base consV(const T_Value& lhs) noexcept {
+    VL_ATTR_ALWINLINE static Base consV(const T_Value& lhs) {
         return Base::consV(lhs, N_MaxSize);
     }
-    VL_ATTR_ALWINLINE static Base consVV(const T_Value& lhs, const T_Value& rhs) noexcept {
+    VL_ATTR_ALWINLINE static Base consVV(const T_Value& lhs, const T_Value& rhs) {
         return Base::consVV(lhs, rhs, N_MaxSize);
     }
-    VL_ATTR_ALWINLINE static Base consCV(const Base& lhs, const T_Value& rhs) noexcept {
+    VL_ATTR_ALWINLINE static Base consCV(const Base& lhs, const T_Value& rhs) {
         return Base::consCV(lhs, rhs, N_MaxSize);
     }
-    VL_ATTR_ALWINLINE static Base consVC(const T_Value& lhs, const Base& rhs) noexcept {
+    VL_ATTR_ALWINLINE static Base consVC(const T_Value& lhs, const Base& rhs) {
         return Base::consVC(lhs, rhs, N_MaxSize);
     }
-    VL_ATTR_ALWINLINE static Base consCC(const Base& lhs, const Base& rhs) noexcept {
+    VL_ATTR_ALWINLINE static Base consCC(const Base& lhs, const Base& rhs) {
         return Base::consCC(lhs, rhs, N_MaxSize);
     }
 
     // METHODS
-    VL_ATTR_ALWINLINE void push_front(const T_Value& value) noexcept {
+    VL_ATTR_ALWINLINE void push_front(const T_Value& value) {
         Base::push_front(value, N_MaxSize);
     }
-    VL_ATTR_ALWINLINE void push_back(const T_Value& value) noexcept {
+    VL_ATTR_ALWINLINE void push_back(const T_Value& value) {
         Base::push_back(value, N_MaxSize);
     }
-    VL_ATTR_ALWINLINE T_Value& atWriteAppend(int32_t index) noexcept {
+    VL_ATTR_ALWINLINE T_Value& atWriteAppend(int32_t index) {
         return Base::atWriteAppend(index, N_MaxSize);
     }
-    VL_ATTR_ALWINLINE T_Value& atWriteAppendBack(int32_t index) noexcept {
+    VL_ATTR_ALWINLINE T_Value& atWriteAppendBack(int32_t index) {
         return Base::atWriteAppendBack(index, N_MaxSize);
     }
-    VL_ATTR_ALWINLINE Base slice(int32_t lsb, int32_t msb) const noexcept {
+    VL_ATTR_ALWINLINE Base slice(int32_t lsb, int32_t msb) const {
         return Base::slice(lsb, msb, N_MaxSize);
     }
-    VL_ATTR_ALWINLINE Base sliceFrontBack(int32_t lsb, int32_t msb) const noexcept {
+    VL_ATTR_ALWINLINE Base sliceFrontBack(int32_t lsb, int32_t msb) const {
         return Base::sliceFrontBack(lsb, msb, N_MaxSize);
     }
-    VL_ATTR_ALWINLINE Base sliceBackBack(int32_t lsb, int32_t msb) const noexcept {
+    VL_ATTR_ALWINLINE Base sliceBackBack(int32_t lsb, int32_t msb) const {
         return Base::sliceBackBack(lsb, msb, N_MaxSize);
     }
 };
@@ -2233,7 +2233,7 @@ struct VlContainsCustomStruct<VlUnpacked<T_Value, N_Depth>> : VlContainsCustomSt
 template <typename T_Value>
 template <typename T_UnpackedValue, std::size_t N_UnpackedDepth>
 VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::renew_copy(
-    size_t size, const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs) noexcept {
+    size_t size, const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs) {
     clear();
     if (size == 0) return;
     resize(size);
@@ -2775,7 +2775,7 @@ inline T VL_NULL_CHECK(T t, const char* filename, int linenum) {
 template <typename T_Value>
 template <typename T_Subclass>
 VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(
-    const VlQueue<VlClassRef<T_Subclass>, 0>& that) noexcept
+    const VlQueue<VlClassRef<T_Subclass>, 0>& that)
     : m_defaultValue{that.atDefault()} {
     const size_t n = that.size();
     if (n > 0) {
@@ -2788,7 +2788,7 @@ VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(
 
 template <typename T_Value>
 template <typename T_Subclass>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(VlQueue<VlClassRef<T_Subclass>, 0>&& that) noexcept
+VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(VlQueue<VlClassRef<T_Subclass>, 0>&& that)
     : m_defaultValue{std::move(that.atDefault())} {
     const size_t n = that.size();
     if (n > 0) {

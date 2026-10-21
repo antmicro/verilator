@@ -621,21 +621,104 @@ protected:
     size_t m_size = 0;  // Number of valid elements
     T_Value m_defaultValue{};  // Default value
 
-    VL_ATTR_NOINLINE void reserveForPush(bool front);
-    VL_ATTR_NOINLINE void destroyElements();
-    VL_ATTR_NOINLINE void truncate(size_t size);
-    VL_ATTR_NOINLINE void assignFrom(const VlQueue& rhs, size_t maxSize);
-    VL_ATTR_NOINLINE void assignFrom(VlQueue&& rhs, size_t maxSize);
+    VL_ATTR_NOINLINE void reserveForPush(bool front) {
+        const size_t newCap = (m_size >= m_cap / 2) ? (m_cap < 4 ? 4 : m_cap * 2) : m_cap;
+        const size_t newHead = front ? (newCap - m_size + 1) / 2 : (newCap - m_size) / 4;
+        T_Value* const newBuf = static_cast<T_Value*>(::operator new(newCap * sizeof(T_Value)));
+        for (size_t i = 0; i < m_size; ++i) {
+            new (newBuf + newHead + i) T_Value(std::move(m_buf[m_head + i]));
+            (m_buf + m_head + i)->~T_Value();
+        }
+        ::operator delete(m_buf);
+        m_buf = newBuf;
+        m_cap = newCap;
+        m_head = newHead;
+    }
+
+    VL_ATTR_NOINLINE void destroyElements() {
+        for (size_t i = 0; i < m_size; ++i) (m_buf + m_head + i)->~T_Value();
+        m_head = 0;
+        m_size = 0;
+    }
+
+    VL_ATTR_NOINLINE void truncate(size_t size) {
+        while (m_size > size) pop_back();
+    }
+
+    VL_ATTR_NOINLINE void assignFrom(const VlQueue& rhs, size_t maxSize) {
+        if (this != &rhs) {
+            destroyElements();
+            const size_t copyCount = (maxSize && maxSize <= rhs.m_size) ? maxSize - 1 : rhs.m_size;
+            if (copyCount > m_cap) {
+                ::operator delete(m_buf);
+                m_buf = static_cast<T_Value*>(::operator new(copyCount * sizeof(T_Value)));
+                m_cap = copyCount;
+            }
+            for (size_t i = 0; i < copyCount; ++i) {
+                new (m_buf + i) T_Value(rhs.m_buf[rhs.m_head + i]);
+            }
+            m_size = copyCount;
+        } else if (VL_UNLIKELY(maxSize && maxSize < m_size)) {
+            truncate(maxSize - 1);
+        }
+    }
+
+    VL_ATTR_NOINLINE void assignFrom(VlQueue&& rhs, size_t maxSize) {
+        if (this != &rhs) {
+            destroyElements();
+            ::operator delete(m_buf);
+            m_buf = std::exchange(rhs.m_buf, nullptr);
+            m_cap = std::exchange(rhs.m_cap, 0);
+            m_head = std::exchange(rhs.m_head, 0);
+            m_size = std::exchange(rhs.m_size, 0);
+        }
+        if (VL_UNLIKELY(maxSize && maxSize < m_size)) truncate(maxSize - 1);
+    }
 
 public:
     // CONSTRUCTORS
     // cppcheck-suppress uninitMemberVar // m_defaultValue isn't defaulted, caller must
-    VL_ATTR_NOINLINE VlQueue();
-    VL_ATTR_NOINLINE ~VlQueue();
-    VL_ATTR_NOINLINE VlQueue(const VlQueue& rhs);
-    VL_ATTR_NOINLINE VlQueue(VlQueue&& rhs);
-    VL_ATTR_NOINLINE VlQueue& operator=(const VlQueue& rhs);
-    VL_ATTR_NOINLINE VlQueue& operator=(VlQueue&& rhs);
+    VL_ATTR_NOINLINE VlQueue() {}
+
+    VL_ATTR_NOINLINE ~VlQueue() {
+        destroyElements();
+        ::operator delete(m_buf);
+    }
+
+    VL_ATTR_NOINLINE VlQueue(const VlQueue& rhs)
+        : m_defaultValue{rhs.m_defaultValue} {
+        if (rhs.m_size) {
+            m_buf = static_cast<T_Value*>(::operator new(rhs.m_size * sizeof(T_Value)));
+            m_cap = rhs.m_size;
+            m_size = rhs.m_size;
+            for (size_t i = 0; i < m_size; ++i) {
+                new (m_buf + i) T_Value(rhs.m_buf[rhs.m_head + i]);
+            }
+        }
+    }
+
+    VL_ATTR_NOINLINE VlQueue(VlQueue&& rhs)
+        : m_buf{std::exchange(rhs.m_buf, nullptr)}
+        , m_cap{std::exchange(rhs.m_cap, 0)}
+        , m_head{std::exchange(rhs.m_head, 0)}
+        , m_size{std::exchange(rhs.m_size, 0)}
+        , m_defaultValue{std::move(rhs.m_defaultValue)} {}
+
+    VL_ATTR_NOINLINE VlQueue<T_Value, 0>& operator=(const VlQueue& rhs) {
+        if (this != &rhs) {
+            assignFrom(rhs, 0);
+            m_defaultValue = rhs.m_defaultValue;
+        }
+        return *this;
+    }
+
+    VL_ATTR_NOINLINE VlQueue<T_Value, 0>& operator=(VlQueue&& rhs) {
+        if (this != &rhs) {
+            assignFrom(std::move(rhs), 0);
+            m_defaultValue = std::move(rhs.m_defaultValue);
+        }
+        return *this;
+    }
 
     // Template constuctors that construct from containers holding sub-classes
     template <typename T_Subclass>
@@ -655,15 +738,36 @@ public:
     }
 
     // Construct new object from _V_alue and/or _C_ontainer child objects
-    VL_ATTR_NOINLINE static VlQueue consV(const T_Value& lhs, size_t maxSize = 0);
-    VL_ATTR_NOINLINE static VlQueue consVV(const T_Value& lhs, const T_Value& rhs,
-                                           size_t maxSize = 0);
-    VL_ATTR_NOINLINE static VlQueue consCV(const VlQueue& lhs, const T_Value& rhs,
-                                           size_t maxSize = 0);
-    VL_ATTR_NOINLINE static VlQueue consVC(const T_Value& lhs, const VlQueue& rhs,
-                                           size_t maxSize = 0);
-    VL_ATTR_NOINLINE static VlQueue consCC(const VlQueue& lhs, const VlQueue& rhs,
-                                           size_t maxSize = 0);
+    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consV(const T_Value& lhs, size_t maxSize = 0) {
+        VlQueue out;
+        out.push_back(lhs, maxSize);
+        return out;
+    }
+
+    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consVV(const T_Value& lhs, const T_Value& rhs, size_t maxSize = 0) {
+        VlQueue out;
+        out.push_back(rhs, maxSize);
+        out.push_back(lhs, maxSize);
+        return out;
+    }
+
+    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consCV(const VlQueue& lhs, const T_Value& rhs, size_t maxSize = 0) {
+        VlQueue out = lhs;
+        out.push_front(rhs, maxSize);
+        return out;
+    }
+
+    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consVC(const T_Value& lhs, const VlQueue& rhs, size_t maxSize = 0) {
+        VlQueue out = rhs;
+        out.push_back(lhs, maxSize);
+        return out;
+    }
+
+    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consCC(const VlQueue& lhs, const VlQueue& rhs, size_t maxSize = 0) {
+        VlQueue out = rhs;
+        for (const auto& i : lhs) out.push_back(i, maxSize);
+        return out;
+    }
 
     // METHODS
     T_Value& atDefault() { return m_defaultValue; }
@@ -673,39 +777,131 @@ public:
     int size() const { return static_cast<int>(m_size); }
     bool empty() const { return m_size == 0; }
     // Clear array. Verilog: function void delete([input index])
-    VL_ATTR_NOINLINE void clear();
-    VL_ATTR_NOINLINE void erase(int32_t index);
+    VL_ATTR_NOINLINE void clear() {
+        destroyElements();
+    }
+
+    VL_ATTR_NOINLINE void erase(int32_t index) {
+        if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_size)) return;
+        const size_t idx = static_cast<size_t>(index);
+        if (idx == 0) {
+            (m_buf + m_head)->~T_Value();
+            ++m_head;
+            if (--m_size == 0) m_head = 0;
+            return;
+        }
+        for (size_t i = idx; i + 1 < m_size; ++i) {
+            m_buf[m_head + i] = std::move(m_buf[m_head + i + 1]);
+        }
+        --m_size;
+        (m_buf + m_head + m_size)->~T_Value();
+        if (m_size == 0) m_head = 0;
+    }
 
     // Dynamic array new[] becomes a renew()
-    VL_ATTR_NOINLINE void renew(size_t size);
+    VL_ATTR_NOINLINE void renew(size_t size) {
+        destroyElements();
+        if (size > m_cap) {
+            ::operator delete(m_buf);
+            m_buf = static_cast<T_Value*>(::operator new(size * sizeof(T_Value)));
+            m_cap = size;
+        }
+        for (size_t i = 0; i < size; ++i) new (m_buf + i) T_Value(atDefault());
+        m_size = size;
+    }
+
     // Dynamic array new[]() becomes a renew_copy()
-    VL_ATTR_NOINLINE void renew_copy(size_t size, const VlQueue& rhs);
+    VL_ATTR_NOINLINE void renew_copy(size_t size, const VlQueue& rhs) {
+        if (size == 0) {
+            clear();
+        } else {
+            *this = rhs;
+            resize(size);
+        }
+    }
     // Unpacked array new[]() becomes a renew_copy()
     template <typename T_UnpackedValue, std::size_t N_UnpackedDepth>
     VL_ATTR_NOINLINE void
     renew_copy(size_t size, const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs);
 
-    VL_ATTR_NOINLINE void resize(size_t size);
+    VL_ATTR_NOINLINE void resize(size_t size) {
+        while (m_size > size) {
+            --m_size;
+            (m_buf + m_head + m_size)->~T_Value();
+            if (m_size == 0) m_head = 0;
+        }
+        while (m_size < size) push_back(atDefault());
+    }
 
     // function void q.push_front(value)
-    VL_ATTR_NOINLINE void push_front(const T_Value& value, size_t maxSize = 0);
+    VL_ATTR_NOINLINE void push_front(const T_Value& value, size_t maxSize = 0) {
+        if (VL_UNLIKELY(m_head == 0)) reserveForPush(true);
+        --m_head;
+        new (m_buf + m_head) T_Value(value);
+        ++m_size;
+        if (VL_UNLIKELY(maxSize != 0 && m_size > maxSize)) {
+            --m_size;
+            (m_buf + m_head + m_size)->~T_Value();
+            if (m_size == 0) m_head = 0;
+        }
+    }
     // function void q.push_back(value)
-    VL_ATTR_NOINLINE void push_back(const T_Value& value, size_t maxSize = 0);
+    VL_ATTR_NOINLINE void push_back(const T_Value& value, size_t maxSize = 0) {
+        if (VL_LIKELY(maxSize == 0 || m_size < maxSize)) {
+            if (VL_UNLIKELY(m_head + m_size == m_cap)) reserveForPush(false);
+            new (m_buf + m_head + m_size) T_Value(value);
+            ++m_size;
+        }
+    }
+
     // function value_t q.pop_front();
-    VL_ATTR_NOINLINE T_Value pop_front();
+    VL_ATTR_NOINLINE T_Value pop_front() {
+        if (empty()) return m_defaultValue;
+        T_Value v = std::move(m_buf[m_head]);
+        (m_buf + m_head)->~T_Value();
+        ++m_head;
+        if (--m_size == 0) m_head = 0;
+        return v;
+    }
     // function value_t q.pop_back();
-    VL_ATTR_NOINLINE T_Value pop_back();
+    VL_ATTR_NOINLINE T_Value pop_back() {
+        if (empty()) return m_defaultValue;
+        --m_size;
+        T_Value v = std::move(m_buf[m_head + m_size]);
+        (m_buf + m_head + m_size)->~T_Value();
+        if (m_size == 0) m_head = 0;
+        return v;
+    }
 
     // Setting. Verilog: assoc[index] = v (should only be used by dynamic arrays)
-    VL_ATTR_NOINLINE T_Value& atWrite(int32_t index);
+    VL_ATTR_NOINLINE T_Value& atWrite(int32_t index) {
+        // cppcheck-suppress variableScope
+        static thread_local T_Value t_throwAway;
+        // Needs to work for dynamic arrays, so does not use N_MaxSize
+        if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_size)) {
+            t_throwAway = atDefault();
+            return t_throwAway;
+        }
+        return m_buf[m_head + index];
+    }
     // Setting. Verilog: assoc[index] = v (should only be used by queues)
-    VL_ATTR_NOINLINE T_Value& atWriteAppend(int32_t index, size_t maxSize = 0);
+    VL_ATTR_NOINLINE T_Value& atWriteAppend(int32_t index, size_t maxSize = 0) {
+        // cppcheck-suppress variableScope
+        static thread_local T_Value t_throwAway;
+        if (static_cast<size_t>(index) == m_size) push_back(atDefault(), maxSize);
+        if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_size)) {
+            t_throwAway = atDefault();
+            return t_throwAway;
+        }
+        return m_buf[m_head + index];
+    }
     // Accessing. Verilog: v = assoc[index]
     const T_Value& at(int32_t index) const {
         // Needs to work for dynamic arrays, so does not use N_MaxSize
         if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_size)) return atDefault();
         return m_buf[m_head + index];
     }
+
     // Access with an index counted from end (e.g. q[$])
     T_Value& atWriteAppendBack(int32_t index, size_t maxSize = 0) {
         return atWriteAppend(m_size - 1 - index, maxSize);
@@ -713,7 +909,26 @@ public:
     const T_Value& atBack(int32_t index) const { return at(m_size - 1 - index); }
 
     // function void q.insert(index, value);
-    VL_ATTR_NOINLINE void insert(int32_t index, const T_Value& value, size_t maxSize = 0);
+    VL_ATTR_NOINLINE void insert(int32_t index, const T_Value& value, size_t maxSize = 0) {
+        if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) > m_size)) return;
+        if (VL_UNLIKELY(maxSize != 0 && m_size >= maxSize)) return;
+        const size_t idx = static_cast<size_t>(index);
+        if (idx == 0) {
+            push_front(value);
+            return;
+        }
+        if (idx == m_size) {
+            push_back(value);
+            return;
+        }
+        if (VL_UNLIKELY(m_head + m_size == m_cap)) reserveForPush(false);
+        new (m_buf + m_head + m_size) T_Value(std::move(m_buf[m_head + m_size - 1]));
+        for (size_t i = m_size - 1; i > idx; --i) {
+            m_buf[m_head + i] = std::move(m_buf[m_head + i - 1]);
+        }
+        m_buf[m_head + idx] = value;
+        ++m_size;
+    }
 
     // inside (set membership operator)
     bool inside(const T_Value& value) const {
@@ -721,7 +936,14 @@ public:
     }
 
     // Return slice q[lsb:msb]
-    VL_ATTR_NOINLINE VlQueue slice(int32_t lsb, int32_t msb, size_t maxSize = 0) const;
+    VL_ATTR_NOINLINE VlQueue<T_Value, 0> slice(int32_t lsb, int32_t msb, size_t maxSize = 0) const {
+        VlQueue out;
+        if (VL_UNLIKELY(lsb < 0)) lsb = 0;
+        if (VL_UNLIKELY(lsb >= static_cast<int32_t>(m_size))) lsb = static_cast<int32_t>(m_size) - 1;
+        if (VL_UNLIKELY(msb >= static_cast<int32_t>(m_size))) msb = static_cast<int32_t>(m_size) - 1;
+        for (int32_t i = lsb; i <= msb; ++i) out.push_back(m_buf[m_head + i], maxSize);
+        return out;
+    }
     VlQueue sliceFrontBack(int32_t lsb, int32_t msb, size_t maxSize = 0) const {
         return slice(lsb, m_size - 1 - msb, maxSize);
     }
@@ -729,7 +951,17 @@ public:
         return slice(m_size - 1 - lsb, m_size - 1 - msb, maxSize);
     }
     // Assign src elements to q[lsb:msb]
-    VL_ATTR_NOINLINE void sliceAssign(int32_t lsb, int32_t msb, const VlQueue& src);
+    VL_ATTR_NOINLINE void sliceAssign(int32_t lsb, int32_t msb, const VlQueue& src) {
+        const int32_t sz = static_cast<int32_t>(m_size);
+        const int32_t srcSz = static_cast<int32_t>(src.m_size);
+        if (VL_UNLIKELY(sz <= 0 || srcSz <= 0)) return;
+        if (VL_UNLIKELY(lsb < 0)) lsb = 0;
+        if (VL_UNLIKELY(lsb >= sz)) lsb = sz - 1;
+        if (VL_UNLIKELY(msb >= sz)) msb = sz - 1;
+        const int32_t count = std::min(msb - lsb + 1, srcSz);
+        if (VL_UNLIKELY(count <= 0)) return;
+        std::copy_n(src.begin(), count, begin() + lsb);
+    }
     void sliceAssignFrontBack(int32_t lsb, int32_t msb, const VlQueue& src) {
         sliceAssign(lsb, m_size - 1 - msb, src);
     }
@@ -744,7 +976,10 @@ public:
     const_iterator end() const { return m_buf + m_head + m_size; }
 
     // Methods
-    VL_ATTR_NOINLINE void sort();
+    VL_ATTR_NOINLINE void sort() {
+        std::sort(begin(), end());
+    }
+
     template <typename T_Func>
     void sort(T_Func with_func) {
         // with_func returns arbitrary type to use for the sort comparison
@@ -753,7 +988,11 @@ public:
             return with_func(0, a) < with_func(0, b);
         });
     }
-    VL_ATTR_NOINLINE void rsort();
+
+    VL_ATTR_NOINLINE void rsort() {
+        std::sort(begin(), end(), [](const T_Value& a, const T_Value& b) { return b < a; });
+    }
+
     template <typename T_Func>
     void rsort(T_Func with_func) {
         // with_func returns arbitrary type to use for the sort comparison
@@ -762,9 +1001,22 @@ public:
             return with_func(0, b) < with_func(0, a);
         });
     }
-    VL_ATTR_NOINLINE void reverse();
-    VL_ATTR_NOINLINE void shuffle();
-    VL_ATTR_NOINLINE VlQueue unique() const;
+
+    VL_ATTR_NOINLINE void reverse() { std::reverse(begin(), end()); }
+    VL_ATTR_NOINLINE void shuffle() { std::shuffle(begin(), end(), VlURNG{}); }
+    VL_ATTR_NOINLINE VlQueue<T_Value, 0> unique() const {
+        VlQueue out;
+        std::set<T_Value> saw;
+        for (const auto& i : *this) {
+            const auto it = saw.find(i);
+            if (it == saw.end()) {
+                saw.insert(it, i);
+                out.push_back(i);
+            }
+        }
+        return out;
+    }
+
     template <typename T_Func>
     VlQueue unique(T_Func with_func) const {
         VlQueue out;
@@ -779,7 +1031,22 @@ public:
         }
         return out;
     }
-    VL_ATTR_NOINLINE VlQueue<IData, 0> unique_index() const;
+
+    VL_ATTR_NOINLINE VlQueue<IData, 0> unique_index() const {
+        VlQueue<IData, 0> out;
+        IData index = 0;
+        std::set<T_Value> saw;
+        for (const auto& i : *this) {
+            const auto it = saw.find(i);
+            if (it == saw.end()) {
+                saw.insert(it, i);
+                out.push_back(index);
+            }
+            ++index;
+        }
+        return out;
+    }
+
     template <typename T_Func>
     VlQueue<IData, 0> unique_index(T_Func with_func) const {
         VlQueue<IData, 0> out;
@@ -864,7 +1131,12 @@ public:
     }
 
     // Reduction operators
-    VL_ATTR_NOINLINE VlQueue min() const;
+    VL_ATTR_NOINLINE VlQueue<T_Value, 0> min() const {
+        if (empty()) return VlQueue{};
+        const auto it = std::min_element(begin(), end());
+        return VlQueue::consV(*it);
+    }
+
     template <typename T_Func>
     VlQueue min(T_Func with_func) const {
         if (empty()) return VlQueue{};
@@ -874,7 +1146,13 @@ public:
                                          });
         return VlQueue::consV(*it);
     }
-    VL_ATTR_NOINLINE VlQueue max() const;
+
+    VL_ATTR_NOINLINE VlQueue<T_Value, 0> max() const {
+        if (empty()) return VlQueue{};
+        const auto it = std::max_element(begin(), end());
+        return VlQueue::consV(*it);
+    }
+
     template <typename T_Func>
     VlQueue max(T_Func with_func) const {
         if (empty()) return VlQueue{};
@@ -959,405 +1237,17 @@ public:
     }
 
     // Dumping. Verilog: str = $sformatf("%p", assoc)
-    VL_ATTR_NOINLINE std::string to_string() const;
+    VL_ATTR_NOINLINE std::string to_string() const {
+        if (empty()) return "'{}";  // No trailing space
+        std::string out = "'{";
+        std::string comma;
+        for (const auto& i : *this) {
+            out += comma + VL_TO_STRING(i);
+            comma = ", ";
+        }
+        return out + "}";
+    }
 };
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::destroyElements() {
-    for (size_t i = 0; i < m_size; ++i) (m_buf + m_head + i)->~T_Value();
-    m_head = 0;
-    m_size = 0;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::reserveForPush(bool front) {
-    const size_t newCap = (m_size >= m_cap / 2) ? (m_cap < 4 ? 4 : m_cap * 2) : m_cap;
-    const size_t newHead = front ? (newCap - m_size + 1) / 2 : (newCap - m_size) / 4;
-    T_Value* const newBuf = static_cast<T_Value*>(::operator new(newCap * sizeof(T_Value)));
-    for (size_t i = 0; i < m_size; ++i) {
-        new (newBuf + newHead + i) T_Value(std::move(m_buf[m_head + i]));
-        (m_buf + m_head + i)->~T_Value();
-    }
-    ::operator delete(m_buf);
-    m_buf = newBuf;
-    m_cap = newCap;
-    m_head = newHead;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::truncate(size_t size) {
-    while (m_size > size) pop_back();
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::assignFrom(const VlQueue& rhs, size_t maxSize) {
-    if (this != &rhs) {
-        destroyElements();
-        const size_t copyCount = (maxSize && maxSize <= rhs.m_size) ? maxSize - 1 : rhs.m_size;
-        if (copyCount > m_cap) {
-            ::operator delete(m_buf);
-            m_buf = static_cast<T_Value*>(::operator new(copyCount * sizeof(T_Value)));
-            m_cap = copyCount;
-        }
-        for (size_t i = 0; i < copyCount; ++i) {
-            new (m_buf + i) T_Value(rhs.m_buf[rhs.m_head + i]);
-        }
-        m_size = copyCount;
-    } else if (VL_UNLIKELY(maxSize && maxSize < m_size)) {
-        truncate(maxSize - 1);
-    }
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::assignFrom(VlQueue&& rhs, size_t maxSize) {
-    if (this != &rhs) {
-        destroyElements();
-        ::operator delete(m_buf);
-        m_buf = std::exchange(rhs.m_buf, nullptr);
-        m_cap = std::exchange(rhs.m_cap, 0);
-        m_head = std::exchange(rhs.m_head, 0);
-        m_size = std::exchange(rhs.m_size, 0);
-    }
-    if (VL_UNLIKELY(maxSize && maxSize < m_size)) truncate(maxSize - 1);
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue() {}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>::~VlQueue() {
-    destroyElements();
-    ::operator delete(m_buf);
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(const VlQueue& rhs)
-    : m_defaultValue{rhs.m_defaultValue} {
-    if (rhs.m_size) {
-        m_buf = static_cast<T_Value*>(::operator new(rhs.m_size * sizeof(T_Value)));
-        m_cap = rhs.m_size;
-        m_size = rhs.m_size;
-        for (size_t i = 0; i < m_size; ++i) {
-            new (m_buf + i) T_Value(rhs.m_buf[rhs.m_head + i]);
-        }
-    }
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(VlQueue&& rhs)
-    : m_buf{std::exchange(rhs.m_buf, nullptr)}
-    , m_cap{std::exchange(rhs.m_cap, 0)}
-    , m_head{std::exchange(rhs.m_head, 0)}
-    , m_size{std::exchange(rhs.m_size, 0)}
-    , m_defaultValue{std::move(rhs.m_defaultValue)} {}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>&
-VlQueue<T_Value, 0>::operator=(const VlQueue& rhs) {
-    if (this != &rhs) {
-        assignFrom(rhs, 0);
-        m_defaultValue = rhs.m_defaultValue;
-    }
-    return *this;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>& VlQueue<T_Value, 0>::operator=(VlQueue&& rhs) {
-    if (this != &rhs) {
-        assignFrom(std::move(rhs), 0);
-        m_defaultValue = std::move(rhs.m_defaultValue);
-    }
-    return *this;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0> VlQueue<T_Value, 0>::consV(const T_Value& lhs,
-                                                                size_t maxSize) {
-    VlQueue out;
-    out.push_back(lhs, maxSize);
-    return out;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>
-VlQueue<T_Value, 0>::consVV(const T_Value& lhs, const T_Value& rhs, size_t maxSize) {
-    VlQueue out;
-    out.push_back(rhs, maxSize);
-    out.push_back(lhs, maxSize);
-    return out;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>
-VlQueue<T_Value, 0>::consCV(const VlQueue& lhs, const T_Value& rhs, size_t maxSize) {
-    VlQueue out = lhs;
-    out.push_front(rhs, maxSize);
-    return out;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>
-VlQueue<T_Value, 0>::consVC(const T_Value& lhs, const VlQueue& rhs, size_t maxSize) {
-    VlQueue out = rhs;
-    out.push_back(lhs, maxSize);
-    return out;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>
-VlQueue<T_Value, 0>::consCC(const VlQueue& lhs, const VlQueue& rhs, size_t maxSize) {
-    VlQueue out = rhs;
-    for (const auto& i : lhs) out.push_back(i, maxSize);
-    return out;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::clear() {
-    destroyElements();
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::erase(int32_t index) {
-    if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_size)) return;
-    const size_t idx = static_cast<size_t>(index);
-    if (idx == 0) {
-        (m_buf + m_head)->~T_Value();
-        ++m_head;
-        if (--m_size == 0) m_head = 0;
-        return;
-    }
-    for (size_t i = idx; i + 1 < m_size; ++i) {
-        m_buf[m_head + i] = std::move(m_buf[m_head + i + 1]);
-    }
-    --m_size;
-    (m_buf + m_head + m_size)->~T_Value();
-    if (m_size == 0) m_head = 0;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::renew(size_t size) {
-    destroyElements();
-    if (size > m_cap) {
-        ::operator delete(m_buf);
-        m_buf = static_cast<T_Value*>(::operator new(size * sizeof(T_Value)));
-        m_cap = size;
-    }
-    for (size_t i = 0; i < size; ++i) new (m_buf + i) T_Value(atDefault());
-    m_size = size;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::renew_copy(size_t size, const VlQueue& rhs) {
-    if (size == 0) {
-        clear();
-    } else {
-        *this = rhs;
-        resize(size);
-    }
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::resize(size_t size) {
-    while (m_size > size) {
-        --m_size;
-        (m_buf + m_head + m_size)->~T_Value();
-        if (m_size == 0) m_head = 0;
-    }
-    while (m_size < size) push_back(atDefault());
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::push_front(const T_Value& value,
-                                                      size_t maxSize) {
-    if (VL_UNLIKELY(m_head == 0)) reserveForPush(true);
-    --m_head;
-    new (m_buf + m_head) T_Value(value);
-    ++m_size;
-    if (VL_UNLIKELY(maxSize != 0 && m_size > maxSize)) {
-        --m_size;
-        (m_buf + m_head + m_size)->~T_Value();
-        if (m_size == 0) m_head = 0;
-    }
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::push_back(const T_Value& value,
-                                                     size_t maxSize) {
-    if (VL_LIKELY(maxSize == 0 || m_size < maxSize)) {
-        if (VL_UNLIKELY(m_head + m_size == m_cap)) reserveForPush(false);
-        new (m_buf + m_head + m_size) T_Value(value);
-        ++m_size;
-    }
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE T_Value VlQueue<T_Value, 0>::pop_front() {
-    if (empty()) return m_defaultValue;
-    T_Value v = std::move(m_buf[m_head]);
-    (m_buf + m_head)->~T_Value();
-    ++m_head;
-    if (--m_size == 0) m_head = 0;
-    return v;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE T_Value VlQueue<T_Value, 0>::pop_back() {
-    if (empty()) return m_defaultValue;
-    --m_size;
-    T_Value v = std::move(m_buf[m_head + m_size]);
-    (m_buf + m_head + m_size)->~T_Value();
-    if (m_size == 0) m_head = 0;
-    return v;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE T_Value& VlQueue<T_Value, 0>::atWrite(int32_t index) {
-    // cppcheck-suppress variableScope
-    static thread_local T_Value t_throwAway;
-    // Needs to work for dynamic arrays, so does not use N_MaxSize
-    if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_size)) {
-        t_throwAway = atDefault();
-        return t_throwAway;
-    }
-    return m_buf[m_head + index];
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE T_Value& VlQueue<T_Value, 0>::atWriteAppend(int32_t index,
-                                                             size_t maxSize) {
-    // cppcheck-suppress variableScope
-    static thread_local T_Value t_throwAway;
-    if (static_cast<size_t>(index) == m_size) push_back(atDefault(), maxSize);
-    if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_size)) {
-        t_throwAway = atDefault();
-        return t_throwAway;
-    }
-    return m_buf[m_head + index];
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::insert(int32_t index, const T_Value& value,
-                                                  size_t maxSize) {
-    if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) > m_size)) return;
-    if (VL_UNLIKELY(maxSize != 0 && m_size >= maxSize)) return;
-    const size_t idx = static_cast<size_t>(index);
-    if (idx == 0) {
-        push_front(value);
-        return;
-    }
-    if (idx == m_size) {
-        push_back(value);
-        return;
-    }
-    if (VL_UNLIKELY(m_head + m_size == m_cap)) reserveForPush(false);
-    new (m_buf + m_head + m_size) T_Value(std::move(m_buf[m_head + m_size - 1]));
-    for (size_t i = m_size - 1; i > idx; --i) {
-        m_buf[m_head + i] = std::move(m_buf[m_head + i - 1]);
-    }
-    m_buf[m_head + idx] = value;
-    ++m_size;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0> VlQueue<T_Value, 0>::slice(int32_t lsb, int32_t msb,
-                                                                size_t maxSize) const {
-    VlQueue out;
-    if (VL_UNLIKELY(lsb < 0)) lsb = 0;
-    if (VL_UNLIKELY(lsb >= static_cast<int32_t>(m_size))) lsb = static_cast<int32_t>(m_size) - 1;
-    if (VL_UNLIKELY(msb >= static_cast<int32_t>(m_size))) msb = static_cast<int32_t>(m_size) - 1;
-    for (int32_t i = lsb; i <= msb; ++i) out.push_back(m_buf[m_head + i], maxSize);
-    return out;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::sliceAssign(int32_t lsb, int32_t msb,
-                                                       const VlQueue& src) {
-    const int32_t sz = static_cast<int32_t>(m_size);
-    const int32_t srcSz = static_cast<int32_t>(src.m_size);
-    if (VL_UNLIKELY(sz <= 0 || srcSz <= 0)) return;
-    if (VL_UNLIKELY(lsb < 0)) lsb = 0;
-    if (VL_UNLIKELY(lsb >= sz)) lsb = sz - 1;
-    if (VL_UNLIKELY(msb >= sz)) msb = sz - 1;
-    const int32_t count = std::min(msb - lsb + 1, srcSz);
-    if (VL_UNLIKELY(count <= 0)) return;
-    std::copy_n(src.begin(), count, begin() + lsb);
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::sort() {
-    std::sort(begin(), end());
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::rsort() {
-    std::sort(begin(), end(), [](const T_Value& a, const T_Value& b) { return b < a; });
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::reverse() {
-    std::reverse(begin(), end());
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::shuffle() {
-    std::shuffle(begin(), end(), VlURNG{});
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0> VlQueue<T_Value, 0>::unique() const {
-    VlQueue out;
-    std::set<T_Value> saw;
-    for (const auto& i : *this) {
-        const auto it = saw.find(i);
-        if (it == saw.end()) {
-            saw.insert(it, i);
-            out.push_back(i);
-        }
-    }
-    return out;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<IData, 0> VlQueue<T_Value, 0>::unique_index() const {
-    VlQueue<IData, 0> out;
-    IData index = 0;
-    std::set<T_Value> saw;
-    for (const auto& i : *this) {
-        const auto it = saw.find(i);
-        if (it == saw.end()) {
-            saw.insert(it, i);
-            out.push_back(index);
-        }
-        ++index;
-    }
-    return out;
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0> VlQueue<T_Value, 0>::min() const {
-    if (empty()) return VlQueue{};
-    const auto it = std::min_element(begin(), end());
-    return VlQueue::consV(*it);
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0> VlQueue<T_Value, 0>::max() const {
-    if (empty()) return VlQueue{};
-    const auto it = std::max_element(begin(), end());
-    return VlQueue::consV(*it);
-}
-
-template <typename T_Value>
-VL_ATTR_NOINLINE std::string VlQueue<T_Value, 0>::to_string() const {
-    if (empty()) return "'{}";  // No trailing space
-    std::string out = "'{";
-    std::string comma;
-    for (const auto& i : *this) {
-        out += comma + VL_TO_STRING(i);
-        comma = ", ";
-    }
-    return out + "}";
-}
 
 template <typename T_Value, size_t N_MaxSize>
 class VlQueue final : public VlQueue<T_Value, 0> {

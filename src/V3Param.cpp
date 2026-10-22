@@ -390,6 +390,14 @@ class ParamProcessor final {
         return VN_IS(nodep, ConsArray) || VN_IS(nodep, ConsStruct);
     }
 
+    static string classOwnerKey(const AstClassRefDType* dtypep) {
+        const AstClassContext* const ownerp = dtypep->ownerp();
+        if (!ownerp) return "";
+        const string prefix = ownerp->anchorp()->name() + ".";
+        const string path = ownerp->path();
+        return VString::startsWith(path, prefix) ? path : prefix + path;
+    }
+
     static string paramValueString(const AstNode* nodep) {
         if (const AstRefDType* const refp = VN_CAST(nodep, RefDType)) {
             nodep = refp->skipRefToNonRefp();
@@ -501,6 +509,8 @@ class ParamProcessor final {
                 classRefp->v3fatalSrc(  // LCOV_EXCL_LINE
                     "ClassRefDType has null classp in paramValueString");
             }
+            // The owner binding selects the static storage of a factory specialization.
+            if (classRefp->ownerp()) key += "@" + classOwnerKey(classRefp);
         } else if (const AstUnpackArrayDType* const dtypep = VN_CAST(nodep, UnpackArrayDType)) {
             // Name containers by their elements as above, not by prettyDTypeName(), which names
             // classes by parameter values that may be yet to be resolved
@@ -1770,7 +1780,13 @@ class ParamProcessor final {
                                   << " violates parameter's forwarding type '"
                                   << modvarp->fwdType().ascii() << "'");
                 }
-                if (exprp->similarDType(origp) || classTypeMatchesDefaultClone(exprp, origp)) {
+                const AstClassRefDType* const exprClassp = VN_CAST(exprp, ClassRefDType);
+                const AstClassRefDType* const origClassp = VN_CAST(origp, ClassRefDType);
+                const bool sameOwner = !exprClassp || !origClassp
+                                       || classOwnerKey(exprClassp) == classOwnerKey(origClassp);
+                if (sameOwner
+                    && (exprp->similarDType(origp)
+                        || classTypeMatchesDefaultClone(exprp, origp))) {
                     // Setting parameter to its default value.  Just ignore it.
                     // This prevents making additional modules, and makes coverage more
                     // obvious as it won't show up under a unique module page name.

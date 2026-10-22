@@ -10,7 +10,8 @@
 import vltest_bootstrap
 
 test.scenarios('vlt_all')
-test.top_filename = 't/t_class_owner_context.v'
-test.compile(verilator_flags2=['--binary', '--protect-ids', '--protect-key', 'OWNER_CONTEXT'])
-test.execute()
+for name in ('binding', 'context', 'effects'):
+    test.top_filename = 't/t_class_owner_' + name + '.v'
+    test.compile(verilator_flags2=['--binary', '--protect-ids', '--protect-key', 'OWNER_CONTEXT'])
+    test.execute()
 test.passes()

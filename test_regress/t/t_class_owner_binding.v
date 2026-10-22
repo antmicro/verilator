@@ -138,11 +138,40 @@ module virtual_binding_case (
   end
 endmodule
 
+module concrete_alias_owner;
+  target_if concrete ();
+endmodule
+
+module concrete_alias_case #(
+    parameter int ID = 73
+) (
+    output bit done
+);
+  concrete_alias_owner owner ();
+  class Reader;
+    function virtual target_if get();
+      return owner.concrete;
+    endfunction
+  endclass
+  Reader reader = new;
+  virtual target_if vif;
+  initial begin
+    vif = reader.get();
+    owner.concrete.x = ID;
+    #1;
+    `checkd(vif.x, ID);
+    done = 1;
+  end
+endmodule
+
 module t;
-  wire [2:0] done;
+  wire [4:0] done;
   input_case #(1) input_first (done[0]);
   input_case #(2) input_second (done[1]);
   virtual_binding_case virtual_bindings (done[2]);
+
+  concrete_alias_case concrete_alias (done[3]);
+  concrete_alias_case #(89) second_alias (done[4]);
 
   initial begin
     wait (&done);

@@ -17,8 +17,38 @@ endinterface
 module effect_owner;
   int value;
   int doubled;
+  string text;
+  int entries[string];
+  class Key;
+  endclass
+  int keyed[Key];
+  Key key = new;
+  int text_changes, entry_changes, keyed_changes;
+  always @(text)++text_changes;
+  always @(entries)++entry_changes;
+  always @(keyed)++keyed_changes;
+  int entry_size;
+  assign entry_size = entries.num();
   assign doubled = 2 * value;
   class Writer;
+    function void put_text(string next_value);
+      text = next_value;
+    endfunction
+    function void put_entry(string name, int next_value);
+      entries[name] = next_value;
+      keyed[key] = next_value;
+    endfunction
+    function void remove_entry(string name);
+      entries.delete(name);
+      keyed.delete(key);
+    endfunction
+    function void replace_entries(int next_value);
+      entries = '{"whole": next_value};
+    endfunction
+    function void clear_entries();
+      entries.delete();
+      keyed.delete();
+    endfunction
     static int values[$];
     static int array_values[];
     function void append(int next_value);
@@ -64,6 +94,45 @@ module t;
 `endif
   effect_owner first (), second ();
   initial begin
+    #1;
+    for (int i = 1; i < 4; ++i) begin
+      automatic int old_text = first.text_changes;
+      automatic int old_entries = first.entry_changes;
+      automatic int old_keyed = first.keyed_changes;
+      first.writer.put_text($sformatf("value %0d", i));
+      first.writer.put_entry("a", i);
+      #1;
+      `checkd(first.text_changes, old_text + 1);
+      `checkd(first.entry_changes, old_entries + 1);
+      `checkd(first.keyed_changes, old_keyed + 1);
+      `checkd(first.entry_size, 1);
+      first.writer.put_entry("a", i + 10);
+      #1;
+      `checkd(first.entry_changes, old_entries + 2);
+      `checkd(first.keyed_changes, old_keyed + 2);
+      first.writer.remove_entry("a");
+      #1;
+      `checkd(first.entry_size, 0);
+      `checkd(first.entry_changes, old_entries + 3);
+      `checkd(first.keyed_changes, old_keyed + 3);
+      first.writer.put_entry("b", i);
+      #1;
+      first.writer.clear_entries();
+      #1;
+      `checkd(first.entry_size, 0);
+      `checkd(first.entry_changes, old_entries + 5);
+      `checkd(first.keyed_changes, old_keyed + 5);
+      `checkd(second.entry_size, 0);
+      first.writer.replace_entries(i);
+      #1;
+      `checkd(first.entry_size, 1);
+      `checkd(first.entries["whole"], i);
+      `checkd(first.entry_changes, old_entries + 6);
+      first.writer.clear_entries();
+      #1;
+      `checkd(first.entry_size, 0);
+      `checkd(first.entry_changes, old_entries + 7);
+    end
     for (int i = 1; i < 8; ++i) begin
       first.writer.put(i);
       `checkd(first.doubled, 2 * i);

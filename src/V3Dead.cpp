@@ -540,6 +540,7 @@ class DeadVisitor final : public VNVisitor {
         iterateChildren(nodep);
         checkAll(nodep);
         if (m_foreachHeaderp) nodep->user1Inc();
+        if (nodep->sensIfacep()) nodep->sensIfacep()->user1Inc();
         // Keep formal arguments
         if (m_inFTask && nodep->isIO()) {
             nodep->user1Inc();

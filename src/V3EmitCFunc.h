@@ -372,6 +372,12 @@ public:
         }
     }
 
+    static bool isCaptureInit(const AstNode* nodep) {
+        const AstAssign* const assignp = VN_CAST(nodep, Assign);
+        const AstVarRef* const refp = assignp ? VN_CAST(assignp->lhsp(), VarRef) : nullptr;
+        return refp && VN_IS(refp->varp()->dtypep()->skipRefp(), ModuleRefDType);
+    }
+
     void putConstructorSubinit(const AstClass* classp, AstCFunc* cfuncp) {
         // Direct non-virtual bases in declaration order
         for (const AstClassExtends* extp = classp->extendsp(); extp;
@@ -417,10 +423,6 @@ public:
         emitCFuncHeader(nodep, m_modp, /* withScope: */ true);
 
         puts(" {\n");
-        if (nodep->isConstructor()) {
-            const AstClass* const classp = VN_CAST(nodep->scopep()->modp(), Class);
-            if (classp && classp->extendsp()) putConstructorSubinit(classp, nodep);
-        }
 
         // "+" in the debug indicates a print from the model
         puts("VL_DEBUG_IF(VL_DBG_MSGF(\"+  ");
@@ -494,7 +496,17 @@ public:
 
         if (nodep->stmtsp()) {
             putsDecoration(nodep, "// Body\n");
-            iterateAndNextConstNull(nodep->stmtsp());
+            if (nodep->isConstructor()) {
+                // Base constructors may dispatch virtual methods that read derived captures.
+                for (AstNode* stmtp = nodep->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+                    if (isCaptureInit(stmtp)) iterateConst(stmtp);
+                }
+                const AstClass* const classp = VN_AS(nodep->scopep()->modp(), Class);
+                if (classp->extendsp()) putConstructorSubinit(classp, nodep);
+            }
+            for (AstNode* stmtp = nodep->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+                if (!nodep->isConstructor() || !isCaptureInit(stmtp)) iterateConst(stmtp);
+            }
         }
 
         m_usevlSelfRef = false;

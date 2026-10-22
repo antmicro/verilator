@@ -14,14 +14,16 @@
 // Before expression lifting, turn external class dependencies into explicit receivers.
 // Scope-address placeholders travel through ordinary scoped linking, including
 // interface aliases. After linking, replace them with typed scope addresses and
-// prohibit inlining their target definitions. Thus method bodies contain only
-// object-relative captures; concrete instance addresses occur at construction.
+// resolve concrete targets. Preparation prohibits target inlining after requirements
+// reach their fixed point, even if optimization removes construction addresses.
+// Method bodies contain only object-relative captures; concrete addresses occur
+// at construction and static initialization.
 // Captures are non-owning: module storage lives for the entire model lifetime.
 // Constructor dependencies propagate until stable, including nested and base
 // construction. Base-only inputs need no field in the derived subobject.
 // Static routines keep their lexical declarations and receive their own hidden
-// inputs; no object receiver exists in their bodies. Only mutable instance-owned
-// static fields move before scoping, through V3Class's single package factory.
+// inputs; no object receiver exists in their bodies. Instance-owned static fields
+// move before scoping, through V3Class's single package factory.
 // Static selections use the receiver's type binding, never the handle value.
 // Class-level generated processes live with static state; they have no object receiver.
 //*************************************************************************
@@ -38,6 +40,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 namespace {
 using CaptureKey = std::pair<string, AstNodeModule*>;
 struct Capture final {
+    AstNodeModule* anchorp = nullptr;  // Lexical origin of an owner-relative path
     bool retained = false;
     AstVar* fieldp = nullptr;
     AstVar* argp = nullptr;
@@ -51,6 +54,7 @@ struct ClassContext final {
     string storagePath;
     std::map<CaptureKey, Capture> captures;
     std::vector<std::pair<AstNodeVarRef*, CaptureKey>> vars;
+    std::vector<std::pair<AstNodeVarRef*, CaptureKey>> ifaces;
     std::vector<std::pair<AstNodeFTaskRef*, CaptureKey>> calls;
     std::vector<AstNew*> constructions;
     std::vector<AstNodeProcedure*> processes;
@@ -80,6 +84,7 @@ class ContextPrepareVisitor final : public VNVisitor {
     std::map<AstNodeFTask*, ClassContext> m_routines;
     std::vector<ClassContext*> m_contexts;
     std::map<AstNodeModule*, AstVar*> m_markers;
+    std::set<string> m_rootScopes;  // Already absolute dependency paths
     std::vector<std::pair<AstNew*, AstNodeModule*>> m_constructions;
     std::vector<StaticSelection> m_staticSelections;
     std::vector<std::pair<AstNodeVarRef*, AstNodeModule*>> m_staticVariables;
@@ -161,10 +166,12 @@ class ContextPrepareVisitor final : public VNVisitor {
         }
         return varp;
     }
-    bool require(ClassContext& context, const CaptureKey& key, bool retained) {
+    bool require(ClassContext& context, const CaptureKey& key, bool retained,
+                 AstNodeModule* anchorp = nullptr) {
         const auto it = context.captures.emplace(key, Capture{});
         const bool changed = it.second || (retained && !it.first->second.retained);
         it.first->second.retained |= retained;
+        if (it.second) it.first->second.anchorp = anchorp ? anchorp : context.ownerp;
         return changed;
     }
     CaptureKey dependency(AstNodeModule* modp, const string& path) { return {path, modp}; }
@@ -209,13 +216,25 @@ class ContextPrepareVisitor final : public VNVisitor {
         return path;
     }
     AstNodeExpr* address(FileLine* fl, AstNodeModule* fromp, const CaptureKey& key,
-                         ClassContext* contextp, bool inCtor) {
+                         ClassContext* contextp, bool inCtor, AstNodeModule* anchorp = nullptr) {
         if (contextp) {
             const Capture& capture = contextp->captures.at(key);
+            UASSERT_OBJ(inCtor || !contextp->object || capture.fieldp, contextp->classp,
+                        "Object capture without instance storage");
             return new AstVarRef{fl, inCtor || !contextp->object ? capture.argp : capture.fieldp,
                                  VAccess::READ};
         }
         AstVar* const varp = marker(key.second);
+        if (VN_IS(fromp, Package)) {
+            // Package initialization has no receiver; retain the dependency's lexical anchor.
+            string path = key.first;
+            if (anchorp && !VN_IS(anchorp, Package)
+                && !m_rootScopes.count(path.substr(0, path.find('.'))))
+                path = VString::dot(anchorp->name(), ".", path);
+            else if (path.empty())
+                path = key.second->name();
+            return new AstVarXRef{fl, varp, path, VAccess::READ};
+        }
         if (fromp == key.second) { return new AstVarRef{fl, varp, VAccess::READ}; }
         // An enclosing owner is a lexical scope address, not an empty dotted lookup.
         if (key.first.empty()) return new AstScopeAddr{fl, nullptr, varp->dtypep()};
@@ -228,8 +247,10 @@ class ContextPrepareVisitor final : public VNVisitor {
         const bool super = VN_IS(nodep->dtypep()->skipRefp(), VoidDType);
         for (const auto& item : target.captures) {
             const CaptureKey key = constructionKey(item.first, dtypep);
-            nodep->addArgsp(new AstArg{nodep->fileline(), item.second.argp->name(),
-                                       address(nodep->fileline(), ownerp, key, contextp, super)});
+            nodep->addArgsp(new AstArg{
+                nodep->fileline(), item.second.argp->name(),
+                address(nodep->fileline(), ownerp, key, contextp, super,
+                        dtypep->ownerp() ? dtypep->ownerp()->anchorp() : item.second.anchorp)});
         }
     }
     void propagateRequirements() {
@@ -242,7 +263,9 @@ class ContextPrepareVisitor final : public VNVisitor {
                     AstClassRefDType* const dtypep = constructedType(newp, context.classp);
                     const bool super = VN_IS(newp->dtypep()->skipRefp(), VoidDType);
                     for (const auto& item : m_classes.at(dtypep->classp()).captures) {
-                        changed |= require(context, constructionKey(item.first, dtypep), !super);
+                        changed |= require(context, constructionKey(item.first, dtypep), !super,
+                                           dtypep->ownerp() ? dtypep->ownerp()->anchorp()
+                                                            : item.second.anchorp);
                     }
                 }
             }
@@ -253,7 +276,7 @@ class ContextPrepareVisitor final : public VNVisitor {
                     for (const auto& item : target.captures) {
                         const CaptureKey key{VString::dot(call.path, ".", item.first.first),
                                              item.first.second};
-                        changed |= require(*callerp, key, callerp->object);
+                        changed |= require(*callerp, key, callerp->object, item.second.anchorp);
                     }
                 }
             }
@@ -264,6 +287,8 @@ class ContextPrepareVisitor final : public VNVisitor {
             ClassContext& context = *contextp;
             unsigned index = 0;
             for (auto& item : context.captures) {
+                // Types and sensitivity metadata retain targets even if addresses fold away.
+                item.first.second->classCaptureTarget(true);
                 Capture& capture = item.second;
                 AstNodeDType* const dtypep = marker(item.first.second)->dtypep();
                 const string name = "__Vcapture" + cvtToStr(index++) + "p";
@@ -287,6 +312,12 @@ class ContextPrepareVisitor final : public VNVisitor {
     void materializeReferences() {
         for (ClassContext* const contextp : m_contexts) {
             const ClassContext& context = *contextp;
+            for (const auto& item : context.ifaces) {
+                AstNodeVarRef* const refp = item.first;
+                refp->replaceWith(
+                    address(refp->fileline(), context.ownerp, item.second, contextp, false));
+                pushDeletep(refp);
+            }
             for (const auto& item : context.vars) {
                 AstNodeVarRef* const refp = item.first;
                 refp->varp()->sensIfacep(item.second.second);
@@ -356,8 +387,8 @@ class ContextPrepareVisitor final : public VNVisitor {
             for (const auto& item : target.captures) {
                 const CaptureKey key{VString::dot(call.path, ".", item.first.first),
                                      item.first.second};
-                AstNodeExpr* const exprp
-                    = address(refp->fileline(), call.ownerp, key, call.callerp, false);
+                AstNodeExpr* const exprp = address(refp->fileline(), call.ownerp, key,
+                                                   call.callerp, false, item.second.anchorp);
                 refp->addArgsp(new AstArg{refp->fileline(), item.second.argp->name(), exprp});
             }
             if (methodp) {
@@ -424,6 +455,9 @@ class ContextPrepareVisitor final : public VNVisitor {
         iterateChildren(nodep);
     }
     void visit(AstNodeProcedure* nodep) override {
+        VL_RESTORER(m_contextp);
+        // Static processes, including package-class initializers, have no object receiver.
+        if (!VN_IS(nodep, InitialAutomatic)) m_contextp = nullptr;
         if (m_collect && m_classp && !VN_IS(nodep, InitialAutomatic)) {
             m_classes.at(m_classp).processes.push_back(nodep);
         }
@@ -462,6 +496,16 @@ class ContextPrepareVisitor final : public VNVisitor {
         if (!V3ClassContext::instanceOwnerp(m_contextp->classp)) return;
         const AstVarXRef* const xrefp = VN_CAST(nodep, VarXRef);
         string path = xrefp ? xrefp->dotted() : "";
+        if (const AstIfaceRefDType* const dtypep
+            = VN_CAST(nodep->dtypep()->skipRefp(), IfaceRefDType)) {
+            if (!dtypep->isVirtual()) {
+                const CaptureKey key{VString::dot(path, ".", dtypep->cellName()),
+                                     dtypep->ifaceViaCellp()};
+                require(*m_contextp, key, true);
+                m_contextp->ifaces.emplace_back(nodep, key);
+                return;
+            }
+        }
         if (const AstClassPackage* const packagep = VN_CAST(targetp, ClassPackage)) {
             path = m_classes.at(packagep->classp()).storagePath;
         }
@@ -549,6 +593,11 @@ class ContextPrepareVisitor final : public VNVisitor {
 public:
     explicit ContextPrepareVisitor(AstNetlist* nodep)
         : m_rootp{nodep} {
+        m_rootScopes.insert(nodep->topModulep()->name());
+        for (AstNode* stmtp = nodep->topModulep()->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+            if (const AstCell* const cellp = VN_CAST(stmtp, Cell))
+                m_rootScopes.insert(cellp->name());
+        }
         iterate(nodep);
         prepareStorage();
         m_collect = false;
@@ -558,6 +607,12 @@ public:
         materializeReferences();
         materializeStaticCalls();
         materializeStaticSelections();
+        nodep->foreach([](AstInitialStatic* initialp) {
+            initialp->foreach([](AstVarRef* refp) {
+                UASSERT_OBJ(!refp->varp()->classCaptureArgp(), refp,
+                            "Static initialization references an object capture");
+            });
+        });
         // Owner paths have now been transferred to construction expressions.
         nodep->foreach(
             [this](AstClassContext* contextp) { pushDeletep(contextp->unlinkFrBack()); });

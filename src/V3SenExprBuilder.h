@@ -58,6 +58,7 @@ private:
         dtypep = dtypep->skipRefp();
         if (VN_IS(dtypep, BasicDType)) return true;
         if (VN_IS(dtypep, PackArrayDType)) return true;
+        if (VN_IS(dtypep, AssocArrayDType)) return isSupportedDType(dtypep->subDTypep());
         if (VN_IS(dtypep, UnpackArrayDType)) return isSupportedDType(dtypep->subDTypep());
         if (VN_IS(dtypep, NodeUOrStructDType)) return true;  // All are packed at the moment
         // Per IEEE, detects reference object pointer changes, not contents of the class changes

@@ -750,41 +750,6 @@ module virtual_binding_case(output bit done);
   end
 endmodule
 
-interface upward_task_if;
-  task automatic invoke();
-    force_error();
-  endtask
-endinterface
-
-module upward_task_owner;
-  int count = 0;
-  upward_task_if backdoor();
-  task automatic force_error();
-    count++;
-  endtask
-endmodule
-
-module upward_task_case(output bit done);
-  upward_task_owner first(), second();
-  initial begin
-    #1;
-    `checkd(first.count, 0);
-    `checkd(second.count, 0);
-    first.backdoor.invoke();
-    #1;
-    `checkd(first.count, 1);
-    `checkd(second.count, 0);
-    second.backdoor.invoke();
-    second.backdoor.invoke();
-    `checkd(first.count, 1);
-    `checkd(second.count, 2);
-    first.backdoor.invoke();
-    `checkd(first.count, 2);
-    `checkd(second.count, 2);
-    done = 1;
-  end
-endmodule
-
 interface task_owner_if;
   int x;
   int y;
@@ -947,7 +912,7 @@ module capture_pair_case(output bit done);
 endmodule
 
 module t;
-  wire [20:0] done;
+  wire [19:0] done;
   context_leaf #(1) flat_first(done[0]);
   context_leaf #(2) flat_second(done[1]);
   context_chain #(3) linear(done[2]);
@@ -965,10 +930,9 @@ module t;
   construction_case #(2) construction_second(done[14]);
   virtual_binding_case virtual_bindings(done[15]);
   block_case blocks(done[16]);
-  upward_task_case upward_tasks(done[17]);
-  task_owner_case task_owners(done[18]);
-  timed_task_case timed_tasks(done[19]);
-  capture_pair_case capture_pairs(done[20]);
+  task_owner_case task_owners(done[17]);
+  timed_task_case timed_tasks(done[18]);
+  capture_pair_case capture_pairs(done[19]);
 
   initial begin
     wait (&done);

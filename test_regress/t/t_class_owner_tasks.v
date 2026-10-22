@@ -4,52 +4,13 @@
 // SPDX-FileCopyrightText: 2026 Wilson Snyder
 // SPDX-License-Identifier: CC0-1.0
 
-// Check owner selection for upward calls, class-task writes and suspended tasks.
+// Check owner selection for class-task writes and suspended tasks.
 // Distinct owners expose incorrect receivers and missing scheduling dependencies.
 
 // verilog_format: off
 `define stop $stop
 `define checkd(gotv,expv) do if ((gotv) !== (expv)) begin $write("%%Error: %s:%0d: %m got=%0d exp=%0d\n", `__FILE__,`__LINE__, (gotv), (expv)); `stop; end while(0)
 // verilog_format: on
-
-interface upward_task_if;
-  task automatic invoke();
-    // Resolve upward from this interface instance to its containing module's task.
-    force_error();
-  endtask
-endinterface
-
-module upward_task_owner;
-  int count = 0;
-  upward_task_if backdoor ();
-  task automatic force_error();
-    count++;
-  endtask
-endmodule
-
-module upward_task_case (
-    output bit done
-);
-  upward_task_owner first (), second ();
-  initial begin
-    #1;
-    `checkd(first.count, 0);
-    `checkd(second.count, 0);
-    first.backdoor.invoke();
-    #1;
-    // Upward lookup must not increment the other module instance's counter.
-    `checkd(first.count, 1);
-    `checkd(second.count, 0);
-    second.backdoor.invoke();
-    second.backdoor.invoke();
-    `checkd(first.count, 1);
-    `checkd(second.count, 2);
-    first.backdoor.invoke();
-    `checkd(first.count, 2);
-    `checkd(second.count, 2);
-    done = 1;
-  end
-endmodule
 
 interface task_owner_if;
   int x;
@@ -141,10 +102,9 @@ module timed_task_case (
 endmodule
 
 module t;
-  wire [2:0] done;
-  upward_task_case upward_tasks (done[0]);
-  task_owner_case task_owners (done[1]);
-  timed_task_case timed_tasks (done[2]);
+  wire [1:0] done;
+  task_owner_case task_owners (done[0]);
+  timed_task_case timed_tasks (done[1]);
 
   initial begin
     wait (&done);

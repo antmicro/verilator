@@ -210,8 +210,6 @@ private:
     std::array<ScopeAliasMap, SAMN__MAX> m_scopeAliasMap;  // Map of <lhs,rhs> aliases
     std::vector<VSymEnt*> m_ifaceVarSyms;  // List of AstIfaceRefDType's to be imported
     IfaceModSyms m_ifaceModSyms;  // List of AstIface+Symbols to be processed
-    std::map<AstNodeModule*, std::set<AstNodeModule*>> m_parentModules;  // Instantiation parents
-    bool m_parentModulesBuilt = false;  // Parent index available for upward task lookup
     const VLinkDotStep m_step;  // Operational step
 
 public:
@@ -1045,49 +1043,6 @@ public:
             }
         }
         return false;
-    }
-    AstNodeFTask* findUpwardTask(AstNodeModule* modp, const string& name) {
-        if (!m_parentModulesBuilt) {
-            class ParentVisitor final : public VNVisitorConst {
-                std::map<AstNodeModule*, std::set<AstNodeModule*>>& m_parents;  // Parent index
-                AstNodeModule* m_modp = nullptr;  // Current instantiating definition
-                void visit(AstNodeModule* nodep) override {
-                    VL_RESTORER(m_modp);
-                    m_modp = nodep;
-                    iterateChildrenConst(nodep);
-                }
-                void visit(AstCell* nodep) override {
-                    if (nodep->modp()) m_parents[nodep->modp()].insert(m_modp);
-                    iterateChildrenConst(nodep);
-                }
-                void visit(AstNode* nodep) override { iterateChildrenConst(nodep); }
-
-            public:
-                explicit ParentVisitor(std::map<AstNodeModule*, std::set<AstNodeModule*>>& parents)
-                    : m_parents{parents} {
-                    iterateConst(v3Global.rootp());
-                }
-            } visitor{m_parentModules};
-            m_parentModulesBuilt = true;
-        }
-        std::set<AstNodeModule*> visited;
-        std::vector<AstNodeModule*> pending{modp};
-        AstNodeFTask* resultp = nullptr;
-        for (size_t index = 0; index < pending.size(); ++index) {
-            for (AstNodeModule* const parentp : m_parentModules[pending[index]]) {
-                if (!visited.emplace(parentp).second) continue;
-                // Uninstantiated templates have no symbols in the current link step.
-                if (!existsNodeSym(parentp)) continue;
-                const VSymEnt* const foundp = getNodeSym(parentp)->findIdFlat(name);
-                if (foundp && VN_IS(foundp->nodep(), NodeFTask)) {
-                    AstNodeFTask* const taskp = VN_AS(foundp->nodep(), NodeFTask);
-                    if (resultp && resultp != taskp) return nullptr;
-                    resultp = taskp;
-                } else
-                    pending.push_back(parentp);
-            }
-        }
-        return resultp;
     }
     VSymEnt* resolveClassOrPackage(VSymEnt* lookSymp, AstClassOrPackageRef* nodep, bool fallback,
                                    bool classOnly, const string& forWhat,
@@ -5689,21 +5644,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 // which may find std::randomize and overwrite classOrPackagep
                 return;
             }
-            VSymEnt* foundp = m_statep->findSymPrefixed(dotSymp, nodep->name(), baddot, first);
-            if (!foundp && first && nodep->dotted().empty() && m_statep->forScopeCreation()
-                && VN_IS(m_modp, Iface) && (!m_ftaskp || !m_ftaskp->classMethod())) {
-                foundp = m_statep->findDotted(nodep->fileline(), dotSymp, nodep->name(), baddot,
-                                              okSymp, true);
-            }
-            if (!foundp && first && m_ds.m_dotText.empty() && VN_IS(m_modp, Iface)
-                && !m_statep->forScopeCreation() && (!m_ftaskp || !m_ftaskp->classMethod())) {
-                if (AstNodeFTask* const upwardp
-                    = m_statep->findUpwardTask(m_modp, nodep->name())) {
-                    nodep->taskp(upwardp);
-                    nodep->classOrPackagep(nullptr);
-                    return;
-                }
-            }
+            VSymEnt* const foundp
+                = m_statep->findSymPrefixed(dotSymp, nodep->name(), baddot, first);
             AstNodeFTask* const taskp = foundp ? VN_CAST(foundp->nodep(), NodeFTask) : nullptr;
             AstNodeModule* const taskModulep = foundp ? foundp->classOrPackagep() : nullptr;
             // Ignore deferring linking of functions inside params of classes extending

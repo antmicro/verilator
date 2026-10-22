@@ -393,8 +393,10 @@ class ParamProcessor final {
     static string classOwnerKey(const AstClassRefDType* dtypep) {
         const AstClassContext* const ownerp = dtypep->ownerp();
         if (!ownerp) return "";
-        const string prefix = ownerp->anchorp()->name() + ".";
+        const string anchor = ownerp->anchorp()->name();
         const string path = ownerp->path();
+        if (path == anchor) return "";
+        const string prefix = anchor + ".";
         return VString::startsWith(path, prefix) ? path : prefix + path;
     }
 
@@ -510,7 +512,8 @@ class ParamProcessor final {
                     "ClassRefDType has null classp in paramValueString");
             }
             // The owner binding selects the static storage of a factory specialization.
-            if (classRefp->ownerp()) key += "@" + classOwnerKey(classRefp);
+            const string owner = classOwnerKey(classRefp);
+            if (!owner.empty()) key += "@" + owner;
         } else if (const AstUnpackArrayDType* const dtypep = VN_CAST(nodep, UnpackArrayDType)) {
             // Name containers by their elements as above, not by prettyDTypeName(), which names
             // classes by parameter values that may be yet to be resolved

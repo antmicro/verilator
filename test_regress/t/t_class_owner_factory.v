@@ -71,8 +71,14 @@ module t;
     function int count();
       return constructions;
     endfunction
+    function int read_root();
+      return $root.t.second.value;
+    endfunction
   endclass
   typedef registry_pkg::Registry#(Item) Registry;
+  typedef t.Item ItemAlias;
+  typedef registry_pkg::Registry#(ItemAlias) ItemAliasRegistry;
+  ItemAliasRegistry item_alias_registry = ItemAliasRegistry::get();
   Registry registry = Registry::get();
   Item item;
   typedef first.ChildItem FirstItem;
@@ -97,6 +103,7 @@ module t;
   SecondItem second_item;
   initial begin
     item = registry.create();
+    `checkd(item_alias_registry, registry);
     first.value = 11;
     second.value = 29;
     unrelated.value = 7;
@@ -115,6 +122,7 @@ module t;
     `checkd(second_item.get(), 29);
     `checkd(item.read_child(0), 11);
     `checkd(item.read_child(1), 29);
+    `checkd(item.read_root(), 29);
     `checkd(unrelated.value, 7);
     `checkd(registry.initialized, 1);
     `checkd(item.count(), 1);

@@ -593,6 +593,8 @@ class ContextPrepareVisitor final : public VNVisitor {
 public:
     explicit ContextPrepareVisitor(AstNetlist* nodep)
         : m_rootp{nodep} {
+        // Explicitly rooted paths must not receive a lexical-owner prefix.
+        m_rootScopes.insert("$root");
         m_rootScopes.insert(nodep->topModulep()->name());
         for (AstNode* stmtp = nodep->topModulep()->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
             if (const AstCell* const cellp = VN_CAST(stmtp, Cell))

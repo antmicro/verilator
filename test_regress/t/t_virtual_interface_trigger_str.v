@@ -22,6 +22,7 @@ module t;
   always @(sif.s)++changes;
 
   initial begin
+    #1;
     for (int i = 1; i < 5; ++i) begin
       automatic int old_changes = changes;
       vif.s = $sformatf("hello %0d", i);

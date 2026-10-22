@@ -13,6 +13,6 @@ test.scenarios('simulator')
 for flags in ([], ['--protect-ids'], ['--no-timing', '-CFLAGS', '-std=c++14']):
     test.compile(verilator_flags2=['--binary', '--stats', *flags])
     if test.vlt_all and '-fno-inline' not in test.driver_verilator_flags:
-        test.file_grep(test.stats, r'Optimizations, Inlined instances\s+(\d+)', 1)
+        test.file_grep(test.stats, r'Optimizations, Inlined instances\s+(\d+)', 2)
     test.execute()
 test.passes()

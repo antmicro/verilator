@@ -29,22 +29,6 @@
 
 VL_DEFINE_DEBUG_FUNCTIONS;
 
-V3Sched::util::StorageScopes V3Sched::util::collectStorageScopes(AstNetlist* netlistp) {
-    StorageScopes scopes;
-    netlistp->foreach([&](AstVarScope* vscp) {
-        if (vscp->varp()->sensIfacep()) scopes[vscp->varp()].push_back(vscp);
-    });
-    return scopes;
-}
-
-const std::vector<AstVarScope*>* V3Sched::util::capturedScopes(const AstMemberRef* nodep,
-                                                               const StorageScopes& scopes) {
-    if (!VN_IS(nodep->fromp()->dtypep()->skipRefp(), ModuleRefDType)) return nullptr;
-    const auto it = scopes.find(nodep->varp());
-    UASSERT_OBJ(it != scopes.end(), nodep, "Captured storage has no concrete scope");
-    return &it->second;
-}
-
 namespace V3Sched {
 namespace util {
 
@@ -266,6 +250,22 @@ computeImplicitSensitivities(const AstNodeProcedure* procp) {
     collectForceReadEdgeIgnores(procp, forceReadEdgeIgnores);
     for (const AstVarScope* const vscp : forceReadEdgeIgnores) implicitSensitivities.erase(vscp);
     return implicitSensitivities;
+}
+
+StorageScopes collectStorageScopes(AstNetlist* netlistp) {
+    StorageScopes scopes;
+    netlistp->foreach([&](AstVarScope* vscp) {
+        if (vscp->varp()->sensIfacep()) scopes[vscp->varp()].push_back(vscp);
+    });
+    return scopes;
+}
+
+const std::vector<AstVarScope*>* capturedScopes(const AstMemberRef* nodep,
+                                                const StorageScopes& scopes) {
+    if (!VN_IS(nodep->fromp()->dtypep()->skipRefp(), ModuleRefDType)) return nullptr;
+    const auto it = scopes.find(nodep->varp());
+    UASSERT_OBJ(it != scopes.end(), nodep, "Captured storage has no concrete scope");
+    return &it->second;
 }
 
 }  // namespace util

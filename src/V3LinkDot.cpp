@@ -5932,21 +5932,37 @@ class LinkDotResolveVisitor final : public VNVisitor {
     void visit(AstMemberSel* nodep) override {
         // checkNoDot not appropriate, can be under a dot
         LINKDOT_VISIT_START();
+        // A type such as p.C can remain a MemberSel while interface port p is generic.
+        // Resolve the children before checking whether specialization has made p known.
         iterateChildren(nodep);
+
+        // Leave already-resolved field selections alone. Type resolution must finish
+        // before concrete instance scoping, so neither case needs this handling.
         if (m_statep->forScopeCreation() || nodep->varp()) return;
+
+        // Only a resolved, nonvirtual interface reference can supply the declaration.
+        // A still-generic port must wait for specialization and a later linking pass.
         const AstNodeVarRef* const fromp = VN_CAST(nodep->fromp(), NodeVarRef);
         if (!fromp || !fromp->varp()) return;
         AstNodeDType* const dtypep = fromp->varp()->subDTypep();
         const AstIfaceRefDType* const ifacep
             = dtypep ? VN_CAST(dtypep->skipRefOrNullp(), IfaceRefDType) : nullptr;
         if (!ifacep || ifacep->isVirtual() || !ifacep->ifaceViaCellp()) return;
+
+        // The selected name may denote a class or typedef rather than a runtime field.
         const VSymEnt* const foundp
             = m_statep->getNodeSym(ifacep->ifaceViaCellp())->findIdFlat(nodep->name());
         if (!foundp) return;
         AstNodeDType* replacementp = nullptr;
+
+        // Retain the interface path and lexical anchor so capture preparation can
+        // distinguish the same class imported through different interface bindings.
         string path = ifacep->cellName().empty() ? fromp->name() : ifacep->cellName();
         if (const AstVarXRef* const xrefp = VN_CAST(fromp, VarXRef))
             path = VString::dot(xrefp->dotted(), ".", path);
+
+        // Replace the expression-shaped selection with a type reference and its owner.
+        // The concrete storage address will be selected later, during scoped binding.
         if (AstClass* const classp = VN_CAST(foundp->nodep(), Class)) {
             AstClassRefDType* const refp
                 = new AstClassRefDType{nodep->fileline(), classp, nullptr};
@@ -6682,23 +6698,16 @@ class LinkDotResolveVisitor final : public VNVisitor {
         // Handle type validation for localparam type assignments
         // Iterate child to resolve any ParseRef nodes
         iterateChildren(nodep);
+        const AstMemberSel* const selp = VN_CAST(nodep->lhsp(), MemberSel);
+        const AstNodeVarRef* const refp = selp ? VN_CAST(selp->fromp(), NodeVarRef) : nullptr;
+        const bool deferTypeCheck
+            = m_statep->forPrimary() && refp && refp->varp()->isIfaceRef();
         // Only emit error if the child is not a type.
         // Do NOT unwrap valid types here - leave that to V3Width.
         // Unwrapping here breaks type parameter resolution during cloning.
         // Allow Dot through to defer the handling until the dot expression is resolved.
-        bool deferredInterfaceType = false;
-        if (m_statep->forPrimary()) {
-            if (const AstMemberSel* const selp = VN_CAST(nodep->lhsp(), MemberSel)) {
-                if (const AstNodeVarRef* const refp = VN_CAST(selp->fromp(), NodeVarRef)) {
-                    const AstNodeDType* const dtypep = refp->varp()->subDTypep();
-                    deferredInterfaceType
-                        = VN_IS(dtypep, IfaceGenericDType)
-                          || (dtypep && VN_IS(dtypep->skipRefOrNullp(), IfaceRefDType));
-                }
-            }
-        }
         if (nodep->lhsp() && !VN_IS(nodep->lhsp(), NodeDType) && !VN_IS(nodep->lhsp(), Dot)
-            && !deferredInterfaceType) {
+            && !deferTypeCheck) {
             // Not a type - emit error
             if (VN_IS(nodep->lhsp(), Const)) {
                 nodep->lhsp()->v3error("Expecting a data type, not a constant");

@@ -135,7 +135,8 @@ private:
             const auto it = m_candidateVscps.find(written);
             if (it == m_candidateVscps.end()) continue;
             for (AstVarScope* const vscp : it->second) {
-                // Solver state has ordering dependencies, but no SV value-change semantics.
+                // Captures may expose generated randomizer helpers. Do not create value-change
+                // triggers for these internal objects; their accesses still participate in ordering.
                 if (const AstBasicDType* const dtypep
                     = VN_CAST(vscp->dtypep()->skipRefp(), BasicDType)) {
                     if (dtypep->isRandomGenerator() || dtypep->isStdRandomGenerator()) continue;

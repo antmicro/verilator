@@ -5465,32 +5465,35 @@ class WidthVisitor final : public VNVisitor {
                 = VN_CAST(m_memberMap.findMember(classp, nodep->name()), NodeFTask)) {
                 userIterate(ftaskp, nullptr);
                 if (ftaskp->isStatic() && !V3ClassContext::instanceOwnerp(classp)) {
-                    AstArg* const argsp
-                        = nodep->argsp() ? nodep->argsp()->unlinkFrBackWithNext() : nullptr;
-                    AstNodeFTaskRef* const refp
-                        = m_vup ? static_cast<AstNodeFTaskRef*>(
-                                      new AstFuncRef{nodep->fileline(), nodep->name(), argsp})
-                                : static_cast<AstNodeFTaskRef*>(
-                                      new AstTaskRef{nodep->fileline(), nodep->name(), argsp});
-                    refp->taskp(ftaskp);
-                    refp->classOrPackagep(classp);
-                    nodep->replaceWith(refp);
-                    VL_DO_DANGLING(pushDeletep(nodep), nodep);
-                    return;
-                }
-                // Static calls also need the receiver until owner storage is selected.
-                nodep->taskp(ftaskp);
-                nodep->dtypeFrom(ftaskp);
-                nodep->classOrPackagep(classp);
-                if (VN_IS(ftaskp, Task)) {
-                    if (m_vup && m_vup->prelim() && !VN_IS(nodep->backp(), StmtExpr)) {
-                        nodep->v3error("Cannot call a task/void-function as a member function: "
-                                       << nodep->prettyNameQ());
+                    AstArg* const argsp = nodep->argsp();
+                    if (argsp) argsp->unlinkFrBackWithNext();
+                    AstNodeFTaskRef* newp = nullptr;
+                    // We use m_vup to determine task or function, so that later error checks
+                    // for funcref->task and taskref->func will pick up properly
+                    if (!m_vup) {  // Called as task
+                        newp = new AstTaskRef{nodep->fileline(), nodep->name(), argsp};
+                    } else {
+                        newp = new AstFuncRef{nodep->fileline(), nodep->name(), argsp};
                     }
-                    nodep->dtypeSetVoid();
+                    newp->taskp(ftaskp);  // Not passed above as might be func vs task mismatch
+                    newp->classOrPackagep(classp);
+                    nodep->replaceWith(newp);
+                    VL_DO_DANGLING(nodep->deleteTree(), nodep);
+                } else {
+                    nodep->taskp(ftaskp);
+                    nodep->dtypeFrom(ftaskp);
+                    nodep->classOrPackagep(classp);
+                    if (VN_IS(ftaskp, Task)) {
+                        if (m_vup && m_vup->prelim() && !VN_IS(nodep->backp(), StmtExpr)) {
+                            nodep->v3error(
+                                "Cannot call a task/void-function as a member function: "
+                                << nodep->prettyNameQ());
+                        }
+                        nodep->dtypeSetVoid();
+                    }
+                    if (withp) nodep->withp(withp);
+                    processFTaskRefArgs(nodep);
                 }
-                if (withp) nodep->withp(withp);
-                processFTaskRefArgs(nodep);
                 return;
             } else if (nodep->name() == "get_randstate") {
                 methodOkArguments(nodep, 0, 0);

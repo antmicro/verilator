@@ -44,7 +44,33 @@ module factory_unrelated;
   int value;
 endmodule
 
+module factory_nested_owner;
+  class NestedItem;
+    static int shared = 5;
+    function int get();
+      return shared;
+    endfunction
+  endclass
+  typedef registry_pkg::Registry#(NestedItem) NestedRegistry;
+  NestedRegistry registry = NestedRegistry::get();
+  function automatic void check();
+    NestedItem first_item;
+    NestedItem second_item;
+    first_item = registry.create();
+    second_item = registry.create();
+    `checkd(registry.initialized, 1);
+    `checkd(first_item.get(), 5);
+    first_item.shared = 31;
+    `checkd(second_item.get(), 31);
+  endfunction
+endmodule
+
+module factory_nested;
+  factory_nested_owner test ();
+endmodule
+
 module t;
+  factory_nested nested ();
   factory_child first (), second ();
   factory_unrelated unrelated ();
   int constructions;
@@ -102,6 +128,7 @@ module t;
   FirstItem first_item;
   SecondItem second_item;
   initial begin
+    nested.test.check();
     item = registry.create();
     `checkd(item_alias_registry, registry);
     first.value = 11;

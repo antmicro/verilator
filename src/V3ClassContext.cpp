@@ -84,6 +84,7 @@ class ContextPrepareVisitor final : public VNVisitor {
     std::map<AstNodeFTask*, ClassContext> m_routines;
     std::vector<ClassContext*> m_contexts;
     std::map<AstNodeModule*, AstVar*> m_markers;
+    std::map<AstNodeModule*, string> m_instancePaths;  // Empty for ambiguous owners or the wrapper
     std::set<string> m_rootScopes;  // Already absolute dependency paths
     std::vector<std::pair<AstNew*, AstNodeModule*>> m_constructions;
     std::vector<StaticSelection> m_staticSelections;
@@ -91,6 +92,17 @@ class ContextPrepareVisitor final : public VNVisitor {
     std::vector<StaticCall> m_staticCalls;
     std::vector<std::pair<AstNodeFTaskRef*, AstNodeModule*>> m_externalCalls;
     bool m_collect = true;
+
+    void indexInstancePaths(AstNodeModule* modp, const string& path) {
+        const auto it = m_instancePaths.emplace(modp, path);
+        // A module definition alone cannot identify one of several instances.
+        if (!it.second) it.first->second.clear();
+        for (AstNode* stmtp = modp->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+            if (const AstCell* const cellp = VN_CAST(stmtp, Cell)) {
+                indexInstancePaths(cellp->modp(), VString::dot(path, ".", cellp->name()));
+            }
+        }
+    }
 
     static AstStmtExpr* newReceiverStmt(AstNodeExpr* exprp) {
         FileLine* const fl = new FileLine{exprp->fileline()};
@@ -226,11 +238,11 @@ class ContextPrepareVisitor final : public VNVisitor {
         }
         AstVar* const varp = marker(key.second);
         if (VN_IS(fromp, Package)) {
-            // Package initialization has no receiver; retain the dependency's lexical anchor.
+            // Package initialization has no receiver; use the anchor's concrete instance path.
             string path = key.first;
             if (anchorp && !VN_IS(anchorp, Package)
                 && !m_rootScopes.count(path.substr(0, path.find('.'))))
-                path = VString::dot(anchorp->name(), ".", path);
+                path = VString::dot(m_instancePaths.at(anchorp), ".", path);
             else if (path.empty())
                 path = key.second->name();
             return new AstVarXRef{fl, varp, path, VAccess::READ};
@@ -606,6 +618,7 @@ public:
         iterate(nodep);
         propagateRequirements();
         declareCaptures();
+        indexInstancePaths(nodep->topModulep(), "");
         materializeReferences();
         materializeStaticCalls();
         materializeStaticSelections();

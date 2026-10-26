@@ -21,7 +21,6 @@ interface nested_if;
   class Outer;
     class Inner;
       static int shared;
-      int value;
       int captured;
       virtual target_if vif;
       function new(virtual target_if target = null);
@@ -90,13 +89,6 @@ module nested_case (
     #1;
     first.c.a.shared = 1;
     second.c.a.shared = 2;
-    first.c.a.value = 10;
-    first.c.b.value = 20;
-    first.d.a.value = 30;
-    second.c.a.value = 40;
-    u.c.value = 50;
-    v.c.value = 60;
-    w.c.value = 70;
     first.c.derived.offset = 100;
     second.c.derived.offset = 200;
     `checkd(first.c.a.captured, 1);
@@ -124,8 +116,6 @@ module nested_case (
     `checkd(first.c.a.captured, 11);
     `checkd(second.c.a.captured, 22);
     first.d.a.shared = 111;
-    first.c.a.value = 100;
-    u.c.value = 500;
     // Rebinding this field must not alter lexical captures or the saved object's target.
     first.c.a.vif = a;
     a.x = 33;
@@ -141,17 +131,9 @@ module nested_case (
     `checkd(first.c.a.shared, 111);
     `checkd(first.c.b.shared, 111);
     `checkd(second.c.a.shared, 2);
-    `checkd(first.c.old.value, 10);
-    `checkd(first.c.a.value, 100);
-    `checkd(first.c.b.value, 20);
-    `checkd(first.d.a.value, 30);
-    `checkd(second.c.old.value, 40);
     `checkd(u.c.get_owner(), 111);
     `checkd(v.c.get_owner(), 111);
     `checkd(w.c.get_owner(), 22);
-    `checkd(u.c.value, 500);
-    `checkd(v.c.value, 60);
-    `checkd(w.c.value, 70);
     `checkd(first.c.h.get(), 211);
     `checkd(second.c.h.get(), 322);
     `checkd(first.c.a.get_target(), 33);

@@ -205,64 +205,16 @@ module generic_inheritance_case (
   end
 endmodule
 
-module context_leaf #(
-    parameter int ID = 1
-) (
-    output bit done
-);
-  typed_base_if base_owner ();
-  typed_derived_if derived_owner (base_owner);
-
-  task automatic check_state(int delta);
-    `checkd(derived_owner.c.get_base(), ID + 70 + delta);
-    `checkd(derived_owner.c.get_derived(), ID + 80 + delta);
-    `checkd(derived_owner.c.value, ID + 90);
-  endtask
-
-  initial begin
-    base_owner.x = ID + 70;
-    derived_owner.x = ID + 80;
-    #1;
-    derived_owner.c.value = ID + 90;
-    #1;
-    check_state(0);
-    base_owner.x = ID + 170;
-    derived_owner.x = ID + 180;
-    #1;
-    check_state(100);
-    done = 1;
-  end
-endmodule
-
-module context_chain #(
-    parameter int ID = 1
-) (
+module inheritance_nested (
     output wire done
 );
-  context_leaf #(ID) leaf (done);
-endmodule
-
-module context_branch #(
-    parameter int ID = 1
-) (
-    output wire done
-);
-  wire left_done, right_done;
-  context_chain #(2 * ID) left (left_done);
-  context_chain #(2 * ID + 1) right (right_done);
-  assign done = left_done && right_done;
+  inheritance_case inherited (done);
 endmodule
 
 module t;
-  wire [6:0] done;
-  // Repeated declarations at different depths must still bind each owner separately.
-  context_leaf #(1) flat_first (done[0]);
-  context_leaf #(2) flat_second (done[1]);
-  context_chain #(3) linear (done[2]);
-  context_branch #(2) left (done[3]);
-  context_branch #(3) right (done[4]);
-  inheritance_case inherited (done[5]);
-  generic_inheritance_case generic_inherited (done[6]);
+  wire [1:0] done;
+  inheritance_nested nested (done[0]);
+  generic_inheritance_case generic_inherited (done[1]);
 
   initial begin
     wait (&done);

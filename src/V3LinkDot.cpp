@@ -5443,11 +5443,15 @@ class LinkDotResolveVisitor final : public VNVisitor {
                         }
                     }
                 }
-                if (m_statep->forPrimary() && isParamedClassRefDType(fromDtp)) {
+                const AstNodeDType* const resolvedDtp
+                    = fromDtp ? fromDtp->skipRefOrNullp() : nullptr;
+                // Inherited type references may remain unresolved until after V3Param.
+                if (m_statep->forPrimary()
+                    && (isParamedClassRefDType(fromDtp)
+                        || (m_insideClassExtParam && fromDtp && !resolvedDtp))) {
                     m_ds.m_unresolvedClass = true;
                 } else if (fromDtp) {
-                    const AstClassRefDType* const classDtp
-                        = VN_CAST(fromDtp->skipRefp(), ClassRefDType);
+                    const AstClassRefDType* const classDtp = VN_CAST(resolvedDtp, ClassRefDType);
                     if (!classDtp)
                         nodep->v3error("'randomize() with' on a non-class-instance "
                                        << fromDtp->prettyNameQ());

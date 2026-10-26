@@ -37,14 +37,40 @@ class outer_sequence;
   extern task body();
 endclass
 
+class base #(
+    type ITEM_T = item
+);
+endclass
+
+class limit #(int VALUE = 3);
+endclass
+
+class derived extends base #(item);
+  typedef item item_t;
+
+  function int randomize_item(ITEM_T item);
+    return item.randomize() with {driver_delay == 1;};
+  endfunction
+
+  function int randomize_known_item(item obj);
+    return obj.randomize() with {driver_delay == limit#(7)::VALUE;};
+  endfunction
+
+  function int randomize_typedef_item(item_t obj);
+    return obj.randomize() with {driver_delay == limit#(11)::VALUE;};
+  endfunction
+endclass
+
 task outer_sequence::body();
   generic_sequence #(item) seq;
   generic_sequence #(fast_item) fseq;
+  derived drvd;
   item cmd;  // Caller-scope 'cmd' for the local:: check below
   int ok;
   seq = new;
   fseq = new;
   cmd = new;
+  drvd = new;
 
   // A second specialization of the same generic class resolves independently.
   ok = fseq.randomize() with {cmd.driver_delay == 11;};
@@ -86,6 +112,19 @@ task outer_sequence::body();
   ok = seq.randomize() with {cmd.driver_delay == local:: cmd.driver_delay + 1;};
   `checkd(ok, 1)
   `checkd(seq.cmd.driver_delay, 43)
+
+  // The randomized target's type is inherited from a parameterized base class.
+  ok = drvd.randomize_item(cmd);
+  `checkd(ok, 1)
+  `checkd(cmd.driver_delay, 1)
+
+  // Known target types must link class references before parameter specialization.
+  ok = drvd.randomize_known_item(cmd);
+  `checkd(ok, 1)
+  `checkd(cmd.driver_delay, 7)
+  ok = drvd.randomize_typedef_item(cmd);
+  `checkd(ok, 1)
+  `checkd(cmd.driver_delay, 11)
 
   // Target declared without #(), so the default specialization (IEEE 1800-2023 8.25).
   begin

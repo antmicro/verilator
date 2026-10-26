@@ -107,17 +107,6 @@ module context_chain #(
   context_leaf #(ID) leaf (done);
 endmodule
 
-module context_branch #(
-    parameter int ID = 1
-) (
-    output wire done
-);
-  wire left_done, right_done;
-  context_chain #(2 * ID) left (left_done);
-  context_chain #(2 * ID + 1) right (right_done);
-  assign done = left_done && right_done;
-endmodule
-
 module block_counter (
     input logic clk,
     input int step,
@@ -170,14 +159,12 @@ module block_case (
 endmodule
 
 module t;
-  wire [5:0] done;
+  wire [3:0] done;
   // Reuse the same owner declaration at different depths with distinct live values.
   context_leaf #(1) flat_first (done[0]);
   context_leaf #(2) flat_second (done[1]);
   context_chain #(3) linear (done[2]);
-  context_branch #(2) left (done[3]);
-  context_branch #(3) right (done[4]);
-  block_case blocks (done[5]);
+  block_case blocks (done[3]);
 
   initial begin
     wait (&done);

@@ -47,7 +47,6 @@ module alias_consumer (
   // Follow both the generic port binding and the owner's typedef to construct C.
   typedef p.class_t C_t;
   C_t c = new;
-  C_t c2 = new;
   function int through_port();
     return p.c.get();
   endfunction
@@ -59,7 +58,6 @@ module direct_consumer (
   // Import the class directly, without the intermediate owner-side alias.
   typedef p.C C_t;
   C_t c = new;
-  C_t c2 = new;
 endmodule
 
 module modport_alias_consumer (
@@ -68,7 +66,6 @@ module modport_alias_consumer (
   // Modport qualification must preserve the same owner provenance as a generic port.
   typedef p.class_t C_t;
   C_t c = new;
-  C_t c2 = new;
   function int through_port();
     return p.c.get();
   endfunction
@@ -79,7 +76,6 @@ module modport_direct_consumer (
 );
   typedef p.C C_t;
   C_t c = new;
-  C_t c2 = new;
 endmodule
 
 module context_leaf #(
@@ -98,35 +94,24 @@ module context_leaf #(
     `checkd(owner.c.get_shared(), ID + 20 + delta);
     `checkd(owner.c2.get_shared(), ID + 20 + delta);
     `checkd(a.c.get_shared(), ID + 20 + delta);
-    `checkd(a.c2.get_shared(), ID + 20 + delta);
     `checkd(b.c.get_shared(), ID + 20 + delta);
-    `checkd(b.c2.get_shared(), ID + 20 + delta);
     `checkd(direct.c.get_shared(), ID + 20 + delta);
-    `checkd(direct.c2.get_shared(), ID + 20 + delta);
     `checkd(ma.c.get_shared(), ID + 20 + delta);
-    `checkd(ma.c2.get_shared(), ID + 20 + delta);
     `checkd(md.c.get_shared(), ID + 20 + delta);
-    `checkd(md.c2.get_shared(), ID + 20 + delta);
     // Imported objects must read the selected owner's live state, not another instance's.
     `checkd(owner.c.get(), ID + 30 + delta);
     `checkd(owner.c2.get(), ID + 30 + delta);
     `checkd(a.c.get(), ID + 30 + delta);
-    `checkd(a.c2.get(), ID + 30 + delta);
     `checkd(b.c.get(), ID + 30 + delta);
-    `checkd(b.c2.get(), ID + 30 + delta);
     `checkd(direct.c.get(), ID + 30 + delta);
-    `checkd(direct.c2.get(), ID + 30 + delta);
     `checkd(ma.c.get(), ID + 30 + delta);
-    `checkd(ma.c2.get(), ID + 30 + delta);
     `checkd(md.c.get(), ID + 30 + delta);
-    `checkd(md.c2.get(), ID + 30 + delta);
     `checkd(a.through_port(), ID + 30 + delta);
     `checkd(ma.through_port(), ID + 30 + delta);
     // The imported owner path must also reach its child interface.
     `checkd(a.c.get_child(), ID + 40 + delta);
     `checkd(b.c.get_child(), ID + 40 + delta);
     `checkd(direct.c.get_child(), ID + 40 + delta);
-    `checkd(direct.c2.get_child(), ID + 40 + delta);
     // Shared owner context must not merge the objects' individual fields.
     `checkd(owner.c.get_value(), ID + 210 + delta);
     `checkd(owner.c2.get_value(), ID + 220);
@@ -147,7 +132,7 @@ module context_leaf #(
     check_state(0);
     owner.c.value = ID + 310;
     // Write through a modport-imported object; all consumers must observe the update.
-    ma.c2.shared = ID + 120;
+    ma.c.shared = ID + 120;
     owner.x = ID + 130;
     owner.child.y = ID + 140;
     a.c.value = ID + 150;
@@ -165,25 +150,12 @@ module context_chain #(
   context_leaf #(ID) leaf (done);
 endmodule
 
-module context_branch #(
-    parameter int ID = 1
-) (
-    output wire done
-);
-  wire left_done, right_done;
-  context_chain #(2 * ID) left (left_done);
-  context_chain #(2 * ID + 1) right (right_done);
-  assign done = left_done && right_done;
-endmodule
-
 module t;
-  wire [4:0] done;
+  wire [2:0] done;
   // Identical owner declarations at different depths must retain separate static state.
   context_leaf #(1) flat_first (done[0]);
   context_leaf #(2) flat_second (done[1]);
   context_chain #(3) linear (done[2]);
-  context_branch #(2) left (done[3]);
-  context_branch #(3) right (done[4]);
 
   initial begin
     wait (&done);

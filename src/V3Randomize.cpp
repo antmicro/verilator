@@ -7028,22 +7028,7 @@ class RandomizeVisitor final : public VNVisitor {
 
             // Pin the sizes so the final solve can't move them
             for (AstVar* const arrVarp : allSizeArrays) {
-                AstVar* const sizeVarp = VN_CAST(arrVarp->user4p(), Var);
-                if (!sizeVarp) continue;
-                AstCMethodHard* const pinp
-                    = new AstCMethodHard{fl, new AstVarRef{fl, localGenp, VAccess::READWRITE},
-                                         VCMethod::RANDOMIZER_PIN_VAR};
-                pinp->dtypeSetVoid();
-                AstCExpr* const namep
-                    = new AstCExpr{fl, AstCExpr::Pure{}, "\"" + sizeVarp->name() + "\""};
-                namep->dtypeSetUInt32();
-                pinp->addPinsp(namep);
-                pinp->addPinsp(new AstConst{fl, AstConst::Unsized64{},
-                                            static_cast<uint64_t>(sizeVarp->width())});
-                AstVarRef* const sizeVarRefp = new AstVarRef{fl, sizeVarp, VAccess::READ};
-                sizeVarRefp->classOrPackagep(VN_AS(sizeVarp->user2p(), NodeModule));
-                pinp->addPinsp(sizeVarRefp);
-                randomizeFuncp->addStmtsp(pinp->makeStmt());
+                randomizeFuncp->addStmtsp(newPinSizeVariable(fl, arrVarp, localGenp));
             }
 
             // Final solve: element values with sizes pinned

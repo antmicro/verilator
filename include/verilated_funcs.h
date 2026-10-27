@@ -1856,7 +1856,8 @@ inline void VL_STREAMR_RRI(int lbits, VlQueue<T_Value>& to_q, const VlQueue<T_Ot
     VL_CONSTEXPR_CXX17 size_t sizeOfThis = sizeof(T_Value);
     T_Value temp = 0;
     if (otherSize > sizeOfThis) {
-        for (auto val : from_q) {
+        for (int i = 0; i < from_q.size(); ++i) {
+            const auto val = from_q.at(i);
             for (int ii = otherSize / sizeOfThis - 1; ii >= 0; ii--) {
                 temp = (static_cast<T_Value>(val >> (ii * 8 * sizeOfThis)));
                 to_q.push_back(temp);
@@ -1865,7 +1866,8 @@ inline void VL_STREAMR_RRI(int lbits, VlQueue<T_Value>& to_q, const VlQueue<T_Ot
     } else {
         // How many of the other element fits in this element.
         size_t otherInElement = sizeOfThis / otherSize - 1;
-        for (auto val : from_q) {
+        for (int i = 0; i < from_q.size(); ++i) {
+            const auto val = from_q.at(i);
             // Shift the element into the correct position and merge
             temp |= (static_cast<T_Value>(val) << (otherInElement * 8 * otherSize));
             otherInElement--;
@@ -1892,7 +1894,8 @@ inline void VL_STREAMR_RRI(int lbits, VlQueue<VlWide<N_Words>>& to_q,
     for (int ii = 0; ii < N_Words; ii++) { temp.at(ii) = 0; }
     if VL_CONSTEXPR_CXX17 (numOtherInWord > 0) {
         size_t elementCount = sizeOfThis - 1;
-        for (auto val : from_q) {
+        for (int i = 0; i < from_q.size(); ++i) {
+            const auto val = from_q.at(i);
             temp.at((elementCount / numOtherInWord) % N_Words)
                 |= (static_cast<EData>(val) << (elementCount * 8 * otherSize));
             elementCount--;
@@ -1907,7 +1910,8 @@ inline void VL_STREAMR_RRI(int lbits, VlQueue<VlWide<N_Words>>& to_q,
         if (elementCount < sizeOfThis - 1) { to_q.push_back(temp); }
     } else {  //QData
         size_t wordCount = N_Words - 1;
-        for (auto val : from_q) {
+        for (int i = 0; i < from_q.size(); ++i) {
+            const auto val = from_q.at(i);
             temp.at(wordCount % N_Words) = (static_cast<EData>(static_cast<QData>(val) >> 32));
             wordCount--;
             if (wordCount == -1) {
@@ -1935,7 +1939,8 @@ inline void VL_STREAMR_RRI(int lbits, VlQueue<T_Value>& to_q,
 
     VL_CONSTEXPR_CXX17 size_t sizeOfThis = sizeof(T_Value);
     T_Value temp = 0;
-    for (auto val : from_q) {
+    for (int i = 0; i < from_q.size(); ++i) {
+        const auto val = from_q.at(i);
         if VL_CONSTEXPR_CXX17 (sizeof(T_Value) == 8) {
             // iterate backwards because queues are msb first
             for (int wordIndex = N_Words - 1; wordIndex >= 0; wordIndex -= 2) {

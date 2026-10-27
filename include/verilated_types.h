@@ -33,6 +33,7 @@
 #include <atomic>
 #include <deque>
 #include <initializer_list>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <set>
@@ -609,35 +610,82 @@ class VlQueue;
 template <typename T_Value>
 class VlQueue<T_Value, 0> VL_NOT_FINAL {
 public:
-    using const_iterator = const T_Value*;
+    using size_type = size_t;
+
     template <typename T_Func>
     using WithFuncReturnType = decltype(std::declval<T_Func>()(0, std::declval<T_Value>()));
 
 protected:
-    // MEMBERS
-    T_Value* m_buf = nullptr;  // Contiguous buffer allocated via ::operator new
-    size_t m_cap = 0;  // Allocated capacity in elements
-    size_t m_head = 0;  // Index of first valid element in m_buf
-    size_t m_size = 0;  // Number of valid elements
+    static constexpr size_type BLOCK_SIZE = sizeof(T_Value) < 512 ? 512 / sizeof(T_Value) : 1;
+    struct Block final {
+        typename std::aligned_storage<sizeof(T_Value), alignof(T_Value)>::type m_slots[BLOCK_SIZE];
+        T_Value* at(size_type offset) { return reinterpret_cast<T_Value*>(&m_slots[offset]); }
+    };
+    Block** m_blocksp = nullptr;  // Array of blocks
+    size_type m_mapCapacity = 0;  // Size of m_blocksp
+    size_type m_firstBlock = 0;  // First used block
+    size_type m_frontOffset = 0;  // Offset of the first used slot in its block
+    size_type m_size = 0;  // Number of valid elements
     T_Value m_defaultValue{};  // Default value
 
-    VL_ATTR_NOINLINE void reserveForPush(bool front) {
-        const size_t newCap = (m_size >= m_cap / 2) ? (m_cap < 4 ? 4 : m_cap * 2) : m_cap;
-        const size_t newHead = front ? (newCap - m_size + 1) / 2 : (newCap - m_size) / 4;
-        T_Value* const newBuf = static_cast<T_Value*>(::operator new(newCap * sizeof(T_Value)));
-        for (size_t i = 0; i < m_size; ++i) {
-            new (newBuf + newHead + i) T_Value(std::move(m_buf[m_head + i]));
-            (m_buf + m_head + i)->~T_Value();
+    T_Value& element(size_type index) {
+        const size_type slot = m_frontOffset + index;
+        return *m_blocksp[m_firstBlock + slot / BLOCK_SIZE]->at(slot % BLOCK_SIZE);
+    }
+    const T_Value& element(size_type index) const {
+        return const_cast<VlQueue*>(this)->element(index);
+    }
+
+    template <typename T_Compare>
+    void sortCompare(T_Compare compare) {
+        const auto siftDown = [this, &compare](size_type root, size_type count) {
+            while (root < count / 2) {
+                size_type child = root * 2 + 1;
+                if (child + 1 < count && compare(element(child), element(child + 1))) ++child;
+                if (!compare(element(root), element(child))) break;
+                std::swap(element(root), element(child));
+                root = child;
+            }
+        };
+        for (size_type i = m_size / 2; i > 0; --i) siftDown(i - 1, m_size);
+        for (size_type i = m_size; i > 1; --i) {
+            std::swap(element(0), element(i - 1));
+            siftDown(0, i - 1);
         }
-        ::operator delete(m_buf);
-        m_buf = newBuf;
-        m_cap = newCap;
-        m_head = newHead;
+    }
+
+    VL_ATTR_NOINLINE void reserveForPush(bool front) {
+        if (!m_size && m_mapCapacity) {
+            m_firstBlock = m_mapCapacity / 2;
+            m_frontOffset = BLOCK_SIZE / 2;
+            return;
+        }
+        const size_type used = m_size ? (m_frontOffset + m_size - 1) / BLOCK_SIZE + 1 : 0;
+        const size_type capacity
+            = used == m_mapCapacity ? (m_mapCapacity ? m_mapCapacity * 2 : 8) : m_mapCapacity;
+        const size_type first = front ? (capacity - used + 1) / 2 : (capacity - used) / 2;
+        if (capacity != m_mapCapacity) {
+            Block** const blocksp = new Block* [capacity] {};
+            for (size_type i = 0; i < used; ++i) blocksp[first + i] = m_blocksp[m_firstBlock + i];
+            delete[] m_blocksp;
+            m_blocksp = blocksp;
+            m_mapCapacity = capacity;
+        } else {
+            std::memmove(m_blocksp + first, m_blocksp + m_firstBlock, used * sizeof(Block*));
+            std::fill_n(m_blocksp, first, nullptr);
+            std::fill(m_blocksp + first + used, m_blocksp + capacity, nullptr);
+        }
+        m_firstBlock = first;
+        if (!m_size) m_frontOffset = BLOCK_SIZE / 2;
     }
 
     VL_ATTR_NOINLINE void destroyElements() {
-        for (size_t i = 0; i < m_size; ++i) (m_buf + m_head + i)->~T_Value();
-        m_head = 0;
+        for (size_type i = 0; i < m_size; ++i) element(i).~T_Value();
+        const size_type used = m_size ? (m_frontOffset + m_size - 1) / BLOCK_SIZE + 1 : 0;
+        for (size_type i = 0; i < used; ++i) {
+            delete m_blocksp[m_firstBlock + i];
+            m_blocksp[m_firstBlock + i] = nullptr;
+        }
         m_size = 0;
     }
 
@@ -649,15 +697,7 @@ protected:
         if (this != &rhs) {
             destroyElements();
             const size_t copyCount = (maxSize && maxSize <= rhs.m_size) ? maxSize - 1 : rhs.m_size;
-            if (copyCount > m_cap) {
-                ::operator delete(m_buf);
-                m_buf = static_cast<T_Value*>(::operator new(copyCount * sizeof(T_Value)));
-                m_cap = copyCount;
-            }
-            for (size_t i = 0; i < copyCount; ++i) {
-                new (m_buf + i) T_Value(rhs.m_buf[rhs.m_head + i]);
-            }
-            m_size = copyCount;
+            for (size_t i = 0; i < copyCount; ++i) push_back(rhs.element(i));
         } else if (VL_UNLIKELY(maxSize && maxSize < m_size)) {
             truncate(maxSize - 1);
         }
@@ -666,10 +706,11 @@ protected:
     VL_ATTR_NOINLINE void assignFrom(VlQueue&& rhs, size_t maxSize) {
         if (this != &rhs) {
             destroyElements();
-            ::operator delete(m_buf);
-            m_buf = std::exchange(rhs.m_buf, nullptr);
-            m_cap = std::exchange(rhs.m_cap, 0);
-            m_head = std::exchange(rhs.m_head, 0);
+            delete[] m_blocksp;
+            m_blocksp = std::exchange(rhs.m_blocksp, nullptr);
+            m_mapCapacity = std::exchange(rhs.m_mapCapacity, 0);
+            m_firstBlock = std::exchange(rhs.m_firstBlock, 0);
+            m_frontOffset = std::exchange(rhs.m_frontOffset, 0);
             m_size = std::exchange(rhs.m_size, 0);
         }
         if (VL_UNLIKELY(maxSize && maxSize < m_size)) truncate(maxSize - 1);
@@ -682,27 +723,18 @@ public:
 
     VL_ATTR_NOINLINE ~VlQueue() {
         destroyElements();
-        ::operator delete(m_buf);
+        delete[] m_blocksp;
     }
 
     VL_ATTR_NOINLINE VlQueue(const VlQueue& rhs)
         : m_defaultValue{rhs.m_defaultValue} {
-        if (rhs.m_size) {
-            m_buf = static_cast<T_Value*>(::operator new(rhs.m_size * sizeof(T_Value)));
-            m_cap = rhs.m_size;
-            m_size = rhs.m_size;
-            for (size_t i = 0; i < m_size; ++i) {
-                new (m_buf + i) T_Value(rhs.m_buf[rhs.m_head + i]);
-            }
-        }
+        assignFrom(rhs, 0);
     }
 
     VL_ATTR_NOINLINE VlQueue(VlQueue&& rhs)
-        : m_buf{std::exchange(rhs.m_buf, nullptr)}
-        , m_cap{std::exchange(rhs.m_cap, 0)}
-        , m_head{std::exchange(rhs.m_head, 0)}
-        , m_size{std::exchange(rhs.m_size, 0)}
-        , m_defaultValue{std::move(rhs.m_defaultValue)} {}
+        : m_defaultValue{std::move(rhs.m_defaultValue)} {
+        assignFrom(std::move(rhs), 0);
+    }
 
     VL_ATTR_NOINLINE VlQueue<T_Value, 0>& operator=(const VlQueue& rhs) {
         if (this != &rhs) {
@@ -727,12 +759,16 @@ public:
     VL_ATTR_NOINLINE VlQueue(VlQueue<VlClassRef<T_Subclass>, 0>&&);
 
     bool operator==(const VlQueue& rhs) const {
-        return m_size == rhs.m_size && std::equal(begin(), end(), rhs.begin());
+        if (m_size != rhs.m_size) return false;
+        for (size_type i = 0; i < m_size; ++i) {
+            if (!(element(i) == rhs.element(i))) return false;
+        }
+        return true;
     }
     bool operator!=(const VlQueue& rhs) const { return !(*this == rhs); }
     bool operator<(const VlQueue& rhs) const {
         for (size_t index = 0; index < m_size; ++index) {
-            if (m_buf[m_head + index] < rhs.m_buf[rhs.m_head + index]) return true;
+            if (element(index) < rhs.element(index)) return true;
         }
         return false;
     }
@@ -765,7 +801,7 @@ public:
 
     VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consCC(const VlQueue& lhs, const VlQueue& rhs, size_t maxSize = 0) {
         VlQueue out = rhs;
-        for (const auto& i : lhs) out.push_back(i, maxSize);
+        for (size_type i = 0; i < lhs.m_size; ++i) out.push_back(lhs.element(i), maxSize);
         return out;
     }
 
@@ -785,29 +821,17 @@ public:
         if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_size)) return;
         const size_t idx = static_cast<size_t>(index);
         if (idx == 0) {
-            (m_buf + m_head)->~T_Value();
-            ++m_head;
-            if (--m_size == 0) m_head = 0;
+            pop_front();
             return;
         }
-        for (size_t i = idx; i + 1 < m_size; ++i) {
-            m_buf[m_head + i] = std::move(m_buf[m_head + i + 1]);
-        }
-        --m_size;
-        (m_buf + m_head + m_size)->~T_Value();
-        if (m_size == 0) m_head = 0;
+        for (size_t i = idx; i + 1 < m_size; ++i) element(i) = std::move(element(i + 1));
+        pop_back();
     }
 
     // Dynamic array new[] becomes a renew()
     VL_ATTR_NOINLINE void renew(size_t size) {
         destroyElements();
-        if (size > m_cap) {
-            ::operator delete(m_buf);
-            m_buf = static_cast<T_Value*>(::operator new(size * sizeof(T_Value)));
-            m_cap = size;
-        }
-        for (size_t i = 0; i < size; ++i) new (m_buf + i) T_Value(atDefault());
-        m_size = size;
+        resize(size);
     }
 
     // Dynamic array new[]() becomes a renew_copy()
@@ -825,31 +849,35 @@ public:
     renew_copy(size_t size, const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs);
 
     VL_ATTR_NOINLINE void resize(size_t size) {
-        while (m_size > size) {
-            --m_size;
-            (m_buf + m_head + m_size)->~T_Value();
-            if (m_size == 0) m_head = 0;
-        }
+        truncate(size);
         while (m_size < size) push_back(atDefault());
     }
 
     // function void q.push_front(value)
     VL_ATTR_NOINLINE void push_front(const T_Value& value, size_t maxSize = 0) {
-        if (VL_UNLIKELY(m_head == 0)) reserveForPush(true);
-        --m_head;
-        new (m_buf + m_head) T_Value(value);
-        ++m_size;
-        if (VL_UNLIKELY(maxSize != 0 && m_size > maxSize)) {
-            --m_size;
-            (m_buf + m_head + m_size)->~T_Value();
-            if (m_size == 0) m_head = 0;
+        if (VL_UNLIKELY(!m_size || (m_firstBlock == 0 && m_frontOffset == 0)))
+            reserveForPush(true);
+        if (m_frontOffset == 0) {
+            --m_firstBlock;
+            m_frontOffset = BLOCK_SIZE;
         }
+        if (!m_blocksp[m_firstBlock]) m_blocksp[m_firstBlock] = new Block;
+        --m_frontOffset;
+        new (m_blocksp[m_firstBlock]->at(m_frontOffset)) T_Value(value);
+        ++m_size;
+        if (VL_UNLIKELY(maxSize != 0 && m_size > maxSize)) pop_back();
     }
     // function void q.push_back(value)
     VL_ATTR_NOINLINE void push_back(const T_Value& value, size_t maxSize = 0) {
         if (VL_LIKELY(maxSize == 0 || m_size < maxSize)) {
-            if (VL_UNLIKELY(m_head + m_size == m_cap)) reserveForPush(false);
-            new (m_buf + m_head + m_size) T_Value(value);
+            if (VL_UNLIKELY(!m_size
+                            || m_firstBlock + (m_frontOffset + m_size) / BLOCK_SIZE
+                                   == m_mapCapacity))
+                reserveForPush(false);
+            const size_type slot = m_frontOffset + m_size;
+            Block*& blockp = m_blocksp[m_firstBlock + slot / BLOCK_SIZE];
+            if (!blockp) blockp = new Block;
+            new (blockp->at(slot % BLOCK_SIZE)) T_Value(value);
             ++m_size;
         }
     }
@@ -857,19 +885,29 @@ public:
     // function value_t q.pop_front();
     VL_ATTR_NOINLINE T_Value pop_front() {
         if (empty()) return m_defaultValue;
-        T_Value v = std::move(m_buf[m_head]);
-        (m_buf + m_head)->~T_Value();
-        ++m_head;
-        if (--m_size == 0) m_head = 0;
+        T_Value v = std::move(element(0));
+        element(0).~T_Value();
+        --m_size;
+        if (++m_frontOffset == BLOCK_SIZE || !m_size) {
+            delete m_blocksp[m_firstBlock];
+            m_blocksp[m_firstBlock] = nullptr;
+            ++m_firstBlock;
+            m_frontOffset = 0;
+        }
         return v;
     }
     // function value_t q.pop_back();
     VL_ATTR_NOINLINE T_Value pop_back() {
         if (empty()) return m_defaultValue;
+        T_Value v = std::move(element(m_size - 1));
+        element(m_size - 1).~T_Value();
         --m_size;
-        T_Value v = std::move(m_buf[m_head + m_size]);
-        (m_buf + m_head + m_size)->~T_Value();
-        if (m_size == 0) m_head = 0;
+        const size_type slot = m_frontOffset + m_size;
+        if (slot % BLOCK_SIZE == 0 || !m_size) {
+            const size_type block = m_firstBlock + slot / BLOCK_SIZE;
+            delete m_blocksp[block];
+            m_blocksp[block] = nullptr;
+        }
         return v;
     }
 
@@ -882,7 +920,7 @@ public:
             t_throwAway = atDefault();
             return t_throwAway;
         }
-        return m_buf[m_head + index];
+        return element(index);
     }
     // Setting. Verilog: assoc[index] = v (should only be used by queues)
     VL_ATTR_NOINLINE T_Value& atWriteAppend(int32_t index, size_t maxSize = 0) {
@@ -893,13 +931,13 @@ public:
             t_throwAway = atDefault();
             return t_throwAway;
         }
-        return m_buf[m_head + index];
+        return element(index);
     }
     // Accessing. Verilog: v = assoc[index]
     const T_Value& at(int32_t index) const {
         // Needs to work for dynamic arrays, so does not use N_MaxSize
         if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_size)) return atDefault();
-        return m_buf[m_head + index];
+        return element(index);
     }
 
     // Access with an index counted from end (e.g. q[$])
@@ -921,27 +959,29 @@ public:
             push_back(value);
             return;
         }
-        if (VL_UNLIKELY(m_head + m_size == m_cap)) reserveForPush(false);
-        new (m_buf + m_head + m_size) T_Value(std::move(m_buf[m_head + m_size - 1]));
-        for (size_t i = m_size - 1; i > idx; --i) {
-            m_buf[m_head + i] = std::move(m_buf[m_head + i - 1]);
-        }
-        m_buf[m_head + idx] = value;
-        ++m_size;
+        const T_Value copy = value;
+        push_back(element(m_size - 1));
+        for (size_t i = m_size - 2; i > idx; --i) element(i) = std::move(element(i - 1));
+        element(idx) = copy;
     }
 
     // inside (set membership operator)
     bool inside(const T_Value& value) const {
-        return std::find(begin(), end(), value) != end();
+        for (size_type i = 0; i < m_size; ++i) {
+            if (element(i) == value) return true;
+        }
+        return false;
     }
 
     // Return slice q[lsb:msb]
     VL_ATTR_NOINLINE VlQueue<T_Value, 0> slice(int32_t lsb, int32_t msb, size_t maxSize = 0) const {
         VlQueue out;
         if (VL_UNLIKELY(lsb < 0)) lsb = 0;
-        if (VL_UNLIKELY(lsb >= static_cast<int32_t>(m_size))) lsb = static_cast<int32_t>(m_size) - 1;
-        if (VL_UNLIKELY(msb >= static_cast<int32_t>(m_size))) msb = static_cast<int32_t>(m_size) - 1;
-        for (int32_t i = lsb; i <= msb; ++i) out.push_back(m_buf[m_head + i], maxSize);
+        if (VL_UNLIKELY(lsb >= static_cast<int32_t>(m_size)))
+            lsb = static_cast<int32_t>(m_size) - 1;
+        if (VL_UNLIKELY(msb >= static_cast<int32_t>(m_size)))
+            msb = static_cast<int32_t>(m_size) - 1;
+        for (int32_t i = lsb; i <= msb; ++i) out.push_back(element(i), maxSize);
         return out;
     }
     VlQueue sliceFrontBack(int32_t lsb, int32_t msb, size_t maxSize = 0) const {
@@ -960,7 +1000,7 @@ public:
         if (VL_UNLIKELY(msb >= sz)) msb = sz - 1;
         const int32_t count = std::min(msb - lsb + 1, srcSz);
         if (VL_UNLIKELY(count <= 0)) return;
-        std::copy_n(src.begin(), count, begin() + lsb);
+        for (int32_t i = 0; i < count; ++i) element(lsb + i) = src.element(i);
     }
     void sliceAssignFrontBack(int32_t lsb, int32_t msb, const VlQueue& src) {
         sliceAssign(lsb, m_size - 1 - msb, src);
@@ -969,50 +1009,51 @@ public:
         sliceAssign(m_size - 1 - lsb, m_size - 1 - msb, src);
     }
 
-    // For save/restore and range iteration
-    T_Value* begin() { return m_buf + m_head; }
-    const_iterator begin() const { return m_buf + m_head; }
-    T_Value* end() { return m_buf + m_head + m_size; }
-    const_iterator end() const { return m_buf + m_head + m_size; }
-
     // Methods
     VL_ATTR_NOINLINE void sort() {
-        std::sort(begin(), end());
+        sortCompare([](const T_Value& a, const T_Value& b) { return a < b; });
     }
 
     template <typename T_Func>
     void sort(T_Func with_func) {
         // with_func returns arbitrary type to use for the sort comparison
-        std::sort(begin(), end(), [=](const T_Value& a, const T_Value& b) {
+        sortCompare([=](const T_Value& a, const T_Value& b) {
             // index number is meaningless with sort, as it changes
             return with_func(0, a) < with_func(0, b);
         });
     }
 
     VL_ATTR_NOINLINE void rsort() {
-        std::sort(begin(), end(), [](const T_Value& a, const T_Value& b) { return b < a; });
+        sortCompare([](const T_Value& a, const T_Value& b) { return b < a; });
     }
 
     template <typename T_Func>
     void rsort(T_Func with_func) {
         // with_func returns arbitrary type to use for the sort comparison
-        std::sort(begin(), end(), [=](const T_Value& a, const T_Value& b) {
+        sortCompare([=](const T_Value& a, const T_Value& b) {
             // index number is meaningless with sort, as it changes
             return with_func(0, b) < with_func(0, a);
         });
     }
 
-    VL_ATTR_NOINLINE void reverse() { std::reverse(begin(), end()); }
-    VL_ATTR_NOINLINE void shuffle() { std::shuffle(begin(), end(), VlURNG{}); }
+    VL_ATTR_NOINLINE void reverse() {
+        for (size_type i = 0; i < m_size / 2; ++i) {
+            std::swap(element(i), element(m_size - 1 - i));
+        }
+    }
+    VL_ATTR_NOINLINE void shuffle() {
+        VlURNG rng;
+        for (size_type i = m_size; i > 1; --i) {
+            std::uniform_int_distribution<size_type> dist{0, i - 1};
+            std::swap(element(i - 1), element(dist(rng)));
+        }
+    }
     VL_ATTR_NOINLINE VlQueue<T_Value, 0> unique() const {
         VlQueue out;
         std::set<T_Value> saw;
-        for (const auto& i : *this) {
-            const auto it = saw.find(i);
-            if (it == saw.end()) {
-                saw.insert(it, i);
-                out.push_back(i);
-            }
+        for (size_type index = 0; index < m_size; ++index) {
+            const auto& i = element(index);
+            if (saw.insert(i).second) { out.push_back(i); }
         }
         return out;
     }
@@ -1020,29 +1061,21 @@ public:
     template <typename T_Func>
     VlQueue unique(T_Func with_func) const {
         VlQueue out;
-        std::set<decltype(with_func(0, m_buf[m_head]))> saw;
-        for (const auto& i : *this) {
+        std::set<decltype(with_func(0, element(0)))> saw;
+        for (size_type index = 0; index < m_size; ++index) {
+            const auto& i = element(index);
             const auto i_mapped = with_func(0, i);
-            const auto it = saw.find(i_mapped);
-            if (it == saw.end()) {
-                saw.insert(it, i_mapped);
-                out.push_back(i);
-            }
+            if (saw.insert(i_mapped).second) { out.push_back(i); }
         }
         return out;
     }
 
     VL_ATTR_NOINLINE VlQueue<IData, 0> unique_index() const {
         VlQueue<IData, 0> out;
-        IData index = 0;
         std::set<T_Value> saw;
-        for (const auto& i : *this) {
-            const auto it = saw.find(i);
-            if (it == saw.end()) {
-                saw.insert(it, i);
-                out.push_back(index);
-            }
-            ++index;
+        for (size_type index = 0; index < m_size; ++index) {
+            const auto& i = element(index);
+            if (saw.insert(i).second) { out.push_back(index); }
         }
         return out;
     }
@@ -1050,62 +1083,52 @@ public:
     template <typename T_Func>
     VlQueue<IData, 0> unique_index(T_Func with_func) const {
         VlQueue<IData, 0> out;
-        IData index = 0;
-        std::set<decltype(with_func(0, m_buf[m_head]))> saw;
-        for (const auto& i : *this) {
-            const auto i_mapped = with_func(index, i);
-            auto it = saw.find(i_mapped);
-            if (it == saw.end()) {
-                saw.insert(it, i_mapped);
-                out.push_back(index);
-            }
-            ++index;
+        std::set<decltype(with_func(0, element(0)))> saw;
+        for (size_type index = 0; index < m_size; ++index) {
+            const auto& i = element(index);
+            const auto i_mapped = with_func(static_cast<IData>(index), i);
+            if (saw.insert(i_mapped).second) { out.push_back(index); }
         }
         return out;
     }
     template <typename T_Func>
     VlQueue find(T_Func with_func) const {
         VlQueue out;
-        IData index = 0;
-        for (const auto& i : *this) {
-            if (with_func(index, i)) out.push_back(i);
-            ++index;
+        for (size_type index = 0; index < m_size; ++index) {
+            const auto& i = element(index);
+            if (with_func(static_cast<IData>(index), i)) out.push_back(i);
         }
         return out;
     }
     template <typename T_Func>
     VlQueue<IData, 0> find_index(T_Func with_func) const {
         VlQueue<IData, 0> out;
-        IData index = 0;
-        for (const auto& i : *this) {
-            if (with_func(index, i)) out.push_back(index);
-            ++index;
+        for (size_type index = 0; index < m_size; ++index) {
+            const auto& i = element(index);
+            if (with_func(static_cast<IData>(index), i)) out.push_back(index);
         }
         return out;
     }
     template <typename T_Func>
     VlQueue find_first(T_Func with_func) const {
-        // Can't use std::find_if as need index number
-        IData index = 0;
-        for (const auto& i : *this) {
-            if (with_func(index, i)) return VlQueue::consV(i);
-            ++index;
+        for (size_type index = 0; index < m_size; ++index) {
+            const auto& i = element(index);
+            if (with_func(static_cast<IData>(index), i)) return VlQueue::consV(i);
         }
         return VlQueue{};
     }
     template <typename T_Func>
     VlQueue<IData, 0> find_first_index(T_Func with_func) const {
-        IData index = 0;
-        for (const auto& i : *this) {
-            if (with_func(index, i)) return VlQueue<IData, 0>::consV(index);
-            ++index;
+        for (size_type index = 0; index < m_size; ++index) {
+            const auto& i = element(index);
+            if (with_func(static_cast<IData>(index), i)) return VlQueue<IData, 0>::consV(index);
         }
         return VlQueue<IData, 0>{};
     }
     template <typename T_Func>
     VlQueue find_last(T_Func with_func) const {
         for (int64_t index = static_cast<int64_t>(m_size) - 1; index >= 0; --index) {
-            const auto& item = m_buf[m_head + index];
+            const auto& item = element(index);
             if (with_func(index, item)) return VlQueue::consV(item);
         }
         return VlQueue{};
@@ -1113,7 +1136,7 @@ public:
     template <typename T_Func>
     VlQueue<IData, 0> find_last_index(T_Func with_func) const {
         for (int64_t index = static_cast<int64_t>(m_size) - 1; index >= 0; --index) {
-            const auto& item = m_buf[m_head + index];
+            const auto& item = element(index);
             if (with_func(index, item)) return VlQueue<IData, 0>::consV(index);
         }
         return VlQueue<IData, 0>{};
@@ -1122,10 +1145,9 @@ public:
     template <typename T_Func>
     VlQueue<WithFuncReturnType<T_Func>, 0> map(T_Func with_func) const {
         VlQueue<WithFuncReturnType<T_Func>, 0> out;
-        IData index = 0;
-        for (const auto& i : *this) {
-            out.push_back(with_func(index, i));
-            ++index;
+        for (size_type index = 0; index < m_size; ++index) {
+            const auto& i = element(index);
+            out.push_back(with_func(static_cast<IData>(index), i));
         }
         return out;
     }
@@ -1133,90 +1155,100 @@ public:
     // Reduction operators
     VL_ATTR_NOINLINE VlQueue<T_Value, 0> min() const {
         if (empty()) return VlQueue{};
-        const auto it = std::min_element(begin(), end());
-        return VlQueue::consV(*it);
+        size_type best = 0;
+        for (size_type index = 1; index < m_size; ++index) {
+            if (element(index) < element(best)) best = index;
+        }
+        return VlQueue::consV(element(best));
     }
 
     template <typename T_Func>
     VlQueue min(T_Func with_func) const {
         if (empty()) return VlQueue{};
-        const auto it = std::min_element(begin(), end(),
-                                         [&with_func](const T_Value& a, const T_Value& b) {
-                                             return with_func(0, a) < with_func(0, b);
-                                         });
-        return VlQueue::consV(*it);
+        size_type best = 0;
+        for (size_type index = 1; index < m_size; ++index) {
+            if (with_func(0, element(index)) < with_func(0, element(best))) best = index;
+        }
+        return VlQueue::consV(element(best));
     }
 
     VL_ATTR_NOINLINE VlQueue<T_Value, 0> max() const {
         if (empty()) return VlQueue{};
-        const auto it = std::max_element(begin(), end());
-        return VlQueue::consV(*it);
+        size_type best = 0;
+        for (size_type index = 1; index < m_size; ++index) {
+            if (element(best) < element(index)) best = index;
+        }
+        return VlQueue::consV(element(best));
     }
 
     template <typename T_Func>
     VlQueue max(T_Func with_func) const {
         if (empty()) return VlQueue{};
-        const auto it = std::max_element(begin(), end(),
-                                         [&with_func](const T_Value& a, const T_Value& b) {
-                                             return with_func(0, a) < with_func(0, b);
-                                         });
-        return VlQueue::consV(*it);
+        size_type best = 0;
+        for (size_type index = 1; index < m_size; ++index) {
+            if (with_func(0, element(best)) < with_func(0, element(index))) best = index;
+        }
+        return VlQueue::consV(element(best));
     }
 
     template <typename U = T_Value>
     T_Value r_sum() const {
         T_Value out(0);  // Type must have assignment operator
-        for (const auto& i : *this) out += i;
+        for (size_type index = 0; index < m_size; ++index) out += element(index);
         return out;
     }
     template <typename T_Func>
     WithFuncReturnType<T_Func> r_sum(T_Func with_func) const {
         WithFuncReturnType<T_Func> out = WithFuncReturnType<T_Func>(0);
-        IData index = 0;
-        for (const auto& i : *this) out += with_func(index++, i);
+        for (size_type index = 0; index < m_size; ++index) {
+            out += with_func(static_cast<IData>(index), element(index));
+        }
         return out;
     }
     template <typename U = T_Value>
     T_Value r_product() const {
         if (empty()) return T_Value(0);  // The big three do it this way
         T_Value out = T_Value(1);
-        for (const auto& i : *this) out *= i;
+        for (size_type index = 0; index < m_size; ++index) out *= element(index);
         return out;
     }
     template <typename T_Func>
     WithFuncReturnType<T_Func> r_product(T_Func with_func) const {
         if (empty()) return WithFuncReturnType<T_Func>(0);  // The big three do it this way
         WithFuncReturnType<T_Func> out = WithFuncReturnType<T_Func>(1);
-        IData index = 0;
-        for (const auto& i : *this) out *= with_func(index++, i);
+        for (size_type index = 0; index < m_size; ++index) {
+            out *= with_func(static_cast<IData>(index), element(index));
+        }
         return out;
     }
     template <typename U = T_Value>
     T_Value r_and() const {
         if (empty()) return T_Value(0);  // The big three do it this way
         T_Value out = ~T_Value(0);
-        for (const auto& i : *this) out &= i;
+        for (size_type index = 0; index < m_size; ++index) out &= element(index);
         return out;
     }
     template <typename T_Func>
     WithFuncReturnType<T_Func> r_and(T_Func with_func) const {
         if (empty()) return WithFuncReturnType<T_Func>(0);  // The big three do it this way
-        IData index = 0;
         WithFuncReturnType<T_Func> out = ~WithFuncReturnType<T_Func>(0);
-        for (const auto& i : *this) out &= with_func(index++, i);
+        for (size_type index = 0; index < m_size; ++index) {
+            out &= with_func(static_cast<IData>(index), element(index));
+        }
         return out;
     }
     template <typename U = T_Value>
     T_Value r_or() const {
         T_Value out = T_Value(0);
-        for (const auto& i : *this) out |= i;
+        for (size_type index = 0; index < m_size; ++index) out |= element(index);
         return out;
     }
     template <typename T_Func>
     WithFuncReturnType<T_Func> r_or(T_Func with_func) const {
         WithFuncReturnType<T_Func> out = WithFuncReturnType<T_Func>(0);
-        IData index = 0;
-        for (const auto& i : *this) out |= with_func(index++, i);
+        for (size_type index = 0; index < m_size; ++index) {
+            out |= with_func(static_cast<IData>(index), element(index));
+        }
         return out;
     }
     template <typename U = T_Value>
@@ -1225,14 +1257,15 @@ public:
         if (empty()) return T_Value(0);
 #endif
         T_Value out = T_Value(0);
-        for (const auto& i : *this) out ^= i;
+        for (size_type index = 0; index < m_size; ++index) out ^= element(index);
         return out;
     }
     template <typename T_Func>
     WithFuncReturnType<T_Func> r_xor(T_Func with_func) const {
         WithFuncReturnType<T_Func> out = WithFuncReturnType<T_Func>(0);
-        IData index = 0;
-        for (const auto& i : *this) out ^= with_func(index++, i);
+        for (size_type index = 0; index < m_size; ++index) {
+            out ^= with_func(static_cast<IData>(index), element(index));
+        }
         return out;
     }
 
@@ -1241,7 +1274,8 @@ public:
         if (empty()) return "'{}";  // No trailing space
         std::string out = "'{";
         std::string comma;
-        for (const auto& i : *this) {
+        for (size_type index = 0; index < m_size; ++index) {
+            const auto& i = element(index);
             out += comma + VL_TO_STRING(i);
             comma = ", ";
         }
@@ -2127,9 +2161,7 @@ VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::renew_copy(
     clear();
     if (size == 0) return;
     resize(size);
-    for (size_t i = 0; i < std::min(size, N_UnpackedDepth); ++i) {
-        m_buf[m_head + i] = rhs.m_storage[i];
-    }
+    for (size_t i = 0; i < std::min(size, N_UnpackedDepth); ++i) { element(i) = rhs.m_storage[i]; }
 }
 
 //===================================================================
@@ -2667,26 +2699,16 @@ template <typename T_Subclass>
 VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(
     const VlQueue<VlClassRef<T_Subclass>, 0>& that)
     : m_defaultValue{that.atDefault()} {
-    const size_t n = that.size();
-    if (n > 0) {
-        m_cap = n;
-        m_buf = static_cast<T_Value*>(::operator new(n * sizeof(T_Value)));
-        std::uninitialized_copy(that.begin(), that.end(), m_buf);
-        m_size = n;
-    }
+    for (int i = 0; i < that.size(); ++i) push_back(that.at(i));
 }
 
 template <typename T_Value>
 template <typename T_Subclass>
 VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(VlQueue<VlClassRef<T_Subclass>, 0>&& that)
     : m_defaultValue{std::move(that.atDefault())} {
-    const size_t n = that.size();
-    if (n > 0) {
-        m_cap = n;
-        m_buf = static_cast<T_Value*>(::operator new(n * sizeof(T_Value)));
-        std::uninitialized_copy(std::make_move_iterator(that.begin()),
-                                std::make_move_iterator(that.end()), m_buf);
-        m_size = n;
+    for (int i = 0; i < that.size(); ++i) {
+        T_Value moved{std::move(that.atWrite(i))};
+        push_back(moved);
     }
 }
 

@@ -1390,34 +1390,26 @@ class ParamProcessor final {
         }
     }
 
-    // True if a $bits/$size type query in nodep's parameters reads another type parameter.
-    static bool defaultParamsHaveTypeQueryOnParamType(const AstClassRefDType* nodep) {
-        bool found = false;
-        nodep->foreach([&](const AstAttrOf* attrp) {
-            if (found || !attrp->attrType().isTypeQuery()) return;
-            const AstRefDType* const refp = VN_CAST(attrp->fromp(), RefDType);
-            if (refp && VN_IS(refp->refDTypep(), ParamTypeDType)) found = true;
-        });
-        return found;
-    }
-
     // Check if exprp's class matches origp's class after deparameterization.
+    // origp is a type parameter default; paramsp are the instance's parameter pins.
     // Handles both the simple case (user4p link from defaultsResolved) and the
     // nested case where the default's inner class has non-default sub-parameters
     // (e.g., uvm_sequence#(uvm_reg_item) where uvm_reg_item != default uvm_sequence_item).
-    bool classTypeMatchesDefaultClone(const AstNodeDType* exprp, const AstNodeDType* origp) {
+    bool classTypeMatchesDefaultClone(const AstNodeDType* exprp, const AstNodeDType* origp,
+                                      const AstPin* paramsp) {
         exprp = exprp->skipRefp();
         origp = origp->skipRefp();
         const auto* const exprClassRefp = VN_CAST(exprp, ClassRefDType);
         const auto* const origClassRefp = VN_CAST(origp, ClassRefDType);
         if (!exprClassRefp || !origClassRefp) return false;
-        // Fast path: check user4p link (set when template was deparameterized with defaults)
+        // Fast path: check user4p link (set when template was deparameterized with defaults).
+        // Only valid when the default has no parameters; else user4p may be a different class.
         const AstNodeModule* const defaultClonep
             = VN_CAST(origClassRefp->classp()->user4p(), Class);
-        if (defaultClonep && defaultClonep == exprClassRefp->classp()) return true;
-        // Skip the comparison when the default's $bits/$size reads another type parameter, as
-        // deparameterizing it below would resolve that shared type at the wrong width (#7711).
-        if (defaultParamsHaveTypeQueryOnParamType(origClassRefp)) return false;
+        if (!origClassRefp->paramsp() && defaultClonep
+            && defaultClonep == exprClassRefp->classp()) {
+            return true;
+        }
         // Slow path: deparameterize the default type and compare the result.
         // Different templates can never match; use origName() because exprp's
         // class may already be a specialization (clone) of the template.
@@ -1429,7 +1421,25 @@ class ParamProcessor final {
         // const_cast safe: cloneTree doesn't modify the source
         AstClassRefDType* const origClonep = static_cast<AstClassRefDType*>(
             const_cast<AstClassRefDType*>(origClassRefp)->cloneTree(false));
-        AstNodeModule* const resolvedModp = classRefDeparam(origClonep, origClassRefp->classp());
+        // Replace references to type parameters with the instance's values, as deparameterizing
+        // would width the template's type parameters (#7711)
+        bool resolved = true;
+        origClonep->foreach([&](AstRefDType* refp) {
+            if (!VN_IS(refp->refDTypep(), ParamTypeDType)) return;
+            const AstPin* pinp = paramsp;
+            while (pinp && pinp->modPTypep() != refp->refDTypep()) {
+                pinp = VN_AS(pinp->nextp(), Pin);
+            }
+            if (!pinp || !pinp->exprp()) {
+                resolved = false;
+                return;
+            }
+            refp->replaceWith(pinp->exprp()->cloneTree(false));
+            // Delay deletion, as foreach reads refp's children after this returns
+            VL_DO_DANGLING(m_deleter.pushDeletep(refp), refp);
+        });
+        AstNodeModule* const resolvedModp
+            = resolved ? classRefDeparam(origClonep, origClassRefp->classp()) : nullptr;
         const bool match = resolvedModp && VN_CAST(resolvedModp, Class) == exprClassRefp->classp();
         VL_DO_DANGLING(origClonep->deleteTree(), origClonep);
         m_defaultCloneInProgress.erase(origClassRefp->classp());
@@ -1759,7 +1769,8 @@ class ParamProcessor final {
                                   << " violates parameter's forwarding type '"
                                   << modvarp->fwdType().ascii() << "'");
                 }
-                if (exprp->similarDType(origp) || classTypeMatchesDefaultClone(exprp, origp)) {
+                if (exprp->similarDType(origp)
+                    || classTypeMatchesDefaultClone(exprp, origp, paramsp)) {
                     // Setting parameter to its default value.  Just ignore it.
                     // This prevents making additional modules, and makes coverage more
                     // obvious as it won't show up under a unique module page name.

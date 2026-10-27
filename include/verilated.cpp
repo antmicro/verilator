@@ -4585,6 +4585,271 @@ void VlDeleter::deleteAll() VL_EXCLUDES(m_mutex) VL_EXCLUDES(m_deleteMutex) VL_M
     }
 }
 
+//======================================================================
+// Type-erased deque storage
+
+VlDequeImpl::Block::Block(size_type elementSize, size_type capacity)
+    : m_elementSize{elementSize}
+    , m_capacity{capacity}
+    , m_storagep{new unsigned char[elementSize * capacity]} {}
+
+VlDequeImpl::Block::~Block() { delete[] m_storagep; }
+
+VlDequeImpl::VlDequeImpl(size_type elementSize, const Ops& ops)
+    : m_elementSize{elementSize}
+    , m_blockSize{elementSize < 512 ? 512 / elementSize : 1}
+    , m_opsp{&ops} {}
+
+VlDequeImpl::VlDequeImpl(const VlDequeImpl& rhs)
+    : VlDequeImpl{rhs.m_elementSize, *rhs.m_opsp} {
+    for (size_type i = 0; i < rhs.size(); ++i) push_back(rhs.at(i));
+}
+VlDequeImpl::VlDequeImpl(VlDequeImpl&& rhs) noexcept
+    : VlDequeImpl{rhs.m_elementSize, *rhs.m_opsp} {
+    swap(rhs);
+}
+VlDequeImpl::~VlDequeImpl() { clear(); }
+
+void VlDequeImpl::reserveMap(bool atFront) {
+    const size_type used_blocks = m_size ? (m_frontOffset + m_size - 1) / m_blockSize + 1 : 0;
+    const size_type new_capacity = used_blocks + 2 > m_mapCapacity
+                                       ? (m_mapCapacity ? m_mapCapacity * 2 : INITIAL_MAP_CAPACITY)
+                                       : m_mapCapacity;
+    const size_type first_block = (new_capacity - used_blocks - 2) / 2 + (atFront ? 1 : 0);
+    if (new_capacity != m_mapCapacity) {
+        Block** const blocksp = new Block* [new_capacity] {};
+        for (size_type i = 0; i < used_blocks; ++i)
+            blocksp[first_block + i] = m_blocksp[m_firstBlock + i];
+        delete[] m_blocksp;
+        m_blocksp = blocksp;
+        m_mapCapacity = new_capacity;
+    } else {
+        std::memmove(m_blocksp + first_block, m_blocksp + m_firstBlock,
+                     used_blocks * sizeof(Block*));
+        std::fill(m_blocksp, m_blocksp + first_block, nullptr);
+        std::fill(m_blocksp + first_block + used_blocks, m_blocksp + m_mapCapacity, nullptr);
+    }
+    m_firstBlock = first_block;
+}
+
+void VlDequeImpl::ensureBackSlot() {
+    const size_type slot = m_frontOffset + m_size;
+    const size_type last = slot / m_blockSize;
+    if (!m_mapCapacity || m_firstBlock + last + 1 >= m_mapCapacity) reserveMap(false);
+    Block*& blockp = m_blocksp[blockIndex(slot)];
+    if (!blockp) blockp = new Block{m_elementSize, m_blockSize};
+}
+
+void VlDequeImpl::ensureFrontSlot() {
+    if (empty()) {
+        ensureBackSlot();
+        return;
+    }
+    if (!m_frontOffset) {
+        if (!m_firstBlock) reserveMap(true);
+        --m_firstBlock;
+        assert(!m_blocksp[m_firstBlock]);
+        m_blocksp[m_firstBlock] = new Block{m_elementSize, m_blockSize};
+        m_frontOffset = m_blockSize;
+    }
+    --m_frontOffset;
+}
+
+void VlDequeImpl::swap(VlDequeImpl& rhs) noexcept {
+    std::swap(m_elementSize, rhs.m_elementSize);
+    std::swap(m_blockSize, rhs.m_blockSize);
+    std::swap(m_opsp, rhs.m_opsp);
+    std::swap(m_blocksp, rhs.m_blocksp);
+    std::swap(m_mapCapacity, rhs.m_mapCapacity);
+    std::swap(m_firstBlock, rhs.m_firstBlock);
+    std::swap(m_frontOffset, rhs.m_frontOffset);
+    std::swap(m_size, rhs.m_size);
+}
+
+VlDequeImpl& VlDequeImpl::operator=(const VlDequeImpl& rhs) {
+    if (this != &rhs) {
+        VlDequeImpl copy{rhs};
+        swap(copy);
+    }
+    return *this;
+}
+
+VlDequeImpl& VlDequeImpl::operator=(VlDequeImpl&& rhs) noexcept {
+    if (this != &rhs) {
+        VlDequeImpl moved{std::move(rhs)};
+        swap(moved);
+    }
+    return *this;
+}
+
+void VlDequeImpl::clear() {
+    for (size_type i = 0; i < m_size; ++i) m_opsp->destroy(slotp(i));
+    for (size_type i = 0; i < m_mapCapacity; ++i) delete m_blocksp[i];
+    delete[] m_blocksp;
+    m_blocksp = nullptr;
+    m_mapCapacity = m_firstBlock = m_frontOffset = m_size = 0;
+}
+
+void VlDequeImpl::push_front(const void* valuep) {
+    ensureFrontSlot();
+    m_opsp->copyConstruct(slotp(0), valuep);
+    ++m_size;
+}
+
+void VlDequeImpl::push_back(const void* valuep) {
+    ensureBackSlot();
+    m_opsp->copyConstruct(slotp(m_size), valuep);
+    ++m_size;
+}
+
+void VlDequeImpl::push_back_move(void* valuep) {
+    ensureBackSlot();
+    m_opsp->moveConstruct(slotp(m_size), valuep);
+    ++m_size;
+}
+
+void VlDequeImpl::pop_front() {
+    assert(!empty());
+    m_opsp->destroy(slotp(0));
+    --m_size;
+    ++m_frontOffset;
+    if (m_frontOffset == m_blockSize || empty()) {
+        delete m_blocksp[m_firstBlock];
+        m_blocksp[m_firstBlock] = nullptr;
+        ++m_firstBlock;
+        m_frontOffset = 0;
+    }
+    if (empty()) m_firstBlock = m_mapCapacity / 2;
+}
+
+void VlDequeImpl::pop_back() {
+    assert(!empty());
+    const size_type block = blockIndex(m_frontOffset + m_size - 1);
+    m_opsp->destroy(slotp(m_size - 1));
+    --m_size;
+    if (empty() || block != blockIndex(m_frontOffset + m_size - 1)) {
+        delete m_blocksp[block];
+        m_blocksp[block] = nullptr;
+    }
+    if (empty()) {
+        m_firstBlock = m_mapCapacity / 2;
+        m_frontOffset = 0;
+    }
+}
+
+void VlDequeImpl::resize(size_type size) {
+    while (m_size > size) pop_back();
+    while (m_size < size) {
+        ensureBackSlot();
+        m_opsp->construct(slotp(m_size));
+        ++m_size;
+    }
+}
+
+void VlDequeImpl::resize(size_type size, const void* valuep) {
+    while (m_size > size) pop_back();
+    while (m_size < size) push_back(valuep);
+}
+
+VlDequeImpl::iterator VlDequeImpl::insert(iterator position, const void* valuep) {
+    const size_type index = static_cast<size_type>(position - begin());
+    assert(index <= m_size);
+    if (index == m_size) {
+        push_back(valuep);
+    } else if (index == 0) {
+        push_front(valuep);
+    } else {
+        if (index < m_size / 2) {
+            push_front(slotp(0));
+            for (size_type i = 1; i < index; ++i) m_opsp->moveAssign(slotp(i), slotp(i + 1));
+        } else {
+            push_back(slotp(m_size - 1));
+            for (size_type i = m_size - 2; i > index; --i)
+                m_opsp->moveAssign(slotp(i), slotp(i - 1));
+        }
+        m_opsp->copyAssign(slotp(index), valuep);
+    }
+    iterator out = begin();
+    out += static_cast<difference_type>(index);
+    return out;
+}
+
+VlDequeImpl::iterator VlDequeImpl::erase(iterator position) {
+    const size_type index = static_cast<size_type>(position - begin());
+    assert(index < m_size);
+    if (index < m_size / 2) {
+        for (size_type i = index; i > 0; --i) m_opsp->moveAssign(slotp(i), slotp(i - 1));
+        pop_front();
+    } else {
+        for (size_type i = index; i + 1 < m_size; ++i) m_opsp->moveAssign(slotp(i), slotp(i + 1));
+        pop_back();
+    }
+    iterator out = begin();
+    out += static_cast<difference_type>(index);
+    return out;
+}
+
+VlDequeImpl::iterator VlDequeImpl::begin() const {
+    return m_size ? iterator{m_blocksp + m_firstBlock, slotp(0)} : iterator{};
+}
+
+VlDequeImpl::iterator VlDequeImpl::end() const {
+    return m_size ? iterator{m_blocksp + blockIndex(m_frontOffset + m_size - 1),
+                             slotp(m_size - 1) + m_elementSize}
+                  : iterator{};
+}
+
+unsigned char* VlDequeImpl::slotp(size_type index) const {
+    const size_type slot = m_frontOffset + index;
+    return m_blocksp[blockIndex(slot)]->m_storagep + (slot % m_blockSize) * m_elementSize;
+}
+
+VlDequeImpl::iterator& VlDequeImpl::iterator::operator++() {
+    const Block* const blockp = *m_blockpp;
+    m_currentp += blockp->m_elementSize;
+    if (m_currentp == blockp->m_storagep + blockp->m_capacity * blockp->m_elementSize
+        && m_blockpp[1]) {
+        ++m_blockpp;
+        m_currentp = (*m_blockpp)->m_storagep;
+    }
+    return *this;
+}
+
+VlDequeImpl::iterator& VlDequeImpl::iterator::operator--() {
+    if (m_currentp == (*m_blockpp)->m_storagep) {
+        --m_blockpp;
+        const Block* const blockp = *m_blockpp;
+        m_currentp = blockp->m_storagep + blockp->m_capacity * blockp->m_elementSize;
+    }
+    m_currentp -= (*m_blockpp)->m_elementSize;
+    return *this;
+}
+
+VlDequeImpl::iterator& VlDequeImpl::iterator::operator+=(difference_type offset) {
+    if (!offset) return *this;
+    const difference_type elementSize = (*m_blockpp)->m_elementSize;
+    const difference_type blockSize = (*m_blockpp)->m_capacity;
+    const difference_type index = (m_currentp - (*m_blockpp)->m_storagep) / elementSize + offset;
+    const difference_type blocks = index >= 0 ? index / blockSize : (index + 1) / blockSize - 1;
+    m_blockpp += blocks;
+    if (!*m_blockpp) {
+        --m_blockpp;
+        m_currentp = (*m_blockpp)->m_storagep + blockSize * elementSize;
+    } else {
+        m_currentp = (*m_blockpp)->m_storagep + (index - blocks * blockSize) * elementSize;
+    }
+    return *this;
+}
+
+VlDequeImpl::difference_type VlDequeImpl::iterator::operator-(const iterator& rhs) const {
+    if (*this == rhs) return 0;
+    const difference_type elementSize = (*m_blockpp)->m_elementSize;
+    return (m_blockpp - rhs.m_blockpp) * static_cast<difference_type>((*m_blockpp)->m_capacity)
+           + (m_currentp - (*m_blockpp)->m_storagep) / elementSize
+           - (rhs.m_currentp - (*rhs.m_blockpp)->m_storagep) / elementSize;
+}
+
+
 //===========================================================================
 // OS functions (last, so we have minimal OS dependencies above)
 

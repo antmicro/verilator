@@ -596,6 +596,256 @@ public:
 template <typename T_Class>
 class VlClassRef;
 
+// Type-erased backing storage for VlDeque
+class VlDequeImpl final {
+public:
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    struct Ops final {
+        void (*construct)(void*);
+        void (*copyConstruct)(void*, const void*);
+        void (*moveConstruct)(void*, void*);
+        void (*copyAssign)(void*, const void*);
+        void (*moveAssign)(void*, void*);
+        void (*destroy)(void*);
+    };
+
+private:
+    struct Block final {
+        const size_type m_elementSize;  // Element size in bytes
+        const size_type m_capacity;  // Elements per block
+        unsigned char* const m_storagep;  // Elements storage
+        Block(size_type elementSize, size_type capacity);
+        ~Block();
+    };
+
+public:
+    class iterator final {
+        friend class VlDequeImpl;
+        Block* const* m_blockpp = nullptr;  // Current block
+        unsigned char* m_currentp = nullptr;  // Current element address
+        iterator(Block* const* blockpp, unsigned char* currentp)
+            : m_blockpp{blockpp}
+            , m_currentp{currentp} {}
+
+    public:
+        iterator() = default;
+        void* datap() const { return m_currentp; }
+        iterator& operator++();
+        iterator& operator--();
+        iterator& operator+=(difference_type offset);
+        difference_type operator-(const iterator& rhs) const;
+        bool operator==(const iterator& rhs) const {
+            return m_blockpp == rhs.m_blockpp && m_currentp == rhs.m_currentp;
+        }
+    };
+
+private:
+    static constexpr size_type INITIAL_MAP_CAPACITY = 8;
+    size_type m_elementSize;  // Element size in bytes
+    size_type m_blockSize;  // Elements per block
+    const Ops* m_opsp;  // Element operations
+    Block** m_blocksp = nullptr;  // Array of blocks
+    size_type m_mapCapacity = 0;  // Size of m_blocksp
+    size_type m_firstBlock = 0;  // First used block
+    size_type m_frontOffset = 0;  // Offset of the first used slot in its block
+    size_type m_size = 0;  // Used slots
+
+    size_type blockIndex(size_type slot) const { return m_firstBlock + slot / m_blockSize; }
+    unsigned char* slotp(size_type index) const;
+    void reserveMap(bool atFront);
+    void ensureBackSlot();
+    void ensureFrontSlot();
+    void swap(VlDequeImpl& rhs) noexcept;
+
+public:
+    VlDequeImpl(size_type elementSize, const Ops& ops);
+    VlDequeImpl(const VlDequeImpl& rhs);
+    VlDequeImpl(VlDequeImpl&& rhs) noexcept;
+    ~VlDequeImpl();
+    VlDequeImpl& operator=(const VlDequeImpl& rhs);
+    VlDequeImpl& operator=(VlDequeImpl&& rhs) noexcept;
+    size_type size() const { return m_size; }
+    bool empty() const { return !m_size; }
+    void clear();
+    void* at(size_type index) { return slotp(index); }
+    const void* at(size_type index) const {
+        assert(index < m_size);
+        return slotp(index);
+    }
+    void push_front(const void* valuep);
+    void push_back(const void* valuep);
+    void push_back_move(void* valuep);
+    void pop_front();
+    void pop_back();
+    void resize(size_type size);
+    void resize(size_type size, const void* valuep);
+    iterator insert(iterator position, const void* valuep);
+    iterator erase(iterator position);
+    iterator begin() const;
+    iterator end() const;
+};
+
+template <typename T_Value>
+class VlDeque final {
+    VlDequeImpl m_deque;  // Type-erased backing storage
+    static const VlDequeImpl::Ops& ops() {
+        static const VlDequeImpl::Ops s_ops{
+            [](void* p) { new (p) T_Value{}; },
+            [](void* p, const void* valuep) {
+                new (p) T_Value{*static_cast<const T_Value*>(valuep)};
+            },
+            [](void* p, void* valuep) {
+                new (p) T_Value{std::move(*static_cast<T_Value*>(valuep))};
+            },
+            [](void* p, const void* valuep) {
+                *static_cast<T_Value*>(p) = *static_cast<const T_Value*>(valuep);
+            },
+            [](void* p, void* valuep) {
+                *static_cast<T_Value*>(p) = std::move(*static_cast<T_Value*>(valuep));
+            },
+            [](void* p) { static_cast<T_Value*>(p)->~T_Value(); }};
+        return s_ops;
+    }
+
+public:
+    using value_type = T_Value;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    template <bool N_Const>
+    class Iterator final {
+        friend class VlDeque;
+        template <bool>
+        friend class Iterator;
+        VlDequeImpl::iterator m_iterator;  // Type-erased iterator
+        explicit Iterator(VlDequeImpl::iterator iterator)
+            : m_iterator{iterator} {}
+
+    public:
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type = T_Value;
+        using difference_type = std::ptrdiff_t;
+        using pointer = typename std::conditional<N_Const, const T_Value*, T_Value*>::type;
+        using reference = typename std::conditional<N_Const, const T_Value&, T_Value&>::type;
+        Iterator() = default;
+        template <bool M_Const, typename std::enable_if<N_Const && !M_Const, int>::type = 0>
+        Iterator(const Iterator<M_Const>& rhs)
+            : m_iterator{rhs.m_iterator} {}
+        reference operator*() const { return *static_cast<pointer>(m_iterator.datap()); }
+        pointer operator->() const { return static_cast<pointer>(m_iterator.datap()); }
+        reference operator[](difference_type offset) const { return *(*this + offset); }
+        Iterator& operator++() {
+            ++m_iterator;
+            return *this;
+        }
+        Iterator& operator--() {
+            --m_iterator;
+            return *this;
+        }
+        Iterator operator++(int) {
+            Iterator old = *this;
+            ++*this;
+            return old;
+        }
+        Iterator operator--(int) {
+            Iterator old = *this;
+            --*this;
+            return old;
+        }
+        Iterator& operator+=(difference_type offset) {
+            m_iterator += offset;
+            return *this;
+        }
+        Iterator& operator-=(difference_type offset) { return *this += -offset; }
+        Iterator operator+(difference_type offset) const {
+            Iterator out = *this;
+            return out += offset;
+        }
+        Iterator operator-(difference_type offset) const {
+            Iterator out = *this;
+            return out -= offset;
+        }
+        friend Iterator operator+(difference_type offset, Iterator rhs) { return rhs += offset; }
+        template <bool M_Const>
+        difference_type operator-(const Iterator<M_Const>& rhs) const {
+            return m_iterator - rhs.m_iterator;
+        }
+        template <bool M_Const>
+        bool operator==(const Iterator<M_Const>& rhs) const {
+            return m_iterator == rhs.m_iterator;
+        }
+        template <bool M_Const>
+        bool operator!=(const Iterator<M_Const>& rhs) const {
+            return !(*this == rhs);
+        }
+        template <bool M_Const>
+        bool operator<(const Iterator<M_Const>& rhs) const {
+            return (*this - rhs) < 0;
+        }
+        template <bool M_Const>
+        bool operator<=(const Iterator<M_Const>& rhs) const {
+            return (*this - rhs) <= 0;
+        }
+        template <bool M_Const>
+        bool operator>(const Iterator<M_Const>& rhs) const {
+            return (*this - rhs) > 0;
+        }
+        template <bool M_Const>
+        bool operator>=(const Iterator<M_Const>& rhs) const {
+            return (*this - rhs) >= 0;
+        }
+    };
+    using iterator = Iterator<false>;
+    using const_iterator = Iterator<true>;
+
+    VlDeque()
+        : m_deque{sizeof(T_Value), ops()} {}
+    template <typename T_Iterator>
+    VlDeque(T_Iterator begin_it, T_Iterator end_it)
+        : VlDeque{} {
+        for (; begin_it != end_it; ++begin_it) push_back(*begin_it);
+    }
+    size_type size() const { return m_deque.size(); }
+    bool empty() const { return m_deque.empty(); }
+    void clear() { m_deque.clear(); }
+    T_Value& operator[](size_type index) { return *static_cast<T_Value*>(m_deque.at(index)); }
+    const T_Value& operator[](size_type index) const {
+        return *static_cast<const T_Value*>(m_deque.at(index));
+    }
+    T_Value& front() { return (*this)[0]; }
+    const T_Value& front() const { return (*this)[0]; }
+    T_Value& back() { return (*this)[size() - 1]; }
+    const T_Value& back() const { return (*this)[size() - 1]; }
+    void push_front(const T_Value& value) { m_deque.push_front(std::addressof(value)); }
+    void push_back(const T_Value& value) { m_deque.push_back(std::addressof(value)); }
+    void push_back(T_Value&& value) { m_deque.push_back_move(std::addressof(value)); }
+    void pop_front() { m_deque.pop_front(); }
+    void pop_back() { m_deque.pop_back(); }
+    void resize(size_type size) { m_deque.resize(size); }
+    void resize(size_type size, const T_Value& value) {
+        m_deque.resize(size, std::addressof(value));
+    }
+    iterator insert(iterator position, const T_Value& value) {
+        if (position != begin() && position != end()) {
+            const T_Value copy{value};
+            return iterator{m_deque.insert(position.m_iterator, std::addressof(copy))};
+        }
+        return iterator{m_deque.insert(position.m_iterator, std::addressof(value))};
+    }
+    iterator erase(iterator position) { return iterator{m_deque.erase(position.m_iterator)}; }
+    iterator begin() { return iterator{m_deque.begin()}; }
+    iterator end() { return iterator{m_deque.end()}; }
+    const_iterator begin() const { return const_iterator{m_deque.begin()}; }
+    const_iterator end() const { return const_iterator{m_deque.end()}; }
+    const_iterator cbegin() const { return begin(); }
+    const_iterator cend() const { return end(); }
+    bool operator==(const VlDeque& rhs) const {
+        return size() == rhs.size() && std::equal(begin(), end(), rhs.begin());
+    }
+    bool operator!=(const VlDeque& rhs) const { return !(*this == rhs); }
+};
+
+
 //===================================================================
 // Verilog queue and dynamic array container
 // There are no multithreaded locks on this; the base variable must
@@ -609,7 +859,7 @@ class VlQueue;
 template <typename T_Value>
 class VlQueue<T_Value, 0> VL_NOT_FINAL {
 public:
-    using Deque = std::deque<T_Value>;
+    using Deque = VlDeque<T_Value>;
     using const_iterator = typename Deque::const_iterator;
     template <typename T_Func>
     using WithFuncReturnType = decltype(std::declval<T_Func>()(0, std::declval<T_Value>()));

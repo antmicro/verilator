@@ -4768,10 +4768,10 @@ VlDequeImpl::iterator VlDequeImpl::insert(iterator position, const void* valuep)
         push_front(valuep);
     } else {
         if (index < m_size / 2) {
-            push_front(slotp(0));
+            push_front_move(slotp(0));
             for (size_type i = 1; i < index; ++i) m_opsp->moveAssign(slotp(i), slotp(i + 1));
         } else {
-            push_back(slotp(m_size - 1));
+            push_back_move(slotp(m_size - 1));
             for (size_type i = m_size - 2; i > index; --i)
                 m_opsp->moveAssign(slotp(i), slotp(i - 1));
         }

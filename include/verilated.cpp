@@ -4597,7 +4597,7 @@ VlDequeImpl::Block::~Block() { delete[] m_storagep; }
 
 VlDequeImpl::VlDequeImpl(size_type elementSize, const Ops& ops)
     : m_elementSize{elementSize}
-    , m_blockSize{elementSize < 512 ? 512 / elementSize : 1}
+    , m_blockSize{elementSize < BLOCK_BYTES ? BLOCK_BYTES / elementSize : 1}
     , m_opsp{&ops} {}
 
 VlDequeImpl::VlDequeImpl(const VlDequeImpl& rhs)
@@ -4610,16 +4610,19 @@ VlDequeImpl::VlDequeImpl(VlDequeImpl&& rhs) noexcept
 }
 VlDequeImpl::~VlDequeImpl() { clear(); }
 
+/* Assure that there is at least one free block slot at selected end (determined by atFront) */
 void VlDequeImpl::reserveMap(bool atFront) {
     const size_type used_blocks = m_size ? (m_frontOffset + m_size - 1) / m_blockSize + 1 : 0;
-    const size_type new_capacity = used_blocks + 2 > m_mapCapacity
+    const size_type new_capacity = used_blocks + 2 > m_mapCapacity // +2 because last block is kept nullptr
                                        ? (m_mapCapacity ? m_mapCapacity * 2 : INITIAL_MAP_CAPACITY)
                                        : m_mapCapacity;
-    const size_type first_block = (new_capacity - used_blocks - 2) / 2 + (atFront ? 1 : 0);
+    const size_type first_block = (new_capacity - used_blocks - 2) / 2 + atFront;
     if (new_capacity != m_mapCapacity) {
         Block** const blocksp = new Block* [new_capacity] {};
-        for (size_type i = 0; i < used_blocks; ++i)
-            blocksp[first_block + i] = m_blocksp[m_firstBlock + i];
+        if (used_blocks) {
+            std::copy(m_blocksp + m_firstBlock, m_blocksp + m_firstBlock + used_blocks,
+                      blocksp + first_block);
+        }
         delete[] m_blocksp;
         m_blocksp = blocksp;
         m_mapCapacity = new_capacity;
@@ -4634,8 +4637,7 @@ void VlDequeImpl::reserveMap(bool atFront) {
 
 void VlDequeImpl::ensureBackSlot() {
     const size_type slot = m_frontOffset + m_size;
-    const size_type last = slot / m_blockSize;
-    if (!m_mapCapacity || m_firstBlock + last + 1 >= m_mapCapacity) reserveMap(false);
+    if (blockIndex(slot) + 1 >= m_mapCapacity) reserveMap(false);
     Block*& blockp = m_blocksp[blockIndex(slot)];
     if (!blockp) blockp = new Block{m_elementSize, m_blockSize};
 }
@@ -4645,8 +4647,8 @@ void VlDequeImpl::ensureFrontSlot() {
         ensureBackSlot();
         return;
     }
-    if (!m_frontOffset) {
-        if (!m_firstBlock) reserveMap(true);
+    if (m_frontOffset == 0) {
+        if (m_firstBlock == 0) reserveMap(true);
         --m_firstBlock;
         assert(!m_blocksp[m_firstBlock]);
         m_blocksp[m_firstBlock] = new Block{m_elementSize, m_blockSize};

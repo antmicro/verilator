@@ -642,6 +642,7 @@ public:
 
 private:
     static constexpr size_type INITIAL_MAP_CAPACITY = 8;
+    static constexpr size_type BLOCK_BYTES = 512;
     size_type m_elementSize;  // Element size in bytes
     size_type m_blockSize;  // Elements per block
     const Ops* m_opsp;  // Element operations

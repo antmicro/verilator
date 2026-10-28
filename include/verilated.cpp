@@ -4849,7 +4849,6 @@ VlDequeImpl::difference_type VlDequeImpl::iterator::operator-(const iterator& rh
            - (rhs.m_currentp - (*rhs.m_blockpp)->m_storagep) / elementSize;
 }
 
-
 //===========================================================================
 // OS functions (last, so we have minimal OS dependencies above)
 

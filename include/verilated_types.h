@@ -805,6 +805,11 @@ public:
         : VlDeque{} {
         for (; begin_it != end_it; ++begin_it) push_back(*begin_it);
     }
+    template <typename T_Iterator>
+    void assign(T_Iterator begin_it, T_Iterator end_it) {
+        resize(std::distance(begin_it, end_it));
+        std::copy(begin_it, end_it, begin());
+    }
     size_type size() const { return m_deque.size(); }
     bool empty() const { return m_deque.empty(); }
     void clear() { m_deque.clear(); }

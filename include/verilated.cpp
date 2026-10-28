@@ -4795,6 +4795,7 @@ VlDequeImpl::iterator VlDequeImpl::begin() const {
     return m_size ? iterator{m_blocksp + m_firstBlock, slotp(0)} : iterator{};
 }
 
+// end iterator is represented as one-past-end in the last block
 VlDequeImpl::iterator VlDequeImpl::end() const {
     return m_size ? iterator{m_blocksp + blockIndex(m_frontOffset + m_size - 1),
                              slotp(m_size - 1) + m_elementSize}
@@ -4810,10 +4811,10 @@ VlDequeImpl::iterator& VlDequeImpl::iterator::operator++() {
     const Block* const blockp = *m_blockpp;
     m_currentp += blockp->m_elementSize;
     if (m_currentp == blockp->m_storagep + blockp->m_capacity * blockp->m_elementSize
-        && m_blockpp[1]) {
+        && *(m_blockpp + 1)) {
         ++m_blockpp;
         m_currentp = (*m_blockpp)->m_storagep;
-    }
+    } // else -> end iterator
     return *this;
 }
 
@@ -4835,6 +4836,7 @@ VlDequeImpl::iterator& VlDequeImpl::iterator::operator+=(difference_type offset)
     const difference_type blocks = index >= 0 ? index / blockSize : (index + 1) / blockSize - 1;
     m_blockpp += blocks;
     if (!*m_blockpp) {
+        // end iterator
         --m_blockpp;
         m_currentp = (*m_blockpp)->m_storagep + blockSize * elementSize;
     } else {

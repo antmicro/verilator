@@ -780,26 +780,30 @@ public:
         return out;
     }
 
-    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consVV(const T_Value& lhs, const T_Value& rhs, size_t maxSize = 0) {
+    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consVV(const T_Value& lhs, const T_Value& rhs,
+                                                       size_t maxSize = 0) {
         VlQueue out;
         out.push_back(rhs, maxSize);
         out.push_back(lhs, maxSize);
         return out;
     }
 
-    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consCV(const VlQueue& lhs, const T_Value& rhs, size_t maxSize = 0) {
+    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consCV(const VlQueue& lhs, const T_Value& rhs,
+                                                       size_t maxSize = 0) {
         VlQueue out = lhs;
         out.push_front(rhs, maxSize);
         return out;
     }
 
-    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consVC(const T_Value& lhs, const VlQueue& rhs, size_t maxSize = 0) {
+    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consVC(const T_Value& lhs, const VlQueue& rhs,
+                                                       size_t maxSize = 0) {
         VlQueue out = rhs;
         out.push_back(lhs, maxSize);
         return out;
     }
 
-    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consCC(const VlQueue& lhs, const VlQueue& rhs, size_t maxSize = 0) {
+    VL_ATTR_NOINLINE static VlQueue<T_Value, 0> consCC(const VlQueue& lhs, const VlQueue& rhs,
+                                                       size_t maxSize = 0) {
         VlQueue out = rhs;
         for (size_type i = 0; i < lhs.m_size; ++i) out.push_back(lhs.element(i), maxSize);
         return out;
@@ -813,9 +817,7 @@ public:
     int size() const { return static_cast<int>(m_size); }
     bool empty() const { return m_size == 0; }
     // Clear array. Verilog: function void delete([input index])
-    VL_ATTR_NOINLINE void clear() {
-        destroyElements();
-    }
+    VL_ATTR_NOINLINE void clear() { destroyElements(); }
 
     VL_ATTR_NOINLINE void erase(int32_t index) {
         if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_size)) return;
@@ -845,8 +847,8 @@ public:
     }
     // Unpacked array new[]() becomes a renew_copy()
     template <typename T_UnpackedValue, std::size_t N_UnpackedDepth>
-    VL_ATTR_NOINLINE void
-    renew_copy(size_t size, const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs);
+    VL_ATTR_NOINLINE void renew_copy(size_t size,
+                                     const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs);
 
     VL_ATTR_NOINLINE void resize(size_t size) {
         truncate(size);
@@ -974,7 +976,8 @@ public:
     }
 
     // Return slice q[lsb:msb]
-    VL_ATTR_NOINLINE VlQueue<T_Value, 0> slice(int32_t lsb, int32_t msb, size_t maxSize = 0) const {
+    VL_ATTR_NOINLINE VlQueue<T_Value, 0> slice(int32_t lsb, int32_t msb,
+                                               size_t maxSize = 0) const {
         VlQueue out;
         if (VL_UNLIKELY(lsb < 0)) lsb = 0;
         if (VL_UNLIKELY(lsb >= static_cast<int32_t>(m_size)))
@@ -1328,9 +1331,7 @@ public:
     }
 
     // Construct new object from _V_alue and/or _C_ontainer child objects
-    VL_ATTR_ALWINLINE static Base consV(const T_Value& lhs) {
-        return Base::consV(lhs, N_MaxSize);
-    }
+    VL_ATTR_ALWINLINE static Base consV(const T_Value& lhs) { return Base::consV(lhs, N_MaxSize); }
     VL_ATTR_ALWINLINE static Base consVV(const T_Value& lhs, const T_Value& rhs) {
         return Base::consVV(lhs, rhs, N_MaxSize);
     }
@@ -1345,12 +1346,8 @@ public:
     }
 
     // METHODS
-    VL_ATTR_ALWINLINE void push_front(const T_Value& value) {
-        Base::push_front(value, N_MaxSize);
-    }
-    VL_ATTR_ALWINLINE void push_back(const T_Value& value) {
-        Base::push_back(value, N_MaxSize);
-    }
+    VL_ATTR_ALWINLINE void push_front(const T_Value& value) { Base::push_front(value, N_MaxSize); }
+    VL_ATTR_ALWINLINE void push_back(const T_Value& value) { Base::push_back(value, N_MaxSize); }
     VL_ATTR_ALWINLINE void insert(int32_t index, const T_Value& value) {
         Base::insert(index, value, N_MaxSize);
     }
@@ -2156,8 +2153,9 @@ struct VlContainsCustomStruct<VlUnpacked<T_Value, N_Depth>> : VlContainsCustomSt
 
 template <typename T_Value>
 template <typename T_UnpackedValue, std::size_t N_UnpackedDepth>
-VL_ATTR_NOINLINE void VlQueue<T_Value, 0>::renew_copy(
-    size_t size, const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs) {
+VL_ATTR_NOINLINE void
+VlQueue<T_Value, 0>::renew_copy(size_t size,
+                                const VlUnpacked<T_UnpackedValue, N_UnpackedDepth>& rhs) {
     clear();
     if (size == 0) return;
     resize(size);
@@ -2696,8 +2694,7 @@ inline T VL_NULL_CHECK(T t, const char* filename, int linenum) {
 
 template <typename T_Value>
 template <typename T_Subclass>
-VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(
-    const VlQueue<VlClassRef<T_Subclass>, 0>& that)
+VL_ATTR_NOINLINE VlQueue<T_Value, 0>::VlQueue(const VlQueue<VlClassRef<T_Subclass>, 0>& that)
     : m_defaultValue{that.atDefault()} {
     for (int i = 0; i < that.size(); ++i) push_back(that.at(i));
 }

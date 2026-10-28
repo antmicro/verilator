@@ -1060,7 +1060,7 @@ static constexpr bool validateArgsDescriptor(const char* descrp) {
     macro(DYN_SLICE_FRONT_BACK,               "sliceFrontBack",         PURE,   CLEAN,  false,      "rr") \
     macro(EVENT_CLEAR_FIRED,                  "clearFired",             false,  CLEAN,  false,      "") \
     macro(EVENT_CLEAR_TRIGGERED,              "clearTriggered",         false,  CLEAN,  false,      "") \
-    macro(EVENT_FIRE,                         "fire",                   false,  CLEAN,  false,      "") \
+    macro(EVENT_FIRE_TICKET,                  "fireTicket",             PURE,   CLEAN,  false,      "") \
     macro(EVENT_IS_FIRED,                     "isFired",                PURE,   CLEAN,  false,      "") \
     macro(EVENT_IS_TRIGGERED,                 "isTriggered",            PURE,   CLEAN,  false,      "") \
     macro(FORCE_ADD,                          "addForce",               false,  CLEAN,  false,      "rrrr+") \
@@ -1099,10 +1099,8 @@ static constexpr bool validateArgsDescriptor(const char* descrp) {
     macro(SCHED_READY,                        "ready",                  false,  CLEAN,  false,      "r") \
     macro(SCHED_MOVE_TO_RESUME_QUEUE,         "moveToResumeQueue",      false,  CLEAN,  false,      "r") \
     macro(SCHED_DELAY,                        "delay",                  false,  CLEAN,  AWAITABLE,  "rrrr") \
-    macro(SCHED_DO_POST_UPDATES,              "doPostUpdates",          false,  CLEAN,  false,      "") \
     macro(SCHED_EVALUATE,                     "evaluate",               false,  CLEAN,  false,      "") \
     macro(SCHED_EVALUATION,                   "evaluation",             false,  CLEAN,  AWAITABLE,  "rrrr") \
-    macro(SCHED_POST_UPDATE,                  "postUpdate",             false,  CLEAN,  AWAITABLE,  "rrrr") \
     macro(SCHED_RESUME,                       "resume",                 false,  CLEAN,  false,      "TODO") \
     macro(SCHED_RESUME_ZERO_DELAY,            "resumeZeroDelay",        false,  CLEAN,  false,      "") \
     macro(SCHED_RESUMPTION,                   "resumption",             false,  CLEAN,  AWAITABLE,  "rrrr") \

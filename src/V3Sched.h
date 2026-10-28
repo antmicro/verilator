@@ -313,7 +313,7 @@ private:
     TriggerKit(const std::string& name, bool slow, uint32_t nSenseWords, uint32_t nExtraWords,
                uint32_t nPreWords,
                std::unordered_map<VNRef<const AstSenItem>, size_t> senItem2TrigIdx,
-               const std::vector<const AstSenItem*>& senItemps, bool useAcc);
+               const std::vector<AstSenItem*>& senItemps, bool useAcc);
     VL_UNCOPYABLE(TriggerKit);
 
 public:
@@ -405,7 +405,6 @@ class TimingKit final {
 
 public:
     ProcessList m_procList;  // Processes that resume timing schedulers
-    AstNodeStmt* m_postUpdatesp = nullptr;  // Post updates for the trigger eval function
 
     // Trigger indices of the external domains of each variable
     std::map<const AstVarScope*, std::vector<uint32_t>>
@@ -418,11 +417,10 @@ public:
     AstCCall* createReady(AstVarScope* trigVscp) VL_MT_DISABLED;
 
     TimingKit() = default;
-    TimingKit(ProcessList&& procList, AstNodeStmt* postUpdatesp,
+    TimingKit(ProcessList&& procList,
               std::map<const AstVarScope*, std::set<AstSenTree*>>&& externalDomains)
         : m_externalDomains{externalDomains}
-        , m_procList{std::move(procList)}
-        , m_postUpdatesp{postUpdatesp} {}
+        , m_procList{std::move(procList)} {}
     VL_UNCOPYABLE(TimingKit);
     TimingKit(TimingKit&&) = default;
     TimingKit& operator=(TimingKit&&) = default;

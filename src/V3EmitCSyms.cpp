@@ -1080,6 +1080,7 @@ void EmitCSyms::emitSymHdr() {
         } else {
             puts("std::vector<VlEvent*> __Vm_triggeredEvents;\n");
         }
+        puts("uint64_t __Vm_eventCounter = 0;  /// Last ticket given to a fired event\n");
     }
     if (v3Global.hasClasses()) puts("VlDeleter __Vm_deleter;\n");
     puts("bool& __Vm_didInit;\n");
@@ -1158,6 +1159,7 @@ void EmitCSyms::emitSymHdr() {
         }
         puts("}\n");
         puts("event.fire();\n");
+        puts("event.fireTicket(++__Vm_eventCounter);\n");
         puts("}\n");
         puts("void clearTriggeredEvents() {\n");
         if (v3Global.assignsEvents()) {

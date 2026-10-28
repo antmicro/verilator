@@ -34,15 +34,13 @@ public:
         std::vector<AstNodeStmt*> m_inits;  // Initialization statements for previous values
         std::vector<AstNodeStmt*> m_preUpdates;  // Pre update assignments
         std::vector<AstNodeStmt*> m_postUpdates;  // Post update assignments
-        // Aliases of destructive post updates (for example event clearFired) that may need
-        // to run once before entering a fresh dynamic wait loop.
-        std::vector<AstNodeStmt*> m_destructivePostUpdates;
         std::vector<AstVar*> m_vars;  // Created temporary variables
     };
 
 private:
     // STATE
     AstScope* const m_scopep;  // The scope
+    const bool m_dynamic;  // Building triggers for a single process's dynamic wait
 
     Results m_results;  // The builder result
 
@@ -231,7 +229,7 @@ private:
         return prevp;
     }
 
-    std::pair<AstNodeExpr*, bool> createTerm(const AstSenItem* senItemp) {
+    std::pair<AstNodeExpr*, bool> createTerm(AstSenItem* const senItemp) {
         FileLine* const flp = senItemp->fileline();
         AstNodeExpr* const senp = senItemp->sensp();
 
@@ -277,28 +275,38 @@ private:
         case VEdgeType::ET_EVENT: {
             UASSERT_OBJ(v3Global.hasEvents(), senItemp, "Inconsistent");
 
-            // Clear 'fired' state when done (guarded if through a nullable reference)
-            // The event is modified, so the select (e.g. assoc array) must be an lvalue
-            AstNodeExpr* const clearFromp = currp();
-            AstNodeExpr* const targetp = clearFromp->getVAccessTargetRecurse();
-            if (AstNodeVarRef* const refp = VN_CAST(targetp, NodeVarRef)) {
-                refp->access(VAccess::WRITE);
-            } else if (AstMemberRef* const refp = VN_CAST(targetp, MemberRef)) {
-                // An event member itself is not written, only the container selected from
-                if (refp != clearFromp) refp->access(VAccess::WRITE);
+            AstNodeExpr* eventExprp;
+            if (m_dynamic) {
+                // Dynamic mode is enabled only by V3Timing's AstScope visitor
+                v3Global.setAssignsEvents();
+                AstVarScope* const eventp = crateTemp(senp);
+                m_results.m_inits.push_back(wrapStmtWithNullChecks(
+                    flp,
+                    new AstAssign{flp, new AstVarRef{flp, eventp, VAccess::WRITE},
+                                  senp->cloneTree(false)},
+                    bases));
+                eventExprp = new AstVarRef{flp, eventp, VAccess::READ};
+            } else {
+                eventExprp = currp();
             }
-            AstCMethodHard* const clearp
-                = new AstCMethodHard{flp, clearFromp, VCMethod::EVENT_CLEAR_FIRED};
-            clearp->dtypeSetVoid();
-            AstNodeStmt* const clearStmtp = wrapStmtWithNullChecks(flp, clearp->makeStmt(), bases);
-            m_results.m_postUpdates.push_back(clearStmtp);
-            m_results.m_destructivePostUpdates.push_back(clearStmtp);
-
-            // Get 'fired' state
-            AstCMethodHard* const callp
-                = new AstCMethodHard{flp, currp(), VCMethod::EVENT_IS_FIRED};
-            callp->dtypeSetBit();
-            AstNodeExpr* const firedp = wrapExprWithNullChecks(flp, callp, bases);
+            AstCExpr* const counterp = new AstCExpr{flp, "vlSymsp->__Vm_eventCounter", 64};
+            const auto pair = m_prev.emplace(*senItemp, nullptr);
+            if (pair.second) pair.first->second = crateTemp(counterp);
+            AstVarScope* const lastEventCounterp = pair.first->second;
+            if (m_hasPostUpdate.emplace(*senItemp).second) {
+                AstAssign* const updateCounterp = new AstAssign{
+                    flp, new AstVarRef{flp, lastEventCounterp, VAccess::WRITE}, counterp};
+                if (pair.second) m_results.m_inits.push_back(updateCounterp->cloneTree(false));
+                m_results.m_postUpdates.push_back(updateCounterp);
+            } else {
+                counterp->deleteTree();
+            }
+            AstCMethodHard* const fireTicketp
+                = new AstCMethodHard{flp, eventExprp, VCMethod::EVENT_FIRE_TICKET};
+            fireTicketp->dtypeSetUInt64();
+            AstNodeExpr* firedp = new AstGt{flp, fireTicketp,
+                                            new AstVarRef{flp, lastEventCounterp, VAccess::READ}};
+            if (!m_dynamic) firedp = wrapExprWithNullChecks(flp, firedp, bases);
             // Do not trigger user named-event processes after $finish.
             AstNodeExpr* const notFinishp
                 = new AstCExpr{flp,
@@ -318,7 +326,7 @@ private:
 public:
     // Returns the expression computing the trigger, and a bool indicating that
     // this trigger should be fired on the first evaluation (at initialization)
-    std::pair<AstNodeExpr*, bool> build(const AstSenItem* senItemp) {
+    std::pair<AstNodeExpr*, bool> build(AstSenItem* const senItemp) {
         auto term = createTerm(senItemp);
         if (AstNodeExpr* const condp = senItemp->condp()) {
             term.first = new AstAnd{senItemp->fileline(), condp->cloneTreePure(false), term.first};
@@ -364,8 +372,9 @@ public:
     }
 
     // CONSTRUCTOR
-    explicit SenExprBuilder(AstScope* scopep)
-        : m_scopep{scopep} {}
+    explicit SenExprBuilder(AstScope* scopep, bool dynamic = false)
+        : m_scopep{scopep}
+        , m_dynamic{dynamic} {}
 };
 
 #endif  // Guard

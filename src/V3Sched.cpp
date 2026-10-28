@@ -851,9 +851,6 @@ void schedule(AstNetlist* netlistp) {
         = TriggerKit::create(netlistp, staticp, senExprBuilder, preTreeps, senTreeps, "act",
                              extraTriggers, false, v3Global.usesTiming());
 
-    // Add post updates from the timing kit
-    if (timingKit.m_postUpdatesp) trigKit.compBasep()->addStmtsp(timingKit.m_postUpdatesp);
-
     if (dpiExportTriggerVscp) {
         trigKit.addExtraTriggerAssignment(dpiExportTriggerVscp, dpiExportTriggerIndex);
     }

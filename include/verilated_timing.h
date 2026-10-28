@@ -320,13 +320,11 @@ public:
 //         <pre updates>;
 //         __Vtrigger = <trigger eval>;
 //         __VdynShed.anyTriggered(__Vtrigger);
-//         [optionally] co_await __VdynSched.postUpdate();
 //         <post updates>;
 //     }
 //    co_await __VdynSched.resumption();
-// The coroutines get resumed at trigger evaluation time, evaluate their local triggers, optionally
-// await the post update step, and if the trigger is set, await proper resumption in the 'act' eval
-// step.
+// The coroutines get resumed at trigger evaluation time, evaluate their local triggers, and if the
+// trigger is set, await proper resumption in the 'act' eval step.
 
 class VlDynamicTriggerScheduler final {
     // TYPES
@@ -337,8 +335,6 @@ class VlDynamicTriggerScheduler final {
     VlCoroutineVec m_suspended;  // Suspended coroutines awaiting trigger evaluation
     VlCoroutineVec m_evaluated;  // Coroutines currently being evaluated (for evaluate())
     VlCoroutineVec m_triggered;  // Coroutines whose triggers were set, and are awaiting resumption
-    VlCoroutineVec m_post;  // Coroutines awaiting the post update step (only relevant for triggers
-                            // with destructive post updates, e.g. named events)
 
     // METHODS
     auto awaitable(VlProcessRef process, VlCoroutineVec& queue, const char* filename, int lineno) {
@@ -361,8 +357,6 @@ public:
     bool evaluate();
     // Called by coroutines that evaluate triggers to notify the scheduler if any triggers were set
     void anyTriggered(bool triggered) { m_anyTriggered = m_anyTriggered || triggered; }
-    // Runs post updates for all dynamic triggers (resumes coroutines that co_await postUpdate())
-    void doPostUpdates();
     // Resumes all coroutines whose triggers are set (those that co_await resumption())
     void resume();
 #ifdef VL_DEBUG
@@ -374,14 +368,6 @@ public:
         VL_DEBUG_IF(VL_DBG_MSGF("         Suspending process waiting for %s at %s:%d\n",
                                 eventDescription, filename, lineno););
         return awaitable(process, m_suspended, filename, lineno);
-    }
-    // Used by coroutines for co_awaiting the trigger post update step
-    auto postUpdate(VlProcessRef process, const char* eventDescription, const char* filename,
-                    int lineno) {
-        VL_DEBUG_IF(
-            VL_DBG_MSGF("         Process waiting for %s at %s:%d awaiting the post update step\n",
-                        eventDescription, filename, lineno););
-        return awaitable(process, m_post, filename, lineno);
     }
     // Used by coroutines for co_awaiting the resumption step (in 'act' eval)
     auto resumption(VlProcessRef process, const char* eventDescription, const char* filename,

@@ -271,7 +271,6 @@ bool VlDynamicTriggerScheduler::evaluate() {
         m_suspended.clear();
         m_evaluated.clear();
         m_triggered.clear();
-        m_post.clear();
         return false;
     }
     m_anyTriggered = false;
@@ -280,21 +279,6 @@ bool VlDynamicTriggerScheduler::evaluate() {
     for (auto& coro : m_evaluated) coro.resume();
     m_evaluated.clear();
     return m_anyTriggered;
-}
-
-void VlDynamicTriggerScheduler::doPostUpdates() {
-    VL_DEBUG_IF(if (!m_post.empty())
-                    VL_DBG_MSGF("         Doing post updates for processes:\n");  //
-                for (const auto& susp : m_post) {
-                    VL_DBG_MSGF("           - ");
-                    susp.dump();
-                });
-    if (VL_UNLIKELY(Verilated::threadContextp()->gotFinish())) {
-        m_post.clear();
-        return;
-    }
-    for (auto& coro : m_post) coro.resume();
-    m_post.clear();
 }
 
 void VlDynamicTriggerScheduler::resume() {

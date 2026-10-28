@@ -487,14 +487,14 @@ void TriggerKit::addValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc*
 TriggerKit::TriggerKit(const std::string& name, bool slow, uint32_t nSenseWords,
                        uint32_t nExtraWords, uint32_t nPreWords,
                        std::unordered_map<VNRef<const AstSenItem>, size_t> senItem2TrigIdx,
-                       const std::vector<const AstSenItem*>& senItemps, bool useAcc)
+                       const std::vector<AstSenItem*>& senItemps, bool useAcc)
     : m_name{name}
     , m_slow{slow}
     , m_nSenseWords{nSenseWords}
     , m_nExtraWords{nExtraWords}
     , m_nPreWords{nPreWords}
     , m_senItem2TrigIdx{std::move(senItem2TrigIdx)}
-    , m_trigIdx2SenItem{senItemps} {
+    , m_trigIdx2SenItem{senItemps.begin(), senItemps.end()} {
     // If no triggers, we don't need to generate anything
     if (!m_nVecWords) return;
     // Otherwise construct the parts of the kit
@@ -573,14 +573,14 @@ TriggerKit TriggerKit::create(AstNetlist* netlistp,  //
     // Need to gather all the unique SenItems under the given SenTrees
 
     // List of unique SenItems used by all 'senTreeps'
-    std::vector<const AstSenItem*> senItemps;
+    std::vector<AstSenItem*> senItemps;
     // Map from SenItem to trigger bit standing for that SenItem. There might
     // be duplicate SenItems, we map all of them to the same index.
     std::unordered_map<VNRef<const AstSenItem>, size_t> senItem2TrigIdx;
 
     // Process the 'pre' trees first, so they are at the begining of the vector
     for (const AstSenTree* const senTreep : preTreeps) {
-        for (const AstSenItem* const itemp : senTreep->sensespList()) {
+        for (AstSenItem* const itemp : senTreep->sensespList()) {
             UASSERT_OBJ(itemp->isClocked() || itemp->isHybrid(), itemp,
                         "Cannot create trigger expression for non-clocked sensitivity");
             const auto pair = senItem2TrigIdx.emplace(*itemp, senItemps.size());
@@ -598,7 +598,7 @@ TriggerKit TriggerKit::create(AstNetlist* netlistp,  //
 
     // Process the rest of the trees
     for (const AstSenTree* const senTreep : senTreeps) {
-        for (const AstSenItem* const itemp : senTreep->sensespList()) {
+        for (AstSenItem* const itemp : senTreep->sensespList()) {
             UASSERT_OBJ(itemp->isClocked() || itemp->isHybrid(), itemp,
                         "Cannot create trigger expression for non-clocked sensitivity");
             const auto pair = senItem2TrigIdx.emplace(*itemp, senItemps.size());
@@ -678,7 +678,7 @@ TriggerKit TriggerKit::create(AstNetlist* netlistp,  //
     // Statements to exectue at initialization time to fire initial triggers
     AstNodeStmt* initialTrigsp = nullptr;
     for (size_t i = 0; i < senItemps.size(); ++i) {
-        const AstSenItem* const senItemp = senItemps[i];
+        AstSenItem* const senItemp = senItemps[i];
 
         // If this is just paddign, use constant zero
         if (!senItemp) {
@@ -978,7 +978,7 @@ public:
 
                 // Find all trigger indexes of SenItems inside `senTreep`
                 // and add them to `trigps` and `usedTriggers`
-                for (const AstSenItem* const itemp : senTreep->sensespList()) {
+                for (AstSenItem* const itemp : senTreep->sensespList()) {
                     const size_t idx = m_trigKit.senItem2TrigIdx(itemp);
                     emplaceAt(m_senExprBuilder.build(itemp).first, idx);
                     auto iter = m_senExprToSenItem.find(*getSenHashNode(itemp));

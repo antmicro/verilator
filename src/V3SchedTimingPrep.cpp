@@ -51,7 +51,6 @@ class ResumeProcessBuilder final {
     // STATE
     AstScope* const m_scopeTopp;  // Scope at the top
     ProcessList m_procList;  // Timing resume processes
-    AstNodeStmt* m_postUpdatesp = nullptr;  // Post updates for the trigger eval function
 
     // METHODS
     // Create a process with a timing scheduler resume() call
@@ -69,11 +68,6 @@ class ResumeProcessBuilder final {
             // Pass on the event description, the third argument of trigger(), see V3Timing
             AstNode* const descp = methodp->pinsp()->nextp()->nextp();
             resumep->addPinsp(VN_AS(descp, NodeExpr)->cloneTree(false));
-        } else if (basicp->isDynamicTriggerScheduler()) {
-            AstCMethodHard* const postp = resumep->cloneTree(false);
-            postp->method(VCMethod::SCHED_DO_POST_UPDATES);
-            UASSERT_OBJ(!m_postUpdatesp, awaitp, "Multiple dynamic trigger schedulers");
-            m_postUpdatesp = postp->makeStmt();
         }
         // Put it in a process
         AstAlways* const procp
@@ -91,10 +85,10 @@ class ResumeProcessBuilder final {
     }
 
 public:
-    // Returns the resume processes and the post updates for the trigger eval function
-    static std::pair<ProcessList, AstNodeStmt*> apply(AstNetlist* netlistp) {
+    // Returns the timing resume processes
+    static ProcessList apply(AstNetlist* netlistp) {
         ResumeProcessBuilder builder{netlistp};
-        return {std::move(builder.m_procList), builder.m_postUpdatesp};
+        return std::move(builder.m_procList);
     }
 };
 
@@ -308,10 +302,10 @@ public:
 
 TimingKit prepareTiming(AstNetlist* const netlistp) {
     if (!v3Global.usesTiming()) return {};
-    std::pair<ProcessList, AstNodeStmt*> resumes = ResumeProcessBuilder::apply(netlistp);
+    ProcessList procList = ResumeProcessBuilder::apply(netlistp);
     std::map<const AstVarScope*, std::set<AstSenTree*>> externalDomains
         = ExternalDomainsVisitor::apply(netlistp);
-    return {std::move(resumes.first), resumes.second, std::move(externalDomains)};
+    return {std::move(procList), std::move(externalDomains)};
 }
 
 }  // namespace V3Sched

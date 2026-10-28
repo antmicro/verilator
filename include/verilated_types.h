@@ -443,12 +443,15 @@ public:
     virtual bool isTriggered() const = 0;
     virtual void clearFired() = 0;
     virtual void clearTriggered() = 0;
+    virtual uint64_t fireTicket() const = 0;
+    virtual void fireTicket(uint64_t value) = 0;
 };
 
 class VlEvent final : public VlEventBase {
     // MEMBERS
     bool m_fired = false;  // Fired on this scheduling iteration
     bool m_triggered = false;  // Triggered state of event persisting until next time step
+    uint64_t m_fireTicket = 0;  // Model's event counter value at the last fire
 
 public:
     // CONSTRUCTOR
@@ -463,6 +466,8 @@ public:
     bool isTriggered() const override { return m_triggered; }
     void clearFired() override { m_fired = false; }
     void clearTriggered() override { m_triggered = false; }
+    uint64_t fireTicket() const override { return m_fireTicket; }
+    void fireTicket(uint64_t value) override { m_fireTicket = value; }
 };
 
 class VlAssignableEvent final : public std::shared_ptr<VlEvent>, public VlEventBase {
@@ -478,6 +483,8 @@ public:
     bool isTriggered() const override { return (*this)->m_triggered; }
     void clearFired() override { (*this)->m_fired = false; }
     void clearTriggered() override { (*this)->m_triggered = false; }
+    uint64_t fireTicket() const override { return (*this)->m_fireTicket; }
+    void fireTicket(uint64_t value) override { (*this)->m_fireTicket = value; }
 };
 
 // Type trait: whether T is an event, or an unpacked array of events

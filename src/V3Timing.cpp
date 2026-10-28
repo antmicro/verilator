@@ -889,7 +889,7 @@ class TimingControlVisitor final : public VNVisitor {
     void visit(AstScope* nodep) override {
         VL_RESTORER(m_scopep);
         m_scopep = nodep;
-        SenExprBuilder senExprBuilder{m_scopep};
+        SenExprBuilder senExprBuilder{m_scopep, true};
         {  // Restore m_senExprBuilderp before destroying senExprBuilder
             VL_RESTORER(m_senExprBuilderp);
             m_senExprBuilderp = &senExprBuilder;
@@ -1207,10 +1207,6 @@ class TimingControlVisitor final : public VNVisitor {
             // Get the SenExprBuilder results
             const SenExprBuilder::Results senResults = m_senExprBuilderp->getAndClearResults();
             localizeVars(m_procp, senResults.m_vars);
-            // If post updates are destructive (e.g. clearFired on events), perform a
-            // conservative pre-clear once before entering the wait loop so stale state from a
-            // previous wait does not cause an immediate false-positive trigger.
-            const bool hasDestructivePostUpdates = !senResults.m_destructivePostUpdates.empty();
             // Create the trigger eval loop, which will await the evaluation step and check the
             // trigger
             AstNodeExpr* const condp
@@ -1229,13 +1225,6 @@ class TimingControlVisitor final : public VNVisitor {
                 VCMethod::SCHED_ANY_TRIGGERED, new AstVarRef{flp, trigvscp, VAccess::READ}};
             anyTriggeredMethodp->dtypeSetVoid();
             loopp->addStmtsp(anyTriggeredMethodp->makeStmt());
-            // If the post update is destructive (e.g. event vars are cleared), create an await for
-            // the post update step
-            if (hasDestructivePostUpdates) {
-                AstCAwait* const awaitPostUpdatep = awaitEvalp->cloneTree(false);
-                VN_AS(awaitPostUpdatep->exprp(), CMethodHard)->method(VCMethod::SCHED_POST_UPDATE);
-                loopp->addStmtsp(awaitPostUpdatep);
-            }
             // Put the post updates at the end of the loop
             for (AstNodeStmt* const stmtp : senResults.m_postUpdates) loopp->addStmtsp(stmtp);
             // Finally, await the resumption step in 'act'
@@ -1243,16 +1232,11 @@ class TimingControlVisitor final : public VNVisitor {
             VN_AS(awaitResumep->exprp(), CMethodHard)->method(VCMethod::SCHED_RESUMPTION);
             AstNode::addNext<AstNodeStmt, AstNodeStmt>(loopp, awaitResumep);
             // Replace the event control with one explicit stmt chain:
-            //   init -> [inits] -> [optional destructive pre-clears] -> loop -> awaitResumption
+            //   init -> [inits] -> loop -> awaitResumption
             AstNodeStmt* chainp = nullptr;
             chainp = AstNode::addNextNull(chainp, initp);
             for (AstNodeStmt* const stmtp : senResults.m_inits) {
                 chainp = AstNode::addNextNull(chainp, stmtp);
-            }
-            if (hasDestructivePostUpdates) {
-                for (AstNodeStmt* const stmtp : senResults.m_destructivePostUpdates) {
-                    chainp = AstNode::addNextNull(chainp, stmtp->cloneTree(false));
-                }
             }
             chainp = AstNode::addNextNull(chainp, loopp);
             nodep->replaceWith(chainp);

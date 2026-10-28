@@ -675,6 +675,7 @@ public:
         return slotp(index);
     }
     void push_front(const void* valuep);
+    void push_front_move(void* valuep);
     void push_back(const void* valuep);
     void push_back_move(void* valuep);
     void pop_front();
@@ -823,6 +824,7 @@ public:
     T_Value& back() { return (*this)[size() - 1]; }
     const T_Value& back() const { return (*this)[size() - 1]; }
     void push_front(const T_Value& value) { m_deque.push_front(std::addressof(value)); }
+    void push_front(T_Value&& value) { m_deque.push_front_move(std::addressof(value)); }
     void push_back(const T_Value& value) { m_deque.push_back(std::addressof(value)); }
     void push_back(T_Value&& value) { m_deque.push_back_move(std::addressof(value)); }
     void pop_front() { m_deque.pop_front(); }

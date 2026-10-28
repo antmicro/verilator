@@ -4698,6 +4698,12 @@ void VlDequeImpl::push_front(const void* valuep) {
     ++m_size;
 }
 
+void VlDequeImpl::push_front_move(void* valuep) {
+    ensureFrontSlot();
+    m_opsp->moveConstruct(slotp(0), valuep);
+    ++m_size;
+}
+
 void VlDequeImpl::push_back(const void* valuep) {
     ensureBackSlot();
     m_opsp->copyConstruct(slotp(m_size), valuep);

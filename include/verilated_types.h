@@ -953,14 +953,14 @@ public:
     const T_Value& atDefault() const { return m_defaultValue; }
 
     // Size. Verilog: function int size(), or int num()
-    int size() const { return static_cast<int>(m_deque.size()); }
+    int size() const { return m_deque.size(); }
     bool empty() const { return m_deque.empty(); }
     // Clear array. Verilog: function void delete([input index])
     VL_ATTR_NOINLINE void clear() { m_deque.clear(); }
 
     VL_ATTR_NOINLINE void erase(int32_t index) {
-        if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_deque.size())) return;
-        m_deque.erase(m_deque.begin() + index);
+        if (VL_LIKELY(index >= 0 && index < m_deque.size()))
+            m_deque.erase(m_deque.begin() + index);
     }
 
     // Dynamic array new[] becomes a renew()
@@ -1015,7 +1015,7 @@ public:
         // cppcheck-suppress variableScope
         static thread_local T_Value t_throwAway;
         // Needs to work for dynamic arrays, so does not use N_MaxSize
-        if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_deque.size())) {
+        if (VL_UNLIKELY(index < 0 || index >= m_deque.size())) {
             t_throwAway = atDefault();
             return t_throwAway;
         }
@@ -1026,7 +1026,7 @@ public:
         // cppcheck-suppress variableScope
         static thread_local T_Value t_throwAway;
         if (static_cast<size_t>(index) == m_deque.size()) push_back(atDefault(), maxSize);
-        if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_deque.size())) {
+        if (VL_UNLIKELY(index < 0 || index >= m_deque.size())) {
             t_throwAway = atDefault();
             return t_throwAway;
         }
@@ -1035,7 +1035,7 @@ public:
     // Accessing. Verilog: v = assoc[index]
     const T_Value& at(int32_t index) const {
         // Needs to work for dynamic arrays, so does not use N_MaxSize
-        if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) >= m_deque.size())) return atDefault();
+        if (VL_UNLIKELY(index < 0 || index >= m_deque.size())) return atDefault();
         return m_deque[index];
     }
 
@@ -1047,7 +1047,7 @@ public:
 
     // function void q.insert(index, value);
     VL_ATTR_NOINLINE void insert(int32_t index, const T_Value& value, size_t maxSize = 0) {
-        if (VL_UNLIKELY(index < 0 || static_cast<size_t>(index) > m_deque.size())) return;
+        if (VL_UNLIKELY(index < 0 || index > m_deque.size())) return;
         if (VL_UNLIKELY(maxSize != 0 && m_deque.size() >= maxSize)) return;
         m_deque.insert(m_deque.begin() + index, value);
     }
@@ -1061,12 +1061,8 @@ public:
     VL_ATTR_NOINLINE VlQueue<T_Value, 0> slice(int32_t lsb, int32_t msb, size_t maxSize = 0) const {
         VlQueue out;
         if (VL_UNLIKELY(lsb < 0)) lsb = 0;
-        if (VL_UNLIKELY(lsb >= static_cast<int32_t>(m_deque.size()))) {
-            lsb = static_cast<int32_t>(m_deque.size()) - 1;
-        }
-        if (VL_UNLIKELY(msb >= static_cast<int32_t>(m_deque.size()))) {
-            msb = static_cast<int32_t>(m_deque.size()) - 1;
-        }
+        if (VL_UNLIKELY(lsb >= m_deque.size())) lsb = m_deque.size() - 1;
+        if (VL_UNLIKELY(msb >= m_deque.size())) msb = m_deque.size() - 1;
         for (int32_t i = lsb; i <= msb; ++i) out.push_back(m_deque[i], maxSize);
         return out;
     }

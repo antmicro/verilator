@@ -887,11 +887,6 @@ protected:
         }
     }
 
-    VL_ATTR_NOINLINE void assignFrom(VlQueue&& rhs, size_t maxSize) {
-        if (this != &rhs) m_deque = std::move(rhs.m_deque);
-        if (VL_UNLIKELY(maxSize && maxSize < m_deque.size())) m_deque.resize(maxSize - 1);
-    }
-
 public:
     // CONSTRUCTORS
     VL_ATTR_NOINLINE VlQueue() = default;
@@ -1396,12 +1391,8 @@ public:
     }
     VL_ATTR_ALWINLINE VlQueue& operator=(const VlQueue&) = default;
     VL_ATTR_ALWINLINE VlQueue& operator=(VlQueue&&) = default;
-    VL_ATTR_ALWINLINE VlQueue& operator=(const Base& rhs) {
+    VL_ATTR_ALWINLINE VlQueue operator=(const Base& rhs) {
         this->assignFrom(rhs, N_MaxSize);
-        return *this;
-    }
-    VL_ATTR_ALWINLINE VlQueue& operator=(Base&& rhs) {
-        this->assignFrom(std::move(rhs), N_MaxSize);
         return *this;
     }
 

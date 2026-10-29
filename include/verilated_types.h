@@ -880,7 +880,7 @@ protected:
     VL_ATTR_NOINLINE void assignFrom(const VlQueue& rhs, size_t maxSize) {
         if (this != &rhs) {
             const size_t copyCount
-                = (maxSize && maxSize <= rhs.m_deque.size()) ? maxSize - 1 : rhs.m_deque.size();
+                = (maxSize && maxSize < rhs.m_deque.size()) ? maxSize - 1 : rhs.m_deque.size();
             m_deque.assign(rhs.begin(), rhs.begin() + copyCount);
         } else if (VL_UNLIKELY(maxSize && maxSize < m_deque.size())) {
             m_deque.resize(maxSize - 1);

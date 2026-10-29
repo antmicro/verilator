@@ -877,21 +877,19 @@ protected:
     Deque m_deque;  // State of the assoc array
     T_Value m_defaultValue{};  // Default value
 
-    VL_ATTR_NOINLINE void truncate(size_t size) { m_deque.resize(size); }
-
     VL_ATTR_NOINLINE void assignFrom(const VlQueue& rhs, size_t maxSize) {
         if (this != &rhs) {
             const size_t copyCount
                 = (maxSize && maxSize <= rhs.m_deque.size()) ? maxSize - 1 : rhs.m_deque.size();
             m_deque.assign(rhs.begin(), rhs.begin() + copyCount);
         } else if (VL_UNLIKELY(maxSize && maxSize < m_deque.size())) {
-            truncate(maxSize - 1);
+            m_deque.resize(maxSize - 1);
         }
     }
 
     VL_ATTR_NOINLINE void assignFrom(VlQueue&& rhs, size_t maxSize) {
         if (this != &rhs) m_deque = std::move(rhs.m_deque);
-        if (VL_UNLIKELY(maxSize && maxSize < m_deque.size())) truncate(maxSize - 1);
+        if (VL_UNLIKELY(maxSize && maxSize < m_deque.size())) m_deque.resize(maxSize - 1);
     }
 
 public:
@@ -1391,12 +1389,12 @@ public:
     // cppcheck-suppress noExplicitConstructor
     VL_ATTR_ALWINLINE VlQueue(const Base& rhs)
         : Base{rhs} {
-        if (VL_UNLIKELY(N_MaxSize < this->m_deque.size())) this->truncate(N_MaxSize - 1);
+        if (VL_UNLIKELY(N_MaxSize < this->m_deque.size())) this->m_deque.resize(N_MaxSize - 1);
     }
     // cppcheck-suppress noExplicitConstructor
     VL_ATTR_ALWINLINE VlQueue(Base&& rhs)
         : Base{std::move(rhs)} {
-        if (VL_UNLIKELY(N_MaxSize < this->m_deque.size())) this->truncate(N_MaxSize - 1);
+        if (VL_UNLIKELY(N_MaxSize < this->m_deque.size())) this->m_deque.resize(N_MaxSize - 1);
     }
     VL_ATTR_ALWINLINE VlQueue& operator=(const VlQueue&) = default;
     VL_ATTR_ALWINLINE VlQueue& operator=(VlQueue&&) = default;
@@ -1413,12 +1411,12 @@ public:
     template <typename T_Subclass>
     VL_ATTR_ALWINLINE VlQueue(const VlQueue<VlClassRef<T_Subclass>, 0>& that)
         : Base{that} {
-        if (VL_UNLIKELY(N_MaxSize < this->m_deque.size())) this->truncate(N_MaxSize);
+        if (VL_UNLIKELY(N_MaxSize < this->m_deque.size())) this->m_deque.resize(N_MaxSize);
     }
     template <typename T_Subclass>
     VL_ATTR_ALWINLINE VlQueue(VlQueue<VlClassRef<T_Subclass>, 0>&& that)
         : Base{std::move(that)} {
-        if (VL_UNLIKELY(N_MaxSize < this->m_deque.size())) this->truncate(N_MaxSize);
+        if (VL_UNLIKELY(N_MaxSize < this->m_deque.size())) this->m_deque.resize(N_MaxSize);
     }
 
     // Construct new object from _V_alue and/or _C_ontainer child objects

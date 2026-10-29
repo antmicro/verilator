@@ -670,10 +670,7 @@ public:
     bool empty() const { return !m_size; }
     void clear();
     void* at(size_type index) { return slotp(index); }
-    const void* at(size_type index) const {
-        assert(index < m_size);
-        return slotp(index);
-    }
+    const void* at(size_type index) const { return slotp(index); }
     void push_front(const void* valuep);
     void push_front_move(void* valuep);
     void push_back(const void* valuep);

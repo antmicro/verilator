@@ -4650,7 +4650,6 @@ void VlDequeImpl::ensureFrontSlot() {
     if (m_frontOffset == 0) {
         if (m_firstBlock == 0) reserveMap(true);
         --m_firstBlock;
-        assert(!m_blocksp[m_firstBlock]);
         m_blocksp[m_firstBlock] = new Block{m_elementSize, m_blockSize};
         m_frontOffset = m_blockSize;
     }
@@ -4717,7 +4716,6 @@ void VlDequeImpl::push_back_move(void* valuep) {
 }
 
 void VlDequeImpl::pop_front() {
-    assert(!empty());
     m_opsp->destroy(slotp(0));
     --m_size;
     ++m_frontOffset;
@@ -4731,7 +4729,6 @@ void VlDequeImpl::pop_front() {
 }
 
 void VlDequeImpl::pop_back() {
-    assert(!empty());
     const size_type block = blockIndex(m_frontOffset + m_size - 1);
     m_opsp->destroy(slotp(m_size - 1));
     --m_size;
@@ -4761,7 +4758,6 @@ void VlDequeImpl::resize(size_type size, const void* valuep) {
 
 VlDequeImpl::iterator VlDequeImpl::insert(iterator position, const void* valuep) {
     const size_type index = static_cast<size_type>(position - begin());
-    assert(index <= m_size);
     if (index == m_size) {
         push_back(valuep);
     } else if (index == 0) {
@@ -4784,7 +4780,6 @@ VlDequeImpl::iterator VlDequeImpl::insert(iterator position, const void* valuep)
 
 VlDequeImpl::iterator VlDequeImpl::erase(iterator position) {
     const size_type index = static_cast<size_type>(position - begin());
-    assert(index < m_size);
     if (index < m_size / 2) {
         for (size_type i = index; i > 0; --i) m_opsp->moveAssign(slotp(i), slotp(i - 1));
         pop_front();

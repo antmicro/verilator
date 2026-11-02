@@ -6642,8 +6642,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
         iterateChildren(nodep);
         const AstMemberSel* const selp = VN_CAST(nodep->lhsp(), MemberSel);
         const AstNodeVarRef* const refp = selp ? VN_CAST(selp->fromp(), NodeVarRef) : nullptr;
-        const bool deferTypeCheck
-            = m_statep->forPrimary() && refp && refp->varp()->isIfaceRef();
+        const bool deferTypeCheck = m_statep->forPrimary() && refp && refp->varp()->isIfaceRef();
         // Only emit error if the child is not a type.
         // Do NOT unwrap valid types here - leave that to V3Width.
         // Unwrapping here breaks type parameter resolution during cloning.

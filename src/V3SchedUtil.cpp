@@ -231,7 +231,7 @@ StorageScopes collectStorageScopes(AstNetlist* netlistp) {
 }
 
 const std::vector<AstVarScope*>* capturedScopes(const AstMemberSel* nodep,
-                                                               const StorageScopes& scopes) {
+                                                const StorageScopes& scopes) {
     if (!VN_IS(nodep->fromp()->dtypep()->skipRefp(), ModuleRefDType)) return nullptr;
     const auto it = scopes.find(nodep->varp());
     UASSERT_OBJ(it != scopes.end(), nodep, "Captured storage has no concrete scope");

@@ -4727,25 +4727,27 @@ void VlDequeImpl::pop_front() {
     m_opsp->destroy(slotp(0));
     --m_size;
     ++m_frontOffset;
-    if (m_frontOffset == m_blockSize || empty()) {
-        delete m_blocksp[m_firstBlock];
-        m_blocksp[m_firstBlock] = nullptr;
-        ++m_firstBlock;
+    if (m_frontOffset == m_blockSize) {
+        if (!empty()) {
+            delete m_blocksp[m_firstBlock];
+            m_blocksp[m_firstBlock] = nullptr;
+            ++m_firstBlock;
+        } // else: keep a single block
         m_frontOffset = 0;
     }
-    if (empty()) m_firstBlock = m_mapCapacity / 2;
 }
 
 void VlDequeImpl::pop_back() {
     const size_type block = blockIndex(m_frontOffset + m_size - 1);
     m_opsp->destroy(slotp(m_size - 1));
     --m_size;
-    if (empty() || block != blockIndex(m_frontOffset + m_size - 1)) {
-        delete m_blocksp[block];
-        m_blocksp[block] = nullptr;
+    if (block != blockIndex(m_frontOffset + m_size - 1)) {
+        if (!empty()) {
+            delete m_blocksp[block];
+            m_blocksp[block] = nullptr;
+        }
     }
     if (empty()) {
-        m_firstBlock = m_mapCapacity / 2;
         m_frontOffset = 0;
     }
 }

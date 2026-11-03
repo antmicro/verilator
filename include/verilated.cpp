@@ -4608,7 +4608,11 @@ VlDequeImpl::VlDequeImpl(VlDequeImpl&& rhs) noexcept
     : VlDequeImpl{rhs.m_elementSize, *rhs.m_opsp} {
     swap(rhs);
 }
-VlDequeImpl::~VlDequeImpl() { clear(); }
+VlDequeImpl::~VlDequeImpl() {
+    clear();
+    if (m_blocksp) delete m_blocksp[m_firstBlock];
+    delete[] m_blocksp;
+}
 
 /* Assure that there is at least one free block slot at selected end (determined by atFront) */
 void VlDequeImpl::reserveMap(bool atFront) {
@@ -4650,7 +4654,7 @@ void VlDequeImpl::ensureFrontSlot() {
     if (m_frontOffset == 0) {
         if (m_firstBlock == 0) reserveMap(true);
         --m_firstBlock;
-        m_blocksp[m_firstBlock] = new Block{m_elementSize, m_blockSize};
+        if (!m_blocksp[m_firstBlock]) m_blocksp[m_firstBlock] = new Block{m_elementSize, m_blockSize};
         m_frontOffset = m_blockSize;
     }
     --m_frontOffset;
@@ -4685,10 +4689,14 @@ VlDequeImpl& VlDequeImpl::operator=(VlDequeImpl&& rhs) noexcept {
 
 void VlDequeImpl::clear() {
     for (size_type i = 0; i < m_size; ++i) m_opsp->destroy(slotp(i));
-    for (size_type i = 0; i < m_mapCapacity; ++i) delete m_blocksp[i];
-    delete[] m_blocksp;
-    m_blocksp = nullptr;
-    m_mapCapacity = m_firstBlock = m_frontOffset = m_size = 0;
+    for (size_type i = 0; i < m_mapCapacity; ++i) {
+        // leave a single block
+        if (i == m_firstBlock) continue;
+        delete m_blocksp[i];
+        m_blocksp[i] = nullptr;
+    }
+    m_size = 0;
+    m_frontOffset = 0;
 }
 
 void VlDequeImpl::push_front(const void* valuep) {

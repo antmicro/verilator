@@ -3709,7 +3709,7 @@ class ConstVisitor final : public VNVisitor {
         if (m_doNConst && replaceNodeAssign(nodep)) return;
         // Process containing this AssignW as single body statement
         AstAlways* const procp = VN_CAST(nodep->backp(), Always);
-        if (!procp || procp->stmtsp() != nodep || nodep->nextp()) return;
+        if (!procp || procp->inReactive() || procp->stmtsp() != nodep || nodep->nextp()) return;
         // Not VarXRef, as different refs may set different values to each hierarchy
         AstNodeVarRef* const varrefp = VN_CAST(nodep->lhsp(), VarRef);
         if (m_wremove && !m_params && m_doNConst && m_modp && operandConst(nodep->rhsp())

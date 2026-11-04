@@ -4935,7 +4935,7 @@ class WidthVisitor final : public VNVisitor {
                     foundp = clockingp->ensureEventp();
                 if (AstVar* const varp = VN_CAST(foundp, Var)) {
                     if (!varp->didWidth()) userIterate(varp, nullptr);
-                    AstIface* const ifacep = adtypep->ifaceViaCellp();
+                    AstNodeModule* const ifacep = adtypep->ifaceViaCellp();
                     varp->sensIfacep(ifacep);
                     // Member of a non-virtual interface reference, e.g. an element selected
                     // from a whole array of interfaces: reference it through the interface,
@@ -4974,7 +4974,7 @@ class WidthVisitor final : public VNVisitor {
                 if (AstCell* const cellp = VN_CAST(foundp, Cell)) {
                     // Sub-interface cell selection (e.g. vif.tx): resolve to the
                     // companion __Viftop var created by V3LinkCells for its dtype.
-                    if (VN_IS(cellp->modp(), Iface)) {
+                    if (VN_IS(cellp->modp(), Iface) || VN_IS(cellp->modp(), Module)) {
                         const string viftopName = cellp->name() + "__Viftop";
                         AstNodeModule* const parentIfacep = adtypep->ifaceViaCellp();
                         AstVar* viftopVarp = nullptr;
@@ -5009,7 +5009,7 @@ class WidthVisitor final : public VNVisitor {
                         }
                         nodep->dtypep(subDtypep);
                         nodep->varp(viftopVarp);
-                        viftopVarp->sensIfacep(VN_AS(cellp->modp(), Iface));
+                        viftopVarp->sensIfacep(cellp->modp());
                         nodep->didWidth(true);
                         return;
                     }
@@ -6079,7 +6079,7 @@ class WidthVisitor final : public VNVisitor {
     void methodCallIfaceRef(AstMethodCall* nodep, AstIfaceRefDType* adtypep) {
         // ifaceViaCellp() resolves the interface via cellp when ifacep is null,
         // as for a sub-interface selected through a virtual interface handle.
-        AstIface* const ifacep = adtypep->ifaceViaCellp();
+        AstNodeModule* const ifacep = adtypep->ifaceViaCellp();
         UINFO(5, __FUNCTION__ << ":" << nodep);
         if (AstNodeFTask* const ftaskp
             = VN_CAST(m_memberMap.findMember(ifacep, nodep->name()), NodeFTask)) {

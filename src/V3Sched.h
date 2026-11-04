@@ -437,7 +437,7 @@ public:
     // One entry per VarScope of an interface member that may be written through a virtual
     // interface. Each gets its own extra trigger bit with value-change detection.
     struct TriggerEntry final {
-        const AstNodeModule* m_ifacep;  // Indirectly addressed storage type
+        const AstNodeModule* m_ifacep;  // Interface type
         const AstVar* m_memberp;  // Member variable in the interface definition
         AstVarScope* m_vscp;  // VarScope to monitor
     };

@@ -512,9 +512,9 @@ class DelayedRecord final : public VNVisitorConst, public DelayedBase {
         iterateChildrenConst(nodep);
     }
     void visit(AstVarScope* nodep) override {
-        // A virtual interface may select any instance of an interface, record for consideration
-        const AstIface* const ifacep = VN_CAST(m_scopep->modp(), Iface);
-        if (ifacep && ifacep->hasVirtualRef()) m_state.ifaceVscps[nodep->varp()].push_back(nodep);
+        // A virtual interface may select any instance of an interface or module, record for
+        // consideration
+        if (m_scopep->modp()->hasVirtualRef()) m_state.ifaceVscps[nodep->varp()].push_back(nodep);
     }
     void visit(AstActive* nodep) override {
         UASSERT_OBJ(!m_activep, nodep, "Should not nest");

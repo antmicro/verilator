@@ -68,9 +68,7 @@ class CoalesceVisitor final : public VNVisitorConst {
         // The user asked for it to be split, which needs the variable itself
         if (varp->attrSplitVar()) return false;
         if (varp->isSc()) return false;
-        if (const AstIface* const ifacep = VN_CAST(vscp->scopep()->modp(), Iface)) {
-            if (ifacep->hasVirtualRef()) return false;
-        }
+        if (vscp->scopep()->modp()->hasVirtualRef()) return false;
         return true;
     }
 

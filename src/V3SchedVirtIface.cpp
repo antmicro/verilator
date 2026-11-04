@@ -105,8 +105,9 @@ private:
         AstVar* const varp = nodep->varp();
         if (varp->isTemp()) return;
         m_vscpsByVar[varp].push_back(nodep);
-        if (const AstNodeModule* const ifacep = varp->sensIfacep())
+        if (const AstNodeModule* const ifacep = varp->sensIfacep()) {
             addCandidateVscp(ifacep, nodep);
+        }
     }
     void visit(AstNodeProcedure* nodep) override {
         // Disable lifetime optimization for variables in AlwaysPost blocks

@@ -2034,12 +2034,10 @@ void AstIface::dtypeNameFreeze() {
 }
 void AstIface::dump(std::ostream& str) const {
     Super::dump(str);
-    if (hasVirtualRef()) str << " [VIRTREF]";
     if (!m_dtypeNameFull.empty()) str << " dtypeName=" << m_dtypeNameFull;
     if (!m_dtypeNameShort.empty()) str << " dtypeNameShort=" << m_dtypeNameShort;
 }
 void AstIface::dumpJson(std::ostream& str) const {
-    dumpJsonBoolIf(str, "hasVirtualRef", hasVirtualRef());
     if (!m_dtypeNameFull.empty()) dumpJsonStr(str, "dtypeNameFull", m_dtypeNameFull);
     if (!m_dtypeNameShort.empty()) dumpJsonStr(str, "dtypeNameShort", m_dtypeNameShort);
     dumpJsonGen(str);
@@ -2076,13 +2074,13 @@ void AstIfaceRefDType::dumpSmall(std::ostream& str) const {
     str << "iface";
 }
 // We need these here, because the classes they point to aren't defined when we declare the class
-AstIface* AstIfaceRefDType::ifaceViaCellp() const {
-    return ((m_cellp && m_cellp->modp()) ? VN_AS(m_cellp->modp(), Iface) : m_ifacep);
+AstNodeModule* AstIfaceRefDType::ifaceViaCellp() const {
+    return ((m_cellp && m_cellp->modp()) ? m_cellp->modp() : m_ifacep);
 }
 string AstIfaceRefDType::prettyDTypeName(bool full) const {
     string result = isVirtual() ? "virtual interface " : "interface ";
     // Until V3Param specializes the interface for the parameters, just name the interface
-    const AstIface* const ifacep = paramsp() ? nullptr : ifaceViaCellp();
+    const AstIface* const ifacep = paramsp() ? nullptr : VN_CAST(ifaceViaCellp(), Iface);
     if (ifacep) {
         result += ifacep->dtypeName(full);
     } else {
@@ -3429,6 +3427,7 @@ void AstNodeModule::dump(std::ostream& str) const {
     if (parameterizedTemplate()) str << " [PAR-TEMPL]";
     if (threadsGroup()) str << " [THREADS-GROUP]";
     if (verilatorLib()) str << " [VERILATOR-LIB]";
+    if (hasVirtualRef()) str << " [VIRTREF]";
     if (unconnectedDrive().isTrue()) str << " [UCDRV]";
     if (!lifetime().isNone()) str << " [" << lifetime().ascii() << "] ";
     str << " [" << timeunit() << "]";
@@ -3447,6 +3446,7 @@ void AstNodeModule::dumpJson(std::ostream& str) const {
     dumpJsonBoolFuncIf(str, recursive);
     dumpJsonBoolFuncIf(str, threadsGroup);
     dumpJsonBoolFuncIf(str, verilatorLib);
+    dumpJsonBoolFuncIf(str, hasVirtualRef);
     dumpJsonStr(str, "unconnectedDrive", unconnectedDrive().ascii());
     dumpJsonStr(str, "lifetime", lifetime().ascii());
     dumpJsonStr(str, "timeunit", timeunit().ascii());

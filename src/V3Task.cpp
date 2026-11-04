@@ -127,9 +127,9 @@ class TaskStateVisitor final : public VNVisitor {
     std::vector<AstInitialAutomatic*> m_initialps;  // Initial blocks to move
     bool m_underPortVar = false;  // Visiting under a port AstVar; any expression there
                                   // is a default value, evaluated at call sites only
-    // Instances of each interface
-    std::map<const AstIface*, std::vector<AstScope*>> m_ifaceScopes;
-    // Copies of the tasks of interfaces, by instance and name
+    // Instances of each interface or module
+    std::map<const AstNodeModule*, std::vector<AstScope*>> m_ifaceScopes;
+    // Copies of the tasks of interfaces and modules, by instance and name
     std::map<std::pair<const AstScope*, std::string>, AstNodeFTask*> m_ifaceFTasks;
     std::set<AstNodeFTask*> m_vifTaskps;  // Tasks called through virtual interfaces
 
@@ -144,8 +144,9 @@ public:
         const AstIfaceRefDType* const ifrefp = VN_CAST(fromp->dtypep()->skipRefp(), IfaceRefDType);
         return ifrefp && ifrefp->isVirtual();
     }
+    // True if functions in the scope may be called through a virtual interface
     static bool isIfaceFTaskScope(const AstScope* scopep) {
-        return scopep && VN_IS(scopep->modp(), Iface);
+        return scopep && (VN_IS(scopep->modp(), Iface) || scopep->modp()->hasVirtualRef());
     }
     AstScope* getScope(AstNodeFTask* nodep) {
         AstScope* const scopep = VN_AS(nodep->user3p(), Scope);
@@ -153,7 +154,7 @@ public:
         return scopep;
     }
     // The instances of 'ifacep'
-    const std::vector<AstScope*>& ifaceScopes(const AstIface* ifacep) {
+    const std::vector<AstScope*>& ifaceScopes(const AstNodeModule* ifacep) {
         return m_ifaceScopes.at(ifacep);
     }
     // The copy of the interface task 'taskp' in the instance 'scopep' of its interface
@@ -260,7 +261,8 @@ private:
             }
         }
         // Likewise, all FTask->scope mappings
-        const AstIface* const ifacep = VN_CAST(nodep->modp(), Iface);
+        // Modules too, if their tasks may be called through a virtual interface reference
+        const AstNodeModule* const ifacep = isIfaceFTaskScope(nodep) ? nodep->modp() : nullptr;
         if (ifacep) m_ifaceScopes[ifacep].push_back(nodep);
         for (AstNode* const stmtp : nodep->blockspList()) {
             if (AstNodeFTask* const taskp = VN_CAST(stmtp, NodeFTask)) {
@@ -399,7 +401,7 @@ public:
         // A call through a virtual interface calls the copy of the task of the instance the
         // handle selects (see TaskVisitor::vifDispatchMethodp), so each copy needs a CFunc
         for (AstNodeFTask* const taskp : m_vifTaskps) {
-            const AstIface* const ifacep = VN_AS(getScope(taskp)->modp(), Iface);
+            const AstNodeModule* const ifacep = getScope(taskp)->modp();
             for (const AstScope* const instScopep : ifaceScopes(ifacep)) {
                 getFTaskVertex(ifaceFTaskp(instScopep, taskp))->needsNonInlineCFunc(true);
             }
@@ -505,7 +507,8 @@ class TaskVisitor final : public VNVisitor {
     V3SharedTmps m_consArrayTmps{"__VconsArrayTemp", VVarType::BLOCKTEMP};  // For ConsArray args
     V3SharedTmps m_forceTmps{"__Vforcefuncout", VVarType::VAR};  // For calls in force statements
     int m_unconVarNum = 0;  // Unique bad connection variable
-    std::map<const AstIface*, VifDispatcher> m_vifDispatchers;  // Dispatchers of each interface
+    // Dispatchers of each interface or module
+    std::map<const AstNodeModule*, VifDispatcher> m_vifDispatchers;
 
     // STATE - across all visitors
     DpiCFuncs m_dpiNames;  // Map of all created DPI functions
@@ -868,7 +871,7 @@ class TaskVisitor final : public VNVisitor {
             AstCFunc* funcp = cfuncp;
             if (viaVif) {
                 // Call the method of the dispatcher of the instance (see vifDispatchMethodp)
-                AstIface* const ifacep = VN_AS(m_statep->getScope(refp->taskp())->modp(), Iface);
+                AstNodeModule* const ifacep = m_statep->getScope(refp->taskp())->modp();
                 VifDispatcher& dispatcher = vifDispatcher(ifacep);
                 fromp = new AstMemberRef{refp->fileline(), fromp, dispatcher.varp};
                 funcp = vifDispatchMethodp(dispatcher, refp->taskp());
@@ -1955,7 +1958,7 @@ class TaskVisitor final : public VNVisitor {
         return funcp;
     }
     // The dispatcher of 'ifacep', constructed on demand
-    VifDispatcher& vifDispatcher(AstIface* ifacep) {
+    VifDispatcher& vifDispatcher(AstNodeModule* ifacep) {
         VifDispatcher& dispatcher = m_vifDispatchers[ifacep];
         if (dispatcher.scopep) return dispatcher;
 

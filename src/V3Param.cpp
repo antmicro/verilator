@@ -3724,7 +3724,7 @@ class ParamVisitor final : public VNVisitor {
                         = VN_CAST(varp->subDTypep()->elemDTypep(), IfaceRefDType);
                     if (!ifacerefp) continue;
                     // Interfaces passed in on the port map have ifaces
-                    if (const AstIface* const ifacep = ifacerefp->ifacep()) {
+                    if (const AstIface* const ifacep = VN_CAST(ifacerefp->ifacep(), Iface)) {
                         if (dotted == backp->name()) {
                             UINFO(9, "Iface matching scope:  " << ifacep);
                             if (ifaceParamReplace(nodep, ifacep->stmtsp())) {  //

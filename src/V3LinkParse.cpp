@@ -878,7 +878,7 @@ class LinkParseVisitor final : public VNVisitor {
     }
     void visit(AstNodeProcedure* nodep) override {
         if (const AstModule* const modp = VN_CAST(m_modp, Module)) {
-            nodep->inReactive(modp->isProgram() && VN_IS(nodep, Initial));
+            nodep->inReactive(modp->isProgram());
         }
         VL_RESTORER(m_lifetimeAllowed);
         m_lifetimeAllowed = true;

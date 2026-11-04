@@ -1223,8 +1223,9 @@ class TimingControlVisitor final : public VNVisitor {
                 refp->varp()->fileline()->modifyWarnOff(V3ErrorCode::UNOPTFLAT, true);
             }
         });
-        // Should be under an always
-        AstAlways* const alwaysp = VN_AS(m_procp, Always);
+        UASSERT_OBJ(VN_IS(m_procp, Always) || VN_IS(m_procp, AlwaysReactive), m_procp,
+                    "AssignW not under Always or AlwaysReactive");
+        AstNodeProcedure* const alwaysp = VN_AS(m_procp, NodeProcedure);
         // Convert it to an Assign; the new assign with intra delay will be handled by
         // visit(AstNodeAssign*)
         AstNodeExpr* const lhs1p = nodep->lhsp()->unlinkFrBack();

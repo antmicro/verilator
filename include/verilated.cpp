@@ -4588,24 +4588,31 @@ void VlDeleter::deleteAll() VL_EXCLUDES(m_mutex) VL_EXCLUDES(m_deleteMutex) VL_M
 //======================================================================
 // Type-erased deque storage
 
-VlDequeImpl::Block::Block(size_type elementSize, size_type capacity)
+VlDequeImpl::Block::Block(size_type elementSize, size_type elementAlignment, size_type capacity)
     : m_elementSize{elementSize}
     , m_capacity{capacity}
-    , m_storagep{new unsigned char[elementSize * capacity]} {}
+    , m_allocationp{new unsigned char[elementSize * capacity + elementAlignment - 1]}
+    , m_storagep{m_allocationp} {
+    size_type space = elementSize * capacity + elementAlignment - 1;
+    void* storagep = m_storagep;
+    m_storagep = static_cast<unsigned char*>(
+        std::align(elementAlignment, elementSize * capacity, storagep, space));
+}
 
-VlDequeImpl::Block::~Block() { delete[] m_storagep; }
+VlDequeImpl::Block::~Block() { delete[] m_allocationp; }
 
-VlDequeImpl::VlDequeImpl(size_type elementSize, const Ops& ops)
+VlDequeImpl::VlDequeImpl(size_type elementSize, size_type elementAlignment, const Ops& ops)
     : m_elementSize{elementSize}
+    , m_elementAlignment{elementAlignment}
     , m_blockSize{elementSize < BLOCK_BYTES ? BLOCK_BYTES / elementSize : 1}
     , m_opsp{&ops} {}
 
 VlDequeImpl::VlDequeImpl(const VlDequeImpl& rhs)
-    : VlDequeImpl{rhs.m_elementSize, *rhs.m_opsp} {
+    : VlDequeImpl{rhs.m_elementSize, rhs.m_elementAlignment, *rhs.m_opsp} {
     for (size_type i = 0; i < rhs.size(); ++i) push_back(rhs.at(i));
 }
 VlDequeImpl::VlDequeImpl(VlDequeImpl&& rhs) noexcept
-    : VlDequeImpl{rhs.m_elementSize, *rhs.m_opsp} {
+    : VlDequeImpl{rhs.m_elementSize, rhs.m_elementAlignment, *rhs.m_opsp} {
     swap(rhs);
 }
 VlDequeImpl::~VlDequeImpl() {
@@ -4643,7 +4650,7 @@ void VlDequeImpl::ensureBackSlot() {
     const size_type slot = m_frontOffset + m_size;
     if (blockIndex(slot) + 1 >= m_mapCapacity) reserveMap(false);
     Block*& blockp = m_blocksp[blockIndex(slot)];
-    if (!blockp) blockp = new Block{m_elementSize, m_blockSize};
+    if (!blockp) blockp = new Block{m_elementSize, m_elementAlignment, m_blockSize};
 }
 
 void VlDequeImpl::ensureFrontSlot() {
@@ -4654,7 +4661,9 @@ void VlDequeImpl::ensureFrontSlot() {
     if (m_frontOffset == 0) {
         if (m_firstBlock == 0) reserveMap(true);
         --m_firstBlock;
-        if (!m_blocksp[m_firstBlock]) m_blocksp[m_firstBlock] = new Block{m_elementSize, m_blockSize};
+        if (!m_blocksp[m_firstBlock]) {
+            m_blocksp[m_firstBlock] = new Block{m_elementSize, m_elementAlignment, m_blockSize};
+        }
         m_frontOffset = m_blockSize;
     }
     --m_frontOffset;
@@ -4662,6 +4671,7 @@ void VlDequeImpl::ensureFrontSlot() {
 
 void VlDequeImpl::swap(VlDequeImpl& rhs) noexcept {
     std::swap(m_elementSize, rhs.m_elementSize);
+    std::swap(m_elementAlignment, rhs.m_elementAlignment);
     std::swap(m_blockSize, rhs.m_blockSize);
     std::swap(m_opsp, rhs.m_opsp);
     std::swap(m_blocksp, rhs.m_blocksp);

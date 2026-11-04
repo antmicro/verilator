@@ -614,8 +614,9 @@ private:
     struct Block final {
         const size_type m_elementSize;  // Element size in bytes
         const size_type m_capacity;  // Elements per block
-        unsigned char* const m_storagep;  // Elements storage
-        Block(size_type elementSize, size_type capacity);
+        unsigned char* m_allocationp;  // Unaligned allocation
+        unsigned char* m_storagep;  // Aligned elements storage
+        Block(size_type elementSize, size_type elementAlignment, size_type capacity);
         ~Block();
     };
 
@@ -644,6 +645,7 @@ private:
     static constexpr size_type INITIAL_MAP_CAPACITY = 8;
     static constexpr size_type BLOCK_BYTES = 512;
     size_type m_elementSize;  // Element size in bytes
+    size_type m_elementAlignment;  // Element alignment in bytes
     size_type m_blockSize;  // Elements per block
     const Ops* m_opsp;  // Element operations
     Block** m_blocksp = nullptr;  // Array of blocks
@@ -660,7 +662,7 @@ private:
     void swap(VlDequeImpl& rhs) noexcept;
 
 public:
-    VlDequeImpl(size_type elementSize, const Ops& ops);
+    VlDequeImpl(size_type elementSize, size_type elementAlignment, const Ops& ops);
     VlDequeImpl(const VlDequeImpl& rhs);
     VlDequeImpl(VlDequeImpl&& rhs) noexcept;
     ~VlDequeImpl();
@@ -798,7 +800,7 @@ public:
     using const_iterator = Iterator<true>;
 
     VlDeque()
-        : m_deque{sizeof(T_Value), ops()} {}
+        : m_deque{sizeof(T_Value), alignof(T_Value), ops()} {}
     template <typename T_Iterator>
     VlDeque(T_Iterator begin_it, T_Iterator end_it)
         : VlDeque{} {

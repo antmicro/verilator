@@ -104,12 +104,18 @@ interface Iface (
   modport mp(input ifsig);
 endinterface
 
+program debug_program;
+  initial $display("program");
+endprogram
+
 module t (/*AUTOARG*/
   // Inputs
   clk, in
   );
   input clk;
   input in;
+
+  debug_program program_inst();
 
   // verilator lint_off UNPACKED
 

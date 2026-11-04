@@ -446,11 +446,13 @@ class AstNodeProcedure VL_NOT_FINAL : public AstNode {
     // @astgen op2 := stmtsp : List[AstNode] // Note: op1 is used in some sub-types only
     bool m_suspendable : 1;  // Is suspendable by a Delay, EventControl, etc.
     bool m_needProcess : 1;  // Uses VlProcess
+    bool m_inReactive : 1;  // Procedure executes in the Reactive region
 protected:
     AstNodeProcedure(VNType t, FileLine* fl, AstNode* stmtsp)
         : AstNode{t, fl} {
         m_needProcess = false;
         m_suspendable = false;
+        m_inReactive = false;
         addStmtsp(stmtsp);
     }
 
@@ -464,6 +466,8 @@ public:
     void setSuspendable() { m_suspendable = true; }
     bool needProcess() const { return m_needProcess; }
     void setNeedProcess() { m_needProcess = true; }
+    bool inReactive() const { return m_inReactive; }
+    void inReactive(bool flag) { m_inReactive = flag; }
 };
 class AstNodeRange VL_NOT_FINAL : public AstNode {
     // A range, sized or unsized

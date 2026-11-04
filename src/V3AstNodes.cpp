@@ -3398,10 +3398,12 @@ bool AstNodePreSel::isPure() {
 }
 void AstNodeProcedure::dump(std::ostream& str) const {
     Super::dump(str);
+    if (inReactive()) str << " [REACTIVE]";
     if (isSuspendable()) str << " [SUSP]";
     if (needProcess()) str << " [NPRC]";
 }
 void AstNodeProcedure::dumpJson(std::ostream& str) const {
+    dumpJsonBoolFuncIf(str, inReactive);
     dumpJsonBoolFuncIf(str, isSuspendable);
     dumpJsonBoolFuncIf(str, needProcess);
     dumpJsonGen(str);

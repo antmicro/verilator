@@ -395,7 +395,7 @@ module t;
                 if ((SUB_B !== 2'h1)) begin
                     begin
                         $write("%%Error: %s:%0d:  got=%0d exp=%0d\n", "t/t_debug_emitv.v", 
-                               32'sh191, SUB_B, 2'h1);
+                               32'sh197, SUB_B, 2'h1);
                         $stop;
                     end
                 end
@@ -1987,6 +1987,11 @@ interface Iface;
         input logic ifsig
     );
 endinterface
+program debug_program;
+initial begin
+    $display("program");
+end
+endprogram
 module sub;
     input logic clk;
     logic [7:0]  xr_vec;

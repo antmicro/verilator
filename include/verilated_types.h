@@ -650,14 +650,16 @@ private:
     const Ops* m_opsp;  // Element operations
     Block** m_blocksp = nullptr;  // Array of blocks
     size_type m_mapCapacity = 0;  // Size of m_blocksp
+    size_type m_firstAllocatedBlock = 0;  // First allocated block
+    size_type m_allocatedBlocks = 0;  // Contiguous allocated blocks
     size_type m_firstBlock = 0;  // First used block
     size_type m_frontOffset = 0;  // Offset of the first used slot in its block
     size_type m_size = 0;  // Used slots
 
     size_type blockIndex(size_type slot) const { return m_firstBlock + slot / m_blockSize; }
     unsigned char* slotp(size_type index) const;
-    void reserveMap(bool atFront);
-    void ensureBackSlot();
+    void reserveMap(bool atFront, size_type blocks = 1);
+    void ensureBackSlot(size_type slots = 1);
     void ensureFrontSlot();
     void swap(VlDequeImpl& rhs) noexcept;
 
@@ -671,6 +673,12 @@ public:
     size_type size() const { return m_size; }
     bool empty() const { return !m_size; }
     void clear();
+    // immediately after reserve_slots(slots) unchecked push_backs
+    // have to be called slots times before any other interaction
+    // with the deque
+    void reserve_slots(size_type slots);
+    void push_back_unchecked(const void* valuep);
+    void push_back_move_unchecked(void* valuep);
     void* at(size_type index) { return slotp(index); }
     const void* at(size_type index) const { return slotp(index); }
     void push_front(const void* valuep);
@@ -707,6 +715,13 @@ class VlDeque final {
             },
             [](void* p) { static_cast<T_Value*>(p)->~T_Value(); }};
         return s_ops;
+    }
+
+    void push_back_unchecked(const T_Value& value) {
+        m_deque.push_back_unchecked(std::addressof(value));
+    }
+    void push_back_unchecked(T_Value&& value) {
+        m_deque.push_back_move_unchecked(std::addressof(value));
     }
 
 public:
@@ -804,12 +819,14 @@ public:
     template <typename T_Iterator>
     VlDeque(T_Iterator begin_it, T_Iterator end_it)
         : VlDeque{} {
-        for (; begin_it != end_it; ++begin_it) push_back(*begin_it);
+        m_deque.reserve_slots(std::distance(begin_it, end_it));
+        for (; begin_it != end_it; ++begin_it) push_back_unchecked(*begin_it);
     }
     template <typename T_Iterator>
     void assign(T_Iterator begin_it, T_Iterator end_it) {
         clear();
-        for (; begin_it != end_it; ++begin_it) push_back(*begin_it);
+        m_deque.reserve_slots(std::distance(begin_it, end_it));
+        for (; begin_it != end_it; ++begin_it) push_back_unchecked(*begin_it);
     }
     size_type size() const { return m_deque.size(); }
     bool empty() const { return m_deque.empty(); }

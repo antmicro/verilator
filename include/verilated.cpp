@@ -4609,7 +4609,11 @@ VlDequeImpl::VlDequeImpl(size_type elementSize, size_type elementAlignment, cons
 
 VlDequeImpl::VlDequeImpl(const VlDequeImpl& rhs)
     : VlDequeImpl{rhs.m_elementSize, rhs.m_elementAlignment, *rhs.m_opsp} {
-    for (size_type i = 0; i < rhs.size(); ++i) push_back(rhs.at(i));
+    reserve_slots(rhs.size());
+    for (size_type i = 0; i < rhs.size(); ++i) {
+        m_opsp->copyConstruct(slotp(i), rhs.at(i));
+    }
+    m_size = rhs.size();
 }
 VlDequeImpl::VlDequeImpl(VlDequeImpl&& rhs) noexcept
     : VlDequeImpl{rhs.m_elementSize, rhs.m_elementAlignment, *rhs.m_opsp} {
@@ -4621,36 +4625,46 @@ VlDequeImpl::~VlDequeImpl() {
     delete[] m_blocksp;
 }
 
-/* Assure that there is at least one free block slot at selected end (determined by atFront) */
-void VlDequeImpl::reserveMap(bool atFront) {
-    const size_type used_blocks = m_size ? (m_frontOffset + m_size - 1) / m_blockSize + 1 : 0;
-    const size_type new_capacity = used_blocks + 2 > m_mapCapacity // +2 because last block is kept nullptr
-                                       ? (m_mapCapacity ? m_mapCapacity * 2 : INITIAL_MAP_CAPACITY)
-                                       : m_mapCapacity;
-    const size_type first_block = (new_capacity - used_blocks - 2) / 2 + atFront;
-    if (new_capacity != m_mapCapacity) {
-        Block** const blocksp = new Block* [new_capacity] {};
-        if (used_blocks) {
-            std::copy(m_blocksp + m_firstBlock, m_blocksp + m_firstBlock + used_blocks,
-                      blocksp + first_block);
+// Reserve map entries outside the allocated range, keeping the last entry null for iterators.
+void VlDequeImpl::reserveMap(bool atFront, size_type blocks) {
+    const size_type required = m_allocatedBlocks + blocks + 1;
+    const size_type newCapacity = required > m_mapCapacity
+                                      ? std::max(required, m_mapCapacity ? m_mapCapacity * 2
+                                                                       : INITIAL_MAP_CAPACITY)
+                                      : m_mapCapacity;
+    const size_type firstBlock
+        = (newCapacity - m_allocatedBlocks - blocks - 1) / 2 + (atFront ? blocks : 0);
+    if (newCapacity != m_mapCapacity) {
+        Block** const blocksp = new Block* [newCapacity] {};
+        if (m_allocatedBlocks) {
+            std::copy(m_blocksp + m_firstAllocatedBlock,
+                      m_blocksp + m_firstAllocatedBlock + m_allocatedBlocks, blocksp + firstBlock);
         }
         delete[] m_blocksp;
         m_blocksp = blocksp;
-        m_mapCapacity = new_capacity;
+        m_mapCapacity = newCapacity;
     } else {
-        std::memmove(m_blocksp + first_block, m_blocksp + m_firstBlock,
-                     used_blocks * sizeof(Block*));
-        std::fill(m_blocksp, m_blocksp + first_block, nullptr);
-        std::fill(m_blocksp + first_block + used_blocks, m_blocksp + m_mapCapacity, nullptr);
+        std::memmove(m_blocksp + firstBlock, m_blocksp + m_firstAllocatedBlock,
+                     m_allocatedBlocks * sizeof(Block*));
+        std::fill(m_blocksp, m_blocksp + firstBlock, nullptr);
+        std::fill(m_blocksp + firstBlock + m_allocatedBlocks, m_blocksp + m_mapCapacity, nullptr);
     }
-    m_firstBlock = first_block;
+    m_firstBlock = firstBlock + (m_firstBlock - m_firstAllocatedBlock);
+    m_firstAllocatedBlock = firstBlock;
 }
 
-void VlDequeImpl::ensureBackSlot() {
-    const size_type slot = m_frontOffset + m_size;
-    if (blockIndex(slot) + 1 >= m_mapCapacity) reserveMap(false);
-    Block*& blockp = m_blocksp[blockIndex(slot)];
-    if (!blockp) blockp = new Block{m_elementSize, m_elementAlignment, m_blockSize};
+void VlDequeImpl::ensureBackSlot(size_type slots) {
+    if (!slots) return;
+    const size_type endBlock = blockIndex(m_frontOffset + m_size + slots - 1) + 1;
+    const size_type allocatedEnd = m_firstAllocatedBlock + m_allocatedBlocks;
+    if (endBlock <= allocatedEnd) return;
+    const size_type blocks = endBlock - allocatedEnd;
+    if (endBlock >= m_mapCapacity) reserveMap(false, blocks);
+    for (size_type i = 0; i < blocks; ++i) {
+        m_blocksp[m_firstAllocatedBlock + m_allocatedBlocks]
+            = new Block{m_elementSize, m_elementAlignment, m_blockSize};
+        ++m_allocatedBlocks;
+    }
 }
 
 void VlDequeImpl::ensureFrontSlot() {
@@ -4663,10 +4677,16 @@ void VlDequeImpl::ensureFrontSlot() {
         --m_firstBlock;
         if (!m_blocksp[m_firstBlock]) {
             m_blocksp[m_firstBlock] = new Block{m_elementSize, m_elementAlignment, m_blockSize};
+            ++m_allocatedBlocks;
+            --m_firstAllocatedBlock;
         }
         m_frontOffset = m_blockSize;
     }
     --m_frontOffset;
+}
+
+void VlDequeImpl::reserve_slots(size_type slots) {
+    ensureBackSlot(slots);
 }
 
 void VlDequeImpl::swap(VlDequeImpl& rhs) noexcept {
@@ -4676,6 +4696,8 @@ void VlDequeImpl::swap(VlDequeImpl& rhs) noexcept {
     std::swap(m_opsp, rhs.m_opsp);
     std::swap(m_blocksp, rhs.m_blocksp);
     std::swap(m_mapCapacity, rhs.m_mapCapacity);
+    std::swap(m_firstAllocatedBlock, rhs.m_firstAllocatedBlock);
+    std::swap(m_allocatedBlocks, rhs.m_allocatedBlocks);
     std::swap(m_firstBlock, rhs.m_firstBlock);
     std::swap(m_frontOffset, rhs.m_frontOffset);
     std::swap(m_size, rhs.m_size);
@@ -4699,14 +4721,26 @@ VlDequeImpl& VlDequeImpl::operator=(VlDequeImpl&& rhs) noexcept {
 
 void VlDequeImpl::clear() {
     for (size_type i = 0; i < m_size; ++i) m_opsp->destroy(slotp(i));
-    for (size_type i = 0; i < m_mapCapacity; ++i) {
-        // leave a single block
+    for (size_type i = m_firstAllocatedBlock; i < m_firstAllocatedBlock + m_allocatedBlocks; ++i) {
+        // Leave a single block
         if (i == m_firstBlock) continue;
         delete m_blocksp[i];
         m_blocksp[i] = nullptr;
     }
+    m_firstAllocatedBlock = m_firstBlock;
+    m_allocatedBlocks = m_allocatedBlocks ? 1 : 0;
     m_size = 0;
     m_frontOffset = 0;
+}
+
+void VlDequeImpl::push_back_unchecked(const void* valuep) {
+    m_opsp->copyConstruct(slotp(m_size), valuep);
+    ++m_size;
+}
+
+void VlDequeImpl::push_back_move_unchecked(void* valuep) {
+    m_opsp->moveConstruct(slotp(m_size), valuep);
+    ++m_size;
 }
 
 void VlDequeImpl::push_front(const void* valuep) {
@@ -4723,14 +4757,12 @@ void VlDequeImpl::push_front_move(void* valuep) {
 
 void VlDequeImpl::push_back(const void* valuep) {
     ensureBackSlot();
-    m_opsp->copyConstruct(slotp(m_size), valuep);
-    ++m_size;
+    push_back_unchecked(valuep);
 }
 
 void VlDequeImpl::push_back_move(void* valuep) {
     ensureBackSlot();
-    m_opsp->moveConstruct(slotp(m_size), valuep);
-    ++m_size;
+    push_back_move_unchecked(valuep);
 }
 
 void VlDequeImpl::pop_front() {
@@ -4742,6 +4774,8 @@ void VlDequeImpl::pop_front() {
             delete m_blocksp[m_firstBlock];
             m_blocksp[m_firstBlock] = nullptr;
             ++m_firstBlock;
+            ++m_firstAllocatedBlock;
+            --m_allocatedBlocks;
         } // else: keep a single block
         m_frontOffset = 0;
     }
@@ -4751,11 +4785,10 @@ void VlDequeImpl::pop_back() {
     const size_type block = blockIndex(m_frontOffset + m_size - 1);
     m_opsp->destroy(slotp(m_size - 1));
     --m_size;
-    if (block != blockIndex(m_frontOffset + m_size - 1)) {
-        if (!empty()) {
-            delete m_blocksp[block];
-            m_blocksp[block] = nullptr;
-        }
+    if (!empty() && block != blockIndex(m_frontOffset + m_size - 1)) {
+        delete m_blocksp[block];
+        m_blocksp[block] = nullptr;
+        --m_allocatedBlocks;
     }
     if (empty()) {
         m_frontOffset = 0;
@@ -4764,8 +4797,8 @@ void VlDequeImpl::pop_back() {
 
 void VlDequeImpl::resize(size_type size) {
     while (m_size > size) pop_back();
+    reserve_slots(size - m_size);
     while (m_size < size) {
-        ensureBackSlot();
         m_opsp->construct(slotp(m_size));
         ++m_size;
     }
@@ -4773,7 +4806,8 @@ void VlDequeImpl::resize(size_type size) {
 
 void VlDequeImpl::resize(size_type size, const void* valuep) {
     while (m_size > size) pop_back();
-    while (m_size < size) push_back(valuep);
+    reserve_slots(size - m_size);
+    while (m_size < size) push_back_unchecked(valuep);
 }
 
 VlDequeImpl::iterator VlDequeImpl::insert(iterator position, const void* valuep) {

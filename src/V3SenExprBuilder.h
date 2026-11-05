@@ -328,6 +328,7 @@ private:
         }
         case VEdgeType::ET_TRUE:  //
             return {currp(), false};
+        case VEdgeType::ET_INITIAL_TRIGGER: return {new AstConst{flp, AstConst::BitFalse{}}, true};
         default:  // LCOV_EXCL_START
             senItemp->v3fatalSrc("Unknown edge type");
             return {nullptr, false};

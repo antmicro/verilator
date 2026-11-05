@@ -1659,6 +1659,7 @@ public:
         ET_EVENT,  // VlEventBase::isFired
         // Involving an expression
         ET_TRUE,
+        ET_INITIAL_TRIGGER,
         //
         ET_COMBO,  // Sensitive to all combo inputs to this block
         ET_COMBO_STAR,  // Sensitive to all combo inputs to this block (from .*)
@@ -1677,6 +1678,7 @@ public:
             true,  // ET_NEGEDGE
             true,  // ET_EVENT
             true,  // ET_TRUE
+            true,
 
             false,  // ET_COMBO
             false,  // ET_COMBO_STAR
@@ -1700,14 +1702,15 @@ public:
     }
     const char* ascii() const {
         static constexpr const char* const names[]
-            = {"CHANGED",    "BOTH",   "POS",    "NEG",     "EVENT", "TRUE", "COMBO",
-               "COMBO_STAR", "HYBRID", "STATIC", "INITIAL", "FINAL", "NEVER"};
+            = {"CHANGED", "BOTH",       "POS",    "NEG",    "EVENT",   "TRUE",  "INITIAL_TRIGGER",
+               "COMBO",   "COMBO_STAR", "HYBRID", "STATIC", "INITIAL", "FINAL", "NEVER"};
         return names[m_e];
     }
     const char* verilogKwd() const {
         static constexpr const char* const names[]
-            = {"[changed]", "edge",     "posedge",  "negedge",   "[event]", "[true]", "*",
-               "*",         "[hybrid]", "[static]", "[initial]", "[final]", "[never]"};
+            = {"[changed]",         "edge",   "posedge", "negedge",  "[event]",  "[true]",
+               "[initial_trigger]", "*",      "*",       "[hybrid]", "[static]", "[initial]",
+               "[final]",           "[never]"};
         return names[m_e];
     }
     // Return true iff this and the other have mutually exclusive transitions

@@ -557,6 +557,24 @@ class ActiveVisitor final : public VNVisitor {
             return;
         }
         if (nodep->keyword() == VAlwaysKwd::CONT_ASSIGN) {
+            if (nodep->inReactive()) {
+                FileLine* const flp = nodep->fileline();
+                AstSenTree* const sentreep
+                    = new AstSenTree{flp, new AstSenItem{flp, AstSenItem::InitialTrigger{}}};
+                nodep->foreach([&](AstVarRef* const refp) {
+                    if (refp->access().isReadOrRW()) {
+                        sentreep->addSensesp(new AstSenItem{
+                            refp->fileline(), VEdgeType::ET_CHANGED, refp->cloneTree(false)});
+                    }
+                });
+                AstAlwaysReactive* const reactivep = new AstAlwaysReactive{
+                    flp, sentreep, nodep->stmtsp()->unlinkFrBackWithNext()};
+                reactivep->inReactive(true);
+                nodep->replaceWith(reactivep);
+                VL_DO_DANGLING(pushDeletep(nodep), nodep);
+                visit(reactivep);
+                return;
+            }
             moveUnderSpecial<AstSenItem::Combo>(nodep);
             return;
         }

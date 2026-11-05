@@ -357,29 +357,41 @@ private:
             VL_DO_DANGLING(pushDeletep(initialp->unlinkFrBack()), initialp);
         }
         m_initialps.clear();
+        // Set the captures from the constructor arguments
+        AstScope* const scopep = getScope(m_ctorp);
+        const auto newCaptureAssignsp = [&]() {
+            AstNodeStmt* assignsp = nullptr;
+            nodep->foreach([&](AstVar* varp) {
+                if (AstVar* const argp = varp->classCaptureArgp()) {
+                    assignsp = AstNode::addNextNull(
+                        assignsp,
+                        new AstAssign{varp->fileline(),
+                                      new AstVarRef{varp->fileline(), findVarScope(scopep, varp),
+                                                    VAccess::WRITE},
+                                      new AstVarRef{argp->fileline(), findVarScope(scopep, argp),
+                                                    VAccess::READ}});
+                }
+            });
+            return assignsp;
+        };
         // IEEE 1800-2023 8.7: initialize properties after super.new
         AstNodeStmt* initp = nullptr;
         if (!nodep->isInterfaceClass() && !m_ctorp->taskPublic()) {
             const string stmt = VIdProtect::protect("_ctor_var_reset") + "(vlSymsp);";
             initp = new AstCStmt{m_ctorp->fileline(), stmt, VCStmtType::CTOR_VAR_RESET_CALL};
         }
+        initp = AstNode::addNextNull(initp, newCaptureAssignsp());
         initp = AstNode::addNextNull(initp, insertp);
         if (m_superNewp) {
             if (initp) m_superNewp->addNextHere(initp);
+            // Also before super.new, for its arguments and virtual calls from the base class
+            if (AstNodeStmt* const assignsp = newCaptureAssignsp()) {
+                m_ctorp->prependStmtsp(assignsp);
+            }
         } else {
             m_ctorp->prependStmtsp(initp);
         }
-        AstScope* const scopep = getScope(m_ctorp);
-        nodep->foreach([&](AstVar* varp) {
-            if (AstVar* const argp = varp->classCaptureArgp()) {
-                AstAssign* const assignp = new AstAssign{
-                    varp->fileline(),
-                    new AstVarRef{varp->fileline(), findVarScope(scopep, varp), VAccess::WRITE},
-                    new AstVarRef{argp->fileline(), findVarScope(scopep, argp), VAccess::READ}};
-                m_ctorp->prependStmtsp(assignp);
-                varp->classCaptureArgp(nullptr);
-            }
-        });
+        nodep->foreach([](AstVar* varp) { varp->classCaptureArgp(nullptr); });
     }
     void visit(AstStmtExpr* nodep) override {
         if (VN_IS(nodep->exprp(), New)) m_superNewp = nodep;

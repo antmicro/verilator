@@ -1395,16 +1395,6 @@ public:
     VL_ATTR_ALWINLINE ~VlQueue() = default;
     VL_ATTR_ALWINLINE VlQueue(const VlQueue&) = default;
     VL_ATTR_ALWINLINE VlQueue(VlQueue&&) = default;
-    // cppcheck-suppress noExplicitConstructor
-    VL_ATTR_ALWINLINE VlQueue(const Base& rhs)
-        : Base{rhs} {
-        if (VL_UNLIKELY(N_MaxSize < this->m_deque.size())) this->m_deque.resize(N_MaxSize - 1);
-    }
-    // cppcheck-suppress noExplicitConstructor
-    VL_ATTR_ALWINLINE VlQueue(Base&& rhs)
-        : Base{std::move(rhs)} {
-        if (VL_UNLIKELY(N_MaxSize < this->m_deque.size())) this->m_deque.resize(N_MaxSize - 1);
-    }
     VL_ATTR_ALWINLINE VlQueue& operator=(const VlQueue&) = default;
     VL_ATTR_ALWINLINE VlQueue& operator=(VlQueue&&) = default;
     VL_ATTR_ALWINLINE VlQueue operator=(const Base& rhs) {

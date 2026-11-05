@@ -1172,22 +1172,6 @@ bool AstClass::isClassExtendedFrom(const AstClass* refClassp, const AstClass* ba
     if (!refClassp->extendsp()) return false;
     return isClassExtendedFrom(refClassp->extendsp()->classp(), baseClassp);
 }
-AstClassContext::AstClassContext(FileLine* fl, const string& path)
-    : ASTGEN_SUPER_ClassContext(fl) {
-    std::istringstream parts{path};
-    for (string part; std::getline(parts, part, '.');) {
-        if (!part.empty()) addPathsp(new AstClassContextPath{fl, part});
-    }
-}
-string AstClassContext::path() const {
-    string result;
-    for (const AstClassContextPath* partp = pathsp(); partp;
-         partp = VN_AS(partp->nextp(), ClassContextPath)) {
-        if (!result.empty()) result += ".";
-        result += partp->name();
-    }
-    return result;
-}
 AstClass* AstClassExtends::classOrNullp() const {
     const AstNodeDType* const dtp = dtypep() ? dtypep() : childDTypep();
     const AstClassRefDType* const refp = VN_CAST(dtp, ClassRefDType);
@@ -2731,8 +2715,6 @@ AstNodeDType::CTypeRecursed AstNodeDType::cTypeRecurse(bool compound, bool packe
         UASSERT_OBJ(!packed, this, "Unsupported type for packed struct or union");
         const string className = EmitCUtil::prefixNameProtect(adtypep);
         info.m_type = adtypep->rawPointer() ? className + "*" : "::VlClassRef<" + className + ">";
-    } else if (const AstModuleRefDType* const adtypep = VN_CAST(dtypep, ModuleRefDType)) {
-        info.m_type = EmitCUtil::prefixNameProtect(adtypep->modp()) + "*";
     } else if (const auto* const adtypep = VN_CAST(dtypep, IfaceRefDType)) {
         UASSERT_OBJ(!packed, this, "Unsupported type for packed struct or union");
         info.m_type = EmitCUtil::prefixNameProtect(adtypep->ifaceViaCellp()) + "*";
@@ -2969,7 +2951,6 @@ bool AstNodeDType::isTriviallyConstructible() const VL_MT_STABLE {
     if (VN_IS(dtypep, CoverCrossDType)) return true;
     if (VN_IS(dtypep, CoverpointDType)) return true;
     if (VN_IS(dtypep, IfaceRefDType)) return true;
-    if (VN_IS(dtypep, ModuleRefDType)) return true;
     // Others
     if (const auto* const adtypep = VN_CAST(dtypep, ClassRefDType)) {  //
         return adtypep->rawPointer();

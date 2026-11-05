@@ -529,7 +529,7 @@ string EmitCFunc::emitVarResetRecurse(const AstVar* varp, bool constructing,
         return "";  // Covergroup constructor creates the runtime and assigns the pointer
     } else if (const AstClassRefDType* const adtypep = VN_CAST(dtypep, ClassRefDType)) {
         return adtypep->rawPointer() ? varNameProtected + suffix + " = nullptr;\n" : "";
-    } else if (VN_IS(dtypep, ModuleRefDType) || VN_IS(dtypep, IfaceRefDType)) {
+    } else if (VN_IS(dtypep, IfaceRefDType)) {
         return varNameProtected + suffix + " = nullptr;\n";
     } else if (const AstDynArrayDType* const adtypep = VN_CAST(dtypep, DynArrayDType)) {
         const string pre = constructing ? "" : varNameProtected + suffix + ".clear();\n";

@@ -12,6 +12,11 @@ package pkg;
       return T::sget();
     endfunction
   endclass
+  class counter #(
+      type T = int
+  );
+    static int n;
+  endclass
 endpackage
 
 module single;
@@ -50,6 +55,12 @@ interface ifc;
     function int peek(C o);
       return o.n;
     endfunction
+    // Static variable of a method
+    function int bump();
+      static int cnt = 10;
+      cnt++;
+      return cnt;
+    endfunction
   endclass
   C c = new;
   function void setn(int a);
@@ -67,6 +78,11 @@ interface ifc;
   endfunction
   function int getcall();
     return pkg::reg_t#(C)::call();
+  endfunction
+  // Specialized with a queue of the class
+  typedef C cq_t[$];
+  function int count();
+    return ++pkg::counter#(cq_t)::n;
   endfunction
 endinterface
 
@@ -107,6 +123,13 @@ module t;
     i1.c.inc();
     if (i1.c.n != 6) $stop;
     if (v.c.n != 2) $stop;
+    // Each instance has its own static variables of methods and specializations
+    if (i1.c.bump() != 11) $stop;
+    if (i1.c.bump() != 12) $stop;
+    if (v.c.bump() != 11) $stop;
+    if (i1.count() != 1) $stop;
+    if (i1.count() != 2) $stop;
+    if (v.count() != 1) $stop;
     $write("*-* All Finished *-*\n");
     $finish;
   end

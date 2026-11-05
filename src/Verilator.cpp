@@ -216,6 +216,9 @@ static void process() {
             if (v3Global.hierGraphp()) return;
         }
 
+        // Bind classes in modules with several instances to their instance
+        V3ClassContext::bindMembers(v3Global.rootp());
+
         // Calculate and check widths, edit tree to TRUNC/EXTRACT any width mismatches
         V3Width::width(v3Global.rootp());
 
@@ -230,6 +233,9 @@ static void process() {
         V3WidthCommit::widthCommit(v3Global.rootp());
         v3Global.assertDTypesResolved(true);
         v3Global.widthMinUsage(VWidthMinUsage::MATCHES_WIDTH);
+
+        // Pass the instance to new() of the classes bound above
+        V3ClassContext::bindCtorCalls(v3Global.rootp());
 
         // End of elaboration
         V3Stats::addStatPerf(V3Stats::STAT_WALLTIME_ELAB, elabWallTime.deltaTime());
@@ -311,9 +317,6 @@ static void process() {
             // Expand inouts, stage 2
             // Also simplify pin connections to always be AssignWs in prep for V3Unknown
             V3Tristate::tristateAll(v3Global.rootp());
-
-            // Select static owners before expression lifting separates receivers from calls.
-            V3ClassContext::prepare(v3Global.rootp());
         }
 
         if (!v3Global.opt.serializeOnly()) {
@@ -357,8 +360,6 @@ static void process() {
             // No more AstAlias after linkDotScope
             V3Scope::scopeAll(v3Global.rootp());
             V3LinkDot::linkDotScope(v3Global.rootp());
-            // Interface aliases now select concrete captures, before inlining targets.
-            V3ClassContext::bind(v3Global.rootp());
             V3Error::abortIfErrors();
 
             // Finish the run time model descriptors now they are scoped

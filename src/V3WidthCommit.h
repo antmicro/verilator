@@ -40,6 +40,12 @@ public:
         return nullptr;
     }
 
+    // Warn if defp, a local or protected member of defClassp named 'name', is referenced by
+    // nodep from refClassp
+    static void classEncapCheck(AstNode* nodep, const string& name, const AstNode* defp,
+                                const AstClass* defClassp,
+                                const AstClass* refClassp) VL_MT_DISABLED;
+
     // Final step... Mark all widths as equal
     static void widthCommit(AstNetlist* nodep) VL_MT_DISABLED;
 };

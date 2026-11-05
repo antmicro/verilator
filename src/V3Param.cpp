@@ -417,7 +417,6 @@ class ParamProcessor final {
         if (consp->defaultp()) key += "default:" + paramValueString(consp->defaultp()) + ",";
         return key + "}";
     }
-
     static string paramValueString(const AstNode* nodep) {
         if (const AstRefDType* const refp = VN_CAST(nodep, RefDType)) {
             nodep = refp->skipRefToNonRefp();

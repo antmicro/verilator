@@ -75,7 +75,6 @@
 #include "V3Assert.h"
 #include "V3Ast.h"
 #include "V3Begin.h"
-#include "V3ClassContext.h"
 #include "V3Const.h"
 #include "V3ConstPool.h"
 #include "V3Error.h"
@@ -5074,15 +5073,6 @@ class WidthVisitor final : public VNVisitor {
                 if (AstVar* const varp = VN_CAST(foundp, Var)) {
                     if (!varp->didWidth()) userIterate(varp, nullptr);
                     if (varp->lifetime().isStatic()) {
-                        if (!varp->isParam() && V3ClassContext::instanceOwnerp(classp)) {
-                            // Keep the receiver until runtime owner binding selects static
-                            // storage.
-                            nodep->varp(varp);
-                            V3LinkLValue::linkLValueSet(nodep->fromp(), VAccess::READ);
-                            nodep->dtypeFrom(varp);
-                            nodep->didWidth(true);
-                            return true;
-                        }
                         // Static members are moved outside the class, so they shouldn't be
                         // accessed by member select on a class object
                         AstVarRef* const varRefp
@@ -5277,6 +5267,8 @@ class WidthVisitor final : public VNVisitor {
         // by sub-interface selection, enabling chained access (e.g. vif.tx.Tx).
         AstNodeModule* const ifacep = adtypep->ifaceViaCellp();
         UASSERT_OBJ(ifacep, nodep, "Unlinked");
+        // Linked by V3ClassContext, e.g. generate block member
+        if (nodep->varp()) return nodep->varp();
         VSpellCheck speller;
         for (AstNode* const itemp : ifacep->stmtspList()) {
             if (itemp->name() == nodep->name()) {
@@ -6091,8 +6083,11 @@ class WidthVisitor final : public VNVisitor {
         // as for a sub-interface selected through a virtual interface handle.
         AstNodeModule* const ifacep = adtypep->ifaceViaCellp();
         UINFO(5, __FUNCTION__ << ":" << nodep);
-        if (AstNodeFTask* const ftaskp
-            = VN_CAST(m_memberMap.findMember(ifacep, nodep->name()), NodeFTask)) {
+        // Linked by V3ClassContext, e.g. generate block function
+        AstNodeFTask* const ftaskp
+            = nodep->taskp() ? nodep->taskp()
+                             : VN_CAST(m_memberMap.findMember(ifacep, nodep->name()), NodeFTask);
+        if (ftaskp) {
             UINFO(5, __FUNCTION__ << "AstNodeFTask" << nodep);
             if (!modportAllowsItem(nodep, adtypep, ftaskp)) {
                 nodep->dtypeSetVoid();
@@ -6237,7 +6232,7 @@ class WidthVisitor final : public VNVisitor {
             if (AstNodeFTask* const ftaskp
                 = VN_CAST(m_memberMap.findMember(classp, nodep->name()), NodeFTask)) {
                 userIterate(ftaskp, nullptr);
-                if (ftaskp->isStatic() && !V3ClassContext::instanceOwnerp(classp)) {
+                if (ftaskp->isStatic()) {
                     AstArg* const argsp = nodep->argsp();
                     if (argsp) argsp->unlinkFrBackWithNext();
                     AstNodeFTaskRef* newp = nullptr;

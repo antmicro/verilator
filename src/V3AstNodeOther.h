@@ -331,7 +331,6 @@ public:
     ASTGEN_MEMBERS_AstNodeGen;
 };
 class AstNodeModule VL_NOT_FINAL : public AstNode {
-    bool m_classCaptureTarget = false;  // Storage addressed by a class capture
     // A module, package, program or interface declaration;
     // something that can live directly under the TOP,
     // excluding $unit package stuff
@@ -391,8 +390,6 @@ protected:
 
 public:
     ASTGEN_MEMBERS_AstNodeModule;
-    bool classCaptureTarget() const { return m_classCaptureTarget; }
-    void classCaptureTarget(bool flag) { m_classCaptureTarget = flag; }
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
     bool maybePointedTo() const override VL_MT_SAFE { return true; }
@@ -886,26 +883,6 @@ public:
     string name() const override VL_MT_STABLE { return m_name; }
     VCoverOptionType optType() const { return m_optType; }
     bool typeOption() const { return m_typeOption; }
-};
-class AstClassContext final : public AstNode {
-    // Symbolic class owner, relative to a lexical module, before instance scoping.
-    // @astgen op1 := pathsp : List[AstClassContextPath]
-public:
-    AstClassContext(FileLine* fl, const string& path);
-    ASTGEN_MEMBERS_AstClassContext;
-    string path() const;
-};
-class AstClassContextPath final : public AstNode {
-    // One lexical instance/port path component in a class owner reference.
-    string m_name;
-
-public:
-    AstClassContextPath(FileLine* fl, const string& name)
-        : ASTGEN_SUPER_ClassContextPath(fl)
-        , m_name{name} {}
-    ASTGEN_MEMBERS_AstClassContextPath;
-    string name() const override { return m_name; }
-    bool sameNode(const AstNode* otherp) const override { return name() == otherp->name(); }
 };
 class AstClassExtends final : public AstNode {
     // class extends class name, or class implements class name
@@ -2407,8 +2384,6 @@ public:
     string text() const VL_MT_SAFE { return m_text; }
 };
 class AstVar final : public AstNode {
-    // @astgen ptr := m_classCaptureArgp : Optional[AstVar] // Hidden constructor input
-    bool m_classContextMarker = false;  // Compile-time placeholder for a scope address
     // A variable (in/out/wire/reg/param) inside a module
     //
     // @astgen op1 := childDTypep : Optional[AstNodeDType]
@@ -2616,10 +2591,6 @@ public:
         dtypeFrom(examplep);
     }
     ASTGEN_MEMBERS_AstVar;
-    bool classContextMarker() const { return m_classContextMarker; }
-    void classContextMarker(bool flag) { m_classContextMarker = flag; }
-    AstVar* classCaptureArgp() const { return m_classCaptureArgp; }
-    void classCaptureArgp(AstVar* argp) { m_classCaptureArgp = argp; }
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
     inline bool sameNode(const AstNode* samep) const override;
@@ -3404,6 +3375,8 @@ class AstClass final : public AstNodeModule {
     // MEMBERS
     // @astgen ptr := m_classOrPackagep : Optional[AstClassPackage]  // Package to be emitted with
     // @astgen ptr := m_covergroupEnclosingClassp : Optional[AstClass]  // Lexical enclosing class
+    // @astgen ptr := m_instancep : Optional[AstVar]  // Member '__Vinstance' (V3ClassContext)
+    // @astgen ptr := m_instanceArgp : Optional[AstVar]  // Constructor argument '__Vinstance'
     string m_dtypeNameFull;  // dtypeName(true) once frozen, as parameters may then be gone
     string m_dtypeNameShort;  // dtypeName(false) once frozen, as parameters may then be gone
     uint32_t m_declTokenNum;  // Declaration token number
@@ -3444,6 +3417,10 @@ public:
         return m_covergroupEnclosingClassp;
     }
     void covergroupEnclosingClassp(AstClass* classp) { m_covergroupEnclosingClassp = classp; }
+    AstVar* instancep() const { return m_instancep; }
+    void instancep(AstVar* varp) { m_instancep = varp; }
+    AstVar* instanceArgp() const { return m_instanceArgp; }
+    void instanceArgp(AstVar* varp) { m_instanceArgp = varp; }
     bool hasRandVarsUpdate() const { return m_hasRandVarsUpdate; }
     void hasRandVarsUpdate(bool flag) { m_hasRandVarsUpdate = flag; }
     bool isCovergroup() const { return m_covergroup; }

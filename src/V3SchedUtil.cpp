@@ -252,22 +252,6 @@ computeImplicitSensitivities(const AstNodeProcedure* procp) {
     return implicitSensitivities;
 }
 
-StorageScopes collectStorageScopes(AstNetlist* netlistp) {
-    StorageScopes scopes;
-    netlistp->foreach([&](AstVarScope* vscp) {
-        if (vscp->varp()->sensIfacep()) scopes[vscp->varp()].push_back(vscp);
-    });
-    return scopes;
-}
-
-const std::vector<AstVarScope*>* capturedScopes(const AstMemberRef* nodep,
-                                                const StorageScopes& scopes) {
-    if (!VN_IS(nodep->fromp()->dtypep()->skipRefp(), ModuleRefDType)) return nullptr;
-    const auto it = scopes.find(nodep->varp());
-    UASSERT_OBJ(it != scopes.end(), nodep, "Captured storage has no concrete scope");
-    return &it->second;
-}
-
 }  // namespace util
 
 }  // namespace V3Sched

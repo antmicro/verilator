@@ -108,57 +108,14 @@ private:
         return nodep;
     }
     void classEncapCheck(AstNode* nodep, AstNode* defp, AstClass* defClassp) {
-        // Check local/protected status and complain
-        bool local = false;
-        bool prot = false;
         if (!defp) {
             // rand_mode() / constraint_mode() handled in V3Randomize
             UASSERT_OBJ(nodep->name() == "rand_mode" || nodep->name() == "constraint_mode", nodep,
                         "Only rand_mode() and constraint_mode() can have no def");
             return;
         }
-        if (const auto anodep = VN_CAST(defp, Var)) {
-            local = anodep->isHideLocal();
-            prot = anodep->isHideProtected();
-        } else if (const auto anodep = VN_CAST(defp, NodeFTask)) {
-            local = anodep->isHideLocal();
-            prot = anodep->isHideProtected();
-        } else if (const auto anodep = VN_CAST(defp, Typedef)) {
-            local = anodep->isHideLocal();
-            prot = anodep->isHideProtected();
-        } else {
-            nodep->v3fatalSrc("ref to unhandled definition type " << defp->prettyTypeNameQ());
-        }
-        if (local || prot) {
-            // In case of covergroup, the reference is to the enclosing class, not the covergroup
-            // itself
-            const AstClass* refClassp = VN_CAST(m_modp, Class);
-            if (refClassp && refClassp->isCovergroup())
-                refClassp = refClassp->covergroupEnclosingClassp();
-            const char* how = nullptr;
-            // Inner nested classes can access `local` or `protected` members of their outer class
-            const auto nestedAccess = [refClassp](const AstClass*, const AstNode* memberp) {
-                return memberp == refClassp;
-            };
-            if (local && defClassp
-                && ((refClassp != defClassp) && !(defClassp->existsMember(nestedAccess)))) {
-                how = "'local'";
-            } else if (prot && defClassp && !AstClass::isClassExtendedFrom(refClassp, defClassp)
-                       && !(defClassp->existsMember(nestedAccess))) {
-                how = "'protected'";
-            }
-            if (how) {
-                UINFO(9, "refclass " << refClassp);
-                UINFO(9, "defclass " << defClassp);
-                nodep->v3warn(ENCAPSULATED, nodep->prettyNameQ()
-                                                << " is hidden as " << how
-                                                << " within this context (IEEE 1800-2023 8.18)\n"
-                                                << nodep->warnContextPrimary() << "\n"
-                                                << nodep->warnOther()
-                                                << "... Location of definition\n"
-                                                << defp->warnContextSecondary());
-            }
-        }
+        V3WidthCommit::classEncapCheck(nodep, nodep->name(), defp, defClassp,
+                                       VN_CAST(m_modp, Class));
     }
     void varLifetimeCheck(AstNode* nodep, AstVar* varp) {
         // Skip if we are under a member select (lhs of a dot)
@@ -676,6 +633,53 @@ public:
 
 //######################################################################
 // V3WidthCommit class functions
+
+void V3WidthCommit::classEncapCheck(AstNode* nodep, const string& name, const AstNode* defp,
+                                    const AstClass* defClassp, const AstClass* refClassp) {
+    // Check local/protected status and complain
+    bool local = false;
+    bool prot = false;
+    if (const auto anodep = VN_CAST(defp, Var)) {
+        local = anodep->isHideLocal();
+        prot = anodep->isHideProtected();
+    } else if (const auto anodep = VN_CAST(defp, NodeFTask)) {
+        local = anodep->isHideLocal();
+        prot = anodep->isHideProtected();
+    } else if (const auto anodep = VN_CAST(defp, Typedef)) {
+        local = anodep->isHideLocal();
+        prot = anodep->isHideProtected();
+    } else {
+        nodep->v3fatalSrc("ref to unhandled definition type " << defp->prettyTypeNameQ());
+    }
+    if (local || prot) {
+        // In case of covergroup, the reference is to the enclosing class, not the covergroup
+        // itself
+        if (refClassp && refClassp->isCovergroup())
+            refClassp = refClassp->covergroupEnclosingClassp();
+        const char* how = nullptr;
+        // Inner nested classes can access `local` or `protected` members of their outer class
+        const auto nestedAccess = [refClassp](const AstClass*, const AstNode* memberp) {
+            return memberp == refClassp;
+        };
+        if (local && defClassp
+            && ((refClassp != defClassp) && !(defClassp->existsMember(nestedAccess)))) {
+            how = "'local'";
+        } else if (prot && defClassp && !AstClass::isClassExtendedFrom(refClassp, defClassp)
+                   && !(defClassp->existsMember(nestedAccess))) {
+            how = "'protected'";
+        }
+        if (how) {
+            UINFO(9, "refclass " << refClassp);
+            UINFO(9, "defclass " << defClassp);
+            nodep->v3warn(ENCAPSULATED, AstNode::prettyNameQ(name)
+                                            << " is hidden as " << how
+                                            << " within this context (IEEE 1800-2023 8.18)\n"
+                                            << nodep->warnContextPrimary() << "\n"
+                                            << nodep->warnOther() << "... Location of definition\n"
+                                            << defp->warnContextSecondary());
+        }
+    }
+}
 
 void V3WidthCommit::widthCommit(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ":");

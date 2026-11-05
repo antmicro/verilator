@@ -1014,9 +1014,7 @@ public:
 
         // Helper: check if a RefDType might resolve to a class later.
         const auto isPotentialClassRef = [](const AstRefDType* refp) -> bool {
-            return refp
-                   && (!refp->typeofp() || VN_IS(refp->typeofp(), Dot)
-                       || VN_IS(refp->typeofp(), MemberRef))
+            return refp && !refp->typeofp()
                    && (!refp->classOrPackageOpp()
                        || VN_IS(refp->classOrPackageOpp(), ClassOrPackageRef));
         };
@@ -1025,8 +1023,7 @@ public:
         // BasicDType is allowed here only for null/object handles.
         const auto isValidTypeNode = [](const AstNode* nodep) -> bool {
             return VN_IS(nodep, VoidDType) || VN_IS(nodep, BasicDType)
-                   || VN_IS(nodep, ClassRefDType) || VN_IS(nodep, ParseRef) || VN_IS(nodep, Dot)
-                   || VN_IS(nodep, MemberRef);
+                   || VN_IS(nodep, ClassRefDType) || VN_IS(nodep, ParseRef);
         };
 
         if (const AstTypedef* const typedefp = VN_CAST(symp->nodep(), Typedef)) {
@@ -4180,7 +4177,9 @@ class LinkDotResolveVisitor final : public VNVisitor {
         LINKDOT_VISIT_START();
         UINFO(8, indent() << "visit " << nodep);
         VL_RESTORER(m_genericIfaceModule);
-        m_genericIfaceModule = nodep->hasGenericIface();
+        if (const AstModule* const modp = VN_CAST(nodep, Module)) {
+            m_genericIfaceModule = modp->hasGenericIface();
+        }
         checkNoDot(nodep);
         m_ds.init(m_curSymp);
         m_ds.m_dotSymp = m_curSymp = m_modSymp
@@ -4238,15 +4237,15 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 // UINFOTREE(1, nodep->modp(), "", "linkcemd");
                 iterateChildren(nodep);
 
-                if (m_statep->forPrimary() && nodep->modp()->hasGenericIface()) {
-                    addImplicitParametersOfGenericIface(nodep);
-                }
+                if (m_statep->forPrimary())
+                    if (const AstModule* const modp = VN_CAST(nodep->modp(), Module)) {
+                        if (modp->hasGenericIface()) addImplicitParametersOfGenericIface(nodep);
+                    }
             }
         }
         // Parent module inherits child's publicity
         // This is done bottom up in the LinkBotupVisitor stage
     }
-    void visit(AstClassContext*) override {}
     void visit(AstClassRefDType* nodep) override {
         // Cell: Recurse inside or cleanup not founds
         LINKDOT_VISIT_START();
@@ -4839,8 +4838,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
                         if (varp->isParam()) foundp = ifaceFoundp;
                     } else if (VN_IS(ifaceFoundp->nodep(), EnumItem)) {
                         foundp = ifaceFoundp;
-                    } else if (VN_IS(ifaceFoundp->nodep(), Class)
-                               || VN_IS(ifaceFoundp->nodep(), Typedef)
+                    } else if (VN_IS(ifaceFoundp->nodep(), Typedef)
                                || VN_IS(ifaceFoundp->nodep(), ParamTypeDType)) {
                         // Redirect dotSymp to the interface cell so that downstream
                         // typedef/ParamTypeDType handlers see the correct context
@@ -5137,13 +5135,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
                         // Continue hierarchical lookup in the class scope.
                         m_ds.m_dotSymp = foundp;
                     } else {
-                        AstClassRefDType* const newp
-                            = new AstClassRefDType{nodep->fileline(), defp, nullptr};
-                        newp->classOrPackagep(foundp->classOrPackagep());
-                        if (m_ds.m_dotPos == DP_FINAL && !m_ds.m_dotText.empty()) {
-                            newp->ownerp(
-                                new AstClassContext{nodep->fileline(), m_modp, m_ds.m_dotText});
-                        }
+                        AstRefDType* const newp
+                            = new AstRefDType{nodep->fileline(), nodep->name()};
                         replaceWithCheckBreak(nodep, newp);
                         VL_DO_DANGLING(pushDeletep(nodep), nodep);
                     }
@@ -5248,11 +5241,6 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     // resolved yet
                     if (m_ds.m_dotPos == DP_NONE) checkDeclOrder(nodep, defp);
                     refp->typedefp(defp);
-
-                    if (ifaceFinalSegmentAllowed) {
-                        refp->ownerp(
-                            new AstClassContext{nodep->fileline(), m_modp, m_ds.m_dotText});
-                    }
 
                     V3LinkDotIfaceCapture::captureTypedefContext(
                         refp, "typedef", static_cast<int>(m_ds.m_dotPos), m_ds.m_dotText,
@@ -6141,52 +6129,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
     void visit(AstMemberRef* nodep) override {
         // checkNoDot not appropriate, can be under a dot
         LINKDOT_VISIT_START();
-        // A type such as p.C can remain a MemberRef while interface port p is generic.
-        // Resolve the children before checking whether specialization has made p known.
         iterateChildren(nodep);
-
-        // Leave already-resolved field selections alone. Type resolution must finish
-        // before concrete instance scoping, so neither case needs this handling.
-        if (m_statep->forScopeCreation() || nodep->varp()) return;
-
-        // Only a resolved, nonvirtual interface reference can supply the declaration.
-        // A still-generic port must wait for specialization and a later linking pass.
-        const AstNodeVarRef* const fromp = VN_CAST(nodep->fromp(), NodeVarRef);
-        if (!fromp || !fromp->varp()) return;
-        AstNodeDType* const dtypep = fromp->varp()->subDTypep();
-        const AstIfaceRefDType* const ifacep
-            = dtypep ? VN_CAST(dtypep->skipRefOrNullp(), IfaceRefDType) : nullptr;
-        if (!ifacep || ifacep->isVirtual() || !ifacep->ifaceViaCellp()) return;
-
-        // The selected name may denote a class or typedef rather than a runtime field.
-        const VSymEnt* const foundp
-            = m_statep->getNodeSym(ifacep->ifaceViaCellp())->findIdFlat(nodep->name());
-        if (!foundp) return;
-        AstNodeDType* replacementp = nullptr;
-
-        // Retain the interface path and lexical anchor so capture preparation can
-        // distinguish the same class imported through different interface bindings.
-        string path = ifacep->cellName().empty() ? fromp->name() : ifacep->cellName();
-        if (const AstVarXRef* const xrefp = VN_CAST(fromp, VarXRef))
-            path = VString::dot(xrefp->dotted(), ".", path);
-
-        // Replace the expression-shaped selection with a type reference and its owner.
-        // The concrete storage address will be selected later, during scoped binding.
-        if (AstClass* const classp = VN_CAST(foundp->nodep(), Class)) {
-            AstClassRefDType* const refp
-                = new AstClassRefDType{nodep->fileline(), classp, nullptr};
-            refp->ownerp(new AstClassContext{nodep->fileline(), m_modp, path});
-            replacementp = refp;
-        } else if (AstTypedef* const typedefp = VN_CAST(foundp->nodep(), Typedef)) {
-            AstRefDType* const refp = new AstRefDType{nodep->fileline(), typedefp->name()};
-            refp->typedefp(typedefp);
-            refp->ownerp(new AstClassContext{nodep->fileline(), m_modp, path});
-            replacementp = refp;
-        }
-        if (replacementp) {
-            nodep->replaceWith(replacementp);
-            pushDeletep(nodep);
-        }
     }
     void visit(AstGenBlock* nodep) override {
         LINKDOT_VISIT_START();
@@ -6494,18 +6437,6 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     }
                     nodep->childDTypep(
                         new AstClassRefDType{nodep->fileline(), classRefp->classp(), paramsp});
-                    AstClassContext* ownerp = classRefp->ownerp();
-                    for (AstNodeDType* dtypep = typedefp->subDTypep(); VN_IS(dtypep, RefDType);
-                         dtypep = dtypep->subDTypep()) {
-                        if (AstClassContext* const contextp = VN_AS(dtypep, RefDType)->ownerp()) {
-                            ownerp = contextp;
-                            break;
-                        }
-                    }
-                    if (ownerp) {
-                        VN_AS(nodep->childDTypep(), ClassRefDType)
-                            ->ownerp(ownerp->cloneTree(false));
-                    }
                     iterate(nodep->childDTypep());
                 } else {
                     nodep->v3warn(E_UNSUPPORTED,
@@ -6941,16 +6872,11 @@ class LinkDotResolveVisitor final : public VNVisitor {
         // Handle type validation for localparam type assignments
         // Iterate child to resolve any ParseRef nodes
         iterateChildren(nodep);
-        const AstMemberRef* const selp = VN_CAST(nodep->lhsp(), MemberRef);
-        const AstNodeVarRef* const refp = selp ? VN_CAST(selp->fromp(), NodeVarRef) : nullptr;
-        const bool deferTypeCheck
-            = m_statep->forPrimary() && refp && refp->varp()->isIfaceRef();
         // Only emit error if the child is not a type.
         // Do NOT unwrap valid types here - leave that to V3Width.
         // Unwrapping here breaks type parameter resolution during cloning.
         // Allow Dot through to defer the handling until the dot expression is resolved.
-        if (nodep->lhsp() && !VN_IS(nodep->lhsp(), NodeDType) && !VN_IS(nodep->lhsp(), Dot)
-            && !deferTypeCheck) {
+        if (nodep->lhsp() && !VN_IS(nodep->lhsp(), NodeDType) && !VN_IS(nodep->lhsp(), Dot)) {
             // Not a type - emit error
             if (VN_IS(nodep->lhsp(), Const)) {
                 nodep->lhsp()->v3error("Expecting a data type, not a constant");

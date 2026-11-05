@@ -947,7 +947,9 @@ class LinkParseVisitor final : public VNVisitor {
         collectPorts(nodep->stmtsp());
 
         iterateChildren(nodep);
-        nodep->hasGenericIface(m_moduleWithGenericIface);
+        if (AstModule* const modp = VN_CAST(nodep, Module)) {
+            modp->hasGenericIface(m_moduleWithGenericIface);
+        }
     }
     void visitIterateNoValueMod(AstNode* nodep) {
         // Iterate a node which any Var within shouldn't create an InitialAutomatic procedure

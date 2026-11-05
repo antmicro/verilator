@@ -332,7 +332,6 @@ public:
 };
 class AstNodeModule VL_NOT_FINAL : public AstNode {
     bool m_classCaptureTarget = false;  // Storage addressed by a class capture
-    bool m_hasGenericIface = false;  // Declaration contains a generic interface port
     // A module, package, program or interface declaration;
     // something that can live directly under the TOP,
     // excluding $unit package stuff
@@ -392,8 +391,6 @@ public:
     ASTGEN_MEMBERS_AstNodeModule;
     bool classCaptureTarget() const { return m_classCaptureTarget; }
     void classCaptureTarget(bool flag) { m_classCaptureTarget = flag; }
-    bool hasGenericIface() const { return m_hasGenericIface; }
-    void hasGenericIface(bool flag) { m_hasGenericIface = flag; }
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
     bool maybePointedTo() const override VL_MT_SAFE { return true; }
@@ -888,18 +885,11 @@ public:
 };
 class AstClassContext final : public AstNode {
     // Symbolic class owner, relative to a lexical module, before instance scoping.
-    // @astgen ptr := m_anchorp : AstNodeModule // Lexical starting definition
     // @astgen op1 := pathsp : List[AstClassContextPath]
 public:
-    AstClassContext(FileLine* fl, AstNodeModule* anchorp, const string& path);
+    AstClassContext(FileLine* fl, const string& path);
     ASTGEN_MEMBERS_AstClassContext;
-    AstNodeModule* anchorp() const { return m_anchorp; }
     string path() const;
-    bool sameNode(const AstNode* otherp) const override {
-        return anchorp() == VN_DBG_AS(otherp, ClassContext)->anchorp();
-    }
-    void dump(std::ostream& str) const override { Super::dump(str); }
-    void dumpJson(std::ostream& str) const override { dumpJsonGen(str); }
 };
 class AstClassContextPath final : public AstNode {
     // One lexical instance/port path component in a class owner reference.
@@ -912,8 +902,6 @@ public:
     ASTGEN_MEMBERS_AstClassContextPath;
     string name() const override { return m_name; }
     bool sameNode(const AstNode* otherp) const override { return name() == otherp->name(); }
-    void dump(std::ostream& str) const override { Super::dump(str); }
-    void dumpJson(std::ostream& str) const override { dumpJsonGen(str); }
 };
 class AstClassExtends final : public AstNode {
     // class extends class name, or class implements class name
@@ -3584,6 +3572,7 @@ class AstModule final : public AstNodeModule {
     // A module declaration
     const bool m_isChecker;  // Module represents a checker
     const bool m_isProgram;  // Module represents a program
+    bool m_hasGenericIface = false;  // Module contains a generic interface
 
 public:
     class Checker {};  // for constructor type-overload selection
@@ -3607,6 +3596,8 @@ public:
     bool timescaleMatters() const override { return true; }
     bool isChecker() const { return m_isChecker; }
     bool isProgram() const { return m_isProgram; }
+    bool hasGenericIface() const { return m_hasGenericIface; }
+    void hasGenericIface(bool hasGenericIface) { m_hasGenericIface = hasGenericIface; }
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
 };

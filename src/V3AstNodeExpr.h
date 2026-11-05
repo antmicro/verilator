@@ -2711,8 +2711,6 @@ public:
     }
     bool cleanOut() const override { return true; }
     string emitC() override { V3ERROR_NA_RETURN(""); }
-    void dump(std::ostream& str) const override;
-    void dumpJson(std::ostream& str) const override;
 };
 class AstScopeName final : public AstNodeExpr {
     // For display %m and DPI context imports

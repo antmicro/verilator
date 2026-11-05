@@ -21,8 +21,6 @@
 #include "verilatedos.h"
 
 class AstNetlist;
-class AstClass;
-class AstClassPackage;
 
 //============================================================================
 

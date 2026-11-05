@@ -4,16 +4,16 @@
 // SPDX-FileCopyrightText: 2026 PlanV GmbH
 // SPDX-License-Identifier: CC0-1.0
 
-interface handle_if;
-  chandle c;
+interface str_if;
+  string s;
 endinterface
 
 module t;
-  handle_if sif ();
-  virtual handle_if vif = sif;
+  str_if sif ();
+  virtual str_if vif = sif;
 
   initial begin
-    vif.c = null;
+    vif.s = "hello";
     $finish;
   end
 endmodule

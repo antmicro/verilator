@@ -113,7 +113,6 @@ class ClassVisitor final : public VNVisitor {
             for (AstNode* stmtp = packagep->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
                 if ((scopep = VN_CAST(stmtp, Scope))) break;
             }
-            UASSERT_OBJ(scopep, packagep, "Missing bound static storage scope");
         } else {
             scopep = new AstScope{nodep->fileline(), packagep, classScopep->name(),
                                   classScopep->aboveScopep(), classScopep->aboveCellp()};
@@ -292,7 +291,6 @@ public:
 // Class class functions
 
 AstClassPackage* V3Class::newPackage(AstClass* classp, const std::string& name) {
-    UASSERT_OBJ(!classp->classOrPackagep(), classp, "Class already has static storage");
     AstClassPackage* const packagep
         = new AstClassPackage{classp->fileline(), name, classp->libname()};
     classp->classOrPackagep(packagep);

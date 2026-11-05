@@ -1172,9 +1172,8 @@ bool AstClass::isClassExtendedFrom(const AstClass* refClassp, const AstClass* ba
     if (!refClassp->extendsp()) return false;
     return isClassExtendedFrom(refClassp->extendsp()->classp(), baseClassp);
 }
-AstClassContext::AstClassContext(FileLine* fl, AstNodeModule* anchorp, const string& path)
-    : ASTGEN_SUPER_ClassContext(fl)
-    , m_anchorp{anchorp} {
+AstClassContext::AstClassContext(FileLine* fl, const string& path)
+    : ASTGEN_SUPER_ClassContext(fl) {
     std::istringstream parts{path};
     for (string part; std::getline(parts, part, '.');) {
         if (!part.empty()) addPathsp(new AstClassContextPath{fl, part});
@@ -2340,10 +2339,12 @@ void AstModule::dump(std::ostream& str) const {
     Super::dump(str);
     if (isChecker()) str << " [CHECKER]";
     if (isProgram()) str << " [PROGRAM]";
+    if (hasGenericIface()) str << " [HASGENERICIFACE]";
 }
 void AstModule::dumpJson(std::ostream& str) const {
     dumpJsonBoolFuncIf(str, isChecker);
     dumpJsonBoolFuncIf(str, isProgram);
+    dumpJsonBoolFuncIf(str, hasGenericIface);
     dumpJsonGen(str);
 }
 void AstMonitorOff::dump(std::ostream& str) const {
@@ -3327,9 +3328,6 @@ bool AstNodeFTask::getPurityRecurse() const {
                                 || varrefp->varp()->lifetime().isStatic())
                                && varrefp->access().isWriteOrRW();
                     }
-                    if (const AstMemberRef* const selp = VN_CAST(nodep, MemberRef)) {
-                        return selp->access().isWriteOrRW();
-                    }
                     return !nodep->isPure();
                 }))
                 return false;
@@ -3416,8 +3414,6 @@ string AstNodeModule::dtypeNameInnerScope(const string& outer) const {
     return dtypeNameIdent(origName()) + dtypeNameParams(this, true) + ".";
 }
 void AstNodeModule::dump(std::ostream& str) const {
-    if (hasGenericIface()) str << " [HASGENERICIFACE]";
-    if (classCaptureTarget()) str << " [CLASS_CAPTURE_TARGET]";
     Super::dump(str);
     str << "  L" << level();
     str << " D" << depth();
@@ -3439,8 +3435,6 @@ void AstNodeModule::dump(std::ostream& str) const {
     if (libname() != "work") str << " libname=" << libname();
 }
 void AstNodeModule::dumpJson(std::ostream& str) const {
-    dumpJsonBoolFuncIf(str, hasGenericIface);
-    dumpJsonBoolFuncIf(str, classCaptureTarget);
     dumpJsonStrFunc(str, origName);
     dumpJsonStrFunc(str, verilogName);
     dumpJsonNumFunc(str, level);
@@ -3862,7 +3856,6 @@ void AstRefDType::dumpSmall(std::ostream& str) const {
     str << "ref";
 }
 AstNodeDType* AstRefDType::subDTypep() const VL_MT_STABLE {
-    if (didWidth() && ownerp() && refDTypep()) return refDTypep();
     if (typedefp()) return typedefp()->subDTypep();
     return refDTypep();  // Maybe nullptr
 }
@@ -4125,14 +4118,6 @@ bool AstScope::sameNode(const AstNode* samep) const {
            && ((!aboveScopep() && !asamep->aboveScopep())
                || (aboveScopep() && asamep->aboveScopep()
                    && aboveScopep()->name() == asamep->aboveScopep()->name()));
-}
-void AstScopeAddr::dump(std::ostream& str) const {
-    Super::dump(str);
-    str << selfPointer().asString();
-}
-void AstScopeAddr::dumpJson(std::ostream& str) const {
-    dumpJsonStr(str, "selfPointer", selfPointer().asString());
-    dumpJsonGen(str);
 }
 void AstScopeName::dump(std::ostream& str) const {
     Super::dump(str);
@@ -4791,7 +4776,6 @@ string AstVar::dpiTmpVarType(const string& varName) const {
     return converter{varName}.convert(this);
 }
 void AstVar::dump(std::ostream& str) const {
-    if (classContextMarker()) str << " [CLASS_CONTEXT_MARKER]";
     Super::dump(str);
     if (libInoutId()) str << " libInoutId=" << libInoutId();
     if (libInoutEnable()) str << " [LIBINOUTEN]";
@@ -4843,7 +4827,6 @@ void AstVar::dump(std::ostream& str) const {
     if (forceValVarp()) str << " forceValVarp=" << nodeAddr(forceValVarp());
 }
 void AstVar::dumpJson(std::ostream& str) const {
-    dumpJsonBoolFuncIf(str, classContextMarker);
     if (libInoutId()) dumpJsonNumFunc(str, libInoutId);
     dumpJsonBoolFuncIf(str, libInoutEnable);
     dumpJsonStrFunc(str, origName);

@@ -1583,14 +1583,6 @@ class EmitVBaseVisitorConst VL_NOT_FINAL : public VNVisitorConst {
             puts(nodep->verilogIdent());
         }
     }
-    void visit(AstScopeAddr* nodep) override {
-        if (nodep->scopep()) {
-            putfs(nodep, nodep->scopep()->prettyName());
-        } else {
-            // Descoping removes the scope link and later lowering erases its module dtype.
-            putfs(nodep, nodep->emitVerilog());
-        }
-    }
     void visit(AstConst* nodep) override {
         const V3Number& num = nodep->num();
         // Emit strings as actual strings, not as numbers

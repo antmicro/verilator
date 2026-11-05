@@ -62,7 +62,6 @@ private:
     static bool writesToVirtIface(const AstNode* const nodep) {
         return nodep->exists([](const AstMemberRef* const memberRefp) {
             if (!memberRefp->access().isWriteOrRW()) return false;
-            if (VN_IS(memberRefp->fromp()->dtypep()->skipRefp(), ModuleRefDType)) return true;
             AstIfaceRefDType* const dtypep
                 = VN_CAST(memberRefp->fromp()->dtypep()->skipRefp(), IfaceRefDType);
             return dtypep && dtypep->isVirtual();
@@ -87,10 +86,6 @@ private:
         iterateChildren(nodep);
     }
     void visit(AstCMethodCall* nodep) override {
-        if (const AstModuleRefDType* const dtypep
-            = VN_CAST(nodep->fromp()->dtypep()->skipRefp(), ModuleRefDType)) {
-            addReachableIfaceCallable(dtypep->modp(), nodep->funcp());
-        }
         // A method call on a member selected through a virtual interface. This includes the
         // calls through a virtual interface, which call a method of its dispatcher (V3Task)
         if (const AstMemberRef* const memberRefp = VN_CAST(nodep->fromp(), MemberRef)) {
@@ -142,12 +137,6 @@ private:
             const auto it = m_candidateVscps.find(written);
             if (it == m_candidateVscps.end()) continue;
             for (AstVarScope* const vscp : it->second) {
-                // Captures may expose generated randomizer helpers. Do not create value-change
-                // triggers for these internal objects; their accesses still participate in ordering.
-                if (const AstBasicDType* const dtypep
-                    = VN_CAST(vscp->dtypep()->skipRefp(), BasicDType)) {
-                    if (dtypep->isRandomGenerator() || dtypep->isStdRandomGenerator()) continue;
-                }
                 const AstNodeModule* const ifacep = written.first;
                 m_triggers.addTrigger(ifacep, vscp->varp(), vscp);
             }
@@ -167,8 +156,7 @@ public:
                     UASSERT_OBJ(refp->varScopep(), refp, "No var scope");
                     AstVar* const varp = refp->varp();
                     if (!refp->access().isWriteOrRW() || varp->isFuncLocal() || varp->isTemp()
-                        || varp->isEvent()
-                        || refp->varScopep()->scopep()->modp() != callable.first) {
+                        || varp->isEvent() || !VN_IS(refp->varScopep()->scopep()->modp(), Iface)) {
                         return;
                     }
                     varp->sensIfacep(callable.first);

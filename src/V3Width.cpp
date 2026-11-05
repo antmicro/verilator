@@ -3373,20 +3373,6 @@ class WidthVisitor final : public VNVisitor {
         UASSERT_OBJ(nodep->subDTypep(), nodep, "Unlinked");
         nodep->dtypeFrom(nodep->subDTypep());
         nodep->widthFromSub(nodep->subDTypep());
-        if (nodep->ownerp()) {
-            if (AstClassRefDType* const classp
-                = VN_CAST(nodep->subDTypep()->skipRefp(), ClassRefDType)) {
-                AstClassRefDType* const clonep = classp->cloneTree(false);
-                string path = nodep->ownerp()->path();
-                if (classp->ownerp()) path = VString::dot(path, ".", classp->ownerp()->path());
-                if (clonep->ownerp()) pushDeletep(clonep->ownerp()->unlinkFrBack());
-                clonep->ownerp(
-                    new AstClassContext{nodep->fileline(), nodep->ownerp()->anchorp(), path});
-                v3Global.rootp()->typeTablep()->addTypesp(clonep);
-                nodep->refDTypep(clonep);
-                nodep->dtypeFrom(clonep);
-            }
-        }
         UINFO(4, "dtWidthed " << nodep);
         // No nodep->typedefp(nullptr) for now; V3WidthCommit needs to check accesses
         nodep->doingWidth(false);
@@ -4863,7 +4849,6 @@ class WidthVisitor final : public VNVisitor {
         // though causes problems with t_class_forward.v, so for now avoided
         // userIterateChildren(nodep->classp(), nullptr);
     }
-    void visit(AstClassContext*) override {}
     void visit(AstClassOrPackageRef* nodep) override {
         if (nodep->didWidthAndSet()) return;
         userIterateChildren(nodep, nullptr);

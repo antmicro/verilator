@@ -1270,8 +1270,6 @@ public:
         return modp() == VN_DBG_AS(otherp, ModuleRefDType)->modp();
     }
     bool similarDTypeNode(const AstNodeDType* otherp) const override { return sameNode(otherp); }
-    void dump(std::ostream& str) const override { Super::dump(str); }
-    void dumpJson(std::ostream& str) const override { dumpJsonGen(str); }
 };
 class AstParamTypeDType final : public AstNodeDType {
     // Parents: MODULE
@@ -1403,7 +1401,6 @@ class AstRefDType final : public AstNodeDType {
     // @astgen op1 := typeofp : Optional[AstNode<AstNodeExpr|AstNodeDType>]
     // @astgen op2 := classOrPackageOpp : Optional[AstNodeExpr]
     // @astgen op3 := paramsp : List[AstPin]
-    // @astgen op4 := ownerp : Optional[AstClassContext]
     //
     // Pre-Width must reference the Typeref, not what it points to, as some child
     // types like AstBracketArrayType will disappear and can't lose the handle

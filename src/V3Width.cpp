@@ -6076,6 +6076,16 @@ class WidthVisitor final : public VNVisitor {
                                                << "() should be handled");
         }
     }
+    // Set sensIfacep on vars, including under generate blocks
+    static void setSensIfaceRecurse(AstNode* itemsp, AstNodeModule* ifacep) {
+        for (AstNode* itemp = itemsp; itemp; itemp = itemp->nextp()) {
+            if (AstVar* const varp = VN_CAST(itemp, Var)) {
+                varp->sensIfacep(ifacep);
+            } else if (AstGenBlock* const genp = VN_CAST(itemp, GenBlock)) {
+                setSensIfaceRecurse(genp->itemsp(), ifacep);
+            }
+        }
+    }
     void methodCallIfaceRef(AstMethodCall* nodep, AstIfaceRefDType* adtypep) {
         // ifaceViaCellp() resolves the interface via cellp when ifacep is null,
         // as for a sub-interface selected through a virtual interface handle.
@@ -6088,11 +6098,7 @@ class WidthVisitor final : public VNVisitor {
                 nodep->dtypeSetVoid();
                 return;
             }
-            if (adtypep->isVirtual()) {
-                for (AstNode* const itemp : ifacep->stmtspList()) {
-                    if (AstVar* const mvarp = VN_CAST(itemp, Var)) { mvarp->sensIfacep(ifacep); }
-                }
-            }
+            if (adtypep->isVirtual()) setSensIfaceRecurse(ifacep->stmtsp(), ifacep);
             userIterate(ftaskp, nullptr);
             if (ftaskp->isStatic()) {
                 AstArg* const argsp = nodep->argsp();

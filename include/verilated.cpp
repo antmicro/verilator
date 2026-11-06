@@ -4609,7 +4609,7 @@ VlDequeImpl::VlDequeImpl(size_type elementSize, size_type elementAlignment, cons
 
 VlDequeImpl::VlDequeImpl(const VlDequeImpl& rhs)
     : VlDequeImpl{rhs.m_elementSize, rhs.m_elementAlignment, *rhs.m_opsp} {
-    reserveSlots(rhs.size());
+    ensureBackSlot(rhs.size());
     for (size_type i = 0; i < rhs.size(); ++i) {
         m_opsp->copyConstruct(slotp(i), rhs.at(i));
     }
@@ -4620,8 +4620,7 @@ VlDequeImpl::VlDequeImpl(VlDequeImpl&& rhs) noexcept
     swap(rhs);
 }
 VlDequeImpl::~VlDequeImpl() {
-    clear();
-    if (m_blocksp) delete m_blocksp[m_firstBlock];
+    clearKeepSlots(0);
     delete[] m_blocksp;
 }
 
@@ -4685,10 +4684,6 @@ void VlDequeImpl::ensureFrontSlot() {
     --m_frontOffset;
 }
 
-void VlDequeImpl::reserveSlots(size_type slots) {
-    ensureBackSlot(slots);
-}
-
 void VlDequeImpl::swap(VlDequeImpl& rhs) noexcept {
     std::swap(m_elementSize, rhs.m_elementSize);
     std::swap(m_elementAlignment, rhs.m_elementAlignment);
@@ -4729,6 +4724,18 @@ void VlDequeImpl::clear() {
     }
     m_firstAllocatedBlock = m_firstBlock;
     m_allocatedBlocks = m_allocatedBlocks ? 1 : 0;
+    m_size = 0;
+    m_frontOffset = 0;
+}
+
+void VlDequeImpl::clearKeepSlots(size_type slots) {
+    size_type blocks = (slots + (m_blockSize - 1)) / m_blockSize;
+    for (size_type i = 0; i < m_size; ++i) m_opsp->destroy(slotp(i));
+    for (size_type i = m_firstAllocatedBlock + blocks; i < m_firstAllocatedBlock + m_allocatedBlocks; ++i) {
+        delete m_blocksp[i];
+        m_blocksp[i] = nullptr;
+    }
+    m_allocatedBlocks = std::min(m_allocatedBlocks, blocks);
     m_size = 0;
     m_frontOffset = 0;
 }
@@ -4788,20 +4795,24 @@ void VlDequeImpl::pop_back() {
 }
 
 void VlDequeImpl::resize(size_type size) {
-    while (m_size > size) pop_back();
-    reserveSlots(size - m_size);
-    while (m_size < size) {
-        m_opsp->construct(slotp(m_size));
-        ++m_size;
+    if (m_size > size) {
+        while (m_size > size) pop_back();
+    } else if (m_size < size) {
+        ensureBackSlot(size - m_size);
+        while (m_size < size) {
+            m_opsp->construct(slotp(m_size++));
+        }
     }
 }
 
 void VlDequeImpl::resize(size_type size, const void* valuep) {
-    while (m_size > size) pop_back();
-    reserveSlots(size - m_size);
-    while (m_size < size) {
-        m_opsp->copyConstruct(slotp(m_size), valuep);
-        ++m_size;
+    if (m_size > size) {
+        while (m_size > size) pop_back();
+    } else if (m_size < size) {
+        ensureBackSlot(size - m_size);
+        while (m_size < size) {
+            m_opsp->copyConstruct(slotp(m_size++), valuep);
+        }
     }
 }
 

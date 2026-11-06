@@ -662,7 +662,7 @@ private:
     void ensureBackSlot(size_type slots = 1);
     void ensureFrontSlot();
     void swap(VlDequeImpl& rhs) noexcept;
-    void reserveSlots(size_type slots);
+    void clearKeepSlots(size_type slots);
     template<typename T_Value>
     void constructForward(const T_Value& value, size_type slot) {
         m_opsp->copyConstruct(slotp(slot), std::addressof(value));
@@ -680,13 +680,14 @@ public:
     template <typename T_Iterator>
     VlDequeImpl(size_type elementSize, size_type elementAlignment, const Ops& ops, T_Iterator begin_it, T_Iterator end_it)
         : VlDequeImpl{elementSize, elementAlignment, ops} {
-        reserveSlots(std::distance(begin_it, end_it));
+        ensureBackSlot(std::distance(begin_it, end_it));
         for (; begin_it != end_it; ++begin_it) constructForward(*begin_it, m_size++);
     }
     template <typename T_Iterator>
     void assign(T_Iterator begin_it, T_Iterator end_it) {
-        clear();
-        reserveSlots(std::distance(begin_it, end_it));
+        size_type new_size = std::distance(begin_it, end_it);
+        clearKeepSlots(new_size);
+        ensureBackSlot(new_size);
         for (; begin_it != end_it; ++begin_it) constructForward(*begin_it, m_size++);
     }
     VlDequeImpl& operator=(const VlDequeImpl& rhs);

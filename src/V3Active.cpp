@@ -569,7 +569,6 @@ class ActiveVisitor final : public VNVisitor {
                 });
                 AstAlwaysReactive* const reactivep = new AstAlwaysReactive{
                     flp, sentreep, nodep->stmtsp()->unlinkFrBackWithNext()};
-                reactivep->inReactive(true);
                 nodep->replaceWith(reactivep);
                 VL_DO_DANGLING(pushDeletep(nodep), nodep);
                 visit(reactivep);

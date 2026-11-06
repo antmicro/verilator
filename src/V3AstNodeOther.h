@@ -3525,6 +3525,7 @@ public:
     AstAlwaysReactive(FileLine* fl, AstSenTree* sentreep, AstNode* bodysp)
         : ASTGEN_SUPER_AlwaysReactive(fl, bodysp) {
         this->sentreep(sentreep);
+        this->inReactive(true);
     }
     ASTGEN_MEMBERS_AstAlwaysReactive;
 };

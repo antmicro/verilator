@@ -662,23 +662,38 @@ private:
     void ensureBackSlot(size_type slots = 1);
     void ensureFrontSlot();
     void swap(VlDequeImpl& rhs) noexcept;
+    void reserveSlots(size_type slots);
+    template<typename T_Value>
+    void constructForward(const T_Value& value, size_type slot) {
+        m_opsp->copyConstruct(slotp(slot), std::addressof(value));
+    }
+    template<typename T_Value>
+    void constructForward(T_Value&& value, size_type slot) {
+        m_opsp->moveConstruct(slotp(slot), std::addressof(value));
+    }
 
 public:
     VlDequeImpl(size_type elementSize, size_type elementAlignment, const Ops& ops);
     VlDequeImpl(const VlDequeImpl& rhs);
     VlDequeImpl(VlDequeImpl&& rhs) noexcept;
     ~VlDequeImpl();
+    template <typename T_Iterator>
+    VlDequeImpl(size_type elementSize, size_type elementAlignment, const Ops& ops, T_Iterator begin_it, T_Iterator end_it)
+        : VlDequeImpl{elementSize, elementAlignment, ops} {
+        reserveSlots(std::distance(begin_it, end_it));
+        for (; begin_it != end_it; ++begin_it) constructForward(*begin_it, m_size++);
+    }
+    template <typename T_Iterator>
+    void assign(T_Iterator begin_it, T_Iterator end_it) {
+        clear();
+        reserveSlots(std::distance(begin_it, end_it));
+        for (; begin_it != end_it; ++begin_it) constructForward(*begin_it, m_size++);
+    }
     VlDequeImpl& operator=(const VlDequeImpl& rhs);
     VlDequeImpl& operator=(VlDequeImpl&& rhs) noexcept;
     size_type size() const { return m_size; }
     bool empty() const { return !m_size; }
     void clear();
-    // immediately after reserve_slots(slots) unchecked push_backs
-    // have to be called slots times before any other interaction
-    // with the deque
-    void reserve_slots(size_type slots);
-    void push_back_unchecked(const void* valuep);
-    void push_back_move_unchecked(void* valuep);
     void* at(size_type index) { return slotp(index); }
     const void* at(size_type index) const { return slotp(index); }
     void push_front(const void* valuep);
@@ -715,13 +730,6 @@ class VlDeque final {
             },
             [](void* p) { static_cast<T_Value*>(p)->~T_Value(); }};
         return s_ops;
-    }
-
-    void push_back_unchecked(const T_Value& value) {
-        m_deque.push_back_unchecked(std::addressof(value));
-    }
-    void push_back_unchecked(T_Value&& value) {
-        m_deque.push_back_move_unchecked(std::addressof(value));
     }
 
 public:
@@ -818,15 +826,10 @@ public:
         : m_deque{sizeof(T_Value), alignof(T_Value), ops()} {}
     template <typename T_Iterator>
     VlDeque(T_Iterator begin_it, T_Iterator end_it)
-        : VlDeque{} {
-        m_deque.reserve_slots(std::distance(begin_it, end_it));
-        for (; begin_it != end_it; ++begin_it) push_back_unchecked(*begin_it);
-    }
+        : m_deque{sizeof(T_Value), alignof(T_Value), ops(), begin_it, end_it} {}
     template <typename T_Iterator>
     void assign(T_Iterator begin_it, T_Iterator end_it) {
-        clear();
-        m_deque.reserve_slots(std::distance(begin_it, end_it));
-        for (; begin_it != end_it; ++begin_it) push_back_unchecked(*begin_it);
+        m_deque.assign(begin_it, end_it);
     }
     size_type size() const { return m_deque.size(); }
     bool empty() const { return m_deque.empty(); }

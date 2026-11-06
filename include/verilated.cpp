@@ -4609,7 +4609,7 @@ VlDequeImpl::VlDequeImpl(size_type elementSize, size_type elementAlignment, cons
 
 VlDequeImpl::VlDequeImpl(const VlDequeImpl& rhs)
     : VlDequeImpl{rhs.m_elementSize, rhs.m_elementAlignment, *rhs.m_opsp} {
-    reserve_slots(rhs.size());
+    reserveSlots(rhs.size());
     for (size_type i = 0; i < rhs.size(); ++i) {
         m_opsp->copyConstruct(slotp(i), rhs.at(i));
     }
@@ -4685,7 +4685,7 @@ void VlDequeImpl::ensureFrontSlot() {
     --m_frontOffset;
 }
 
-void VlDequeImpl::reserve_slots(size_type slots) {
+void VlDequeImpl::reserveSlots(size_type slots) {
     ensureBackSlot(slots);
 }
 
@@ -4733,16 +4733,6 @@ void VlDequeImpl::clear() {
     m_frontOffset = 0;
 }
 
-void VlDequeImpl::push_back_unchecked(const void* valuep) {
-    m_opsp->copyConstruct(slotp(m_size), valuep);
-    ++m_size;
-}
-
-void VlDequeImpl::push_back_move_unchecked(void* valuep) {
-    m_opsp->moveConstruct(slotp(m_size), valuep);
-    ++m_size;
-}
-
 void VlDequeImpl::push_front(const void* valuep) {
     ensureFrontSlot();
     m_opsp->copyConstruct(slotp(0), valuep);
@@ -4757,12 +4747,14 @@ void VlDequeImpl::push_front_move(void* valuep) {
 
 void VlDequeImpl::push_back(const void* valuep) {
     ensureBackSlot();
-    push_back_unchecked(valuep);
+    m_opsp->copyConstruct(slotp(m_size), valuep);
+    ++m_size;
 }
 
 void VlDequeImpl::push_back_move(void* valuep) {
     ensureBackSlot();
-    push_back_move_unchecked(valuep);
+    m_opsp->moveConstruct(slotp(m_size), valuep);
+    ++m_size;
 }
 
 void VlDequeImpl::pop_front() {
@@ -4797,7 +4789,7 @@ void VlDequeImpl::pop_back() {
 
 void VlDequeImpl::resize(size_type size) {
     while (m_size > size) pop_back();
-    reserve_slots(size - m_size);
+    reserveSlots(size - m_size);
     while (m_size < size) {
         m_opsp->construct(slotp(m_size));
         ++m_size;
@@ -4806,8 +4798,11 @@ void VlDequeImpl::resize(size_type size) {
 
 void VlDequeImpl::resize(size_type size, const void* valuep) {
     while (m_size > size) pop_back();
-    reserve_slots(size - m_size);
-    while (m_size < size) push_back_unchecked(valuep);
+    reserveSlots(size - m_size);
+    while (m_size < size) {
+        m_opsp->copyConstruct(slotp(m_size), valuep);
+        ++m_size;
+    }
 }
 
 VlDequeImpl::iterator VlDequeImpl::insert(iterator position, const void* valuep) {

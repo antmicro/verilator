@@ -4203,6 +4203,7 @@ task_subroutine_callNoMethod<nodeExprp>:    // function_subroutine_callNoMethod 
         |       funcRef yWITH__PAREN '(' expr ')'       { $$ = new AstWithParse{$2, $1, $4}; }
         //                      // can call as method and yWITH without parenthesis
         |       id yWITH__PAREN '(' expr ')'            { $$ = new AstWithParse{$2, new AstFuncRef{$<fl>1, *$1}, $4}; }
+        |       id yWITH__CUR constraint_block          { $$ = new AstWithParse{$2, new AstFuncRef{$<fl>1, *$1}, nullptr, $3}; }
         //                      // IEEE: method_call requires a "." so is in expr
         //                      // IEEE: ['std::'] not needed, as normal std package resolution will find it
         //                      // IEEE: randomize_call
@@ -4219,6 +4220,7 @@ task_subroutine_callNoMethod<nodeExprp>:    // function_subroutine_callNoMethod 
 function_subroutine_callNoMethod<nodeExprp>:        // IEEE: function_subroutine_call (as function)
                 function_subroutine_callNoMethodNoWith  { $$ = $1; }
         |       id yWITH__PAREN '(' expr ')'            { $$ = new AstWithParse{$2, new AstFuncRef{$<fl>1, *$1}, $4}; }
+        |       id yWITH__CUR constraint_block          { $$ = new AstWithParse{$2, new AstFuncRef{$<fl>1, *$1}, nullptr, $3}; }
         ;
 
 function_subroutine_callNoMethodNoWith<nodeExprp>:  // IEEE: part of function_subroutine_call

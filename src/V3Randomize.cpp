@@ -927,9 +927,12 @@ class CaptureVisitor final : public VNVisitor {
         const bool varHasAutomaticLifetime = varRefp->varp()->lifetime().isAutomatic();
         const bool varIsFieldOfCaller = AstClass::isClassExtendedFrom(callerClassp, varClassp);
         const bool varIsParam = varRefp->varp()->isParam();
+        // Index variables form a list under the header
+        const AstNode* idxHeadp = varRefp->varp();
+        while (!idxHeadp->firstAbovep() && idxHeadp->backp()) idxHeadp = idxHeadp->backp();
         const bool varIsConstraintIterator
-            = VN_IS(varRefp->varp()->firstAbovep(), ForeachHeader)
-              && VN_IS(varRefp->varp()->firstAbovep()->firstAbovep(), ConstraintForeach);
+            = VN_IS(idxHeadp->firstAbovep(), ForeachHeader)
+              && VN_IS(idxHeadp->firstAbovep()->firstAbovep(), ConstraintForeach);
         if (refIsXref) return CaptureMode::CAP_VALUE | CaptureMode::CAP_F_XREF;
         if (varIsConstraintIterator) return CaptureMode::CAP_NO;
         if (varIsFuncLocal && varHasAutomaticLifetime) return CaptureMode::CAP_VALUE;

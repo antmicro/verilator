@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: CC0-1.0
 
 interface str_if;
-  string s;
+  chandle s;
 endinterface
 
 module t;
@@ -13,7 +13,7 @@ module t;
   virtual str_if vif = sif;
 
   initial begin
-    vif.s = "hello";
+    vif.s = null;
     $finish;
   end
 endmodule

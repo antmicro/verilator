@@ -75,7 +75,7 @@ private:
         if (nodep->access().isWriteOrRW()) {
             AstIfaceRefDType* const dtypep
                 = VN_CAST(nodep->fromp()->dtypep()->skipRefp(), IfaceRefDType);
-            if (dtypep && dtypep->isVirtual()) {
+            if (dtypep && dtypep->isVirtual() && !nodep->varp()->isEvent()) {
                 m_vifWrittenMembers.emplace(dtypep->ifacep(), nodep->varp()->name());
             }
         }

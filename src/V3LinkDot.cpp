@@ -4624,14 +4624,19 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 nodep->v3fatalSrc("Unhandled DotPosition");
             }
             // Lookup
-            VSymEnt* foundp;
+            VSymEnt* foundp = nullptr;
             string baddot;
             VSymEnt* okSymp = nullptr;
             // Restricted 'with (id_list)': only id_list names bind into target class.
             if (m_randSymp
                 && (!m_currentWithp || m_currentWithp->nameResolvesToTarget(nodep->name()))) {
                 foundp = m_randSymp->findIdFlat(nodep->name());
-                if (foundp) {
+                if (foundp && !m_randMethodCallp) {
+                    // Member of the current object, link as a normal reference
+                    if (m_currentWithp && m_currentWithp->restricted()) {
+                        m_restrictedNamesUsed.insert(nodep->name());
+                    }
+                } else if (foundp) {
                     if (m_currentWithp && m_currentWithp->restricted()) {
                         m_restrictedNamesUsed.insert(nodep->name());
                     }
@@ -4660,7 +4665,9 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     return;
                 }
             }
-            if (allowScope) {
+            if (foundp) {
+                // Found in the randomized object
+            } else if (allowScope) {
                 foundp = m_statep->findDotted(nodep->fileline(), m_ds.m_dotSymp, nodep->name(),
                                               baddot, okSymp, first);  // Maybe nullptr
             } else if (first) {
@@ -5571,6 +5578,16 @@ class LinkDotResolveVisitor final : public VNVisitor {
         UINFO(8, indent() << "visit " << nodep);
         UINFO(8, indent() << m_ds.ascii());
         if (m_ds.m_dotPos != DP_MEMBER || nodep->name() != "randomize") {
+            VL_RESTORER(m_randSymp);
+            VL_RESTORER(m_randMethodCallp);
+            if (nodep->name() == "randomize" && nodep->withp() && VN_IS(m_modp, Class)
+                && (m_ds.m_dotPos == DP_NONE
+                    || (m_ds.m_dotp && m_ds.m_dotp->rhsp() == nodep
+                        && isDotThisReference(m_ds.m_dotp)))) {
+                // 'randomize() with' on the current object; names resolve in the class first
+                m_randSymp = m_statep->getNodeSym(m_modp);
+                m_randMethodCallp = nullptr;
+            }
             // Visit arguments at the beginning.
             // They may be visitted even if the current node can't be linked now.
             symIterateChildren(nodep, m_curSymp);
@@ -5695,7 +5712,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
             if (m_randSymp
                 && (!m_currentWithp || m_currentWithp->nameResolvesToTarget(nodep->name()))) {
                 VSymEnt* const foundp = m_randSymp->findIdFlat(nodep->name());
-                if (foundp && m_currentWithp) {
+                if (foundp && m_currentWithp && m_randMethodCallp) {
                     if (m_currentWithp->restricted()) {
                         m_restrictedNamesUsed.insert(nodep->name());
                     }

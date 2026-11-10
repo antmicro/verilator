@@ -663,6 +663,10 @@ AstNode* V3Begin::convertToWhile(AstForeach* nodep) {
                     loopp = createForeachLoopRanged(nodep, blockp, bodyPointp, subfromp, varp,
                                                     adtypep->declRange());
                 }
+            } else if (VN_IS(fromDtp, NodeUOrStructDType)) {
+                // Packed, checked in V3Width
+                loopp = createForeachLoopRanged(nodep, blockp, bodyPointp, subfromp, varp,
+                                                VNumRange{fromDtp->width() - 1, 0});
             } else if (VN_IS(fromDtp, DynArrayDType) || VN_IS(fromDtp, QueueDType)) {
                 AstConst* const leftp = new AstConst{fl, 0};
                 AstNodeExpr* const rightp

@@ -7692,6 +7692,9 @@ class WidthVisitor final : public VNVisitor {
             } else if (const AstAssocArrayDType* const adtypep
                        = VN_CAST(fromDtp, AssocArrayDType)) {
                 varp->dtypeFrom(adtypep->keyDTypep());
+            } else if (VN_IS(fromDtp, NodeUOrStructDType)
+                       && VN_AS(fromDtp, NodeUOrStructDType)->packed()) {
+                // Iterates as a packed vector
             } else {
                 argsp->v3error("Illegal 'foreach' loop on " << fromDtp->prettyTypeNameQ()
                                                             << " data type");

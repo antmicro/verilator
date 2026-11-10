@@ -1580,8 +1580,18 @@ class WidthVisitor final : public VNVisitor {
                 UINFO(1, "    Related dtype: " << fromDtp);
                 nodep->v3fatalSrc("Associative array reference is not to associative array");
             }
-            iterateCheckTyped(nodep, "Associative select", nodep->bitp(), adtypep->keyDTypep(),
-                              BOTH);
+            AstNodeDType* keyDtp = adtypep->keyDTypep();
+            // An integral index is implicitly cast to the key type, including an enum
+            if (const AstEnumDType* const enumDtp = VN_CAST(keyDtp->skipRefToEnump(), EnumDType)) {
+                keyDtp = enumDtp->subDTypep();
+            }
+            userIterateAndNext(nodep->bitp(), WidthVP{SELF, PRELIM}.p());
+            if (nodep->bitp()->isDouble() && keyDtp->skipRefp()->isIntegralOrPacked()) {
+                nodep->bitp()->fileline()->v3error(
+                    "Real expression cannot index an integral associative"
+                    " array (IEEE 1800-2023 7.8.4)");
+            }
+            iterateCheckTyped(nodep, "Associative select", nodep->bitp(), keyDtp, BOTH);
             nodep->dtypeFrom(adtypep->subDTypep());
         }
     }

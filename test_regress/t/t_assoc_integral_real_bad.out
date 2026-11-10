@@ -1,0 +1,16 @@
+%Error: t/t_assoc_integral_real_bad.v:13:11: Real expression cannot index an integral associative array (IEEE 1800-2023 7.8.4)
+   13 |     keyed[index_value] = 1;
+      |           ^~~~~~~~~~~
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Warning-REALCVT: t/t_assoc_integral_real_bad.v:13:11: Implicit conversion of real to integer
+   13 |     keyed[index_value] = 1;
+      |           ^~~~~~~~~~~
+                  ... For warning description see https://verilator.org/warn/REALCVT?v=latest
+                  ... Use "/* verilator lint_off REALCVT */" and lint_on around source to disable this message.
+%Error: t/t_assoc_integral_real_bad.v:14:11: Real expression cannot index an integral associative array (IEEE 1800-2023 7.8.4)
+   14 |     plain[index_value] = 1;
+      |           ^~~~~~~~~~~
+%Warning-REALCVT: t/t_assoc_integral_real_bad.v:14:11: Implicit conversion of real to integer
+   14 |     plain[index_value] = 1;
+      |           ^~~~~~~~~~~
+%Error: Exiting due to

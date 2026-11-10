@@ -2123,10 +2123,22 @@ class ConstraintExprVisitor final : public VNVisitor {
         if (!nodep->bodyp()) {
             nodep->unlinkFrBack();
         } else if (m_wantSingle) {
+            VL_RESTORER(m_foreachBodyp);
+            VL_RESTORER_COPY(m_foreachIdxVars);
+            for (AstNode* const elemp : nodep->headerp()->elementspList()) {
+                if (const AstVar* const varp = VN_CAST(elemp, Var)) m_foreachIdxVars.insert(varp);
+            }
+            // Holds the registrations that reference the indices
+            AstBegin* const holderp = SmtUtil::newItemsHolderp(fl, nullptr);
+            m_foreachBodyp = holderp;
             AstNodeExpr* const itemp = editSingle(fl, nodep->bodyp());
             AstVar* const textVarp = newTextVarp(nodep);
-            AstNodeStmt* const bodyp
-                = prependDistPreamble(nodep, newTermAppendp(fl, textVarp, itemp));
+            AstNodeStmt* bodyp = newTermAppendp(fl, textVarp, itemp);
+            if (AstNode* const regsp = holderp->declsp()) {
+                bodyp = VN_AS(regsp->unlinkFrBackWithNext()->addNext(bodyp), NodeStmt);
+            }
+            VL_DO_DANGLING(holderp->deleteTree(), holderp);
+            bodyp = prependDistPreamble(nodep, bodyp);
             nodep->replaceWith(newTextBuildp(
                 fl, textVarp, "", new AstForeach{fl, nodep->headerp()->unlinkFrBack(), bodyp},
                 newTextApplyp(fl, textVarp, "bvand", "#b1")));

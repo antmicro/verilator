@@ -417,14 +417,14 @@ void TriggerKit::addValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc*
 
     // Reject types that do not support value-change comparison
     if (const AstBasicDType* const bdtypep = VN_CAST(dtypep, BasicDType)) {
-        if (bdtypep->isEvent() || bdtypep->isString()
-            || bdtypep->keyword() == VBasicDTypeKwd::CHANDLE) {
+        if (bdtypep->isEvent() || bdtypep->keyword() == VBasicDTypeKwd::CHANDLE) {
             instVscp->v3warn(E_UNSUPPORTED, "Unsupported: virtual interface trigger on "
                                                 << dtypep->prettyDTypeNameQ() << " type");
             return;
         }
     } else if (!VN_IS(dtypep, PackArrayDType) && !VN_IS(dtypep, UnpackArrayDType)
-               && !VN_IS(dtypep, NodeUOrStructDType) && !VN_IS(dtypep, ClassRefDType)) {
+               && !VN_IS(dtypep, NodeUOrStructDType) && !VN_IS(dtypep, ClassRefDType)
+               && !VN_IS(dtypep, QueueDType) && !VN_IS(dtypep, DynArrayDType)) {
         instVscp->v3warn(E_UNSUPPORTED, "Unsupported: virtual interface trigger on "
                                             << dtypep->prettyDTypeNameQ() << " type");
         return;
@@ -457,6 +457,8 @@ void TriggerKit::addValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc*
             = new AstCMethodHard{flp, rdPrev(prevVscp), VCMethod::UNPACKED_NEQ, rdInst(instVscp)};
         cmhp->dtypeSetBit();
         neqp = cmhp;
+    } else if (dtypep->isString()) {
+        neqp = new AstNeqN{flp, rdInst(instVscp), rdPrev(prevVscp)};
     } else {
         neqp = new AstNeq{flp, rdInst(instVscp), rdPrev(prevVscp)};
     }

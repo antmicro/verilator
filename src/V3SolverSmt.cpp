@@ -2089,7 +2089,7 @@ class ConstraintExprVisitor final : public VNVisitor {
                 AstNodeDType* const arrayDtp = arraySelp->fromp()->dtypep()->skipRefp();
                 AstNodeDType* const elemDtp
                     = arrayDtp->subDTypep() ? arrayDtp->subDTypep()->skipRefp() : nullptr;
-                if (elemDtp && VN_IS(elemDtp, ClassRefDType)) {
+                if (elemDtp && VN_IS(elemDtp, ClassRefDType) && nodep->user1()) {
                     const bool isSimple
                         = nodep->fromp() == rootNodep && VN_IS(arraySelp->fromp(), VarRef);
                     if (!isSimple && !m_nestedAccessp) {

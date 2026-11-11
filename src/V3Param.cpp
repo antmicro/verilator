@@ -1446,7 +1446,10 @@ class ParamProcessor final {
         // Fast path: check user4p link (set when template was deparameterized with defaults)
         const AstNodeModule* const defaultClonep
             = VN_CAST(origClassRefp->classp()->user4p(), Class);
-        if (defaultClonep && defaultClonep == exprClassRefp->classp()) return true;
+        if (!origClassRefp->paramsp() && defaultClonep
+            && defaultClonep == exprClassRefp->classp()) {
+            return true;
+        }
         // Skip the comparison when the default refers to another type parameter, as
         // deparameterizing it below would use the default of that parameter (#7711).
         if (defaultParamsReferToParamType(origClassRefp)) return false;
@@ -1811,6 +1814,12 @@ class ParamProcessor final {
                         && classRefDTypep->classp()->hasGParam()) {
                         classRefDeparam(classRefDTypep, classRefDTypep->classp());
                     }
+                } else if (AstIfaceRefDType* const ifaceRefDTypep
+                           = VN_CAST(exprp, IfaceRefDType)) {
+                    if (ifaceRefDTypep->paramsp() && ifaceRefDTypep->ifacep()
+                        && ifaceRefDTypep->ifacep()->hasGParam()) {
+                        ifaceRefDeparam(ifaceRefDTypep, ifaceRefDTypep->ifacep());
+                    }
                 }
                 if (exprp->similarDType(origp) || classTypeMatchesDefaultClone(exprp, origp)) {
                     // Setting parameter to its default value.  Just ignore it.
@@ -2128,6 +2137,19 @@ class ParamProcessor final {
                     if (!paramsp) paramsp = newPinp;
                     resolvedSome = true;
                 }
+            }
+        }
+
+        // Link the pins in declaration order, the specialization name depends on it
+        for (AstPin* const pinp : pinsByIndex) {
+            if (pinp) pinp->unlinkFrBack();
+        }
+        for (AstPin* const pinp : pinsByIndex) {
+            if (!pinp) continue;
+            if (classOrPackageRefp) {
+                classOrPackageRefp->addParamsp(pinp);
+            } else {
+                classRefDTypep->addParamsp(pinp);
             }
         }
     }

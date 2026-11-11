@@ -1325,7 +1325,16 @@ class ConstraintExprVisitor final : public VNVisitor {
             }
 
             AstNodeModule* const classp = getLeftmostVarModulep(memberRefp, varp);
-            AstBegin* const initp = getInitp(varp, memberRefp || structSelOrCMeth, classp);
+            // Associative array elements may be created after new().  Unpacked struct
+            // elements stay in new(), as __VupdateRandVars rebinds only registrations there.
+            bool hasAssoc = false;
+            const AstNodeDType* dtp = varp->dtypep()->skipRefp();
+            for (; dtp && dtp->isNonPackedArray(); dtp = dtp->subDTypep()->skipRefp()) {
+                hasAssoc |= VN_IS(dtp, AssocArrayDType);
+            }
+            if (dtp && dtp->isCompound() && VN_IS(dtp, NodeUOrStructDType)) hasAssoc = false;
+            AstBegin* const initp
+                = getInitp(varp, memberRefp || structSelOrCMeth || hasAssoc, classp);
             if (m_nestedAccessp) {
                 AstStmtExpr* const writeVarStmtp = m_nestedAccessp->makeWriteVarStmt(varp, m_genp);
                 addRegistrationStmt(writeVarStmtp, initp);

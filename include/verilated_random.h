@@ -264,6 +264,7 @@ class VlRandomizer VL_NOT_FINAL {
     std::vector<std::string>
         m_constraints_line;  // fileline content of the constraint for unsat constraints
     std::vector<std::string> m_softConstraints;  // Soft constraints
+    std::vector<std::string> m_varDomains;  // Hard constraints kept by clearConstraints()
     std::map<std::string, std::shared_ptr<const VlRandomVar>> m_vars;  // Solver-dependent
     // Scratch buffer for randomConstraint(), reused across calls
     std::vector<const VlRandomVar*> m_randomConstraintVars;
@@ -963,6 +964,8 @@ public:
         hard(std::move(constraint), {name});
     }
     void disable_soft(const std::string& varName);
+    // Constrain a variable to the values of its type in every solve
+    void var_domain(std::string constraint) { m_varDomains.emplace_back(std::move(constraint)); }
     void clearConstraints();
     void clearAll();  // Clear both constraints and variables
     void markRandc(const std::string& name);  // Mark variable as randc for cyclic tracking

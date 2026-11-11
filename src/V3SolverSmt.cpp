@@ -159,7 +159,7 @@ class ConstraintExprVisitor final : public VNVisitor {
     AstNodeFTask* m_prepareConstrainedArraysp = nullptr;  // Grow arrays for indexed struct access
     uint32_t* m_uniqueConstraintIdp = nullptr;  // Current ID of unique call
     V3UniqueNames& m_uniqueNames;  // Unique names of temporaries, and of blocks holding them
-    std::vector<AstVar*> m_rangeConstrainedEnums;  // Enums that are already range-constrained
+    std::set<std::string> m_rangeConstrainedEnums;  // Enums that are already range-constrained
     // First expression found under an inside index
     AstNode* m_firstExpressionInsideIndexp = nullptr;
     AstBegin* m_foreachBodyp = nullptr;  // Holder of the body of the innermost constraint-foreach
@@ -1281,15 +1281,17 @@ class ConstraintExprVisitor final : public VNVisitor {
         const RandomizeMode randMode = {.asUQuad = varp->user1()};
         if (!randMode.usesMode && editFormat(nodep)) return;
 
-        AstEnumDType* enumDtp = VN_CAST(nodep->dtypep()->skipRefToEnump(), EnumDType);
-        if (enumDtp
-            && (std::find(m_rangeConstrainedEnums.begin(), m_rangeConstrainedEnums.end(), varp)
-                == m_rangeConstrainedEnums.end())) {
+        // A member reached through a class handle has the type and the name of the select
+        const bool enumMember = memberRefp && !m_nestedAccessp;
+        AstNodeDType* const enumRefDtp = enumMember ? memberRefp->dtypep() : nodep->dtypep();
+        const std::string enumName = enumMember ? smtName : varp->name();
+        AstEnumDType* enumDtp = VN_CAST(enumRefDtp->skipRefToEnump(), EnumDType);
+        if (enumDtp && !m_rangeConstrainedEnums.count(enumName)) {
             AstVar* genVarp = m_genp;
             if (m_classp && m_classp->user3p()) genVarp = VN_AS(m_classp->user3p(), Var);
             UASSERT_OBJ(genVarp, nodep, "No 'randomize' variable in m_genp or m_classp");
             AstNodeExpr* enumRangeExprp
-                = createEnumConstraint(nodep->fileline(), varp->name(), enumDtp, genVarp);
+                = createEnumConstraint(nodep->fileline(), enumName, enumDtp, genVarp);
             AstBegin* targetp = m_inlineInitBlockp;
             if (!targetp) {
                 // The constraint setup task is also called by derived classes
@@ -1300,7 +1302,7 @@ class ConstraintExprVisitor final : public VNVisitor {
                 targetp = newInitBlockp(taskp);
             }
             targetp->addStmtsp(enumRangeExprp->makeStmt());
-            m_rangeConstrainedEnums.push_back(varp);
+            m_rangeConstrainedEnums.insert(enumName);
         }
 
         VNRelinker relinker;

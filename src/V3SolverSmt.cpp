@@ -976,6 +976,11 @@ class ConstraintExprVisitor final : public VNVisitor {
                 writeVarp->addPinsp(new AstSFormatF{
                     fl, smtName + "." + idxFmt + "." + memberVarp->name(), false, idxp});
                 writeVarp->addPinsp(new AstConst{fl, AstConst::Unsized64{}, 0ULL});
+                // rand_mode of the array applies to the members of its elements
+                const RandomizeMode randMode = {.asUQuad = varp->user1()};
+                if (randMode.usesMode) {
+                    writeVarp->addPinsp(new AstConst{fl, AstConst::Unsized64{}, randMode.index});
+                }
                 ifNonNullp->addThensp(writeVarp->makeStmt());
             }
         }
@@ -1107,11 +1112,11 @@ class ConstraintExprVisitor final : public VNVisitor {
         methodp->addPinsp(varnamep);
         methodp->addPinsp(
             new AstConst{varp->dtypep()->fileline(), AstConst::Unsized64{}, unpackedDims});
-        if (randMode.usesMode && !(isGlobalConstrained && memberRefp)) {
+        if (randMode.usesMode && !memberRefp) {
             methodp->addPinsp(
                 new AstConst{varp->fileline(), AstConst::Unsized64{}, randMode.index});
         }
-        // For globalConstrained sub-object members with rand_mode:
+        // For sub-object members with rand_mode (the mode is in the sub-object):
         // Always call write_var (keeps variable in solver for constraint
         // evaluation), but toggle disabled state so the solver skips
         // write-back when rand_mode is off.
@@ -1129,7 +1134,7 @@ class ConstraintExprVisitor final : public VNVisitor {
             markp->dtypeSetVoid();
             initp->addStmtsp(markp->makeStmt());
         }
-        if (isGlobalConstrained && memberRefp && randMode.usesMode) {
+        if (memberRefp && randMode.usesMode) {
             setRandMode(varp, memberRefp, smtName, randMode, initp);
         }
         // If randc, also emit markRandc() for cyclic tracking

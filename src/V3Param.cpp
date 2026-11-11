@@ -1797,6 +1797,16 @@ class ParamProcessor final {
             AstNodeDType* exprp
                 = rawTypep && rawTypep->skipRefOrNullp() ? rawTypep->skipRefToNonRefp() : nullptr;
             const AstNodeDType* origp = modvarp->skipRefToNonRefp();
+            // Width a copy of a default with a constant range, the template stays unwidthed
+            if (AstBasicDType* const basicp = VN_CAST(modvarp->skipRefToNonRefp(), BasicDType)) {
+                const AstRange* const rangep = basicp->rangep();
+                if (rangep && VN_IS(rangep->leftp(), Const) && VN_IS(rangep->rightp(), Const)) {
+                    AstBasicDType* const widthedp = basicp->cloneTree(false);
+                    V3Width::widthParamsEdit(widthedp);
+                    m_deleter.pushDeletep(widthedp);
+                    origp = widthedp;
+                }
+            }
             if (!exprp) {
                 pinp->v3error("Parameter type pin value isn't a type: Param "
                               << modvarp->prettyNameQ() << " of " << nodep->prettyNameQ());

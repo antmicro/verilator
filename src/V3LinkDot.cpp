@@ -1331,7 +1331,12 @@ class LinkDotFindVisitor final : public VNVisitor {
             m_curSymp = m_modSymp = nullptr;
         }
     }
-    void visit(AstTypeTable*) override {}  // FindVisitor::
+    void visit(AstTypeTable* nodep) override {  // FindVisitor::
+        // V3Width moves the virtual interface type of a class type parameter here
+        for (AstNode* typep = nodep->typesp(); typep; typep = typep->nextp()) {
+            if (VN_IS(typep, IfaceRefDType)) iterate(typep);
+        }
+    }
     void visit(AstIfaceRefDType* nodep) override {  // FindVisitor::
         if (!m_statep->forScopeCreation() && nodep->isVirtual() && nodep->ifacep()
             && !nodep->ifacep()->user3()) {

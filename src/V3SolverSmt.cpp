@@ -2787,7 +2787,9 @@ class ConstraintExprVisitor final : public VNVisitor {
                     // Don't mark loop variable references as randomizable
                     if (!VN_IS(nodep, Const)) {
                         if (AstNodeVarRef* const vrefp = VN_CAST(nodep, NodeVarRef)) {
-                            if (vrefp->varp() != loopVarp) nodep->user1(true);
+                            if (vrefp->varp() != loopVarp && !vrefp->varp()->isUsedLoopIdx()) {
+                                nodep->user1(true);
+                            }
                         } else {
                             nodep->user1(true);
                         }

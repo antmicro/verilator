@@ -641,22 +641,61 @@ class ConstraintExprVisitor final : public VNVisitor {
         }
     }
 
-    // Extract return expression from a simple function body, or nullptr if too complex.
+    // Clone exprp with references to function locals replaced by their values
+    static AstNodeExpr* cloneSubstLocals(AstNodeExpr* exprp,
+                                         const std::map<const AstVar*, AstNodeExpr*>& values) {
+        AstNodeExpr* newp = exprp->cloneTreePure(false);
+        if (const AstVarRef* const refp = VN_CAST(newp, VarRef)) {
+            const auto it = values.find(refp->varp());
+            if (it == values.end()) return newp;
+            VL_DO_DANGLING(newp->deleteTree(), newp);
+            return it->second->cloneTreePure(false);
+        }
+        newp->foreach([&](AstVarRef* refp) {
+            const auto it = values.find(refp->varp());
+            if (it == values.end()) return;
+            refp->replaceWith(it->second->cloneTreePure(false));
+            VL_DO_DANGLING(refp->deleteTree(), refp);
+        });
+        return newp;
+    }
+
+    // Return a new expression for the return value of a simple function in terms of its
+    // ports, or nullptr if too complex.
     // Uses foreach to walk all assigns regardless of body organization (JumpBlock nesting etc.).
     // Takes the last assignment to the return variable -- the first is the initializer.
     AstNodeExpr* extractReturnExpr(AstFunc* funcp) {
         AstVar* const retVarp = funcp->fvarp();
         if (!retVarp) return nullptr;
+        const auto isLocal
+            = [](const AstVar* varp) { return varp->isFuncLocal() && !varp->isIO(); };
+        std::map<const AstVar*, AstNodeExpr*> localValues;  // Values of assigned locals
         AstNodeExpr* retExprp = nullptr;
         int assignCount = 0;
         funcp->foreach([&](AstAssign* assignp) {
             AstVarRef* const lhsp = VN_CAST(assignp->lhsp(), VarRef);
-            if (!lhsp || lhsp->varp() != retVarp) return;
-            retExprp = assignp->rhsp();
-            ++assignCount;
+            if (!lhsp) return;
+            const AstVar* const varp = lhsp->varp();
+            if (varp == retVarp) {
+                ++assignCount;
+            } else if (!isLocal(varp) || VN_IS(assignp->rhsp(), CReset)) {
+                return;
+            }
+            AstNodeExpr* const valuep = cloneSubstLocals(assignp->rhsp(), localValues);
+            AstNodeExpr*& slotr = varp == retVarp ? retExprp : localValues[varp];
+            if (slotr) VL_DO_DANGLING(slotr->deleteTree(), slotr);
+            slotr = valuep;
         });
         // Simple function: initializer + return (2) or just return (1)
-        if (assignCount > 2 || !retExprp) return nullptr;
+        bool simple = retExprp && assignCount <= 2;
+        // Locals are evaluated as straight-line code, and must be assigned before read
+        if (simple && !localValues.empty()) {
+            simple = !funcp->exists([](const AstNode* nodep) {
+                return VN_IS(nodep, If) || VN_IS(nodep, Loop);
+            }) && !retExprp->exists([&](const AstVarRef* refp) { return isLocal(refp->varp()); });
+        }
+        for (const auto& it : localValues) it.second->deleteTree();
+        if (!simple && retExprp) VL_DO_DANGLING(retExprp->deleteTree(), retExprp);
         return retExprp;
     }
 
@@ -2852,8 +2891,8 @@ class ConstraintExprVisitor final : public VNVisitor {
             return;
         }
 
-        AstNodeExpr* const retExprp = extractReturnExpr(funcp);
-        if (!retExprp) {
+        AstNodeExpr* inlinedp = extractReturnExpr(funcp);
+        if (!inlinedp) {
             nodep->v3warn(CONSTRAINTIGN,
                           "Unsupported: complex function in constraint, treating as state");
             nodep->user1(false);
@@ -2865,12 +2904,11 @@ class ConstraintExprVisitor final : public VNVisitor {
         const V3TaskConnects tconnects
             = V3Task::taskConnects(nodep, funcp->declsp(), nullptr, false);
 
-        // Clone return expression, substitute params with args.
+        // Substitute params with args in the return expression.
         // Track the root via a local pointer: when the root itself is a VarRef to a port
         // (e.g. body `F = d;`), the cloned root has no back pointer, so foreach's
         // replaceWith would trip the "no back" assertion -- substitute the root pointer
         // directly instead.
-        AstNodeExpr* inlinedp = retExprp->cloneTreePure(false);
         for (const auto& tconnect : tconnects) {
             const AstVar* const portp = tconnect.first;
             AstArg* const argp = tconnect.second;

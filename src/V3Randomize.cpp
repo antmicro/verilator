@@ -1011,12 +1011,9 @@ class CaptureVisitor final : public VNVisitor {
         }
         m_ignore.emplace(nodep);
         UASSERT_OBJ(nodep->taskp(), nodep, "Task unlinked");
+        iterateChildren(nodep);
         // We assume that constraint targets are not referenced this way.
-        if (VN_IS(nodep, MethodCall) || VN_IS(nodep, New)) {
-            m_ignore.emplace(nodep);
-            iterateChildren(nodep);
-            return;
-        }
+        if (VN_IS(nodep, MethodCall) || VN_IS(nodep, New)) return;
         AstClass* const classp = VN_CAST(nodep->taskp()->user2p(), Class);
         if ((classp == m_callerp) && VN_IS(m_callerp, Class)) {
             AstArg* const argsp = nodep->argsp();

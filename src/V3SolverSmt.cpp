@@ -3135,6 +3135,7 @@ class SolverSmtLowering final : public V3SolverLowering {
     int m_distNum = 0;  // Dist bucket variable counter within a class for var naming
     std::set<std::string> m_writtenVars;  // Track write_var calls per class to avoid duplicates
     std::map<AstClass*, VInsertionSet<AstVar*>> m_sizeConstrainedArrays;  // Per-class arrays
+    std::set<const AstVar*> m_inlineSizedArrays;  // Arrays with a size variable from 'with'
     uint32_t m_uniqueConstraintId = 0;  // current ID of unique call
 
     // METHODS
@@ -4390,6 +4391,7 @@ public:
         }
         {
             std::vector<AstCMethodHard*> sizeMethodps;
+            std::set<const AstVar*> resizedArrays;  // Arrays resized by this 'with' block
             capturedTreep->foreachAndNext([&](AstCMethodHard* methodp) {
                 if (methodp->method() == VCMethod::DYN_SIZE
                     || methodp->method() == VCMethod::ASSOC_SIZE) {
@@ -4432,7 +4434,10 @@ public:
                 // arrVarp and sizeVarp may live in a base class when the
                 // array is inherited; route VarRefs through their declaring
                 // class so V3Scope can resolve them.
-                if (wasCreated) {
+                // No class constraint resizes the array, so each 'with' block that
+                // constrains the size does
+                if (wasCreated) m_inlineSizedArrays.insert(arrVarp);
+                if (m_inlineSizedArrays.count(arrVarp) && resizedArrays.insert(arrVarp).second) {
                     AstNodeExpr* const resizeVarRefp = buildMemberRefExprp(rootExprp, arrVarp);
                     AstNodeExpr* const sizeExprp = buildMemberRefExprp(rootExprp, sizeVarp);
                     // Append size >= 0 constraint so ConstraintExprVisitor processes it

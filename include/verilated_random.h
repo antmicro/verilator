@@ -1043,6 +1043,36 @@ public:
         }
         return true;
     }
+
+    // Enum randomization, 'table' holds the enum item values
+    template <typename T, std::size_t N_Items>
+    bool basicStdRandomization(T& value, size_t, const VlUnpacked<T, N_Items>& table) {
+        value = table[VL_RANDOM_RNG_I(m_rng) % N_Items];
+        return true;
+    }
+    template <typename T_Unpacked, std::size_t N_Depth, typename T_Table>
+    bool basicStdRandomization(VlUnpacked<T_Unpacked, N_Depth>& value, size_t width,
+                               const T_Table& table) {
+        for (size_t i = 0; i < N_Depth; ++i) basicStdRandomization(value[i], width, table);
+        return true;
+    }
+    template <typename T_Value, size_t N_MaxSize, typename T_Table>
+    bool basicStdRandomization(VlQueue<T_Value, N_MaxSize>& value, size_t width,
+                               const T_Table& table) {
+        for (int i = 0; i < value.size(); ++i) {
+            basicStdRandomization(value.atWrite(i), width, table);
+        }
+        return true;
+    }
+    template <typename T_Key, typename T_Value, typename T_Table>
+    bool basicStdRandomization(VlAssocArray<T_Key, T_Value>& value, size_t width,
+                               const T_Table& table) {
+        T_Key key;
+        for (int exists = value.first(key); exists; exists = value.next(key)) {
+            basicStdRandomization(value.atWrite(key), width, table);
+        }
+        return true;
+    }
     bool next() { return VlRandomizer::next(m_rng); }
 };
 

@@ -4282,15 +4282,9 @@ public:
                 addConstraintRebuild(randomizep, genp, genp, sizeArrayVars,
                                      (new AstTaskRef{fl, setupAllTaskp})->makeStmt());
 
-                AstVar* const finalOkVarp = new AstVar{fl, VVarType::BLOCKTEMP, "__Vfinal_ok",
-                                                       nodep->findBasicDType(VBasicDTypeKwd::BIT)};
-                finalOkVarp->funcLocal(true);
-                randomizep->addDeclsp(finalOkVarp);
-                randomizep->addStmtsp(new AstAssign{
-                    fl, new AstVarRef{fl, finalOkVarp, VAccess::WRITE}, newSolverCallp(genp)});
-
+                // The caller places the final solve after or before the basic randomization
                 beginValp = new AstAnd{fl, new AstVarRef{fl, sizeOkVarp, VAccess::READ},
-                                       new AstVarRef{fl, finalOkVarp, VAccess::READ}};
+                                       newSolverCallp(genp)};
             } else {
                 beginValp = newSolverCallp(genp);
             }

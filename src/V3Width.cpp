@@ -4359,6 +4359,25 @@ class WidthVisitor final : public VNVisitor {
         //  x dist {a :/ p, b :/ q} --> (p > 0 && x == a) || (q > 0 && x == b)
         // (only outside constraints; inside constraints V3Randomize handles weighted selection)
         userIterateAndNext(nodep->exprp(), WidthVP{CONTEXT_DET, PRELIM}.p());
+        if (nodep->exprp()->dtypep()->skipRefp()->isIntegralOrPacked()) {
+            // '$' is the lowest or highest value of the expression type (IEEE 1800-2023 18.5.3)
+            const int width = nodep->exprp()->width();
+            const bool isSigned = nodep->exprp()->isSigned();
+            for (AstDistItem* const ditemp : nodep->itemspList()) {
+                AstInsideRange* const irp = VN_CAST(ditemp->rangep(), InsideRange);
+                if (!irp) continue;
+                for (AstNodeExpr* const boundp : {irp->lhsp(), irp->rhsp()}) {
+                    if (!VN_IS(boundp, Unbounded)) continue;
+                    const bool high = boundp == irp->rhsp();
+                    V3Number num{boundp, width, 0};
+                    if (high) num.setAllBits1();
+                    if (isSigned) num.setBit(width - 1, !high);
+                    num.isSigned(isSigned);
+                    boundp->replaceWith(new AstConst{boundp->fileline(), num});
+                    VL_DO_DANGLING(pushDeletep(boundp), boundp);
+                }
+            }
+        }
         for (AstNode* const itemp : nodep->itemspList()) {
             VL_DO_DANGLING(userIterate(itemp, WidthVP{CONTEXT_DET, PRELIM}.p()), itemp);
         }

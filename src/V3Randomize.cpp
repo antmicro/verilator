@@ -987,6 +987,17 @@ class CaptureVisitor final : public VNVisitor {
         // would route them through the solver write path.
         if (!m_targetp && nodep->user1()) memberRefp->user1(true);
         memberRefp->user2p(m_targetp);
+        if (m_targetp && VN_AS(nodep->varp()->user2p(), NodeModule) != m_targetp) {
+            // Selects of a member of the outer object without a random index are state
+            for (AstNode *childp = nodep, *parentp = nodep->backp();
+                 parentp->op1p() == childp
+                 && (VN_IS(parentp, MemberRef) || VN_IS(parentp, NodeSel)
+                     || VN_IS(parentp, StructSel) || VN_IS(parentp, CMethodHard))
+                 && !(parentp->op2p() && parentp->op2p()->user1());
+                 childp = parentp, parentp = parentp->backp()) {
+                parentp->user1(false);
+            }
+        }
         nodep->replaceWith(memberRefp);
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
         m_ignore.emplace(memberRefp);

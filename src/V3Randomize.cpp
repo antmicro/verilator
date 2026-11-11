@@ -371,6 +371,8 @@ class RandomizeMarkVisitor final : public VNVisitor {
         cloneConstrp->foreach([&](AstNodeExpr* exprp) {
             if (AstVarRef* const varRefp = VN_CAST(exprp, VarRef)) {
                 if (!varRefp->varp()->isClassMember()) return;
+                // Static members are not accessed through the handle
+                if (varRefp->varp()->lifetime().isStatic()) return;
                 AstNodeExpr* const chainp = buildMemberRefChain(rootVarRefp, newPath);
                 AstMemberRef* const finalRefp
                     = new AstMemberRef{varRefp->fileline(), chainp, varRefp->varp()};

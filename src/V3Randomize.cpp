@@ -1611,7 +1611,7 @@ class RandomizeVisitor final : public VNVisitor {
                         fl,
                         new AstSub{fl, tempRefp,
                                    new AstConst{fl, static_cast<uint32_t>(aryDTypep->lo())}},
-                        new AstConst{fl, 0}, V3Number::log2b(aryDTypep->hi()) + 1}};
+                        new AstConst{fl, 0}, V3Number::log2b(aryDTypep->elementsConst() - 1) + 1}};
             } else if (VN_IS(tempDTypep, AssocArrayDType)) {
                 tempElementp = new AstAssocSel{fl, tempExprp, tempRefp};
             } else if (VN_IS(tempDTypep, QueueDType)) {
@@ -1669,9 +1669,16 @@ class RandomizeVisitor final : public VNVisitor {
             AstAssign* const assignp = new AstAssign{
                 fl, new AstVarRef{fl, outputVarp, VAccess::WRITE},
                 new AstAnd{fl, new AstVarRef{fl, outputVarp, VAccess::READ}, callp}};
-            return new AstIf{
+            AstIf* const ifp = new AstIf{
                 fl, new AstNeq{fl, exprp->cloneTree(false), new AstConst{fl, AstConst::Null{}}},
                 assignp};
+            AstVar* varp = nullptr;
+            exprp->exists([&](const AstVarRef* varrefp) {
+                if (varrefp->access().isWriteOrRW()) varp = varrefp->varp();
+                return varp != nullptr;
+            });
+            if (!varp) return ifp;
+            return wrapIfRandMode(VN_AS(m_modp, Class), varp, ifp);
         } else if (AstDynArrayDType* const dynarrayDtp = VN_CAST(memberDtp, DynArrayDType)) {
             return createArrayForeachLoop(fl, dynarrayDtp, exprp, outputVarp);
         } else if (AstQueueDType* const queueDtp = VN_CAST(memberDtp, QueueDType)) {

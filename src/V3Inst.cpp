@@ -111,8 +111,10 @@ class InstVisitor final : public VNVisitor {
             if (m_cellp->modp()->user2() > 1) return false;
         }
         // Only a whole variable can be aliased, anything else needs the assignment
-        AstVarRef* const refp = VN_CAST(exprp, VarRef);
+        AstNodeVarRef* const refp = VN_CAST(exprp, NodeVarRef);
         if (!refp) return false;
+        // A hierarchical reference is aliased only for a ref port
+        if (VN_IS(refp, VarXRef) && !modVarp->direction().isRef()) return false;
         AstVar* const exprVarp = refp->varp();
         // A virtual interface port connected to a real interface can't be an alias
         if (exprVarp->isIfaceRef()) return false;
@@ -300,6 +302,8 @@ public:
             // Done. Interface
         } else if (!alwaysCvt && connectXRefp && connectXRefp->varp()
                    && connectXRefp->varp()->isIfaceRef()) {
+        } else if (!alwaysCvt && connectXRefp && pinVarp->direction().isRef()) {
+            // Done. A ref port becomes an alias of the referenced variable
         } else if (!alwaysCvt && connBasicp && pinBasicp
                    && connBasicp->width() == pinBasicp->width()
                    && connBasicp->lo() == pinBasicp->lo()

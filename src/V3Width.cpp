@@ -4556,7 +4556,12 @@ class WidthVisitor final : public VNVisitor {
             // Unsupported in parameters
             AstNodeExpr* const inewp = new AstCMethodHard{nodep->fileline(), itemp->unlinkFrBack(),
                                                           VCMethod::ARRAY_INSIDE, exprp};
-            iterateCheckTyped(nodep, "inside value", exprp, itemDtp->subDTypep(), BOTH);
+            AstNodeDType* const elemDtp = itemDtp->subDTypep()->skipRefp();
+            // In constraints V3SolverSmt extends the elements to a wider value
+            if (!(m_constraintp && VN_IS(elemDtp, BasicDType) && elemDtp->isIntegralOrPacked()
+                  && exprp->dtypep()->isIntegralOrPacked() && exprp->width() > elemDtp->width())) {
+                iterateCheckTyped(nodep, "inside value", exprp, elemDtp, BOTH);
+            }
             inewp->dtypeSetBit();
             inewp->didWidth(true);
             return inewp;

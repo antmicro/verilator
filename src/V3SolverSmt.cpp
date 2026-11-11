@@ -2554,9 +2554,17 @@ class ConstraintExprVisitor final : public VNVisitor {
             AstNodeExpr* const idxRefp = new AstVarRef{nodep->fileline(), newVarp, VAccess::READ};
             AstForeachHeader* const headerp
                 = new AstForeachHeader{fl, nodep->fromp()->cloneTreePure(false), newVarp};
-            AstNodeExpr* const selp = newSel(nodep->fileline(), nodep->fromp(), idxRefp);
+            AstNodeExpr* selp = newSel(nodep->fileline(), nodep->fromp(), idxRefp);
             selp->user1(randArr);
-            AstNode* const itemp = new AstEq{fl, selp, nodep->pinsp()->unlinkFrBack()};
+            AstNodeExpr* const valuep = nodep->pinsp()->unlinkFrBack();
+            if (valuep->width() > selp->width()) {
+                const bool isSigned = selp->isSigned();
+                selp = isSigned
+                           ? static_cast<AstNodeExpr*>(new AstExtendS{fl, selp, valuep->width()})
+                           : static_cast<AstNodeExpr*>(new AstExtend{fl, selp, valuep->width()});
+                selp->user1(randArr);
+            }
+            AstNode* const itemp = new AstEq{fl, selp, valuep};
             itemp->user1(true);
 
             AstVar* const textVarp = newTextVarp(nodep);

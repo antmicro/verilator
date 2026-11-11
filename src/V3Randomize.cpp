@@ -2354,6 +2354,8 @@ class RandomizeVisitor final : public VNVisitor {
         iterateChildren(nodep);
     }
     void visit(AstClass* nodep) override {
+        // The constraints of the base classes are lowered with this class
+        if (nodep->user1() && nodep->extendsp()) iterate(nodep->extendsp()->classp());
         VL_RESTORER(m_modp);
         VL_RESTORER(m_randCaseNum);
         m_modp = nodep;

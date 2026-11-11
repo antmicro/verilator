@@ -3612,6 +3612,7 @@ class SolverSmtLowering final : public V3SolverLowering {
     // A non-rand value can never be re-drawn; a non-rand owner level is skipped.
     AstNodeExpr* newVarGate(AstVar* varp, const AstMemberRef* memberRefp, bool ownerLevel,
                             AstVar* randModeVarp, FileLine* fl) {
+        if (varp->isStdRandomizeArg()) return new AstConst{fl, AstConst::BitTrue{}};
         if (!varp->rand().isRandomizable()) {
             return new AstConst{fl, AstConst::BitTrue{}, ownerLevel};
         }
@@ -3811,7 +3812,7 @@ class SolverSmtLowering final : public V3SolverLowering {
 
     // Replace AstDist with weighted bucket selection via AstConstraintIf chain.
     // Supports both constant and variable weight expressions.
-    void lowerDistConstraints(AstTask* taskp, AstNodeConstraintItem* constrItemsp,
+    void lowerDistConstraints(AstNodeFTask* taskp, AstNodeConstraintItem* constrItemsp,
                               AstVar* randModeVarp, AstConstraintForeach* foreachp = nullptr) {
         // When inside a foreach, bucket preamble stmts are stored in foreachp->user3p()
         // (as a linked list) so visit(AstConstraintForeach*) can inject them into the
@@ -4408,6 +4409,9 @@ public:
 
         // Generate constraint setup code and a hardcoded call to the solver
         AstBegin* const holderp = SmtUtil::newItemsHolderp(nodep->fileline(), capturedTreep);
+        lowerDistConstraints(randomizeFuncp, VN_AS(holderp->declsp(), NodeConstraintItem),
+                             randModeVarp);
+        capturedTreep = holderp->declsp();  // The first item may be replaced
         AstBegin* const setupBlockp
             = new AstBegin{nodep->fileline(), "__Vsetup_constraints", holderp, true};
         randomizeFuncp->addStmtsp(setupBlockp);
@@ -4696,6 +4700,8 @@ public:
         randomizeFuncp->addStmtsp(
             implementConstraintsClearAll(randomizeFuncp->fileline(), stdrandp));
         AstBegin* const holderp = SmtUtil::newItemsHolderp(fl, capturedTreep);
+        lowerDistConstraints(randomizeFuncp, VN_AS(holderp->declsp(), NodeConstraintItem),
+                             nullptr);
         AstBegin* const setupBlockp = new AstBegin{fl, "__Vsetup_constraints", holderp, true};
         randomizeFuncp->addStmtsp(setupBlockp);
         {

@@ -3571,9 +3571,7 @@ class SolverSmtLowering final : public V3SolverLowering {
             return newDistGate(selp->fromp(), randModeVarp, fl);
         }
         if (const AstCMethodHard* const methodp = VN_CAST(nodep, CMethodHard)) {
-            if (methodp->method() == VCMethod::ARRAY_AT
-                && VN_IS(methodp->fromp()->dtypep()->skipRefp(),  // LCOV_EXCL_BR_LINE
-                         DynArrayDType)) {  // Queue form is rejected before dist lowering
+            if (methodp->method() == VCMethod::ARRAY_AT) {
                 return newDistGate(methodp->fromp(), randModeVarp, fl);
             }
         }

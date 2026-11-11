@@ -4628,7 +4628,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
             string baddot;
             VSymEnt* okSymp = nullptr;
             // Restricted 'with (id_list)': only id_list names bind into target class.
-            if (m_randSymp
+            // A name after '::' is not a member of the randomized object.
+            if (m_randSymp && !staticAccess
                 && (!m_currentWithp || m_currentWithp->nameResolvesToTarget(nodep->name()))) {
                 foundp = m_randSymp->findIdFlat(nodep->name());
                 if (foundp && !m_randMethodCallp) {
@@ -5715,7 +5716,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
                                                okSymp, true);  // Maybe nullptr
             }
             // Restricted 'with (id_list)': only id_list names bind into target class.
-            if (m_randSymp
+            // A name after '::' is not a member of the randomized object.
+            if (m_randSymp && !staticAccess
                 && (!m_currentWithp || m_currentWithp->nameResolvesToTarget(nodep->name()))) {
                 VSymEnt* const foundp = m_randSymp->findIdFlat(nodep->name());
                 if (foundp && m_currentWithp && m_randMethodCallp) {

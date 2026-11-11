@@ -1987,6 +1987,29 @@ class ConstraintExprVisitor final : public VNVisitor {
                 return;
             }
         }
+        AstUnpackArrayDType* const stateArrDtp
+            = VN_CAST(nodep->fromp()->dtypep()->skipRefp(), UnpackArrayDType);
+        if (indexIsRand && !m_nestedAccessp && !nodep->fromp()->user1() && stateArrDtp
+            && nodep->dtypep()->skipRefp()->isIntegralOrPacked()) {
+            // State array with a random index in the last dimension: select among the
+            // elements, zero when the index is out of bounds
+            AstNodeExpr* resultp = new AstConst{fl, AstConst::WidthedValue{}, nodep->width(), 0};
+            for (int i = stateArrDtp->elementsConst() - 1; i >= 0; --i) {
+                AstNodeExpr* const elemp
+                    = new AstArraySel{fl, nodep->fromp()->cloneTreePure(false), i};
+                AstNodeExpr* const eqp
+                    = new AstEq{fl, nodep->bitp()->cloneTreePure(false),
+                                new AstConst{fl, AstConst::WidthedValue{}, nodep->bitp()->width(),
+                                             static_cast<uint32_t>(i)}};
+                eqp->user1(true);
+                resultp = new AstCond{fl, eqp, elemp, resultp};
+                resultp->user1(true);
+            }
+            nodep->replaceWith(resultp);
+            VL_DO_DANGLING(pushDeletep(nodep), nodep);
+            iterate(resultp);
+            return;
+        }
         if (indexIsRand) {
             // Index depends on rand variable -- keep as SMT symbol.
             // Array index sort is 32-bit, so zero-extend narrower indices.

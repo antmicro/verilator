@@ -2615,6 +2615,14 @@ class RandomizeVisitor final : public VNVisitor {
 
                 basicMethodp->addPinsp(
                     new AstConst{nodep->fileline(), AstConst::Unsized64{}, width});
+                // Enum elements are picked from the table of the item values
+                AstNodeDType* leafDtp = exprp->dtypep()->skipRefToEnump();
+                while (leafDtp->isNonPackedArray()) {
+                    leafDtp = leafDtp->subDTypep()->skipRefToEnump();
+                }
+                if (AstEnumDType* const enumDtp = VN_CAST(leafDtp, EnumDType)) {
+                    basicMethodp->addPinsp(enumValueTabRefp(enumDtp));
+                }
                 basicMethodp->dtypeSetBit();
 
                 basicStmtsp = AstNode::addNextNull(

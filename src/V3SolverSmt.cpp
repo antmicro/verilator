@@ -927,7 +927,14 @@ class ConstraintExprVisitor final : public VNVisitor {
         FileLine* const fl = varp->fileline();
         AstNodeModule* const varClassp = VN_AS(varp->user2p(), NodeModule);
         const std::string idxFmt
-            = isUnpackedClassRefArray ? "%0x" : keyHexFormat(iterVarp->dtypep()->skipRefp());
+            = isUnpackedClassRefArray ? "%x" : keyHexFormat(iterVarp->dtypep()->skipRefp());
+        // Index width of an unpacked array select, as the constraint formats the index
+        int idxWidth = 0;
+        if (isUnpackedClassRefArray) {
+            const int elements
+                = VN_AS(varp->dtypep()->skipRefp(), UnpackArrayDType)->elementsConst();
+            idxWidth = elements > 1 ? V3Number::log2b(elements - 1) + 1 : 1;
+        }
 
         for (const AstClass* cp = elemClassp; cp;
              cp = cp->extendsp() ? cp->extendsp()->classp() : nullptr) {
@@ -960,9 +967,10 @@ class ConstraintExprVisitor final : public VNVisitor {
                 writeVarp->addPinsp(memberRefp);
                 writeVarp->addPinsp(
                     new AstConst{fl, AstConst::Unsized64{}, static_cast<uint64_t>(memberWidth)});
-                writeVarp->addPinsp(
-                    new AstSFormatF{fl, smtName + "." + idxFmt + "." + memberVarp->name(), false,
-                                    new AstVarRef{fl, iterVarp, VAccess::READ}});
+                AstNodeExpr* idxp = new AstVarRef{fl, iterVarp, VAccess::READ};
+                if (isUnpackedClassRefArray) idxp = new AstSel{fl, idxp, 0, idxWidth};
+                writeVarp->addPinsp(new AstSFormatF{
+                    fl, smtName + "." + idxFmt + "." + memberVarp->name(), false, idxp});
                 writeVarp->addPinsp(new AstConst{fl, AstConst::Unsized64{}, 0ULL});
                 ifNonNullp->addThensp(writeVarp->makeStmt());
             }

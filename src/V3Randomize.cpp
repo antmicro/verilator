@@ -941,6 +941,7 @@ class CaptureVisitor final : public VNVisitor {
     AstNodeModule* m_callerp;  // Module of the outer context (for capturing `this`)
     AstClass* m_targetp;  // Module of inner context (for symbol lookup)
     std::map<const AstVar*, AstVar*> m_varCloneMap;  // Map original var nodes to their clones
+    std::set<std::string> m_cloneNames;  // Names of the clones in m_varCloneMap
     std::set<AstNode*> m_ignore;  // Nodes to ignore for capturing
     std::unordered_set<const AstVar*> m_constraintIterators;  // Enclosing foreach loop variables
     AstVar* m_thisp = nullptr;  // Variable for outer context's object, if necessary
@@ -959,6 +960,10 @@ class CaptureVisitor final : public VNVisitor {
             newVarp->funcReturn(false);
             newVarp->direction(VDirection::INPUT);
             newVarp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
+            // Variables of different scopes may have the same name
+            if (!m_cloneNames.emplace(newVarp->name()).second) {
+                newVarp->name(newVarp->name() + "__Vcap" + cvtToStr(m_varCloneMap.size()));
+            }
             m_varCloneMap.emplace(varrefp->varp(), newVarp);
             varp = newVarp;
             return true;
@@ -1028,7 +1033,7 @@ class CaptureVisitor final : public VNVisitor {
         if (callerIsClass && varClassp && !varIsFieldOfCaller
             && varRefp->varp()->lifetime().isStatic())
             return CaptureMode::CAP_VALUE;
-        UASSERT_OBJ(!callerIsClass, varRefp, "Invalid reference?");
+        UASSERT_OBJ(!callerIsClass || !varClassp, varRefp, "Invalid reference?");
         return CaptureMode::CAP_VALUE;
     }
 

@@ -1428,14 +1428,9 @@ class ParamProcessor final {
     }
 
     // True if a $bits/$size type query in nodep's parameters reads another type parameter.
-    static bool defaultParamsHaveTypeQueryOnParamType(const AstClassRefDType* nodep) {
-        bool found = false;
-        nodep->foreach([&](const AstAttrOf* attrp) {
-            if (found || !attrp->attrType().isTypeQuery()) return;
-            const AstRefDType* const refp = VN_CAST(attrp->fromp(), RefDType);
-            if (refp && VN_IS(refp->refDTypep(), ParamTypeDType)) found = true;
-        });
-        return found;
+    static bool defaultParamsReferToParamType(const AstClassRefDType* nodep) {
+        return nodep->exists(
+            [](const AstRefDType* refp) { return VN_IS(refp->refDTypep(), ParamTypeDType); });
     }
 
     // Check if exprp's class matches origp's class after deparameterization.
@@ -1452,9 +1447,9 @@ class ParamProcessor final {
         const AstNodeModule* const defaultClonep
             = VN_CAST(origClassRefp->classp()->user4p(), Class);
         if (defaultClonep && defaultClonep == exprClassRefp->classp()) return true;
-        // Skip the comparison when the default's $bits/$size reads another type parameter, as
-        // deparameterizing it below would resolve that shared type at the wrong width (#7711).
-        if (defaultParamsHaveTypeQueryOnParamType(origClassRefp)) return false;
+        // Skip the comparison when the default refers to another type parameter, as
+        // deparameterizing it below would use the default of that parameter (#7711).
+        if (defaultParamsReferToParamType(origClassRefp)) return false;
         // Slow path: deparameterize the default type and compare the result.
         // Different templates can never match; use origName() because exprp's
         // class may already be a specialization (clone) of the template.
@@ -1809,6 +1804,14 @@ class ParamProcessor final {
                                   << " violates parameter's forwarding type '"
                                   << modvarp->fwdType().ascii() << "'");
                 }
+                // Deparameterize ClassRefDType before the comparison with the default and
+                // before name generation (#7000)
+                if (AstClassRefDType* const classRefDTypep = VN_CAST(exprp, ClassRefDType)) {
+                    if (classRefDTypep->paramsp() && classRefDTypep->classp()
+                        && classRefDTypep->classp()->hasGParam()) {
+                        classRefDeparam(classRefDTypep, classRefDTypep->classp());
+                    }
+                }
                 if (exprp->similarDType(origp) || classTypeMatchesDefaultClone(exprp, origp)) {
                     // Setting parameter to its default value.  Just ignore it.
                     // This prevents making additional modules, and makes coverage more
@@ -1818,13 +1821,6 @@ class ParamProcessor final {
                         VL_DO_DANGLING(V3Const::constifyParamsEdit(exprp), exprp);
                         rawTypep = VN_CAST(pinp->exprp(), NodeDType);
                         exprp = rawTypep ? rawTypep->skipRefToNonRefp() : nullptr;
-                    }
-                    // Deparameterize ClassRefDType before name generation (#7000)
-                    if (AstClassRefDType* const classRefDTypep = VN_CAST(exprp, ClassRefDType)) {
-                        if (classRefDTypep->paramsp() && classRefDTypep->classp()
-                            && classRefDTypep->classp()->hasGParam()) {
-                            classRefDeparam(classRefDTypep, classRefDTypep->classp());
-                        }
                     }
                     overridingTypePinsr.emplace(pinp);  // Named once every pin is prepared
                 }
@@ -1967,6 +1963,47 @@ class ParamProcessor final {
         UASSERT(paramspMap.empty(), "Not every generic interface implicit param is used");
     }
 
+    // Replace references to parameters of classp under rootp with the values of the pins.
+    // A value parameter without a pin is replaced with its default value.
+    void substituteClassParams(AstNode* rootp, const AstClass* classp, AstPin* paramsp,
+                               const std::vector<AstPin*>& pinsByIndex) {
+        std::unordered_map<const AstVar*, AstNode*> values;  // Parameter to its value
+        size_t nparams = 0;
+        for (AstNode* const stmtp : classp->memberspList()) {
+            const AstVar* const varp = VN_CAST(stmtp, Var);
+            if (!varp || !varp->isGParam()) continue;
+            values.emplace(varp, varp->valuep());
+            ++nparams;
+        }
+        for (AstPin* const pinp : VNList<AstPin>{paramsp}) {
+            if (pinp->modVarp() && pinp->exprp()) values[pinp->modVarp()] = pinp->exprp();
+        }
+        // A default value can refer to other parameters
+        bool again = true;
+        for (size_t pass = 0; again && pass <= nparams; ++pass) {
+            again = false;
+            std::vector<AstNode*> refps;
+            rootp->foreach([&](AstNode* nodep) {
+                if (VN_IS(nodep, RefDType) || VN_IS(nodep, VarRef)) refps.push_back(nodep);
+            });
+            for (AstNode* const nodep : refps) {
+                AstNode* valuep = nullptr;
+                if (const AstRefDType* const refp = VN_CAST(nodep, RefDType)) {
+                    const auto it = m_paramIndex.find(VN_CAST(refp->refDTypep(), ParamTypeDType));
+                    if (it == m_paramIndex.end() || !pinsByIndex[it->second]) continue;
+                    valuep = VN_CAST(pinsByIndex[it->second]->exprp(), NodeDType);
+                } else {
+                    const auto it = values.find(VN_AS(nodep, VarRef)->varp());
+                    if (it != values.end()) valuep = it->second;
+                }
+                if (!valuep) continue;
+                nodep->replaceWith(valuep->cloneTree(false));
+                VL_DO_DANGLING(m_deleter.pushDeletep(nodep), nodep);
+                again = true;
+            }
+        }
+    }
+
     void resolveDefaultParams(AstNode* nodep) {
         AstClassOrPackageRef* classOrPackageRefp = VN_CAST(nodep, ClassOrPackageRef);
         AstClassRefDType* classRefDTypep = VN_CAST(nodep, ClassRefDType);
@@ -2032,10 +2069,16 @@ class ParamProcessor final {
         // for proper handling. The remaining ones are just pushed back
         std::vector<AstPin*> pinsByIndex;
         pinsByIndex.resize(m_classTypeParams.size(), nullptr);
-        for (AstPin* const pinp : VNList<AstPin>{paramsp}) {
+        for (AstPin *pinp = paramsp, *nextp; pinp; pinp = nextp) {
+            nextp = VN_AS(pinp->nextp(), Pin);
             AstParamTypeDType* const typep = pinp->modPTypep();
             const auto it = typep ? m_paramIndex.find(typep) : m_paramIndex.end();
             if (it != m_paramIndex.end()) {
+                if (!pinp->exprp()) {  // Empty override, use the default
+                    if (paramsp == pinp) paramsp = nextp;
+                    VL_DO_DANGLING(m_deleter.pushDeletep(pinp->unlinkFrBack()), pinp);
+                    continue;
+                }
                 pinsByIndex[it->second] = pinp;
             } else {
                 pinsByIndex.push_back(pinp);
@@ -2065,6 +2108,10 @@ class ParamProcessor final {
                     newPinp = new AstPin{dtypep->fileline(), static_cast<int>(paramIdx) + 1,
                                          "__paramNumber" + cvtToStr(paramIdx + 1),
                                          dtypep->cloneTree(false)};
+                    substituteClassParams(newPinp->exprp(), classp,
+                                          classOrPackageRefp ? classOrPackageRefp->paramsp()
+                                                             : classRefDTypep->paramsp(),
+                                          pinsByIndex);
                 }
 
                 if (newPinp) {

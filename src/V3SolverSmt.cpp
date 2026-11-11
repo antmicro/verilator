@@ -1750,6 +1750,15 @@ class ConstraintExprVisitor final : public VNVisitor {
         if (editFormat(nodep)) return;
         VNRelinker handle;
         FileLine* const fl = nodep->fileline();
+        if (!VN_IS(nodep->lsbp(), Const)) {
+            // SMT extract needs constant bounds; shift by the variable index, select at zero
+            AstNodeExpr* const fromp = nodep->fromp()->unlinkFrBack();
+            AstNodeExpr* const lsbp = nodep->lsbp()->unlinkFrBack();
+            AstShiftR* const shiftp = new AstShiftR{fl, fromp, lsbp, fromp->width()};
+            shiftp->user1(true);
+            nodep->fromp(shiftp);
+            nodep->lsbp(new AstConst{fl, 0});
+        }
         AstNodeExpr* const msbp = new AstSFormatF{
             fl, "%1d", false,
             new AstAdd{fl, nodep->lsbp()->cloneTreePure(false),

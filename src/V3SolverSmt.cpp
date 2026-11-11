@@ -141,6 +141,7 @@ class ConstraintExprVisitor final : public VNVisitor {
                                          // (may be null, then new() is used)
     AstNodeFTask* const m_memberrefInitTaskp;  // Fallback for memberref write_var when
                                                // classp has no randomize() (inherited members)
+    AstNodeFTask* const m_constrSetupTaskp;  // Setup task of the constraint (may be null)
     AstVar* const m_genp;  // VlRandomizer variable of the class
     AstVar* m_randModeVarp;  // Relevant randmode state variable
     bool m_wantSingle = false;  // Whether to merge constraint expressions with LOGAND
@@ -1232,8 +1233,12 @@ class ConstraintExprVisitor final : public VNVisitor {
                 = createEnumConstraint(nodep->fileline(), varp->name(), enumDtp, genVarp);
             AstBegin* targetp = m_inlineInitBlockp;
             if (!targetp) {
-                targetp
-                    = newInitBlockp(SmtUtil::getCreateConstraintSetupFunc(m_classp, m_memberMap));
+                // The constraint setup task is also called by derived classes
+                AstNodeFTask* const taskp
+                    = m_constrSetupTaskp
+                          ? m_constrSetupTaskp
+                          : SmtUtil::getCreateConstraintSetupFunc(m_classp, m_memberMap);
+                targetp = newInitBlockp(taskp);
             }
             targetp->addStmtsp(enumRangeExprp->makeStmt());
             m_rangeConstrainedEnums.push_back(varp);
@@ -2998,10 +3003,12 @@ public:
                                    uint32_t* uniqueConstraintIdp, V3UniqueNames& uniqueNames,
                                    AstNodeFTask* memberrefInitTaskp = nullptr,
                                    VInsertionSet<AstVar*>* sizeConstrainedArraysp = nullptr,
-                                   AstNodeFTask* prepareConstrainedArraysp = nullptr)
+                                   AstNodeFTask* prepareConstrainedArraysp = nullptr,
+                                   AstNodeFTask* constrSetupTaskp = nullptr)
         : m_classp{classp}
         , m_inlineInitBlockp{inlineInitp}
         , m_memberrefInitTaskp{memberrefInitTaskp}
+        , m_constrSetupTaskp{constrSetupTaskp}
         , m_genp{genp}
         , m_randModeVarp{randModeVarp}
         , m_memberMap{memberMap}
@@ -4079,7 +4086,8 @@ public:
                     ConstraintExprVisitor{
                         classp,        m_memberMap,  holderp->declsp(), nullptr,
                         genp,          randModeVarp, m_writtenVars,     &m_uniqueConstraintId,
-                        m_uniqueNames, randomizep,   &sizeArrays,       prepareArraysTaskp};
+                        m_uniqueNames, randomizep,   &sizeArrays,       prepareArraysTaskp,
+                        taskp};
                     SmtUtil::replaceWithLowered(holderp);
                 }
             });

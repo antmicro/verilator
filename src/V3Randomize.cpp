@@ -1165,6 +1165,7 @@ class RandomizeVisitor final : public VNVisitor {
     // Per-handle-type pre/post virtual wrapper presence
     std::map<AstClass*, std::pair<bool, bool>> m_prePostWrap;
     ActiveSet m_activeClasses;  // Classes currently building randomize()
+    ActiveSet m_globalConstraintOwners;  // Classes with a global constraint, with base classes
     RandModeVars m_modeVars;  // Static rand_mode/constraint_mode state vars per class
     const std::unique_ptr<V3SolverLowering> m_solverp;  // Constraint solver lowering
 
@@ -2369,7 +2370,16 @@ class RandomizeVisitor final : public VNVisitor {
 
         // Detect global-constraint ownership BEFORE the constraint items are
         // unlinked into setup tasks below (after that the member-selects are gone).
-        const bool basicFirst = classOwnsGlobalConstraint(nodep);
+        // Constraints of a base class may be lowered already; use the recorded result.
+        const AstClass* const basep = nodep->extendsp() ? nodep->extendsp()->classp() : nullptr;
+        const bool basicFirst
+            = classOwnsGlobalConstraint(nodep) || m_globalConstraintOwners.count(basep);
+        if (basicFirst) {
+            for (const AstClass* cp = nodep; cp;
+                 cp = cp->extendsp() ? cp->extendsp()->classp() : nullptr) {
+                m_globalConstraintOwners.insert(cp);
+            }
+        }
 
         FileLine* const fl = nodep->fileline();
         AstFunc* const randomizep = V3Randomize::newRandomizeFunc(m_memberMap, nodep);

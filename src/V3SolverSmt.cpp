@@ -152,6 +152,7 @@ class ConstraintExprVisitor final : public VNVisitor {
     std::set<std::string>& m_writtenVars;  // Track which variable paths have write_var generated
                                            // (shared across all constraints)
     std::set<std::string> m_inlineWrittenVars;  // Per-instance tracking for inline constraints
+                                                // and registrations in m_constrSetupTaskp
     VInsertionSet<AstVar*>* m_sizeConstrainedArraysp = nullptr;  // Arrays with size constraints
     AstNodeExpr* m_conditionp = nullptr;  // Condition under which current expression is defined
                                           // (nullptr == always defined)
@@ -898,11 +899,14 @@ class ConstraintExprVisitor final : public VNVisitor {
         return VN_AS(varp->user2p(), NodeModule);
     }
 
-    AstBegin* getInitp(AstVar* const varp, const bool memberrefOrStructSel,
+    AstBegin* getInitp(AstVar* const varp, const bool memberref, const bool structSel,
                        AstNodeModule* const classp) const {
         if (m_inlineInitBlockp) return m_inlineInitBlockp;
         varp->user3(true);
-        if (memberrefOrStructSel) {
+        // The constraint setup task is also called by derived classes
+        // and by 'randomize() with' through a base class handle
+        if (memberref && m_constrSetupTaskp) return newInitBlockp(m_constrSetupTaskp);
+        if (memberref || structSel) {
             if (AstNodeFTask* const taskp
                 = VN_AS(m_memberMap.findMember(classp, "randomize"), NodeFTask)) {
                 return newInitBlockp(taskp);
@@ -1043,9 +1047,9 @@ class ConstraintExprVisitor final : public VNVisitor {
         varp->user3(true);
         AstBegin* initp = m_inlineInitBlockp;
         if (!initp) {
-            // In randomize(), as elements may be created after new()
-            AstNodeFTask* taskp
-                = VN_CAST(m_memberMap.findMember(varClassp, "randomize"), NodeFTask);
+            // In the constraint setup task, as elements may be created after new()
+            AstNodeFTask* taskp = m_constrSetupTaskp;
+            if (!taskp) taskp = VN_CAST(m_memberMap.findMember(varClassp, "randomize"), NodeFTask);
             if (!taskp) taskp = m_memberrefInitTaskp;
             UASSERT_OBJ(taskp, varClassp, "No randomize() in class");
             initp = newInitBlockp(taskp);
@@ -1300,37 +1304,40 @@ class ConstraintExprVisitor final : public VNVisitor {
             = createVarExprp(nodep, randMode, smtName, isGlobalConstrained, memberRefp, varp);
         relinker.relink(exprp);
 
+        bool isClassRefArray = false;
+        bool isUnpackedClassRefArray = false;
+        AstClassRefDType* elemClassRefDtp = nullptr;
+        {
+            AstNodeDType* varDtp = varp->dtypep()->skipRefp();
+            if (varDtp->isNonPackedArray()) {
+                AstNodeDType* const elemDtp = varDtp->subDTypep()->skipRefp();
+                elemClassRefDtp = VN_CAST(elemDtp, ClassRefDType);
+                if (elemClassRefDtp) {
+                    isClassRefArray = true;
+                    isUnpackedClassRefArray = VN_IS(varDtp, UnpackArrayDType);
+                }
+            }
+        }
+
         // Global / inline / class-level member-select refs key on the full path
         // (so same-type sub-objects c1.x, c2.x stay distinct); a plain class-level
         // variable keys on user3(). Inline 'with' dedups per function (own solver).
-        const bool alreadyWritten = m_inlineInitBlockp    ? m_inlineWrittenVars.count(smtName) > 0
+        // Registrations in the constraint setup task dedup per constraint.
+        const bool perConstraint
+            = m_inlineInitBlockp || (m_constrSetupTaskp && (memberRefp || isClassRefArray));
+        const bool alreadyWritten = perConstraint         ? m_inlineWrittenVars.count(smtName) > 0
                                     : isGlobalConstrained ? m_writtenVars.count(smtName) > 0
                                     : memberRefp          ? m_writtenVars.count(smtName) > 0
                                                           : varp->user3();
         const bool shouldWriteVar = !alreadyWritten;
         if (shouldWriteVar) {
             // Track this variable path as written
-            if (m_inlineInitBlockp)
+            if (perConstraint)
                 m_inlineWrittenVars.insert(smtName);
             else if (isGlobalConstrained || memberRefp)
                 m_writtenVars.insert(smtName);
             // For global constraints, delete nodep after processing
             if (isGlobalConstrained && !nodep->backp()) VL_DO_DANGLING(pushDeletep(nodep), nodep);
-
-            bool isClassRefArray = false;
-            bool isUnpackedClassRefArray = false;
-            AstClassRefDType* elemClassRefDtp = nullptr;
-            {
-                AstNodeDType* varDtp = varp->dtypep()->skipRefp();
-                if (varDtp->isNonPackedArray()) {
-                    AstNodeDType* const elemDtp = varDtp->subDTypep()->skipRefp();
-                    elemClassRefDtp = VN_CAST(elemDtp, ClassRefDType);
-                    if (elemClassRefDtp) {
-                        isClassRefArray = true;
-                        isUnpackedClassRefArray = VN_IS(varDtp, UnpackArrayDType);
-                    }
-                }
-            }
 
             AstNodeModule* const classp = getLeftmostVarModulep(memberRefp, varp);
             // Associative array elements may be created after new().  Unpacked struct
@@ -1342,7 +1349,7 @@ class ConstraintExprVisitor final : public VNVisitor {
             }
             if (dtp && dtp->isCompound() && VN_IS(dtp, NodeUOrStructDType)) hasAssoc = false;
             AstBegin* const initp
-                = getInitp(varp, memberRefp || structSelOrCMeth || hasAssoc, classp);
+                = getInitp(varp, memberRefp, structSelOrCMeth || hasAssoc, classp);
             if (m_nestedAccessp) {
                 AstStmtExpr* const writeVarStmtp = m_nestedAccessp->makeWriteVarStmt(varp, m_genp);
                 addRegistrationStmt(writeVarStmtp, initp);

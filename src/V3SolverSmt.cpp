@@ -4540,12 +4540,11 @@ public:
                 methodp->addPinsp(varRefp);
 
                 uint32_t dimension = 0;
-                if (VN_IS(arrVarp->dtypep(), UnpackArrayDType)
-                    || VN_IS(arrVarp->dtypep(), DynArrayDType)
-                    || VN_IS(arrVarp->dtypep(), QueueDType)
-                    || VN_IS(arrVarp->dtypep(), AssocArrayDType)) {
+                const AstNodeDType* const arrDtp = arrVarp->dtypep()->skipRefp();
+                if (VN_IS(arrDtp, UnpackArrayDType) || VN_IS(arrDtp, DynArrayDType)
+                    || VN_IS(arrDtp, QueueDType) || VN_IS(arrDtp, AssocArrayDType)) {
                     const std::pair<uint32_t, uint32_t> dims
-                        = arrVarp->dtypep()->dimensions(/*includeBasic=*/true);
+                        = arrDtp->dimensions(/*includeBasic=*/true);
                     dimension = dims.second;
                 }
 

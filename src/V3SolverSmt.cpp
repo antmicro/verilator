@@ -850,7 +850,7 @@ class ConstraintExprVisitor final : public VNVisitor {
             AstNodeExpr* const nameExprp
                 = m_nestedAccessp ? m_nestedAccessp->cloneName()
                                   : new AstSFormatF{varp->fileline(), smtName, false, nullptr};
-            nameExprp->dtypep(varp->dtypep());
+            nameExprp->dtypeSetString();
             enablep->addPinsp(nameExprp);
             // rand_mode OFF: set disabled state
             AstCMethodHard* const disablep = new AstCMethodHard{

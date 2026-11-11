@@ -1025,6 +1025,11 @@ class ConstraintExprVisitor final : public VNVisitor {
                 writeVarp->addPinsp(new AstSFormatF{
                     fl, smtName + "." + idxFmt + "." + memberVarp->name(), false, idxp});
                 writeVarp->addPinsp(new AstConst{fl, AstConst::Unsized64{}, 0ULL});
+                // rand_mode of the array applies to the members of its elements
+                const RandomizeMode randMode = {.asUQuad = varp->user1()};
+                if (randMode.usesMode) {
+                    writeVarp->addPinsp(new AstConst{fl, AstConst::Unsized64{}, randMode.index});
+                }
                 ifNonNullp->addThensp(writeVarp->makeStmt());
             }
         }
@@ -1156,9 +1161,9 @@ class ConstraintExprVisitor final : public VNVisitor {
         methodp->addPinsp(varnamep);
         methodp->addPinsp(
             new AstConst{varp->dtypep()->fileline(), AstConst::Unsized64{}, unpackedDims});
-        // The rand_mode of a globalConstrained sub-object member or of a foreign
-        // static is not in this generator's rand_mode arrays
-        const bool foreignMode = (isGlobalConstrained && memberRefp) || foreignStatic;
+        // The rand_mode of a sub-object member or of a foreign static is not in this
+        // generator's rand_mode arrays
+        const bool foreignMode = memberRefp || foreignStatic;
         if (randMode.usesMode && !foreignMode) {
             methodp->addPinsp(
                 new AstConst{varp->fileline(), AstConst::Unsized64{}, randMode.index});

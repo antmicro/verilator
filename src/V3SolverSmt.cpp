@@ -260,8 +260,8 @@ class ConstraintExprVisitor final : public VNVisitor {
     NestedAccessPath* m_nestedAccessp = nullptr;  // Indicates state of nested access
 
     // Emit enum range hard constraint for a single variable
-    AstNodeExpr* createEnumConstraint(FileLine* const fl, const std::string& smtName,
-                                      AstEnumDType* const enumDtp, AstVar* const genVarp) {
+    AstCMethodHard* createEnumConstraint(FileLine* const fl, const std::string& smtName,
+                                         AstEnumDType* const enumDtp, AstVar* const genVarp) {
         AstNodeModule* const genModp = VN_AS(genVarp->user2p(), NodeModule);
         const int width = enumDtp->width();
         std::string constraint = "(__Vbv (or";
@@ -1290,18 +1290,33 @@ class ConstraintExprVisitor final : public VNVisitor {
             AstVar* genVarp = m_genp;
             if (m_classp && m_classp->user3p()) genVarp = VN_AS(m_classp->user3p(), Var);
             UASSERT_OBJ(genVarp, nodep, "No 'randomize' variable in m_genp or m_classp");
-            AstNodeExpr* enumRangeExprp
+            AstCMethodHard* const enumRangeExprp
                 = createEnumConstraint(nodep->fileline(), enumName, enumDtp, genVarp);
             AstBegin* targetp = m_inlineInitBlockp;
-            if (!targetp) {
-                // The constraint setup task is also called by derived classes
-                AstNodeFTask* const taskp
-                    = m_constrSetupTaskp
-                          ? m_constrSetupTaskp
-                          : SmtUtil::getCreateConstraintSetupFunc(m_classp, m_memberMap);
-                targetp = newInitBlockp(taskp);
+            if (!targetp && m_constrSetupTaskp && !memberRefp && VN_IS(varp->user2p(), Class)) {
+                // The variable is registered in new(), so classes that do not apply this
+                // constraint also solve it. The range is kept with the registration.
+                if (varp->user3()) {
+                    VL_DO_DANGLING(enumRangeExprp->deleteTree(), enumRangeExprp);
+                } else {
+                    enumRangeExprp->method(VCMethod::RANDOMIZER_VAR_DOMAIN);
+                    pushDeletep(enumRangeExprp->pinsp()->nextp()->unlinkFrBack());
+                    AstNodeFTask* const newp = VN_AS(
+                        m_memberMap.findMember(VN_AS(varp->user2p(), Class), "new"), NodeFTask);
+                    UASSERT_OBJ(newp, varp, "No new() in class");
+                    newInitBlockp(newp)->addStmtsp(enumRangeExprp->makeStmt());
+                }
+            } else {
+                if (!targetp) {
+                    // The constraint setup task is also called by derived classes
+                    AstNodeFTask* const taskp
+                        = m_constrSetupTaskp
+                              ? m_constrSetupTaskp
+                              : SmtUtil::getCreateConstraintSetupFunc(m_classp, m_memberMap);
+                    targetp = newInitBlockp(taskp);
+                }
+                targetp->addStmtsp(enumRangeExprp->makeStmt());
             }
-            targetp->addStmtsp(enumRangeExprp->makeStmt());
             m_rangeConstrainedEnums.insert(enumName);
         }
 

@@ -1059,6 +1059,7 @@ void VlRandomizer::emitDeclares(std::ostream& os, bool pinCurrent) const {
 
 void VlRandomizer::emitAsserts(std::ostream& os, const std::vector<std::string>& extras,
                                bool named) const {
+    for (const std::string& domain : m_varDomains) os << "(assert (= #b1 " << domain << "))\n";
     int j = 0;
     for (const std::string& constraint : m_constraints) {
         if (named) {
@@ -1797,6 +1798,7 @@ void VlRandomizer::clearAll() {
     m_constraintVarNames.clear();
     m_constraintVarEnds.clear();
     m_softConstraints.clear();
+    m_varDomains.clear();
     m_vars.clear();
     m_randcVarNames.clear();
     m_randcUsedValues.clear();

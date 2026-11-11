@@ -402,6 +402,18 @@ class ParamProcessor final {
         return VN_IS(nodep, ConsArray) || VN_IS(nodep, ConsStruct);
     }
 
+    // Name of the scopes enclosing a class, empty in $unit and for other modules.
+    // Classes of the same name can be declared in different scopes.
+    static string classScopePrefix(const AstNodeModule* modp) {
+        if (!VN_IS(modp, Class)) return "";
+        const AstNode* abovep = modp->aboveLoopp();
+        while (abovep && !VN_IS(abovep, NodeModule)) abovep = abovep->aboveLoopp();
+        const AstNodeModule* const scopep = VN_CAST(abovep, NodeModule);
+        if (!scopep) return "";
+        const AstPackage* const packagep = VN_CAST(scopep, Package);
+        if (packagep && packagep->isDollarUnit()) return "";
+        return classScopePrefix(scopep) + scopep->name() + "::";
+    }
     static string paramValueString(const AstNode* nodep) {
         if (const AstRefDType* const refp = VN_CAST(nodep, RefDType)) {
             nodep = refp->skipRefToNonRefp();
@@ -503,6 +515,7 @@ class ParamProcessor final {
                     // Unspecialized class with no params - use origName
                     key = origName;
                 }
+                key = classScopePrefix(classRefp->classp()) + key;
             } else {
                 // classp() should always be set; unresolved class refs
                 // would have errored in LinkDot.
@@ -1096,8 +1109,8 @@ class ParamProcessor final {
             insertp->addNextHere(newModp);
         }
 
-        m_modNameMap.emplace(newModp->name(), ModInfo{newModp});
-        const auto iter = m_modNameMap.find(newname);
+        const auto iter
+            = m_modNameMap.emplace(classScopePrefix(srcModp) + newname, ModInfo{newModp}).first;
         CloneMap* const clonemapp = &(iter->second.m_cloneMap);
         UINFO(4, "     De-parameterize to new: " << newModp);
 
@@ -1181,14 +1194,15 @@ class ParamProcessor final {
     const ModInfo* moduleFindOrClone(AstNodeModule* srcModp, AstNode* ifErrorp, AstPin* paramsp,
                                      const string& newname, const IfaceRefRefs& ifaceRefRefs) {
         // Already made this flavor?
-        auto it = m_modNameMap.find(newname);
+        const string key = classScopePrefix(srcModp) + newname;
+        auto it = m_modNameMap.find(key);
         if (it != m_modNameMap.end()) {
             UINFO(4, "     De-parameterize to prev: " << it->second.m_modp);
         } else {
             if (!deepCloneModule(srcModp, ifErrorp, paramsp, newname, ifaceRefRefs)) {
                 return nullptr;
             }
-            it = m_modNameMap.find(newname);
+            it = m_modNameMap.find(key);
             UASSERT(it != m_modNameMap.end(), "should find just-made module");
         }
         const ModInfo* const modInfop = &(it->second);

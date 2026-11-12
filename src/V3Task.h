@@ -53,6 +53,8 @@ class V3Task final {
 
 public:
     static void taskAll(AstNetlist* nodep) VL_MT_DISABLED;
+    /// Evaluate non-constant defaults of constructor ports in the constructor
+    static void ctorDefaultsToFlags(AstFunc* funcp) VL_MT_DISABLED;
     /// Return vector of [port, pin-connects-to]  (SLOW)
     static V3TaskConnects taskConnects(AstNodeFTaskRef* nodep, AstNode* taskDeclsp,
                                        V3TaskConnectState* statep = nullptr,

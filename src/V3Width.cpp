@@ -8852,6 +8852,10 @@ class WidthVisitor final : public VNVisitor {
             nodep->dtypeFrom(nodep->fvarp());  // Which will get it from fvarp()->dtypep()
         }
         userIterateChildren(nodep, nullptr);
+        // Before any call is connected
+        if (AstFunc* const funcp = VN_CAST(nodep, Func)) {
+            if (funcp->isConstructor()) V3Task::ctorDefaultsToFlags(funcp);
+        }
 
         nodep->didWidth(true);
         nodep->doingWidth(false);

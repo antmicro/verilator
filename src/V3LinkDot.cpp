@@ -4691,10 +4691,12 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 && nodep->fileline()->tokenNum() < laterVarp->fileline()->tokenNum()) {
                 foundp = nullptr;
             }
-            // A task/function variable declared after the reference does not hide an outer
-            // declaration (IEEE 1800-2023 6.18)
+            // A task/function variable, or a class member referenced from a typedef, declared
+            // after the reference does not hide an outer declaration (IEEE 1800-2023 6.18)
             if (foundp && first && !m_ds.m_dotp && VN_IS(foundp->nodep(), Var)
-                && VN_IS(foundp->parentp()->nodep(), NodeFTask) && foundp->parentp()->fallbackp()
+                && (VN_IS(foundp->parentp()->nodep(), NodeFTask)
+                    || (m_resolvingTypedef && VN_IS(foundp->parentp()->nodep(), Class)))
+                && foundp->parentp()->fallbackp()
                 && nodep->fileline()->tokenNum() < foundp->nodep()->fileline()->tokenNum()) {
                 if (VSymEnt* const outerp
                     = foundp->parentp()->fallbackp()->findIdFallback(nodep->name())) {

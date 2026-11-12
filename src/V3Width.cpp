@@ -4496,7 +4496,8 @@ class WidthVisitor final : public VNVisitor {
         for (AstNode* const itemp : nodep->itemspList()) {
             if (VN_IS(itemp, InsideRange)) {
                 userIterate(itemp, WidthVP{expDTypep, FINAL}.p());
-            } else if (!itemp->dtypep()->skipRefp()->isNonPackedArray()) {
+            } else if (!itemp->dtypep()->skipRefp()->isNonPackedArray()
+                       && !VN_IS(itemp->dtypep()->skipRefp(), WildcardArrayDType)) {
                 iterateCheck(nodep, "Inside Item", itemp, CONTEXT_DET, FINAL, expDTypep,
                              EXTEND_EXP);
             }
@@ -4553,7 +4554,8 @@ class WidthVisitor final : public VNVisitor {
             return irangep->newAndFromInside(exprp, irangep->lhsp()->unlinkFrBack(),
                                              irangep->rhsp()->unlinkFrBack());
         } else if (VN_IS(itemDtp, UnpackArrayDType) || VN_IS(itemDtp, DynArrayDType)
-                   || VN_IS(itemDtp, QueueDType)) {
+                   || VN_IS(itemDtp, QueueDType) || VN_IS(itemDtp, AssocArrayDType)
+                   || VN_IS(itemDtp, WildcardArrayDType)) {
             // Unsupported in parameters
             AstNodeDType* const elemDtp = itemDtp->subDTypep()->skipRefp();
             const AstBasicDType* const elemBasicp = elemDtp->basicp();
@@ -4607,11 +4609,6 @@ class WidthVisitor final : public VNVisitor {
             inewp->dtypeSetBit();
             inewp->didWidth(true);
             return inewp;
-        } else if (VN_IS(itemDtp, AssocArrayDType)) {
-            nodep->v3error("Inside operator not specified on associative arrays "
-                           "(IEEE 1800-2023 11.4.13)");
-            VL_DO_DANGLING(exprp->deleteTree(), exprp);
-            return nullptr;
         }
         return AstEqWild::newTyped(itemp->fileline(), exprp, itemp->unlinkFrBack());
     }

@@ -662,11 +662,14 @@ class ParamProcessor final {
     }
     void relinkPinsByName(AstPin* startpinp, AstNodeModule* modp) {
         std::map<const string, AstVar*> nameToPin;
+        std::map<const string, AstParamTypeDType*> nameToTypePin;
         for (AstNode* const stmtp : modp->stmtspList()) {
             if (AstVar* const varp = VN_CAST(stmtp, Var)) {
                 if (varp->isIO() || varp->isGParam() || varp->isIfaceRef()) {
                     nameToPin.emplace(varp->name(), varp);
                 }
+            } else if (AstParamTypeDType* const ptp = VN_CAST(stmtp, ParamTypeDType)) {
+                if (ptp->isGParam()) nameToTypePin.emplace(ptp->name(), ptp);
             }
         }
         for (AstPin* const pinp : VNList<AstPin>{startpinp}) {
@@ -675,6 +678,11 @@ class ParamProcessor final {
                 UASSERT_OBJ(varIt != nameToPin.end(), varp,
                             "Not found in " << modp->prettyNameQ());
                 pinp->modVarp(varIt->second);
+            } else if (const AstParamTypeDType* const ptp = pinp->modPTypep()) {
+                const auto ptIt = vlstd::as_const(nameToTypePin).find(ptp->name());
+                UASSERT_OBJ(ptIt != nameToTypePin.end(), ptp,
+                            "Not found in " << modp->prettyNameQ());
+                pinp->modPTypep(ptIt->second);
             }
         }
     }
@@ -2185,6 +2193,21 @@ class ParamProcessor final {
         // Must be a separate loop, as constant conversion may have changed some pointers.
         string longname = srcModp->name() + "_";
         if (debug() >= 9 && paramsp) paramsp->dumpTreeAndNext(cout, "-  cellparams: ");
+        // A pin of a class nested in a cloned class can still point to a parameter of another
+        // copy of the class
+        if (VN_IS(srcModp, Class)) {
+            for (const AstPin* const pinp : VNList<AstPin>{paramsp}) {
+                const AstNode* const modParamp = pinp->modVarp()
+                                                     ? static_cast<const AstNode*>(pinp->modVarp())
+                                                     : pinp->modPTypep();
+                const AstNodeModule* const ownerp
+                    = modParamp ? VN_CAST(modParamp->aboveLoopp(), NodeModule) : nullptr;
+                if (ownerp && ownerp != srcModp && ownerp->origName() == srcModp->origName()) {
+                    relinkPinsByName(paramsp, srcModp);
+                    break;
+                }
+            }
+        }
 
         if (srcModp->hierBlock()) {
             longname = parameterizedHierBlockName(srcModp, paramsp);

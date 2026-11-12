@@ -374,6 +374,17 @@ class PremitVisitor final : public VNVisitor {
     }
     void visit(AstCMethodHard* nodep) override {
         iterateChildren(nodep);
+        // Element accesses return a reference; a ref argument must not get a copy
+        const VCMethod method = nodep->method();
+        if (method == VCMethod::ARRAY_AT_WRITE || method == VCMethod::DYN_AT_WRITE_APPEND
+            || method == VCMethod::DYN_AT_WRITE_APPEND_BACK) {
+            return;
+        }
+        if (method == VCMethod::ARRAY_AT || method == VCMethod::ARRAY_AT_BACK) {
+            const AstNode* headp = nodep;
+            while (headp->backp()->nextp() == headp) headp = headp->backp();
+            if (VN_IS(headp->backp(), NodeCCall)) return;
+        }
         checkNode(nodep);
     }
     void visit(AstCvtArrayToPacked* nodep) override {

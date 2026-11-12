@@ -720,12 +720,17 @@ class TaskVisitor final : public VNVisitor {
             if (portp->isRef() || portp->isConstRef()) {
                 bool refArgOk = false;
                 if (VN_IS(pinp, VarRef) || VN_IS(pinp, MemberRef) || VN_IS(pinp, StructSel)
-                    || VN_IS(pinp, ArraySel) || VN_IS(pinp, AssocSel)) {
+                    || VN_IS(pinp, ArraySel) || VN_IS(pinp, AssocSel)
+                    || VN_IS(pinp, WildcardSel)) {
                     refArgOk = true;
                 } else if (AstCMethodHard* const cMethodp = VN_CAST(pinp, CMethodHard)) {
                     if (VN_IS(cMethodp->fromp()->dtypep()->skipRefp(), QueueDType)) {
                         refArgOk = cMethodp->method() == VCMethod::DYN_AT_WRITE_APPEND
-                                   || cMethodp->method() == VCMethod::DYN_AT_WRITE_APPEND_BACK;
+                                   || cMethodp->method() == VCMethod::DYN_AT_WRITE_APPEND_BACK
+                                   // at() returns a const reference to the element
+                                   || (portp->isConstRef()
+                                       && (cMethodp->method() == VCMethod::ARRAY_AT
+                                           || cMethodp->method() == VCMethod::ARRAY_AT_BACK));
                     } else {
                         changeAtWriteRecurse(cMethodp);
                         refArgOk = cMethodp->method() == VCMethod::ARRAY_AT_WRITE;
@@ -734,6 +739,14 @@ class TaskVisitor final : public VNVisitor {
                 if (refArgOk) {
                     if (AstVarRef* const varrefp = VN_CAST(pinp, VarRef)) {
                         varrefp->access(VAccess::READWRITE);
+                    } else if (VN_IS(pinp, AssocSel) || VN_IS(pinp, WildcardSel)) {
+                        // Reference the stored element, created if missing, not the default
+                        AstNodeExpr* const targetp = pinp->getVAccessTargetRecurse();
+                        if (AstNodeVarRef* const refp = VN_CAST(targetp, NodeVarRef)) {
+                            refp->access(VAccess::READWRITE);
+                        } else if (AstMemberRef* const memberRefp = VN_CAST(targetp, MemberRef)) {
+                            memberRefp->access(VAccess::READWRITE);
+                        }
                     }
                 } else {
                     pinp->v3error("Function/task ref argument is not of allowed type");

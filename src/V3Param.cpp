@@ -427,6 +427,8 @@ class ParamProcessor final {
             } else {
                 nodep->v3fatalSrc("Can't parameterize interface without module name");
             }
+            // Different modports of one interface are different types
+            if (!ifrtp->modportName().empty()) key += "." + ifrtp->modportName();
         } else if (const AstNodeUOrStructDType* const dtypep
                    = VN_CAST(nodep, NodeUOrStructDType)) {
             key += " ";

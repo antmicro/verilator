@@ -3306,6 +3306,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
     };
 
     // STATE
+    // Fileline of the array name of a select in a dotted reference
+    std::unordered_map<const AstCellArrayRef*, FileLine*> m_arrayNameFl;
     LinkDotState* const m_statep;  // State, including dotted symbol table
     VSymEnt* m_curSymp = nullptr;  // SymEnt for current lookup point
     VSymEnt* m_modSymp = nullptr;  // SymEnt for current module
@@ -3573,10 +3575,11 @@ class LinkDotResolveVisitor final : public VNVisitor {
         }
         UINFO(9, indent() << "iface array element dotted='" << dotted << "' base=" << base);
         if (dotted.empty()) return nullptr;
-        AstVarXRef* const newp = new AstVarXRef{arefp->fileline(),
-                                                base + "__BRA__" + cvtToStr(constp->toSInt())
-                                                    + "__KET__" + VIFTOP_SUFFIX,
-                                                dotted, VAccess::READ};
+        const auto flIt = m_arrayNameFl.find(arefp);
+        FileLine* const flp = flIt != m_arrayNameFl.end() ? flIt->second : arefp->fileline();
+        AstVarXRef* const newp = new AstVarXRef{
+            flp, base + "__BRA__" + cvtToStr(constp->toSInt()) + "__KET__" + VIFTOP_SUFFIX, dotted,
+            VAccess::READ};
         // V3Param creates the element's variable; link after it
         if (m_statep->forPrimary()) newp->user3(true);
         return newp;
@@ -5027,7 +5030,6 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     m_ds.m_dotSymp = foundp;
                     m_ds.m_dotPos = DP_SCOPE;
                     UINFO(9, indent() << "modport -> iface varref " << foundp->nodep());
-                    // We lose the modport name here, so we cannot detect mismatched modports.
                     AstNodeExpr* newp
                         = new AstVarRef{nodep->fileline(), ifaceRefVarp, VAccess::READ};
 
@@ -5063,11 +5065,19 @@ class LinkDotResolveVisitor final : public VNVisitor {
                         m_ds.m_unlinkedScopep = nullptr;
                     } else if (cellarrayrefp && lastStates.m_dotPos == DP_FINAL) {
                         UINFO(9, indent() << "Array modport to SelBit " << cellarrayrefp);
+                        const auto flIt = m_arrayNameFl.find(cellarrayrefp);
+                        if (flIt != m_arrayNameFl.end()) newp->fileline(flIt->second);
                         newp = new AstSelBit{cellarrayrefp->fileline(), newp,
                                              cellarrayrefp->selp()->unlinkFrBack()};
                         newp->user3(true);  // Don't process again
                         VL_DO_DANGLING(pushDeletep(cellarrayrefp->unlinkFrBack()), cellarrayrefp);
                         m_ds.m_unlinkedScopep = nullptr;
+                    }
+                    if (lastStates.m_dotPos == DP_FINAL && !m_ds.m_unlinkedScopep && m_ds.m_dotp
+                        && !VN_IS(m_ds.m_dotp->backp(), Pin)) {
+                        // Keep the modport as a member selection; V3Width types the value with it
+                        newp = new AstMemberRef{newp->fileline(), newp, VFlagChildDType{},
+                                                nodep->name()};
                     }
                     nodep->replaceWith(newp);
                     VL_DO_DANGLING(pushDeletep(nodep), nodep);
@@ -6064,6 +6074,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
             } else {
                 AstCellArrayRef* const newp
                     = new AstCellArrayRef{nodep->fileline(), nodep->fromp()->name(), exprp};
+                m_arrayNameFl.emplace(newp, nodep->fromp()->fileline());
                 nodep->replaceWith(newp);
                 VL_DO_DANGLING(pushDeletep(nodep), nodep);
             }
@@ -6970,6 +6981,24 @@ class LinkDotResolveVisitor final : public VNVisitor {
     void visit(AstIfaceRefDType* nodep) override {
         if (nodep->user3SetOnce()) return;
         LINKDOT_VISIT_START();
+        // A modport of a type that is not a variable's type, e.g. a class parameter
+        if (m_statep->forPrimary() && nodep->isModport() && !nodep->modportp()) {
+            if (const AstNodeModule* const ifacep = nodep->ifaceViaCellp()) {
+                for (AstNode* const itemp : ifacep->stmtspList()) {
+                    AstModport* const modportp = VN_CAST(itemp, Modport);
+                    if (modportp && modportp->name() == nodep->modportName()) {
+                        nodep->modportp(modportp);
+                        break;
+                    }
+                }
+                if (!nodep->modportp()) {
+                    nodep->modportFileline()->v3error("Modport not found under interface "
+                                                      << nodep->prettyNameQ(nodep->ifaceName())
+                                                      << ": "
+                                                      << nodep->prettyNameQ(nodep->modportName()));
+                }
+            }
+        }
         if (nodep->paramsp()) {
             // If there is no parameters, there is no need to visit this node.
             AstIface* const ifacep = VN_AS(nodep->ifacep(), Iface);

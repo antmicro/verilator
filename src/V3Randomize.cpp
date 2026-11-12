@@ -2036,6 +2036,85 @@ class RandomizeVisitor final : public VNVisitor {
             callbackTaskp->addStmtsp(wrapIfRandMode(classp, memberVarp, nullCheckp));
         });
     }
+    // Get or create __VrandSnapshot(__Vrestore): saves the rand members to shadow members, or
+    // restores them when __Vrestore is set. A failed randomize() keeps the previous values
+    // (IEEE 1800-2023 18.6.3).
+    AstTask* getCreateSnapshotTask(AstClass* const classp) {
+        const string name = "__VrandSnapshot";
+        if (AstTask* const taskp = VN_CAST(m_memberMap.findMember(classp, name), Task)) {
+            return taskp;
+        }
+        FileLine* const fl = classp->fileline();
+        AstTask* const taskp = new AstTask{fl, name};
+        taskp->classMethod(true);
+        taskp->isVirtual(classp->isExtended());
+        classp->addMembersp(taskp);
+        m_memberMap.insert(classp, taskp);
+        AstVar* const restorep
+            = new AstVar{fl, VVarType::MEMBER, "__Vrestore", VFlagBitPacked{}, 1};
+        restorep->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
+        restorep->funcLocal(true);
+        restorep->direction(VDirection::INPUT);
+        taskp->addDeclsp(restorep);
+        classp->foreachMember([&](AstClass* ownerClassp, AstVar* memberVarp) {
+            if (!memberVarp->rand().isRandomizable()) return;
+            if (const AstClassRefDType* const classRefp
+                = VN_CAST(memberVarp->dtypep()->skipRefp(), ClassRefDType)) {
+                AstTask* const nestedp = getCreateSnapshotTask(classRefp->classp());
+                if (m_activeClasses.count(classRefp->classp()) || nestedp == taskp) {
+                    nestedp->recursive(true);
+                }
+                AstMethodCall* const callp = new AstMethodCall{
+                    fl, new AstVarRef{fl, ownerClassp, memberVarp, VAccess::WRITE}, name,
+                    new AstArg{fl, "", new AstVarRef{fl, restorep, VAccess::READ}}};
+                callp->taskp(nestedp);
+                callp->dtypeSetVoid();
+                taskp->addStmtsp(new AstIf{
+                    fl,
+                    new AstNeq{fl, new AstVarRef{fl, ownerClassp, memberVarp, VAccess::READ},
+                               new AstConst{fl, AstConst::Null{}}},
+                    callp->makeStmt()});
+                return;
+            }
+            AstVar* const savep = new AstVar{
+                fl, VVarType::MEMBER, "__Vsaved_" + memberVarp->name(), memberVarp->dtypep()};
+            classp->addMembersp(savep);
+            taskp->addStmtsp(new AstIf{
+                fl, new AstVarRef{fl, restorep, VAccess::READ},
+                new AstAssign{fl, new AstVarRef{fl, ownerClassp, memberVarp, VAccess::WRITE},
+                              new AstVarRef{fl, classp, savep, VAccess::READ}},
+                new AstAssign{fl, new AstVarRef{fl, classp, savep, VAccess::WRITE},
+                              new AstVarRef{fl, ownerClassp, memberVarp, VAccess::READ}}});
+        });
+        // Override in subclasses, so the call saves the members of the dynamic type
+        if (classp->isExtended()) {
+            v3Global.rootp()->foreach([&](AstClass* subp) {
+                if (subp != classp && AstClass::isClassExtendedFrom(subp, classp)) {
+                    getCreateSnapshotTask(subp);
+                }
+            });
+        }
+        return taskp;
+    }
+    AstNodeStmt* newSnapshotCall(AstClass* const classp, bool restore) {
+        FileLine* const fl = classp->fileline();
+        AstTask* const taskp = getCreateSnapshotTask(classp);
+        AstClassRefDType* const refDTypep = new AstClassRefDType{fl, classp, nullptr};
+        v3Global.rootp()->typeTablep()->addTypesp(refDTypep);
+        AstMethodCall* const callp = new AstMethodCall{
+            fl, new AstThisRef{fl, refDTypep}, taskp->name(),
+            new AstArg{fl, "", new AstConst{fl, AstConst::BitTrue{}, restore}}};
+        callp->taskp(taskp);
+        callp->dtypeSetVoid();
+        return callp->makeStmt();
+    }
+    // Restore the rand members when the solve failed
+    void addFailedRandomizeStmts(AstFunc* const randomizeFuncp, AstClass* const classp) {
+        FileLine* const fl = classp->fileline();
+        randomizeFuncp->addStmtsp(new AstIf{
+            fl, new AstLogNot{fl, new AstVarRef{fl, randomizeFuncp->fvarp(), VAccess::READ}},
+            newSnapshotCall(classp, true)});
+    }
     AstVar* getVarFromRef(AstNodeExpr* const exprp) {
         if (AstMemberRef* const memberRefp = VN_CAST(exprp, MemberRef)) {
             return memberRefp->varp();
@@ -2486,6 +2565,7 @@ class RandomizeVisitor final : public VNVisitor {
             populateNestedCallbackTask(preTaskp, nodep, "pre_randomize");
             randomizep->addStmtsp((new AstTaskRef{fl, preTaskp})->makeStmt());
         }
+        randomizep->addStmtsp(newSnapshotCall(nodep, false));
 
         // Both IS_RANDOMIZED and IS_RANDOMIZED_GLOBAL classes need full constraint support
         // IS_RANDOMIZED_GLOBAL classes can be randomized independently
@@ -2525,6 +2605,7 @@ class RandomizeVisitor final : public VNVisitor {
         }
         postp = AstNode::addNextNull(postp, newPrePostCall(nodep, "post_randomize"));
         addPostRandomizeStmts(randomizep, postp);
+        addFailedRandomizeStmts(randomizep, nodep);
         m_activeClasses.erase(nodep);
     }
     void visit(AstRandCase* nodep) override {
@@ -2841,6 +2922,7 @@ class RandomizeVisitor final : public VNVisitor {
             }
             randomizeFuncp->addStmtsp((new AstTaskRef{nodep->fileline(), preTaskp})->makeStmt());
         }
+        randomizeFuncp->addStmtsp(newSnapshotCall(classp, false));
 
         // Detach the expression and prepare variable copies
         // (randomize() in class method is a FuncRef, not a MethodCall)
@@ -2872,6 +2954,7 @@ class RandomizeVisitor final : public VNVisitor {
                                                 ? newVirtualPrePostCall(classp, "post_randomize")
                                                 : newPrePostCall(classp, "post_randomize"));
         addPostRandomizeStmts(randomizeFuncp, postp);
+        addFailedRandomizeStmts(randomizeFuncp, classp);
 
         // Replace the node with a call to that function
         nodep->name(randomizeFuncp->name());

@@ -8943,7 +8943,9 @@ class WidthVisitor final : public VNVisitor {
                                   << portp->prettyNameQ()
                                   << " requires a compatible interface type, parameters, and "
                                      "modport.");
-                } else if (portp->isWritable() && pinp->width() != portp->width()) {
+                } else if (portp->isWritable() && pinp->width() != portp->width()
+                           && !(portDTypep->isNonPackedArray() && pinDTypep->isNonPackedArray()
+                                && unpackedArraySizesMatch(portDTypep, pinDTypep))) {
                     pinp->v3widthWarn(portp->width(), pinp->width(),
                                       "Function output argument "
                                           << portp->prettyNameQ() << " requires " << portp->width()

@@ -2210,10 +2210,87 @@ class ConstraintExprVisitor final : public VNVisitor {
         }
     }
     void visit(AstSFormatF* nodep) override {}
+    // One-bit copy of a constraint if condition, inverted for the else branch
+    static AstNodeExpr* newGuardp(AstNodeExpr* condp, bool invert) {
+        FileLine* const fl = condp->fileline();
+        AstNodeExpr* guardp = condp->cloneTreePure(false);
+        if (guardp->width() != 1) {
+            guardp = new AstNeq{fl, guardp, new AstConst{fl, V3Number{fl, condp->width(), 0}}};
+            guardp->dtypeSetBit();
+            guardp->user1(condp->user1());
+        }
+        if (invert) {
+            guardp = new AstLogNot{fl, guardp};
+            guardp->dtypeSetBit();
+            guardp->user1(condp->user1());
+        }
+        return guardp;
+    }
+    // Move the soft constraints out of the branches of an if as 'guard -> expr', so the fold
+    // into one hard constraint does not make them hard
+    static void hoistSoft(AstNode* itemsp, AstNodeExpr* guardp, AstNode*& hoistedp) {
+        for (AstNode *itemp = itemsp, *nextp; itemp; itemp = nextp) {
+            nextp = itemp->nextp();
+            FileLine* const fl = itemp->fileline();
+            if (AstConstraintIf* const ifp = VN_CAST(itemp, ConstraintIf)) {
+                AstNodeExpr* const thenGuardp = new AstLogAnd{fl, guardp->cloneTreePure(false),
+                                                              newGuardp(ifp->condp(), false)};
+                AstNodeExpr* const elseGuardp = new AstLogAnd{fl, guardp->cloneTreePure(false),
+                                                              newGuardp(ifp->condp(), true)};
+                for (AstNodeExpr* const exprp : {thenGuardp, elseGuardp}) {
+                    exprp->dtypeSetBit();
+                    exprp->user1(true);
+                }
+                hoistSoft(ifp->thensp(), thenGuardp, hoistedp);
+                hoistSoft(ifp->elsesp(), elseGuardp, hoistedp);
+                VL_DO_DANGLING(thenGuardp->deleteTree(), thenGuardp);
+                VL_DO_DANGLING(elseGuardp->deleteTree(), elseGuardp);
+                continue;
+            }
+            if (AstConstraintForeach* const foreachp = VN_CAST(itemp, ConstraintForeach)) {
+                // A copy of the loop keeps the soft items, the original keeps the rest
+                AstConstraintForeach* const clonep = foreachp->cloneTree(false);
+                AstNode* softp = nullptr;
+                hoistSoft(clonep->bodyp(), guardp, softp);
+                AstNode* removedp = nullptr;
+                hoistSoft(foreachp->bodyp(), guardp, removedp);
+                if (removedp) VL_DO_DANGLING(removedp->deleteTree(), removedp);
+                if (!softp) {
+                    VL_DO_DANGLING(clonep->deleteTree(), clonep);
+                    continue;
+                }
+                if (clonep->bodyp()) clonep->bodyp()->unlinkFrBackWithNext()->deleteTree();
+                clonep->addBodyp(VN_AS(softp, NodeConstraintItem));
+                // The soft bucket selection reads the variables set by the preamble
+                foreachp->user3p(nullptr);
+                hoistedp = AstNode::addNextNull(hoistedp, clonep);
+                continue;
+            }
+            AstConstraintExpr* const cexprp = VN_CAST(itemp, ConstraintExpr);
+            if (!cexprp || !cexprp->isSoft()) continue;
+            AstNodeExpr* const logIfp
+                = new AstLogIf{fl, guardp->cloneTreePure(false), cexprp->exprp()->unlinkFrBack()};
+            logIfp->dtypeSetBit();
+            logIfp->user1(true);
+            cexprp->exprp(logIfp);
+            hoistedp = AstNode::addNextNull(hoistedp, cexprp->unlinkFrBack());
+        }
+    }
     void visit(AstConstraintIf* nodep) override {
         // Outside a fold, this if's branches are folded here and m_constraintVars collects
         // their names for the constraint replacing it; a nested if adds to its parent's fold
         const bool foldOwner = !m_wantSingle;
+        if (foldOwner) {
+            FileLine* const fl = nodep->fileline();
+            AstNodeExpr* const thenGuardp = newGuardp(nodep->condp(), false);
+            AstNodeExpr* const elseGuardp = newGuardp(nodep->condp(), true);
+            AstNode* hoistedp = nullptr;
+            hoistSoft(nodep->thensp(), thenGuardp, hoistedp);
+            hoistSoft(nodep->elsesp(), elseGuardp, hoistedp);
+            VL_DO_DANGLING(thenGuardp->deleteTree(), thenGuardp);
+            VL_DO_DANGLING(elseGuardp->deleteTree(), elseGuardp);
+            if (hoistedp) nodep->addNextHere(hoistedp);
+        }
         UASSERT_OBJ(!foldOwner || m_constraintVars.empty(), nodep,
                     "Constraint names of an earlier fold were not taken over");
         AstNodeExpr* newp = nullptr;
@@ -2223,9 +2300,9 @@ class ConstraintExprVisitor final : public VNVisitor {
         if (thenp && elsep) {
             newp = new AstCond{fl, nodep->condp()->unlinkFrBack(), thenp, elsep};
         } else if (thenp) {
-            newp = new AstLogIf{fl, nodep->condp()->unlinkFrBack(), thenp};
+            newp = new AstLogIf{fl, newGuardp(nodep->condp(), false), thenp};
         } else if (elsep) {
-            newp = new AstLogIf{fl, new AstNot{fl, nodep->condp()->unlinkFrBack()}, elsep};
+            newp = new AstLogIf{fl, newGuardp(nodep->condp(), true), elsep};
         }
         if (newp) {
             newp->dtypeSetBit();  // Result is boolean (prevents bare-var != 0 wrapping)
@@ -3546,7 +3623,19 @@ class SolverSmtLowering final : public V3SolverLowering {
         FileLine* const fl = distp->fileline();
         AstNodeExpr* unionExprp = nullptr;
         for (const auto& bucket : buckets) {
-            AstNodeExpr* const memberp = newDistMembershipTerm(distp, bucket.rangep);
+            AstNodeExpr* memberp = newDistMembershipTerm(distp, bucket.rangep);
+            // A state weight that is zero only at runtime excludes the bucket's values too
+            // (IEEE 1800-2023 18.5.3)
+            if (bucket.weightExprp->exists([](const AstNodeVarRef*) { return true; })
+                && !bucket.weightExprp->exists([](const AstNodeVarRef* refp) {
+                       return refp->varp()->rand().isRandomizable();
+                   })) {
+                AstNeq* const nzp = new AstNeq{fl, bucket.weightExprp->cloneTreePure(false),
+                                               new AstConst{fl, AstConst::Unsized64{}, 0}};
+                nzp->dtypeSetBit();
+                memberp = new AstLogAnd{fl, memberp, nzp};
+                memberp->user1(true);
+            }
             if (!unionExprp) {
                 unionExprp = memberp;
             } else {

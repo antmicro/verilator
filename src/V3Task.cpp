@@ -42,6 +42,9 @@
 
 VL_DEFINE_DEBUG_FUNCTIONS;
 
+// Prefix of the flag port of a constructor port with a non-constant default
+static constexpr const char* CTOR_FLAG_PREFIX = "__Vprovided__";
+
 //######################################################################
 // Graph subclasses
 
@@ -2471,6 +2474,22 @@ static V3TaskConnects connectArgs(T_Ref* nodep, const AstNode* calleep, AstNode*
 
     if (!makeChanges) return tconnects;
 
+    // The flag port of a constructor port with a non-constant default is 1 if the argument
+    // is given (ctorDefaultsToFlags)
+    for (int i = 0; i < tpinnum; ++i) {
+        AstVar* const portp = tconnects[i].first;
+        if (tconnects[i].second || !VString::startsWith(portp->name(), CTOR_FLAG_PREFIX)) {
+            continue;
+        }
+        const auto it = nameToIndex.find(portp->name().substr(std::strlen(CTOR_FLAG_PREFIX)));
+        if (it == nameToIndex.end()) continue;
+        const AstArg* const givenp = tconnects[it->second].second;
+        if (!givenp || !givenp->exprp()) continue;
+        tconnects[i].second = new AstArg{nodep->fileline(), portp->name(),
+                                         new AstConst{nodep->fileline(), AstConst::BitTrue{}}};
+        reorganize = true;
+    }
+
     // Connect missing ones
     for (int i = 0; i < tpinnum; ++i) {
         AstVar* const portp = tconnects[i].first;
@@ -2799,6 +2818,70 @@ std::string V3Task::assignDpiToInternal(const std::string& lhsName, AstVar* varp
         }
     }
     return statements;
+}
+
+// A constructor cannot be wrapped (taskConnectWrap), so a non-constant default of an integral
+// input port is evaluated in the constructor. A flag port tells if the argument is given.
+void V3Task::ctorDefaultsToFlags(AstFunc* funcp) {
+    std::vector<AstVar*> portps;
+    int pinNum = 0;
+    for (AstNode* declp = funcp->declsp(); declp; declp = declp->nextp()) {
+        AstVar* const portp = VN_CAST(declp, Var);
+        if (!portp || !portp->isIO() || portp->isFuncReturn()) continue;
+        pinNum = std::max(pinNum, portp->pinNum());
+        if (!portp->isReadOnly() || !portp->valuep()
+            || !portp->dtypep()->skipRefp()->isIntegralOrPacked()) {
+            continue;
+        }
+        const AstNodeExpr* const valuep = V3Const::constifyEdit(VN_AS(portp->valuep(), NodeExpr));
+        if (VN_IS(valuep, Const)) continue;
+        // connectArgs evaluates a static method at the call
+        const AstFuncRef* const refp = VN_CAST(valuep, FuncRef);
+        if (refp && refp->taskp()->classMethod() && refp->taskp()->isStatic()) continue;
+        portps.push_back(portp);
+    }
+    if (portps.empty()) return;
+    std::map<const AstVar*, AstVar*> localps;  // Port -> local holding its value
+    AstNodeStmt* stmtsp = nullptr;
+    for (AstVar* const portp : portps) {
+        FileLine* const fl = portp->fileline();
+        AstVar* const flagp = new AstVar{fl, VVarType::PORT, CTOR_FLAG_PREFIX + portp->name(),
+                                         funcp->findBitDType()};
+        flagp->direction(VDirection::INPUT);
+        flagp->funcLocal(true);
+        flagp->pinNum(++pinNum);
+        flagp->valuep(new AstConst{fl, AstConst::BitFalse{}});
+        funcp->addDeclsp(flagp);
+        AstVar* const localp
+            = new AstVar{fl, VVarType::BLOCKTEMP, "__Vdefault__" + portp->name(), portp->dtypep()};
+        localp->funcLocal(true);
+        funcp->addDeclsp(localp);
+        // A default reads the locals of earlier defaulted ports
+        AstNodeExpr* const defaultp = VN_AS(portp->valuep(), NodeExpr)->unlinkFrBack();
+        defaultp->foreach([&](AstVarRef* refp) {
+            const auto it = localps.find(refp->varp());
+            if (it != localps.end()) refp->varp(it->second);
+        });
+        AstConst* const zerop = new AstConst{fl, V3Number{fl, portp->width(), 0}};
+        zerop->dtypeFrom(portp);
+        portp->valuep(zerop);
+        AstCond* const condp = new AstCond{fl, new AstVarRef{fl, flagp, VAccess::READ},
+                                           new AstVarRef{fl, portp, VAccess::READ}, defaultp};
+        condp->dtypeFrom(portp);
+        stmtsp = AstNode::addNext(
+            stmtsp, new AstAssign{fl, new AstVarRef{fl, localp, VAccess::WRITE}, condp});
+        localps.emplace(portp, localp);
+    }
+    // The body reads the locals
+    if (AstNode* const bodyp = funcp->stmtsp()) {
+        bodyp->foreachAndNext([&](AstVarRef* refp) {
+            const auto it = localps.find(refp->varp());
+            if (it != localps.end()) refp->varp(it->second);
+        });
+        bodyp->addHereThisAsNext(stmtsp);
+    } else {
+        funcp->addStmtsp(stmtsp);
+    }
 }
 
 void V3Task::taskAll(AstNetlist* nodep) {

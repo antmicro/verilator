@@ -3549,6 +3549,38 @@ class LinkDotResolveVisitor final : public VNVisitor {
             m_ds.m_dotErr = true;
         }
     }
+    AstNodeExpr* ifaceArrayElemXRef(AstNode* nodep, const std::string& dotText) {
+        AstCellArrayRef* const arefp = VN_CAST(nodep, CellArrayRef);
+        if (!arefp || !m_ds.m_unresolvedCell) return nullptr;
+        const AstConst* const constp = VN_CAST(arefp->selp(), Const);
+        if (!constp || arefp->selp()->nextp()) return nullptr;
+        static constexpr const char* const VIFTOP_SUFFIX = "__Viftop";
+        std::string base = arefp->name();
+        if (VString::endsWith(base, VIFTOP_SUFFIX)) {
+            base.resize(base.size() - std::strlen(VIFTOP_SUFFIX));
+        }
+        // visit(AstSelBit*) appended the placeholder of the deferred index
+        static constexpr const char* const PLACEHOLDER = "__BRA__??__KET__";
+        std::string dotted = dotText;
+        if (!VString::endsWith(dotted, PLACEHOLDER)) return nullptr;
+        dotted.resize(dotted.size() - std::strlen(PLACEHOLDER));
+        // An earlier deferred index needs V3Param
+        if (dotted.find(PLACEHOLDER) != std::string::npos) return nullptr;
+        if (dotted == base) {
+            dotted = "";
+        } else if (VString::endsWith(dotted, "." + base)) {
+            dotted.resize(dotted.size() - base.size() - 1);
+        }
+        UINFO(9, indent() << "iface array element dotted='" << dotted << "' base=" << base);
+        if (dotted.empty()) return nullptr;
+        AstVarXRef* const newp = new AstVarXRef{arefp->fileline(),
+                                                base + "__BRA__" + cvtToStr(constp->toSInt())
+                                                    + "__KET__" + VIFTOP_SUFFIX,
+                                                dotted, VAccess::READ};
+        // V3Param creates the element's variable; link after it
+        if (m_statep->forPrimary()) newp->user3(true);
+        return newp;
+    }
     AstVar* findIfaceTopVarp(AstNode* nodep, VSymEnt* parentEntp, const string& name) {
         const string findName = name + "__Viftop";
         VSymEnt* const ifaceSymp = parentEntp->findIdFallback(findName);
@@ -4434,6 +4466,16 @@ class LinkDotResolveVisitor final : public VNVisitor {
                         newp = new AstConst{nodep->fileline(), AstConst::BitFalse{}};
                     } else {
                         newp = nodep->rhsp()->unlinkFrBack();
+                        // A hierarchical reference ending at an element of an interface array
+                        // refers to the element's interface variable
+                        // A pin expression is resolved by V3Param instead
+                        AstNodeExpr* const xrefp = VN_IS(nodep->backp(), Pin)
+                                                       ? nullptr
+                                                       : ifaceArrayElemXRef(newp, m_ds.m_dotText);
+                        if (xrefp) {
+                            VL_DO_DANGLING(pushDeletep(newp), newp);
+                            newp = xrefp;
+                        }
                     }
                     UINFOTREE(9, newp, "", "dot-out");
                     nodep->replaceWith(newp);
@@ -4973,6 +5015,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
                         = findIfaceTopVarp(nodep, parentEntp, cellp->name());
                     //
                     ok = true;
+                    const std::string cellDotText = m_ds.m_dotText;
                     m_ds.m_dotText = VString::dot(m_ds.m_dotText, ".", nodep->name());
                     m_ds.m_dotSymp = foundp;
                     m_ds.m_dotPos = DP_SCOPE;
@@ -4988,7 +5031,30 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     // AstDot must visit another ParseRef or FTaskRef before restoring DotStates.
                     // That final reference consumes CellArrayRef by constructing AstUnlinkedRef;
                     // V3Param then resolves its array index.
-                    if (cellarrayrefp && lastStates.m_dotPos == DP_FINAL) {
+                    // In a hierarchical reference the array select is the last cell
+                    AstCellRef* const cellrefp = VN_CAST(m_ds.m_unlinkedScopep, CellRef);
+                    AstCellArrayRef* const lastArrayRefp
+                        = cellrefp ? VN_CAST(cellrefp->exprp(), CellArrayRef) : cellarrayrefp;
+                    AstNodeExpr* const xrefp = (lastArrayRefp && lastStates.m_dotPos == DP_FINAL)
+                                                   ? ifaceArrayElemXRef(lastArrayRefp, cellDotText)
+                                                   : nullptr;
+                    const size_t cellDotPos = cellDotText.rfind('.');
+                    if (!xrefp && !m_ds.m_unlinkedScopep && cellDotPos != std::string::npos
+                        && lastStates.m_dotPos == DP_FINAL) {
+                        // Interface instance in another module
+                        UINFO(9, indent() << "Hierarchical modport " << cellDotText);
+                        VL_DO_DANGLING(pushDeletep(newp), newp);
+                        newp = new AstVarXRef{nodep->fileline(), ifaceRefVarp->name(),
+                                              cellDotText.substr(0, cellDotPos), VAccess::READ};
+                        if (m_statep->forPrimary()) newp->user3(true);
+                    } else if (xrefp) {
+                        UINFO(9, indent() << "Hierarchical array modport " << xrefp);
+                        VL_DO_DANGLING(pushDeletep(newp), newp);
+                        newp = xrefp;
+                        AstNode* const scopep = m_ds.m_unlinkedScopep->unlinkFrBack();
+                        VL_DO_DANGLING(pushDeletep(scopep), scopep);
+                        m_ds.m_unlinkedScopep = nullptr;
+                    } else if (cellarrayrefp && lastStates.m_dotPos == DP_FINAL) {
                         UINFO(9, indent() << "Array modport to SelBit " << cellarrayrefp);
                         newp = new AstSelBit{cellarrayrefp->fileline(), newp,
                                              cellarrayrefp->selp()->unlinkFrBack()};

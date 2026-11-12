@@ -1,0 +1,5 @@
+%Error: t/t_iface_physical_modport_value_bad.v:38:26: Modport not found under interface 'Link': 'Missing'
+   38 |   Channel #(virtual Link.Missing) missing_view;
+      |                          ^~~~~~~
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: Exiting due to

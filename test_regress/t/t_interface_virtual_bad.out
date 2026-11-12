@@ -11,6 +11,10 @@
                                          : ... note: In instance 't'
    35 |     v8 = v8_phy;   
       |          ^~~~~~
+%Error: t/t_interface_virtual_bad.v:36:13: Operator ASSIGN expected no interface modport on Assign RHS but got 'phy' modport.
+                                         : ... note: In instance 't'
+   36 |     v8 = p8.phy;   
+      |             ^~~
 %Error: t/t_interface_virtual_bad.v:37:15: Operator ASSIGN expected non-interface on Assign RHS but 'p8' is an interface.
                                          : ... note: In instance 't'
    37 |     data = p8.phy;   

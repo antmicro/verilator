@@ -11304,6 +11304,8 @@ class WidthVisitor final : public VNVisitor {
                                     << underIfaceRefp->ifaceViaCellp()->prettyNameQ() << ").");
                 } else if (underIfaceRefp->modportp()
                            && expIfaceRefp->modportp() != underIfaceRefp->modportp()
+                           // A parameterized type may carry only the modport name
+                           && expIfaceRefp->modportName() != underIfaceRefp->modportName()
                            // Port without modport may connect to a modport (IEEE 1800-2023 25.5)
                            && (expIfaceRefp->modportp() || !VN_IS(parentp, Pin))) {
                     underp->v3error(ucfirst(parentp->prettyOperatorName())

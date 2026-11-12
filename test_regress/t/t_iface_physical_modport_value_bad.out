@@ -1,0 +1,14 @@
+%Error: t/t_iface_physical_modport_value_bad.v:32:22: Virtual interface argument 'port' requires a compatible interface type, parameters, and modport.
+                                                    : ... note: In instance 't'
+   32 |     wrong_view = new(ports[0].Writer);
+      |                      ^~~~~
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: t/t_iface_physical_modport_value_bad.v:33:26: Virtual interface argument 'port' requires a compatible interface type, parameters, and modport.
+                                                    : ... note: In instance 't'
+   33 |     dropped_view = new(t.ports[0].Reader);
+      |                          ^~~~~
+%Error: t/t_iface_physical_modport_value_bad.v:34:25: Virtual interface argument 'port' requires a compatible interface type, parameters, and modport.
+                                                    : ... note: In instance 't'
+   34 |     wrong_param = new(t.ports[1].Reader);
+      |                         ^~~~~
+%Error: Exiting due to

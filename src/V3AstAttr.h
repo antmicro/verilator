@@ -1064,6 +1064,7 @@ static constexpr bool validateArgsDescriptor(const char* descrp) {
     macro(EVENT_CLEAR_FIRED,                  "clearFired",             false,  CLEAN,  false,      "", "") \
     macro(EVENT_CLEAR_TRIGGERED,              "clearTriggered",         false,  CLEAN,  false,      "", "") \
     macro(EVENT_FIRE,                         "fire",                   false,  CLEAN,  false,      "", "") \
+    macro(EVENT_FIRE_COUNT,                   "fireCount",              PURE,   CLEAN,  false,      "", "") \
     macro(EVENT_IS_FIRED,                     "isFired",                PURE,   CLEAN,  false,      "", "") \
     macro(EVENT_IS_TRIGGERED,                 "isTriggered",            PURE,   CLEAN,  false,      "", "") \
     macro(FORCE_ADD,                          "addForce",               false,  CLEAN,  false,      "rrrr+", "") \

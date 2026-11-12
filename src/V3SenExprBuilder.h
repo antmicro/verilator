@@ -43,6 +43,7 @@ public:
 private:
     // STATE
     AstScope* const m_scopep;  // The scope
+    const bool m_dynamic;  // Triggers of one waiting process (V3Timing dynamic triggers)
 
     Results m_results;  // The builder result
 
@@ -285,6 +286,24 @@ private:
                     false};
         case VEdgeType::ET_EVENT: {
             UASSERT_OBJ(v3Global.hasEvents(), senItemp, "Inconsistent");
+            // Do not trigger user named-event processes after $finish.
+            const auto notFinishp = [flp]() {
+                return new AstCExpr{flp,
+                                    "VL_LIKELY(!vlSymsp->_vm_contextp__->gotFinish() && "
+                                    "!vlSymsp->_vm_contextp__->finishPending())",
+                                    1};
+            };
+            if (m_dynamic) {
+                // A waiting process triggers on a fire() after it started waiting. It compares
+                // the fire count with its own copy, the shared 'fired' state is not cleared.
+                AstCMethodHard* const countp
+                    = new AstCMethodHard{flp, currp(), VCMethod::EVENT_FIRE_COUNT};
+                countp->dtypeSetUInt64();
+                AstVarRef* const prevCountp = new AstVarRef{flp, getPrev(countp), VAccess::READ};
+                AstNodeExpr* const changedp
+                    = wrapExprWithNullCheck(flp, new AstNeq{flp, countp, prevCountp}, baseRefp);
+                return {new AstLogAnd{flp, notFinishp(), changedp}, false};
+            }
 
             // Clear 'fired' state when done (guarded if through a nullable reference)
             // The event is modified, so the select (e.g. assoc array) must be an lvalue
@@ -321,13 +340,7 @@ private:
                 = new AstCMethodHard{flp, currp(), VCMethod::EVENT_IS_FIRED};
             callp->dtypeSetBit();
             AstNodeExpr* const firedp = wrapExprWithNullCheck(flp, callp, baseRefp);
-            // Do not trigger user named-event processes after $finish.
-            AstNodeExpr* const notFinishp
-                = new AstCExpr{flp,
-                               "VL_LIKELY(!vlSymsp->_vm_contextp__->gotFinish() && "
-                               "!vlSymsp->_vm_contextp__->finishPending())",
-                               1};
-            return {new AstLogAnd{flp, notFinishp, firedp}, false};
+            return {new AstLogAnd{flp, notFinishp(), firedp}, false};
         }
         case VEdgeType::ET_TRUE:  //
             return {currp(), false};
@@ -380,8 +393,9 @@ public:
     }
 
     // CONSTRUCTOR
-    explicit SenExprBuilder(AstScope* scopep)
-        : m_scopep{scopep} {}
+    explicit SenExprBuilder(AstScope* scopep, bool dynamic = false)
+        : m_scopep{scopep}
+        , m_dynamic{dynamic} {}
 };
 
 #endif  // Guard

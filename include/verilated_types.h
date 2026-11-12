@@ -436,6 +436,7 @@ public:
     virtual ~VlEventBase() = default;
 
     virtual void fire() = 0;
+    virtual uint64_t fireCount() const = 0;
     virtual bool isFired() const = 0;
     virtual bool isTriggered() const = 0;
     virtual void clearFired() = 0;
@@ -446,6 +447,7 @@ class VlEvent final : public VlEventBase {
     // MEMBERS
     bool m_fired = false;  // Fired on this scheduling iteration
     bool m_triggered = false;  // Triggered state of event persisting until next time step
+    uint64_t m_fireCount = 0;  // Number of fire() calls, compared by dynamic waiters
 
 public:
     // CONSTRUCTOR
@@ -455,7 +457,11 @@ public:
     friend std::string VL_TO_STRING(const VlEvent& e);
     friend class VlAssignableEvent;
     // METHODS
-    void fire() override { m_fired = m_triggered = true; }
+    void fire() override {
+        m_fired = m_triggered = true;
+        ++m_fireCount;
+    }
+    uint64_t fireCount() const override { return m_fireCount; }
     bool isFired() const override { return m_fired; }
     bool isTriggered() const override { return m_triggered; }
     void clearFired() override { m_fired = false; }
@@ -470,7 +476,8 @@ public:
     ~VlAssignableEvent() override = default;
 
     // METHODS
-    void fire() override { (*this)->m_fired = (*this)->m_triggered = true; }
+    void fire() override { (*this)->fire(); }
+    uint64_t fireCount() const override { return (*this)->m_fireCount; }
     bool isFired() const override { return (*this)->m_fired; }
     bool isTriggered() const override { return (*this)->m_triggered; }
     void clearFired() override { (*this)->m_fired = false; }

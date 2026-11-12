@@ -836,7 +836,7 @@ class TimingControlVisitor final : public VNVisitor {
     void visit(AstScope* nodep) override {
         VL_RESTORER(m_scopep);
         m_scopep = nodep;
-        SenExprBuilder senExprBuilder{m_scopep};
+        SenExprBuilder senExprBuilder{m_scopep, /* dynamic: */ true};
         {  // Restore m_senExprBuilderp before destroying senExprBuilder
             VL_RESTORER(m_senExprBuilderp);
             m_senExprBuilderp = &senExprBuilder;

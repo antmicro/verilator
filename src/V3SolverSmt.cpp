@@ -3158,6 +3158,7 @@ class SolverSmtLowering final : public V3SolverLowering {
     int m_distNum = 0;  // Dist bucket variable counter within a class for var naming
     std::set<std::string> m_writtenVars;  // Track write_var calls per class to avoid duplicates
     std::map<AstClass*, VInsertionSet<AstVar*>> m_sizeConstrainedArrays;  // Per-class arrays
+    std::map<AstClass*, VInsertionSet<AstVar*>> m_resizedArrays;  // Resized by class constraints
     std::set<const AstVar*> m_inlineSizedArrays;  // Arrays with a size variable from 'with'
     uint32_t m_uniqueConstraintId = 0;  // current ID of unique call
 
@@ -4051,6 +4052,17 @@ class SolverSmtLowering final : public V3SolverLowering {
         }
     }
 
+    // Arrays resized between the solve passes: size-constrained arrays and arrays resized
+    // by class constraints, of classp and its base classes
+    void collectSizePhaseArrays(AstClass* classp, VInsertionSet<AstVar*>& arrayVars) const {
+        collectSizeConstrainedArrays(classp, arrayVars);
+        for (; classp; classp = classp->extendsp() ? classp->extendsp()->classp() : nullptr) {
+            const auto it = m_resizedArrays.find(classp);
+            if (it != m_resizedArrays.end())
+                arrayVars.insert(it->second.begin(), it->second.end());
+        }
+    }
+
     static void copyVariableRegistrations(AstFunc* const sourcep, AstFunc* const targetp) {
         for (AstNodeStmt* const stmtp : sourcep->stmtspList()) {
             bool hasRegistration = false;
@@ -4110,6 +4122,7 @@ class SolverSmtLowering final : public V3SolverLowering {
     // Rebuild constraints after resize
     void addConstraintRebuild(AstFunc* const randomizep, AstVar* const setupGenp,
                               AstVar* const solveGenp, const VInsertionSet<AstVar*>& sizeArrayVars,
+                              const VInsertionSet<AstVar*>& phaseArrayVars,
                               AstNodeStmt* const setupStmtsp) {
         FileLine* const fl = randomizep->fileline();
         for (AstVar* const arrVarp : sizeArrayVars) {
@@ -4117,7 +4130,7 @@ class SolverSmtLowering final : public V3SolverLowering {
         }
         randomizep->addStmtsp(implementConstraintsClear(fl, setupGenp));
         randomizep->addStmtsp(setupStmtsp);
-        for (AstVar* const arrVarp : sizeArrayVars) {
+        for (AstVar* const arrVarp : phaseArrayVars) {
             randomizep->addStmtsp(newPinSizeVariable(fl, arrVarp, solveGenp));
         }
     }
@@ -4166,6 +4179,7 @@ public:
                         fl, nodep->fromp()->unlinkFrBack(), VCMethod::DYN_RESIZE, sizeVarRefp};
                     resizep->dtypep(nodep->findVoidDType());
                     resizerTaskp->addStmtsp(new AstStmtExpr{fl, resizep});
+                    m_resizedArrays[classp].insert(queueVarp);
                 }
 
                 // Since size variable is signed int, we need additional constraint
@@ -4293,16 +4307,20 @@ public:
             AstTaskRef* const setupTaskRefp = new AstTaskRef{fl, setupAllTaskp};
             randomizep->addStmtsp(setupTaskRefp->makeStmt());
 
-            if (!sizeArrayVars.empty()) {
+            // __VBasicRand runs after the resize, so the elements of an array resized by a
+            // class constraint are randomized after the first solve too
+            VInsertionSet<AstVar*> phaseArrayVars = sizeArrayVars;
+            collectSizePhaseArrays(nodep, phaseArrayVars);
+            if (!phaseArrayVars.empty()) {
                 AstVar* const sizeOkVarp
-                    = addSizeSolvep(randomizep, genp, randModeVarp, sizeArrayVars);
+                    = addSizeSolvep(randomizep, genp, randModeVarp, phaseArrayVars);
                 if (AstTask* const resizeAllTaskp
                     = VN_AS(m_memberMap.findMember(nodep, "__Vresize_constrained_arrays"), Task)) {
                     randomizep->addStmtsp(
                         new AstIf{fl, new AstVarRef{fl, sizeOkVarp, VAccess::READ},
                                   (new AstTaskRef{fl, resizeAllTaskp})->makeStmt(), nullptr});
                 }
-                addConstraintRebuild(randomizep, genp, genp, sizeArrayVars,
+                addConstraintRebuild(randomizep, genp, genp, sizeArrayVars, phaseArrayVars,
                                      (new AstTaskRef{fl, setupAllTaskp})->makeStmt());
 
                 // The caller places the final solve after or before the basic randomization
@@ -4332,12 +4350,11 @@ public:
         return beginValp;
     }
     void addAfterClassSolve(AstClass* nodep, AstFunc* randomizep) override {
-        const auto sizeArraysIt = m_sizeConstrainedArrays.find(nodep);
-        const bool needsSizePhase
-            = sizeArraysIt != m_sizeConstrainedArrays.end() && !sizeArraysIt->second.empty();
-        // Size-only resize fallback (no element constraint, so no two-pass phase).
-        // Must run after the solver .next() that sets the size variable.
-        if (needsSizePhase) return;
+        VInsertionSet<AstVar*> phaseArrayVars;
+        collectSizePhaseArrays(nodep, phaseArrayVars);
+        // Resize fallback without a size phase. Must run after the solver .next() that sets
+        // the size variable.
+        if (!phaseArrayVars.empty()) return;
         if (AstTask* const resizeAllTaskp
             = VN_AS(m_memberMap.findMember(nodep, "__Vresize_constrained_arrays"), Task)) {
             AstTaskRef* const resizeTaskRefp = new AstTaskRef{nodep->fileline(), resizeAllTaskp};
@@ -4406,9 +4423,9 @@ public:
             = VN_AS(m_memberMap.findMember(classp, "__Vresize_constrained_arrays"), Task)) {
             resizeStmtsp = (new AstTaskRef{nodep->fileline(), resizeAllTaskp})->makeStmt();
         }
+        VInsertionSet<AstVar*> resizedArrays;  // Arrays resized by this 'with' block
         {
             std::vector<AstCMethodHard*> sizeMethodps;
-            std::set<const AstVar*> resizedArrays;  // Arrays resized by this 'with' block
             capturedTreep->foreachAndNext([&](AstCMethodHard* methodp) {
                 if (methodp->method() == VCMethod::DYN_SIZE
                     || methodp->method() == VCMethod::ASSOC_SIZE) {
@@ -4454,7 +4471,7 @@ public:
                 // No class constraint resizes the array, so each 'with' block that
                 // constrains the size does
                 if (wasCreated) m_inlineSizedArrays.insert(arrVarp);
-                if (m_inlineSizedArrays.count(arrVarp) && resizedArrays.insert(arrVarp).second) {
+                if (m_inlineSizedArrays.count(arrVarp) && resizedArrays.insert(arrVarp)) {
                     AstNodeExpr* const resizeVarRefp = buildMemberRefExprp(rootExprp, arrVarp);
                     AstNodeExpr* const sizeExprp = buildMemberRefExprp(rootExprp, sizeVarp);
                     // Append size >= 0 constraint so ConstraintExprVisitor processes it
@@ -4495,25 +4512,27 @@ public:
         // final (post-resize) length rather than their pre-solve (usually empty) one.
         FileLine* const fl = nodep->fileline();
         collectSizeConstrainedArrays(classp, allSizeArrays);
-        const bool needsSizePhase = !allSizeArrays.empty();
+        // Arrays resized between the solves; __VBasicRand runs after the resize
+        VInsertionSet<AstVar*> phaseArrays = allSizeArrays;
+        collectSizePhaseArrays(classp, phaseArrays);
+        for (AstVar* const arrVarp : resizedArrays) {
+            // Only arrays of the randomized object; a member of a nested object is
+            // resized through a member reference that the size pins do not support
+            for (const AstClass* cp = classp; cp;
+                 cp = cp->extendsp() ? cp->extendsp()->classp() : nullptr) {
+                if (arrVarp->user2p() == cp) phaseArrays.insert(arrVarp);
+            }
+        }
+        const bool needsSizePhase = !phaseArrays.empty();
         AstVar* const retVarp = randomizeFuncp->fvarp();
 
         if (needsSizePhase) {
-            // Call __VBasicRand and stash its result FIRST, as its own statement,
-            // before either solve. The single-statement form below (basicRandomizeFuncCallp
-            // combined inline with the solver call) relies on statement hoisting emitting
-            // __VBasicRand before the (one) solve call, so the solver's answer -- not
-            // __VBasicRand's fallback fill of every rand array element -- is what sticks.
-            // With two explicit solves as separate statements, that implicit ordering no
-            // longer holds (the hoisted __VBasicRand call would land right before the LAST
-            // statement that references it, i.e. after the final solve), so it is made
-            // explicit here instead.
+            // __VBasicRand runs as its own statement after the resize and before the final
+            // solve, so the solver values of constrained elements override its fill
             AstVar* const basicOkVarp = new AstVar{fl, VVarType::BLOCKTEMP, "__Vbasic_ok",
                                                    classp->findBasicDType(VBasicDTypeKwd::BIT)};
             basicOkVarp->funcLocal(true);
             randomizeFuncp->addDeclsp(basicOkVarp);
-            randomizeFuncp->addStmtsp(new AstAssign{
-                fl, new AstVarRef{fl, basicOkVarp, VAccess::WRITE}, basicRandomizeFuncCallp});
 
             AstVar* const finalOkVarp = new AstVar{fl, VVarType::BLOCKTEMP, "__Vfinal_ok",
                                                    classp->findBasicDType(VBasicDTypeKwd::BIT)};
@@ -4522,7 +4541,7 @@ public:
 
             // First pass: solve to determine sizes
             AstVar* const sizeOkVarp
-                = addSizeSolvep(randomizeFuncp, localGenp, randModeVarp, allSizeArrays);
+                = addSizeSolvep(randomizeFuncp, localGenp, randModeVarp, phaseArrays);
 
             // Resize constrained arrays before rebuilding constraints: both any
             // class-wide resize task (class-level size constraints) and this
@@ -4561,7 +4580,7 @@ public:
             // once-ever registration (AstVar::user3()) does not re-run on the second
             // lowering pass below, so it is redone here by hand, same as the
             // class-level pattern above.
-            for (AstVar* const arrVarp : allSizeArrays) {
+            for (AstVar* const arrVarp : phaseArrays) {
                 // The size var itself needs write_var'ing here too, unconditionally:
                 // the pin below always references it by name, but nothing else in
                 // THIS with-block's own (re-)lowered tree is guaranteed to touch it --
@@ -4588,6 +4607,8 @@ public:
                     sizeMethodp->addPinsp(new AstConst{fl, AstConst::Unsized64{}, 0});
                     randomizeFuncp->addStmtsp(sizeMethodp->makeStmt());
                 }
+                // __VBasicRand randomizes the elements of an array without element constraints
+                if (!allSizeArrays.exists(arrVarp)) continue;
 
                 if (isDynArrOfClassTypeRecurse(arrVarp->dtypep())) {
                     const uint32_t unpackedDims = arrVarp->dtypep()->dimensions(false).second;
@@ -4650,9 +4671,13 @@ public:
             SmtUtil::replaceWithLowered(capturedClonep);
 
             // Pin the sizes so the final solve can't move them
-            for (AstVar* const arrVarp : allSizeArrays) {
+            for (AstVar* const arrVarp : phaseArrays) {
                 randomizeFuncp->addStmtsp(newPinSizeVariable(fl, arrVarp, localGenp));
             }
+
+            // Randomize after the resize, the final solve overrides the constrained elements
+            randomizeFuncp->addStmtsp(new AstAssign{
+                fl, new AstVarRef{fl, basicOkVarp, VAccess::WRITE}, basicRandomizeFuncCallp});
 
             // Final solve: element values with sizes pinned
             AstCExpr* const solverCall2p = newSolverCallp(localGenp);

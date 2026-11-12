@@ -4555,12 +4555,53 @@ class WidthVisitor final : public VNVisitor {
         } else if (VN_IS(itemDtp, UnpackArrayDType) || VN_IS(itemDtp, DynArrayDType)
                    || VN_IS(itemDtp, QueueDType)) {
             // Unsupported in parameters
+            AstNodeDType* const elemDtp = itemDtp->subDTypep()->skipRefp();
+            const AstBasicDType* const elemBasicp = elemDtp->basicp();
+            const AstBasicDType* const exprBasicp = exprp->dtypep()->basicp();
+            const bool wider = elemBasicp && elemBasicp->isIntegralOrPacked() && exprBasicp
+                               && exprBasicp->isIntegralOrPacked()
+                               && exprp->width() > elemDtp->width();
+            if (wider && !m_constraintp) {
+                // A wider value matches if it fits in the element type and the array has the
+                // truncated value. The '&&' evaluates exprp once, before the temp reads.
+                FileLine* const fl = nodep->fileline();
+                const int width = exprp->width();
+                const int elemWidth = elemDtp->width();
+                const bool isSigned = exprp->isSigned() && elemDtp->isSigned();
+                AstExprStmt* const exprStmtp = VN_CAST(exprp, ExprStmt);
+                AstNodeExpr* const readp = exprStmtp ? exprStmtp->resultp() : exprp;
+                V3Number maxNum{fl, width, 0};
+                maxNum.setMask(isSigned ? elemWidth - 1 : elemWidth);
+                AstNodeExpr* fitsp;
+                if (isSigned) {
+                    V3Number minNum{fl, width, 0};
+                    minNum.opNot(maxNum);
+                    AstNodeExpr* const gtep = new AstGteS{fl, exprp, new AstConst{fl, minNum}};
+                    AstNodeExpr* const ltep
+                        = new AstLteS{fl, readp->cloneTreePure(false), new AstConst{fl, maxNum}};
+                    gtep->dtypeSetBit();
+                    ltep->dtypeSetBit();
+                    fitsp = new AstLogAnd{fl, gtep, ltep};
+                } else {
+                    fitsp = new AstLte{fl, exprp, new AstConst{fl, maxNum}};
+                }
+                fitsp->dtypeSetBit();
+                AstNodeExpr* const selp
+                    = new AstSel{fl, readp->cloneTreePure(false), 0, elemWidth};
+                selp->dtypep(itemDtp->subDTypep());
+                selp->didWidth(true);
+                AstNodeExpr* const inewp
+                    = new AstCMethodHard{fl, itemp->unlinkFrBack(), VCMethod::ARRAY_INSIDE, selp};
+                inewp->dtypeSetBit();
+                inewp->didWidth(true);
+                AstNodeExpr* const andp = new AstLogAnd{fl, fitsp, inewp};
+                andp->dtypeSetBit();
+                return andp;
+            }
             AstNodeExpr* const inewp = new AstCMethodHard{nodep->fileline(), itemp->unlinkFrBack(),
                                                           VCMethod::ARRAY_INSIDE, exprp};
-            AstNodeDType* const elemDtp = itemDtp->subDTypep()->skipRefp();
             // In constraints V3SolverSmt extends the elements to a wider value
-            if (!(m_constraintp && VN_IS(elemDtp, BasicDType) && elemDtp->isIntegralOrPacked()
-                  && exprp->dtypep()->isIntegralOrPacked() && exprp->width() > elemDtp->width())) {
+            if (!(m_constraintp && wider && VN_IS(elemDtp, BasicDType))) {
                 iterateCheckTyped(nodep, "inside value", exprp, elemDtp, BOTH);
             }
             inewp->dtypeSetBit();

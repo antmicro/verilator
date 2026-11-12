@@ -9037,7 +9037,8 @@ class WidthVisitor final : public VNVisitor {
                                   << portp->prettyNameQ()
                                   << " requires a compatible interface type, parameters, and "
                                      "modport.");
-                } else if (portp->isWritable() && pinp->width() != portp->width()) {
+                } else if (portp->isWritable() && pinp->width() != portp->width()
+                           && !isQueueUnpackPair(portDTypep, pinDTypep)) {
                     pinp->v3widthWarn(portp->width(), pinp->width(),
                                       "Function output argument "
                                           << portp->prettyNameQ() << " requires " << portp->width()
@@ -10602,6 +10603,15 @@ class WidthVisitor final : public VNVisitor {
             relinker.relink(rhsp);
         }
         return rhsp;
+    }
+    // A fixed-size unpacked array and a queue or dynamic array, which checkClassAssign converts
+    static bool isQueueUnpackPair(const AstNodeDType* ap, const AstNodeDType* bp) {
+        const auto isQueuep = [](const AstNodeDType* dtp) {
+            return VN_IS(dtp->skipRefp(), DynArrayDType) || VN_IS(dtp->skipRefp(), QueueDType);
+        };
+        const auto isUnpackp
+            = [](const AstNodeDType* dtp) { return VN_IS(dtp->skipRefp(), UnpackArrayDType); };
+        return (isQueuep(ap) && isUnpackp(bp)) || (isUnpackp(ap) && isQueuep(bp));
     }
     static bool similarDTypeRecurse(const AstNodeDType* const node1p,
                                     const AstNodeDType* const node2p) {

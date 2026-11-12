@@ -720,7 +720,7 @@ class TaskVisitor final : public VNVisitor {
             if (portp->isRef() || portp->isConstRef()) {
                 bool refArgOk = false;
                 if (VN_IS(pinp, VarRef) || VN_IS(pinp, MemberRef) || VN_IS(pinp, StructSel)
-                    || VN_IS(pinp, ArraySel)) {
+                    || VN_IS(pinp, ArraySel) || VN_IS(pinp, AssocSel)) {
                     refArgOk = true;
                 } else if (AstCMethodHard* const cMethodp = VN_CAST(pinp, CMethodHard)) {
                     if (VN_IS(cMethodp->fromp()->dtypep()->skipRefp(), QueueDType)) {

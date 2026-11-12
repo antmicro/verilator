@@ -2440,31 +2440,44 @@ class ConstraintExprVisitor final : public VNVisitor {
                                     && VN_IS(rangep->rightp(), Const),
                                 nodep, "Unpack array does not have a constant range");
                     staticSize = up->elementsConst();
+                    for (const AstNodeDType* subp = up->subDTypep()->skipRefp();
+                         const AstUnpackArrayDType* const subUp = VN_CAST(subp, UnpackArrayDType);
+                         subp = subUp->subDTypep()->skipRefp()) {
+                        staticSize *= subUp->elementsConst();
+                    }
                     if (staticSize > 100) {
                         nodep->v3warn(
                             CONSTRAINTIGN,
                             "Unsupported: Unique constraint on static arrays of size > 100");
                         continue;
                     }
-                    elemWidth = static_cast<uint64_t>(varp->dtypep()->width());
-                } else if (dynDTypeSupported(dtypep)) {
-                    elemWidth = static_cast<uint64_t>(dtypep->subDTypep()->width());
-                } else {
+                } else if (!dynDTypeSupported(dtypep)) {
                     nodep->v3warn(CONSTRAINTIGN, "Unsupported: Unique constraint on "
                                                      << dtypep->prettyDTypeName(false));
                     continue;
                 }
 
-                // Ensure it is ONLY 1-D by checking that the element type is not an array/queue
-                const AstNodeDType* const subp = dtypep->subDTypep()->skipRefp();
-                if (VN_IS(subp, NodeArrayDType) || VN_IS(subp, QueueDType)
-                    || VN_IS(subp, DynArrayDType) || VN_IS(subp, AssocArrayDType)
-                    || VN_IS(subp, WildcardArrayDType)) {
-                    nodep->v3warn(CONSTRAINTIGN,
-                                  "Unsupported: Unique constraint on multidimensional arrays");
+                // The distinct expression covers the leaf elements of all unpacked dimensions
+                const AstNodeDType* wildp = nullptr;
+                for (const AstNodeDType* dimp = dtypep; dimp->isNonPackedArray();
+                     dimp = dimp->subDTypep()->skipRefp()) {
+                    if (VN_IS(dimp, WildcardArrayDType)) wildp = dimp;
+                }
+                if (wildp) {
+                    nodep->v3warn(CONSTRAINTIGN, "Unsupported: Unique constraint on "
+                                                     << wildp->prettyDTypeName(false));
                     continue;
                 }
+                const AstNodeDType* const leafp = SmtUtil::arrayElementDTypep(dtypep);
+                elemWidth = static_cast<uint64_t>(leafp->width());
+                const uint32_t unpackedDims = dtypep->dimensions(false).second;
 
+                if (m_wantSingle && unpackedDims > 1) {
+                    nodep->v3warn(CONSTRAINTIGN, "Unsupported: Unique constraint on "
+                                                 "multidimensional array inside conditional "
+                                                 "constraint");
+                    continue;
+                }
                 if (m_wantSingle && !staticSize) {
                     nodep->v3warn(CONSTRAINTIGN,
                                   "Unsupported: Unique constraint on dynamically sized array "
@@ -2498,7 +2511,7 @@ class ConstraintExprVisitor final : public VNVisitor {
                     writeVarCallp->addPinsp(argVarRefp);
                     writeVarCallp->addPinsp(new AstConst{fl, AstConst::Unsized64{}, elemWidth});
                     writeVarCallp->addPinsp(varnamep);
-                    writeVarCallp->addPinsp(new AstConst{fl, 1});  // Dimension
+                    writeVarCallp->addPinsp(new AstConst{fl, unpackedDims});
                     const RandomizeMode randMode = {.asUQuad = varp->user1()};
                     if (randMode.usesMode) {
                         writeVarCallp->addPinsp(

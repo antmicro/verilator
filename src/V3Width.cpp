@@ -1812,7 +1812,37 @@ class WidthVisitor final : public VNVisitor {
         }
     }
 
+    // An element of an interface instance array selected through an interface reference
+    // ('vif.children[1]') is the cell named by the index. Returns the replacing member.
+    AstMemberRef* ifaceArrayElemMember(AstSelBit* nodep) {
+        AstMemberRef* const memberp = VN_CAST(nodep->fromp(), MemberRef);
+        if (!memberp || memberp->didWidth()) return nullptr;
+        if (!VN_IS(memberp->fromp(), NodeVarRef) && !VN_IS(memberp->fromp(), MemberRef)) {
+            return nullptr;
+        }
+        userIterateAndNext(memberp->fromp(), WidthVP{SELF, BOTH}.p());
+        const AstIfaceRefDType* const adtypep
+            = VN_CAST(memberp->fromp()->dtypep()->skipRefp(), IfaceRefDType);
+        if (!adtypep) return nullptr;
+        V3Const::constifyParamsEdit(nodep->bitp());
+        const AstConst* const constp = VN_CAST(nodep->bitp(), Const);
+        const AstNodeModule* const ifacep = adtypep->ifaceViaCellp();
+        if (!constp || !ifacep) return nullptr;
+        const string elemName
+            = memberp->name() + "__BRA__" + cvtToStr(constp->toSInt()) + "__KET__";
+        if (!ifacep->exists([&](const AstCell* cellp) { return cellp->name() == elemName; })) {
+            return nullptr;
+        }
+        memberp->name(elemName);
+        nodep->replaceWith(memberp->unlinkFrBack());
+        VL_DO_DANGLING(pushDeletep(nodep), nodep);
+        return memberp;
+    }
     void visit(AstSelBit* nodep) override {
+        if (AstMemberRef* const memberp = ifaceArrayElemMember(nodep)) {
+            userIterate(memberp, m_vup);
+            return;
+        }
         // Just a quick check as after V3Param these nodes instead are AstSel's
         userIterateAndNext(nodep->fromp(), WidthVP{CONTEXT_DET, PRELIM}.p());  // FINAL in AstSel
         userIterateAndNext(nodep->bitp(), WidthVP{CONTEXT_DET, PRELIM}.p());  // FINAL in AstSel

@@ -1,0 +1,6 @@
+%Error: t/t_gen_selected_xmr_bad.v:7:13: Can't find definition of scope/variable: 'absent_target'
+                                       : ... note: In instance 't.h'
+    7 |     initial absent_target.run_check();
+      |             ^~~~~~~~~~~~~
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: Exiting due to

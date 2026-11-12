@@ -3637,6 +3637,13 @@ class LinkDotResolveVisitor final : public VNVisitor {
         if (m_statep->forPrimary()) newp->user3(true);
         return newp;
     }
+    static bool underGenerate(const AstNode* nodep) {
+        for (const AstNode* backp = nodep->backp(); backp && !VN_IS(backp, NodeModule);
+             backp = backp->backp()) {
+            if (VN_IS(backp, GenIf) || VN_IS(backp, GenCase) || VN_IS(backp, GenFor)) return true;
+        }
+        return false;
+    }
     AstVar* findIfaceTopVarp(AstNode* nodep, VSymEnt* parentEntp, const string& name) {
         const string findName = name + "__Viftop";
         VSymEnt* const ifaceSymp = parentEntp->findIdFallback(findName);
@@ -5365,7 +5372,13 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 }
             }
             if (!ok) {
-                if (m_insideClassExtParam) {
+                if (m_statep->forPrimary() && m_ds.m_dotPos != DP_NONE && underGenerate(nodep)) {
+                    // V3Param may delete this generate branch, and selects the upward
+                    // reference target per specialization; resolve after it
+                    UINFO(9, indent() << "deferring until post-V3Param: " << nodep);
+                    m_ds.m_unresolvedClass = true;
+                    m_ds.m_dotPos = DP_MEMBER;
+                } else if (m_insideClassExtParam) {
                     // Don't throw error if the reference is inside a class that extends a param,
                     // because some members can't be linked in such a case. m_insideClassExtParam
                     // may be true only in the first stage of linking.
@@ -6162,6 +6175,28 @@ class LinkDotResolveVisitor final : public VNVisitor {
     void visit(AstSelBit* nodep) override {
         if (nodep->user3SetOnce()) return;
         LINKDOT_VISIT_START();
+        if (!m_statep->forPrimary() && (m_ds.m_dotPos == DP_SCOPE || m_ds.m_dotPos == DP_FIRST)) {
+            // After V3Param a cell array is split into cells named by the index
+            AstParseRef* const refp = VN_CAST(nodep->fromp(), ParseRef);
+            const AstConst* const constp = VN_CAST(nodep->bitp(), Const);
+            if (refp && constp) {
+                const std::string cellName
+                    = refp->name() + "__BRA__" + cvtToStr(constp->toSInt()) + "__KET__";
+                VSymEnt* const lookupSymp = m_ds.m_dotPos == DP_FIRST ? m_curSymp : m_ds.m_dotSymp;
+                // An upward reference is searched from the first component's name
+                if (lookupSymp
+                    && (lookupSymp->findIdFallback(cellName)
+                        || (m_ds.m_dotPos == DP_FIRST
+                            && !lookupSymp->findIdFallback(refp->name())))) {
+                    UINFO(9, indent() << "split cell array select " << cellName);
+                    refp->name(cellName);
+                    nodep->replaceWith(refp->unlinkFrBack());
+                    VL_DO_DANGLING(pushDeletep(nodep), nodep);
+                    iterate(refp);
+                    return;
+                }
+            }
+        }
         iterateAndNextNull(nodep->fromp());
         if (m_ds.m_unresolvedClass) {
             UASSERT_OBJ(m_ds.m_dotPos != DP_SCOPE && m_ds.m_dotPos != DP_FIRST, nodep,

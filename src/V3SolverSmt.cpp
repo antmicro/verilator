@@ -168,6 +168,7 @@ class ConstraintExprVisitor final : public VNVisitor {
     std::set<std::string> m_inlineWrittenVars;  // Per-instance tracking for inline constraints
                                                 // and registrations in m_constrSetupTaskp
     VInsertionSet<AstVar*>* m_sizeConstrainedArraysp = nullptr;  // Arrays with size constraints
+    bool m_elemSetText = false;  // Constraint text is built from the elements of a rand array
     AstNodeExpr* m_conditionp = nullptr;  // Condition under which current expression is defined
                                           // (nullptr == always defined)
     AstNodeFTask* m_prepareConstrainedArraysp = nullptr;  // Grow arrays for indexed struct access
@@ -2804,7 +2805,18 @@ class ConstraintExprVisitor final : public VNVisitor {
         }
         callp->addPinsp(
             new AstCExpr{nodep->fileline(), AstCExpr::Pure{}, "\"" + prettyText + "\""});
-        nodep->replaceWith(callp->makeStmt());
+        AstNodeStmt* stmtp = callp->makeStmt();
+        if (m_elemSetText) {
+            // The elements are known after the resize
+            m_elemSetText = false;
+            AstCExpr* const phasep = new AstCExpr{nodep->fileline()};
+            phasep->dtypeSetBit();
+            phasep->add(new AstVarRef{nodep->fileline(), VN_AS(m_genp->user2p(), NodeModule),
+                                      m_genp, VAccess::READ});
+            phasep->add(".sizePhase()");
+            stmtp = new AstIf{nodep->fileline(), new AstLogNot{nodep->fileline(), phasep}, stmtp};
+        }
+        nodep->replaceWith(stmtp);
         VL_DO_DANGLING(nodep->deleteTree(), nodep);
     }
     void visit(AstCMethodHard* nodep) override {
@@ -2924,6 +2936,9 @@ class ConstraintExprVisitor final : public VNVisitor {
 
         if (nodep->method() == VCMethod::ARRAY_INSIDE) {
             const bool randArr = nodep->fromp()->user1();
+            if (randArr && !VN_IS(nodep->fromp()->dtypep()->skipRefp(), UnpackArrayDType)) {
+                m_elemSetText = true;
+            }
 
             const AstNodeDType* const arrDtp = nodep->fromp()->dtypep()->skipRefp();
             AstNodeDType* idxDtp;
@@ -4361,6 +4376,14 @@ class SolverSmtLowering final : public V3SolverLowering {
         }
     }
 
+    // Statement setting whether the generator solves for the array sizes
+    static AstNodeStmt* newSizePhasep(AstVar* const genp, bool flag) {
+        AstCStmt* const stmtp = new AstCStmt{genp->fileline()};
+        stmtp->add(new AstVarRef{genp->fileline(), VN_CAST(genp->user2p(), NodeModule), genp,
+                                 VAccess::READWRITE});
+        stmtp->add(flag ? ".sizePhase(true);" : ".sizePhase(false);");
+        return stmtp;
+    }
     static AstCExpr* newSolverCallp(AstVar* const genp) {
         AstCExpr* const callp = new AstCExpr{genp->fileline()};
         callp->dtypeSetBit();
@@ -4398,6 +4421,7 @@ class SolverSmtLowering final : public V3SolverLowering {
             addArrayElemRefresh(fl, arrVarp, randomizep, setupGenp);
         }
         randomizep->addStmtsp(implementConstraintsClear(fl, setupGenp));
+        randomizep->addStmtsp(newSizePhasep(setupGenp, false));
         randomizep->addStmtsp(setupStmtsp);
         for (AstVar* const arrVarp : phaseArrayVars) {
             randomizep->addStmtsp(newPinSizeVariable(fl, arrVarp, solveGenp));
@@ -4573,13 +4597,14 @@ public:
                     break;
                 }
             }
-            AstTaskRef* const setupTaskRefp = new AstTaskRef{fl, setupAllTaskp};
-            randomizep->addStmtsp(setupTaskRefp->makeStmt());
-
             // __VBasicRand runs after the resize, so the elements of an array resized by a
             // class constraint are randomized after the first solve too
             VInsertionSet<AstVar*> phaseArrayVars = sizeArrayVars;
             collectSizePhaseArrays(nodep, phaseArrayVars);
+            if (!phaseArrayVars.empty()) randomizep->addStmtsp(newSizePhasep(genp, true));
+            AstTaskRef* const setupTaskRefp = new AstTaskRef{fl, setupAllTaskp};
+            randomizep->addStmtsp(setupTaskRefp->makeStmt());
+
             if (!phaseArrayVars.empty()) {
                 AstVar* const sizeOkVarp
                     = addSizeSolvep(randomizep, genp, randModeVarp, phaseArrayVars);

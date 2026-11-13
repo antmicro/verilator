@@ -969,6 +969,11 @@ public:
     void var_domain(std::string constraint) { m_varDomains.emplace_back(std::move(constraint)); }
     void clearConstraints();
     void clearAll();  // Clear both constraints and variables
+    // Copy the randc cycle of another generator of the same object
+    void randcStateFrom(const VlRandomizer& other) {
+        m_randcUsedValues = other.m_randcUsedValues;
+        m_randcConstraintHash = other.m_randcConstraintHash;
+    }
     void sizePhase(bool flag) { m_sizePhase = flag; }
     bool sizePhase() const { return m_sizePhase; }
     void markRandc(const std::string& name);  // Mark variable as randc for cyclic tracking

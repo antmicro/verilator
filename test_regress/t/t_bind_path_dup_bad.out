@@ -1,0 +1,9 @@
+%Error: t/t_bind_path_dup_bad.v:12:21: Duplicate declaration of instance: 'p'
+                                     : ... note: In instance 't.target'
+   12 |   bind target probe p ();
+      |                     ^
+        t/t_bind_path_dup_bad.v:11:21: ... Location of original declaration
+   11 |   bind target probe p ();
+      |                     ^
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: Exiting due to

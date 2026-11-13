@@ -2796,14 +2796,27 @@ bind_directive<nodep>:          // ==IEEE: bind_directive + bind_target_scope
         //                      // We merged the rules - id may be a bind_target_instance or
         //                      // module_identifier or interface_identifier
                 yBIND bind_target_instance bind_instantiation
-                        { $$ = new AstBind{$<fl>2, $2, $3}; }
+                        { $$ = new AstBind{$1, $2, $3}; }
         |       yBIND bind_target_instance/*scope*/ ':' bind_target_instance_list bind_instantiation
-                        { $$ = nullptr; BBUNSUP($1, "Unsupported: Bind with instance list"); DEL($5); }
+                        { $$ = nullptr;
+                          if (!VN_IS($2, ParseRef)) {
+                              BBUNSUP($1, "Unsupported: Bind with instance list of a dotted scope");
+                              DEL($4);
+                          } else {
+                              for (AstNode *targetp = $4, *nextp; targetp; targetp = nextp) {
+                                  nextp = targetp->nextp();
+                                  if (nextp) nextp->unlinkFrBackWithNext();
+                                  AstBind* const bindp = new AstBind{$1, targetp, $5->cloneTree(true)};
+                                  bindp->name($2->name());
+                                  $$ = addNextNull($$, bindp);
+                              }
+                          }
+                          DEL($2, $5); }
         ;
 
-bind_target_instance_list:      // ==IEEE: bind_target_instance_list
-                bind_target_instance                    { }
-        |       bind_target_instance_list ',' bind_target_instance      { }
+bind_target_instance_list<nodep>:  // ==IEEE: bind_target_instance_list
+                bind_target_instance                    { $$ = $1; }
+        |       bind_target_instance_list ',' bind_target_instance      { $$ = addNextNull($1, $3); }
         ;
 
 bind_target_instance<nodep>:    // ==IEEE: bind_target_instance

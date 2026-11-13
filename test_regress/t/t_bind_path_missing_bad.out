@@ -1,0 +1,6 @@
+%Error: t/t_bind_path_missing_bad.v:13:3: Can't find definition of 'inst'
+                                        : ... note: In instance 't'
+   13 |   bind gen_leaf[3].inst probe p ();
+      |   ^~~~
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: Exiting due to

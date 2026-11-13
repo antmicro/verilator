@@ -1,0 +1,6 @@
+%Error: t/t_class_param_member_shadow_bad.v:10:19: Parameter type pin value isn't a type: Param 'T' of 'holder'
+                                                 : ... note: In instance 't'
+   10 |   typedef holder#(item) holder_t;
+      |                   ^~~~
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: Exiting due to

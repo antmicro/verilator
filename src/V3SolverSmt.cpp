@@ -656,6 +656,79 @@ class ConstraintExprVisitor final : public VNVisitor {
         return selp;
     }
 
+    // Index of a queue or dynamic array extended to at least 32 bits
+    static AstNodeExpr* newIndex32p(AstNodeExpr* indexp) {
+        // A std::randomize() argument is referenced with write access
+        indexp->foreach([](AstNodeVarRef* refp) { refp->access(VAccess::READ); });
+        if (indexp->width() >= 32) return indexp;
+        FileLine* const fl = indexp->fileline();
+        const bool rand = indexp->user1();
+        AstNodeExpr* const newp = indexp->isSigned()
+                                      ? static_cast<AstNodeExpr*>(new AstExtendS{fl, indexp, 32})
+                                      : static_cast<AstNodeExpr*>(new AstExtend{fl, indexp, 32});
+        newp->user1(rand);
+        return newp;
+    }
+    // True if nodep selects an element of a state queue or dynamic array with a random index
+    static bool isStateSelRandIndex(const AstNodeExpr* nodep) {
+        const AstCMethodHard* const methodp = VN_CAST(nodep, CMethodHard);
+        return methodp && methodp->method() == VCMethod::ARRAY_AT && !methodp->fromp()->user1()
+               && methodp->dtypep()->skipRefp()->isIntegralOrPacked() && methodp->pinsp()->user1();
+    }
+    // New condition that the random indices of state array selects under nodep are in
+    // bounds, or nullptr if there is no such select. A select in a branch that is not
+    // taken, or under an implication that does not hold, is not checked.
+    static AstNodeExpr* newIndexValidp(AstNodeExpr* nodep) {
+        FileLine* const fl = nodep->fileline();
+        const auto mark = [](AstNodeExpr* exprp) {
+            exprp->dtypeSetBit();
+            exprp->user1(true);
+            return exprp;
+        };
+        const auto join = [&](AstNodeExpr* ap, AstNodeExpr* bp) -> AstNodeExpr* {
+            if (!ap || !bp) return ap ? ap : bp;
+            return mark(new AstLogAnd{fl, ap, bp});
+        };
+        if (AstCond* const condp = VN_CAST(nodep, Cond)) {
+            AstNodeExpr* thenp = newIndexValidp(condp->thenp());
+            AstNodeExpr* elsep = newIndexValidp(condp->elsep());
+            AstNodeExpr* validp = nullptr;
+            if (thenp || elsep) {
+                if (!thenp) thenp = new AstConst{fl, AstConst::BitTrue{}};
+                if (!elsep) elsep = new AstConst{fl, AstConst::BitTrue{}};
+                validp = mark(new AstCond{fl, condp->condp()->cloneTree(false), thenp, elsep});
+            }
+            return join(newIndexValidp(condp->condp()), validp);
+        }
+        if (AstLogIf* const ifp = VN_CAST(nodep, LogIf)) {
+            AstNodeExpr* validp = newIndexValidp(ifp->rhsp());
+            if (validp) validp = mark(new AstLogIf{fl, ifp->lhsp()->cloneTree(false), validp});
+            return join(newIndexValidp(ifp->lhsp()), validp);
+        }
+        AstNodeExpr* validp = nullptr;
+        if (isStateSelRandIndex(nodep)) {
+            AstCMethodHard* const methodp = VN_AS(nodep, CMethodHard);
+            AstCMethodHard* const sizep
+                = new AstCMethodHard{fl, methodp->fromp()->cloneTree(false), VCMethod::DYN_SIZE};
+            sizep->dtypeSetInt();
+            // Unsigned, so a negative index is out of bounds
+            AstNodeExpr* const indexp = newIndex32p(methodp->pinsp()->cloneTree(false));
+            validp
+                = mark(new AstLt{fl, indexp,
+                                 indexp->width() > 32 ? new AstExtend{fl, sizep, indexp->width()}
+                                                      : static_cast<AstNodeExpr*>(sizep)});
+        }
+        for (AstNode* const childp :
+             {nodep->op1p(), nodep->op2p(), nodep->op3p(), nodep->op4p()}) {
+            for (AstNode* itemp = childp; itemp; itemp = itemp->nextp()) {
+                if (AstNodeExpr* const exprp = VN_CAST(itemp, NodeExpr)) {
+                    validp = join(validp, newIndexValidp(exprp));
+                }
+            }
+        }
+        return validp;
+    }
+
     // Convert expression to target width using extend or truncate as needed
     static AstNodeExpr* adjustWidth(FileLine* fl, AstNodeExpr* exprp, int targetWidth,
                                     VSigning targetSigning) {
@@ -2684,6 +2757,13 @@ class ConstraintExprVisitor final : public VNVisitor {
                 nodep->exprp(neqp);
             }
         }
+        if (AstNodeExpr* const validp = newIndexValidp(nodep->exprp())) {
+            AstNodeExpr* const andp
+                = new AstLogAnd{nodep->fileline(), validp, nodep->exprp()->unlinkFrBack()};
+            andp->dtypeSetBit();
+            andp->user1(true);
+            nodep->exprp(andp);
+        }
         iterateChildren(nodep);
         if (m_wantSingle) {
             nodep->replaceWith(nodep->exprp()->unlinkFrBack());
@@ -2807,6 +2887,29 @@ class ConstraintExprVisitor final : public VNVisitor {
                     VL_DO_DANGLING(origp->deleteTree(), origp);
                 }
 
+            } else if (isStateSelRandIndex(nodep)) {
+                // State array with a random index: OR of the elements, each selected by an
+                // index comparison; newIndexValidp() excludes an index out of bounds
+                AstVar* const loopVarp
+                    = new AstVar{fl, VVarType::BLOCKTEMP, "__Vindex", nodep->findIntDType()};
+                AstForeachHeader* const headerp
+                    = new AstForeachHeader{fl, nodep->fromp()->cloneTreePure(false), loopVarp};
+                AstNodeExpr* const eqp = new AstEq{fl, newIndex32p(nodep->pinsp()->unlinkFrBack()),
+                                                   new AstVarRef{fl, loopVarp, VAccess::READ}};
+                eqp->user1(true);
+                AstNodeExpr* const elemp
+                    = newSel(fl, nodep->fromp(), new AstVarRef{fl, loopVarp, VAccess::READ});
+                AstNodeExpr* const termp = new AstCond{
+                    fl, eqp, elemp, new AstConst{fl, AstConst::WidthedValue{}, nodep->width(), 0}};
+                termp->user1(true);
+                AstVar* const textVarp = newTextVarp(nodep);
+                AstStmtExpr* const appendp = newTermAppendp(
+                    fl, textVarp, VN_AS(iterateSubtreeReturnEdits(termp), NodeExpr));
+                nodep->replaceWith(
+                    newTextBuildp(fl, textVarp, "", new AstForeach{fl, headerp, appendp},
+                                  newTextApplyp(fl, textVarp, "bvor",
+                                                "(_ bv0 " + cvtToStr(nodep->width()) + ")")));
+                VL_DO_DANGLING(nodep->deleteTree(), nodep);
             } else if (indexIsRand) {
                 nodep->v3warn(E_UNSUPPORTED,
                               "Unsupported: Randomization of an index to a non-random variable");

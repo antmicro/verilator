@@ -68,7 +68,7 @@ hello, from a concatenated format string [0].
 two           2 args           3with commas
 extra argument:                    0
                    0 : pre argument after
-empty: > <
+empty: ><
 [0] Embedded tab '	' and <#013> return
 [0] Embeddedmultiline
 '23 23       23'

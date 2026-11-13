@@ -1322,6 +1322,8 @@ void _vl_vsformat(std::string& output, const std::string& format, int argc,
                     const IData charval = VL_BITRSHIFT_W(lwp, lsb) & 0xff;
                     field += (charval == 0) ? ' ' : charval;
                 }
+                // The literal "" has no characters
+                if (lbits <= 8 && !(lwp[0] & 0xff)) field.clear();
                 std::string padding;
                 if (width > field.size()) padding.append(width - field.size(), ' ');
                 output += left ? (field + padding) : (padding + field);

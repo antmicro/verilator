@@ -161,8 +161,6 @@ class ConstraintExprVisitor final : public VNVisitor {
     uint32_t* m_uniqueConstraintIdp = nullptr;  // Current ID of unique call
     V3UniqueNames& m_uniqueNames;  // Unique names of temporaries, and of blocks holding them
     std::set<std::string> m_rangeConstrainedEnums;  // Enums that are already range-constrained
-    // First expression found under an inside index
-    AstNode* m_firstExpressionInsideIndexp = nullptr;
     AstBegin* m_foreachBodyp = nullptr;  // Holder of the body of the innermost constraint-foreach
     std::set<const AstVar*> m_foreachIdxVars;  // Index vars of all enclosing constraint-foreaches
     // Solver variables named by constraints folded into a single expression (m_wantSingle)
@@ -180,9 +178,6 @@ class ConstraintExprVisitor final : public VNVisitor {
             = nullptr;  // Top node of nested array/member access
         AstSFormatF* m_nestedNameFormatTopp = nullptr;  // Top node of variable's name format
         AstSFormatF* m_nestedNameFormatp = nullptr;  // Last node of variable's name format
-        AstNode** m_firstExpressionInsideIndexPointerp
-            = nullptr;  // First expression with no name, used for "Multiple expressions inside
-                        // indices of complex expression in constraint" error
 
         std::string m_smtName;  // string name for shouldWriteVar checking
 
@@ -196,22 +191,10 @@ class ConstraintExprVisitor final : public VNVisitor {
             }
             m_nestedNameFormatp = nodep;
 
-            m_smtName.insert(0, "." + name);
-            // Some expressions have empty name which can cause some variables to have the same
-            // name and only first one will be written
-            if (name == "") {
-                if (*m_firstExpressionInsideIndexPointerp) {
-                    (*m_firstExpressionInsideIndexPointerp)
-                        ->v3warn(
-                            E_UNSUPPORTED,
-                            "Unsupported: Multiple expressions inside indices of complex "
-                            "expression in constraint\n"
-                                << (*m_firstExpressionInsideIndexPointerp)->warnContextPrimary()
-                                << nodep->warnOther() << "... Location of second expression\n"
-                                << nodep->warnContextSecondary());
-                }
-                *m_firstExpressionInsideIndexPointerp = nodep;
-            }
+            // An index expression has no name. A name per occurrence keeps the variables of
+            // different expressions apart; each one is then written.
+            static int s_exprNum = 0;
+            m_smtName.insert(0, "." + (name.empty() ? "__Vexpr" + cvtToStr(++s_exprNum) : name));
         }
 
         AstMemberRef* accessTree() { return m_topNestedArrayMemberRefp; }
@@ -247,9 +230,8 @@ class ConstraintExprVisitor final : public VNVisitor {
             VL_DO_DANGLING(m_topNestedArrayMemberRefp->deleteTree(), m_topNestedArrayMemberRefp);
         }
 
-        NestedAccessPath(AstMemberRef* topMemberRefp, AstNode** pointerToFirstExprp)
-            : m_topNestedArrayMemberRefp{topMemberRefp}
-            , m_firstExpressionInsideIndexPointerp{pointerToFirstExprp} {}
+        explicit NestedAccessPath(AstMemberRef* topMemberRefp)
+            : m_topNestedArrayMemberRefp{topMemberRefp} {}
         ~NestedAccessPath() {
             if (m_nestedNameFormatp) {
                 VL_DO_CLEAR(m_nestedNameFormatTopp->deleteTree(),
@@ -2188,8 +2170,7 @@ class ConstraintExprVisitor final : public VNVisitor {
                     const bool isSimple
                         = nodep->fromp() == rootNodep && VN_IS(arraySelp->fromp(), VarRef);
                     if (!isSimple && !m_nestedAccessp) {
-                        m_nestedAccessp = new NestedAccessPath(nodep->cloneTree(false),
-                                                               &m_firstExpressionInsideIndexp);
+                        m_nestedAccessp = new NestedAccessPath(nodep->cloneTree(false));
                         AstSFormatF* const formatp
                             = new AstSFormatF{fl, nodep->name(), false, nullptr};
                         m_nestedAccessp->addVarNamePart(
@@ -2664,7 +2645,6 @@ class ConstraintExprVisitor final : public VNVisitor {
         // call.  Conditional occurrences (if / foreach / implication body)
         // are rewritten by extractConditionalDisableSofts() before this
         // visitor runs, so anything we see here is unconditional.
-        VL_RESTORER(m_firstExpressionInsideIndexp);
         // Outside a fold this constraint is emitted here with only its own names: those it
         // records, plus the folded names when it replaces an if (see visit(AstConstraintIf*))
         std::set<std::string> vars;

@@ -284,6 +284,7 @@ class VlRandomizer VL_NOT_FINAL {
     std::vector<std::pair<std::string, std::string>>
         m_solveBefore;  // Solve-before ordering pairs (beforeVar, afterVar)
     bool m_checkOnly = false;  // Set for randomize(null)
+    bool m_sizePhase = false;  // Solving for the array sizes, the arrays have their old sizes
     bool isFrozenVar(const std::string& name,
                      const VlRandomVar& var) const;  // true if this var is currently frozen
     bool hasFrozenVar() const;  // true if any var is currently rand_mode(0)-frozen
@@ -968,6 +969,8 @@ public:
     void var_domain(std::string constraint) { m_varDomains.emplace_back(std::move(constraint)); }
     void clearConstraints();
     void clearAll();  // Clear both constraints and variables
+    void sizePhase(bool flag) { m_sizePhase = flag; }
+    bool sizePhase() const { return m_sizePhase; }
     void markRandc(const std::string& name);  // Mark variable as randc for cyclic tracking
     void solveBefore(const std::string& beforeName,
                      const std::string& afterName);  // Register solve-before ordering

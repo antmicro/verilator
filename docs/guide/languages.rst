@@ -200,8 +200,9 @@ with Verilator's internal symbols, any double underscore is replaced with
 Bind
 ----
 
-Verilator only supports bind to a target module name, not to an instance
-path.
+Verilator supports bind to a target module name, and to instance paths
+through named generate blocks and instance arrays. An index of a
+multidimensional instance array is unsupported.
 
 
 Class

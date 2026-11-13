@@ -364,6 +364,10 @@ public:
                    && (VN_IS(fnodep, Begin) || VN_IS(fnodep, GenBlock))) {
             // Begin: ... blocks often replicate under genif/genfor, so
             // suppress duplicate checks.  See t_gen_forif.v for an example.
+        } else if (forPrimary() && VN_IS(nodep, Cell) && VN_IS(fnodep, Cell)
+                   && VN_IS(nodep->abovep(), GenIf) && VN_IS(fnodep->abovep(), GenIf)) {
+            // Instances bound to different instances of one module are under generate ifs
+            // (V3LinkCells), checked when the generates are resolved
         } else {
             UINFO(4, "name " << name);  // Not always same as nodep->name
             UINFO(4, "Var1 " << nodep);

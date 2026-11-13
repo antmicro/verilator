@@ -1,0 +1,8 @@
+%Error: t/t_bind_target_missing_bad.v:13:3: Cannot resolve hierarchical bind target
+   13 |   bind t.missing probe root_probe ();
+      |   ^~~~
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: t/t_bind_target_missing_bad.v:14:3: Cannot resolve hierarchical bind target
+   14 |   bind child.missing probe local_probe ();
+      |   ^~~~
+%Error: Exiting due to

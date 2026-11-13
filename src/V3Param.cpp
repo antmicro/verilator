@@ -3400,13 +3400,23 @@ class ParamVisitor final : public VNVisitor {
     // the variable referencing the whole array (see V3LinkCells), which is also split into
     // variables referencing the elements.
     void expandCellArrayDimensions(AstCell* arrayedCellp, AstVar* ifaceVarp,
-                                   const AstRange* rangep, const std::string& suffix, int idx) {
+                                   const AstRange* rangep, const std::string& suffix, int idx,
+                                   int lastIndex = 0) {
         // Base case: insert the element when no dimensions left
         if (!rangep) {
             AstCell* const elemp = arrayedCellp->cloneTree(false);
             elemp->name(arrayedCellp->name() + suffix);
             elemp->origName(arrayedCellp->origName() + suffix);
             elemp->arrayIdx(idx);
+            // Index of the element in the pins of a bind target
+            if (elemp->paramsp()) {
+                elemp->paramsp()->foreachAndNext([&](AstLambdaArgRef* refp) {
+                    if (refp->name() != V3Param::BIND_ELEM_NAME) return;
+                    refp->replaceWith(
+                        new AstConst{refp->fileline(), AstConst::Signed32{}, lastIndex});
+                    VL_DO_DANGLING(pushDeletep(refp), refp);
+                });
+            }
             arrayedCellp->addNextHere(elemp);
             if (ifaceVarp) {
                 AstIfaceRefDType* const irefp
@@ -3434,7 +3444,7 @@ class ParamVisitor final : public VNVisitor {
         const AstRange* const subRangep = VN_AS(rangep->nextp(), Range);
         for (const int n : rangep->seqRightToLeft()) {
             const std::string s = suffix + "__BRA__" + AstNode::encodeNumber(n) + "__KET__";
-            expandCellArrayDimensions(arrayedCellp, ifaceVarp, subRangep, s, --idx);
+            expandCellArrayDimensions(arrayedCellp, ifaceVarp, subRangep, s, --idx, n);
         }
     }
 
@@ -4265,6 +4275,33 @@ void V3Param::param(AstNetlist* rootp) {
 
     if (dumpTreeEitherLevel() >= 9) V3LinkDotIfaceCapture::dumpEntries("before V3Param");
     { ParamTop{rootp}; }
+    // A bind to instances needs a target instance (see V3LinkCells)
+    for (AstNodeModule* modp = rootp->modulesp(); modp; modp = VN_AS(modp->nextp(), NodeModule)) {
+        if (modp->dead() || modp->parameterizedTemplate()) continue;
+        for (AstNode* const stmtp : modp->stmtspList()) {
+            const AstVar* const varp = VN_CAST(stmtp, Var);
+            if (!varp || !VString::startsWith(varp->name(), BIND_TARGET_PREFIX)) continue;
+            const std::string range = varp->name().substr(std::strlen(BIND_TARGET_PREFIX));
+            const int first = std::atoi(range.c_str());
+            const int last = std::atoi(range.substr(range.find('_') + 1).c_str());
+            const bool found = modp->exists([&](const AstCell* cellp) {
+                for (const AstNode* const cstmtp : cellp->modp()->stmtspList()) {
+                    const AstVar* const paramp = VN_CAST(cstmtp, Var);
+                    if (!paramp || !paramp->isGParam()) continue;
+                    for (int num = first; num <= last; ++num) {
+                        if (paramp->name() != "__Vbind" + cvtToStr(num)) continue;
+                        const AstConst* const constp = VN_CAST(paramp->valuep(), Const);
+                        if (constp && !constp->num().isEqZero()) return true;
+                    }
+                }
+                return false;
+            });
+            if (!found) {
+                varp->v3error("Can't find definition of " << AstNode::prettyNameQ(
+                                  VN_AS(varp->valuep(), Const)->num().toString()));
+            }
+        }
+    }
     // The memo is only good while parameterizing, and the tree moves after.
     rootp->clearContainingModules();
     if (dumpTreeEitherLevel() >= 9) V3LinkDotIfaceCapture::dumpEntries("after V3Param");

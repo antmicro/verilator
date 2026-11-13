@@ -26,6 +26,12 @@ class AstNetlist;
 
 class V3Param final {
 public:
+    // Name of the AstLambdaArgRef for the index of an instance array element in a pin of a
+    // bind target (see V3LinkCells)
+    static constexpr const char* BIND_ELEM_NAME = "__VbindElem";
+    // Prefix of the localparam for a bind to instances; the name ends with the first and last
+    // number of its "__Vbind<number>" parameters, the value is the name of the target
+    static constexpr const char* BIND_TARGET_PREFIX = "__VbindTarget";
     static void param(AstNetlist* rootp) VL_MT_DISABLED;
     static void finalizeDeferredParams(AstNetlist* rootp) VL_MT_DISABLED;
 };

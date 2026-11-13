@@ -29,6 +29,7 @@
 
 #include "V3Control.h"
 #include "V3Graph.h"
+#include "V3Param.h"
 #include "V3Parse.h"
 #include "V3Stats.h"
 #include "V3SymTable.h"
@@ -229,6 +230,30 @@ class LinkCellsVisitor final : public VNVisitor {
     // STATE
     VInFilter* const m_filterp;  // Parser filter
     LinkCellsState& m_state;  // State for linking cells
+
+    // Bind to instances
+    struct BindComp final {
+        std::string name;  // Name of the path component
+        AstNodeExpr* selp;  // Index, or nullptr
+    };
+    struct BindCond final {
+        std::string genvar;  // Genvar of a generate loop around the instance
+        AstNodeExpr* indexp;  // Index the genvar must have
+    };
+    struct BindStep final {
+        AstCell* cellp;  // Instance on the path
+        AstNodeModule* modp;  // Its module
+        std::vector<BindCond> conds;  // Generate loops between the previous instance and it
+    };
+    using BindWalk = std::vector<BindStep>;
+    struct BindBound final {
+        AstGenIf* ifp;  // Generate if with the bound instances
+        const AstNode* cellsp;  // Instances as parsed
+        std::set<const AstCell*> targetps;  // Target instances
+    };
+    std::map<const AstNodeModule*, std::vector<BindBound>> m_bindBounds;  // Per target module
+    int m_bindNum = 0;  // Number of bind targets, for parameter names
+    bool m_bindArray = false;  // Bind target names an instance array
 
     // Below state needs to be preserved between each module call.
     AstNodeModule* m_modp = nullptr;  // Current module
@@ -589,21 +614,223 @@ class LinkCellsVisitor final : public VNVisitor {
         newEdge(vertex(m_modp), vertex(nodep->packagep()), 1, false);
     }
 
+    // Bind to instances (IEEE 1800-2023 23.11). The bound instances are added to the module
+    // of the target instance under a generate if on a parameter, which only the instances on
+    // the path to the target set.
+
+    // Split the bind target into path components, false if not supported
+    static bool bindComps(AstNode* nodep, std::vector<BindComp>& comps) {
+        if (AstDot* const dotp = VN_CAST(nodep, Dot)) {
+            return bindComps(dotp->lhsp(), comps) && bindComps(dotp->rhsp(), comps);
+        }
+        if (const AstParseRef* const refp = VN_CAST(nodep, ParseRef)) {
+            comps.push_back({refp->name(), nullptr});
+            return true;
+        }
+        if (AstSelBit* const selp = VN_CAST(nodep, SelBit)) {
+            if (const AstParseRef* const refp = VN_CAST(selp->fromp(), ParseRef)) {
+                comps.push_back({refp->name(), selp->bitp()});
+                return true;
+            }
+        }
+        return false;
+    }
+    // Find the instances named by comps[idx] and up, under itemsp of modp
+    void bindFind(AstNodeModule* modp, AstNode* itemsp, const std::vector<BindComp>& comps,
+                  size_t idx, BindWalk& walk, std::vector<BindCond>& conds,
+                  std::vector<BindWalk>& walks) {
+        const BindComp& comp = comps[idx];
+        const bool last = idx + 1 == comps.size();
+        for (AstNode* itemp = itemsp; itemp; itemp = itemp->nextp()) {
+            if (AstGenIf* const ifp = VN_CAST(itemp, GenIf)) {
+                bindFind(modp, ifp->thensp(), comps, idx, walk, conds, walks);
+                bindFind(modp, ifp->elsesp(), comps, idx, walk, conds, walks);
+            } else if (AstGenCase* const casep = VN_CAST(itemp, GenCase)) {
+                for (AstGenCaseItem* const citemp : casep->itemspList()) {
+                    bindFind(modp, citemp->itemsp(), comps, idx, walk, conds, walks);
+                }
+            } else if (AstGenBlock* const blockp = VN_CAST(itemp, GenBlock)) {
+                if (blockp->name().empty()) {
+                    bindFind(modp, blockp->itemsp(), comps, idx, walk, conds, walks);
+                    continue;
+                }
+                if (blockp->name() != comp.name || last) continue;
+                if (AstGenFor* const forp = blockp->genforp()) {
+                    const AstAssign* const initp = VN_CAST(forp->initsp(), Assign);
+                    if (!comp.selp || !initp) continue;
+                    conds.push_back({initp->lhsp()->name(), comp.selp});
+                    bindFind(modp, forp->itemsp(), comps, idx + 1, walk, conds, walks);
+                    conds.pop_back();
+                } else if (!comp.selp) {
+                    bindFind(modp, blockp->itemsp(), comps, idx + 1, walk, conds, walks);
+                }
+            } else if (AstCell* const cellp = VN_CAST(itemp, Cell)) {
+                if (cellp->name() != comp.name) continue;
+                if (comp.selp && !cellp->rangep()) continue;
+                if (comp.selp && cellp->rangep()->nextp()) {
+                    m_bindArray = true;
+                    continue;
+                }
+                AstNodeModule* const cellModp
+                    = cellp->modp() ? cellp->modp()
+                                    : resolveModule(cellp, cellp->modName(), modp->libname());
+                if (!cellModp) continue;
+                walk.push_back({cellp, cellModp, conds});
+                // An element of an instance array, no genvar
+                if (comp.selp) walk.back().conds.push_back({"", comp.selp});
+                if (last) {
+                    walks.push_back(walk);
+                } else {
+                    std::vector<BindCond> cellConds;
+                    bindFind(cellModp, cellModp->stmtsp(), comps, idx + 1, walk, cellConds, walks);
+                }
+                walk.pop_back();
+            }
+        }
+    }
+    static void bindAddParam(AstNodeModule* modp, const std::string& name, VBasicDTypeKwd kwd) {
+        for (AstNode* const stmtp : modp->stmtspList()) {
+            if (VN_IS(stmtp, Var) && stmtp->name() == name) return;
+        }
+        FileLine* const fl = modp->fileline();
+        AstVar* const varp = new AstVar{fl, VVarType::GPARAM, name, VFlagChildDType{},
+                                        new AstBasicDType{fl, kwd}};
+        varp->ansi(true);  // Overridable also in a module with a parameter port list
+        if (kwd == VBasicDTypeKwd::BIT) {
+            varp->valuep(new AstConst{fl, AstConst::BitFalse{}});
+        } else {
+            varp->valuep(new AstConst{fl, AstConst::Signed32{}, 0});
+        }
+        modp->addStmtsp(varp);
+    }
+    static void bindAddPin(AstCell* cellp, const std::string& name, AstNodeExpr* exprp) {
+        // "()" is parsed as one empty pin
+        if (cellp->paramsp() && !cellp->paramsp()->nextp() && cellp->paramsp()->name() == ""
+            && !cellp->paramsp()->exprp()) {
+            cellp->paramsp()->unlinkFrBack()->deleteTree();
+        }
+        AstPin* const pinp = new AstPin{cellp->fileline(), 0, name, exprp};
+        pinp->param(true);
+        cellp->addParamsp(pinp);
+    }
+    void bindApply(AstBind* nodep, const BindWalk& walk) {
+        FileLine* const fl = nodep->fileline();
+        const std::string activeName = "__Vbind" + cvtToStr(++m_bindNum);
+        for (size_t i = 0; i < walk.size(); ++i) {
+            const BindStep& step = walk[i];
+            AstNodeExpr* activep = nullptr;
+            if (i > 0) activep = new AstParseRef{fl, activeName};
+            for (size_t c = 0; c < step.conds.size(); ++c) {
+                const BindCond& cond = step.conds[c];
+                AstNodeExpr* indexp = nullptr;
+                if (i == 0) {
+                    indexp = cond.indexp->cloneTree(false);
+                } else {
+                    // The index is evaluated in the module of the bind, and passed down
+                    const std::string name = activeName + "_i" + cvtToStr(i) + "_" + cvtToStr(c);
+                    for (size_t j = 0; j < i; ++j) {
+                        bindAddParam(walk[j].modp, name, VBasicDTypeKwd::INT);
+                        bindAddPin(walk[j].cellp, name,
+                                   j == 0 ? cond.indexp->cloneTree(false)
+                                          : static_cast<AstNodeExpr*>(new AstParseRef{fl, name}));
+                    }
+                    indexp = new AstParseRef{fl, name};
+                }
+                // V3Param replaces the AstLambdaArgRef with the index of the element
+                AstNodeExpr* const lhsp
+                    = cond.genvar.empty()
+                          ? static_cast<AstNodeExpr*>(
+                                new AstLambdaArgRef{fl, V3Param::BIND_ELEM_NAME, true})
+                          : static_cast<AstNodeExpr*>(new AstParseRef{fl, cond.genvar});
+                AstNodeExpr* const eqp = new AstEq{fl, lhsp, indexp};
+                activep = activep ? new AstLogAnd{fl, activep, eqp} : eqp;
+            }
+            if (!activep) activep = new AstConst{fl, AstConst::BitTrue{}};
+            bindAddParam(step.modp, activeName, VBasicDTypeKwd::BIT);
+            bindAddPin(step.cellp, activeName, activep);
+        }
+        AstNodeModule* const targetModp = walk.back().modp;
+        // Equal instances bound to different instances of the module are shared. Other
+        // instances of one name are checked by V3LinkDot when the generates are resolved.
+        for (BindBound& bound : m_bindBounds[targetModp]) {
+            if (bound.targetps.count(walk.back().cellp)) continue;
+            const AstNode* ap = bound.cellsp;
+            const AstNode* bp = nodep->cellsp();
+            while (ap && bp && ap->sameTree(bp)) {
+                ap = ap->nextp();
+                bp = bp->nextp();
+            }
+            if (ap || bp) continue;
+            bound.ifp->condp(new AstLogOr{fl, bound.ifp->condp()->unlinkFrBack(),
+                                          new AstParseRef{fl, activeName}});
+            bound.targetps.insert(walk.back().cellp);
+            return;
+        }
+        AstGenIf* const ifp = new AstGenIf{fl, new AstParseRef{fl, activeName},
+                                           nodep->cellsp()->cloneTree(true), nullptr};
+        // The AstBind is deleted after this visitor
+        m_bindBounds[targetModp].push_back({ifp, nodep->cellsp(), {walk.back().cellp}});
+        targetModp->addStmtsp(ifp);
+        VL_RESTORER(m_modp);
+        m_modp = targetModp;
+        iterateAndNextNull(ifp->thensp());
+    }
+
     void visit(AstBind* nodep) override {
         // Bind: Has cells underneath that need to be put into the new
         // module, and cells which need resolution
-        // TODO this doesn't allow bind to dotted hier names, that would require
-        // this move to post param, which would mean we do not auto-read modules
-        // and means we cannot compute module levels until later.
         UINFO(4, "Link Bind: " << nodep);
-        AstParseRef* const targetp = VN_CAST(nodep->targetp(), ParseRef);
-        if (!targetp) {
-            nodep->targetp()->v3warn(E_UNSUPPORTED,
-                                     "Unsupported: bind with dotted bind_target_scope");
+        std::vector<BindComp> comps;
+        if (!bindComps(nodep->targetp(), comps)) {
+            nodep->targetp()->v3warn(E_UNSUPPORTED, "Unsupported: bind target");
             VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
             return;
         }
-        const std::string name = targetp->name();
+        BindWalk walk;
+        std::vector<BindCond> conds;
+        std::vector<BindWalk> walks;
+        m_bindArray = false;
+        // The path starts in the module of the bind, or with the name of a module
+        AstNodeModule* rootModp = m_modp;
+        bindFind(rootModp, rootModp->stmtsp(), comps, 0, walk, conds, walks);
+        if (walks.empty() && comps.size() > 1 && !comps[0].selp) {
+            rootModp = comps[0].name == m_modp->name()
+                           ? m_modp
+                           : findModuleSym(comps[0].name, m_modp->libname());
+            if (rootModp) bindFind(rootModp, rootModp->stmtsp(), comps, 1, walk, conds, walks);
+        }
+        // "bind <module> : <instances>" selects the instances of the module
+        if (!nodep->name().empty()) {
+            walks.erase(std::remove_if(walks.begin(), walks.end(),
+                                       [&](const BindWalk& walk) {
+                                           return walk.back().modp->name() != nodep->name();
+                                       }),
+                        walks.end());
+        }
+        const bool moduleTarget = comps.size() == 1 && !comps[0].selp && nodep->name().empty();
+        if (!walks.empty() || !moduleTarget) {
+            if (!walks.empty()) {
+                // V3Param checks that an instance is the target after the generates
+                FileLine* const fl = nodep->fileline();
+                AstVar* const varp
+                    = new AstVar{fl, VVarType::LPARAM,
+                                 V3Param::BIND_TARGET_PREFIX + cvtToStr(m_bindNum + 1) + "_"
+                                     + cvtToStr(m_bindNum + walks.size()),
+                                 VFlagChildDType{}, new AstBasicDType{fl, VBasicDTypeKwd::STRING}};
+                varp->valuep(new AstConst{fl, AstConst::String{}, comps.back().name});
+                rootModp->addStmtsp(varp);
+                for (const BindWalk& bindWalk : walks) bindApply(nodep, bindWalk);
+            } else if (m_bindArray) {
+                nodep->v3warn(E_UNSUPPORTED,
+                              "Unsupported: bind to an element of a multidimensional instance"
+                              " array");
+            } else {
+                nodep->v3error("Cannot resolve hierarchical bind target");
+            }
+            VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
+            return;
+        }
+        const std::string name = comps[0].name;
 
         AstNodeModule* const modp = resolveModule(nodep, name, m_modp->libname());
         if (modp && !modp->verilatorLib()) {

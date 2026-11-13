@@ -761,6 +761,8 @@ string V3Number::displayed(FileLine* fl, const string& vformat,
     case 's': {
         if (formatAttr.isString() || formatAttr.isComplex()) {
             str = toString();
+        } else if (width() <= 8 && isEqZero()) {
+            // The literal "" has no characters
         } else {
             // Spec says always drop leading zeros, this isn't quite right, we space pad.
             int bit = width() - 1;

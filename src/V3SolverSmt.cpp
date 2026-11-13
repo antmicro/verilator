@@ -4315,6 +4315,16 @@ class SolverSmtLowering final : public V3SolverLowering {
         }
     }
 
+    // Statement copying the randc cycle of generator fromp to generator top
+    static AstNodeStmt* newRandcStateCopyp(AstVar* const top, AstVar* const fromp) {
+        FileLine* const fl = top->fileline();
+        AstCStmt* const stmtp = new AstCStmt{fl};
+        stmtp->add(new AstVarRef{fl, VN_CAST(top->user2p(), NodeModule), top, VAccess::READWRITE});
+        stmtp->add(".randcStateFrom(");
+        stmtp->add(new AstVarRef{fl, VN_CAST(fromp->user2p(), NodeModule), fromp, VAccess::READ});
+        stmtp->add(");");
+        return stmtp;
+    }
     // Statement setting whether the generator solves for the array sizes
     static AstNodeStmt* newSizePhasep(AstVar* const genp, bool flag) {
         AstCStmt* const stmtp = new AstCStmt{genp->fileline()};
@@ -4614,6 +4624,29 @@ public:
         }
 
         randomizeFuncp->addDeclsp(localGenp);
+
+        // The randc cycle is per object, not per call (IEEE 1800-2023 18.4.2): the class
+        // generator keeps it between calls, or a generator member made for it
+        AstVar* randcStatep = nullptr;
+        if (classp->existsMember(
+                [](const AstClass*, const AstVar* varp) { return varp->rand().isRandC(); })) {
+            randcStatep = classGenp;
+            if (!randcStatep) {
+                static const char* const name = "__Vrandc_state";
+                AstClass* basep = classp;
+                while (basep->extendsp()) basep = basep->extendsp()->classp();
+                randcStatep = VN_CAST(m_memberMap.findMember(basep, name), Var);
+                if (!randcStatep) {
+                    randcStatep
+                        = new AstVar{basep->fileline(), VVarType::MEMBER, name,
+                                     basep->findBasicDType(VBasicDTypeKwd::RANDOM_GENERATOR)};
+                    randcStatep->user2p(basep);
+                    basep->addMembersp(randcStatep);
+                    m_memberMap.insert(basep, randcStatep);
+                }
+                randomizeFuncp->addStmtsp(newRandcStateCopyp(localGenp, randcStatep));
+            }
+        }
 
         // Copy (derive) class constraints if present
         if (classGenp) {
@@ -4939,6 +4972,7 @@ public:
                 randomizeFuncp->addStmtsp(ifp);
             }
         }
+        if (randcStatep) randomizeFuncp->addStmtsp(newRandcStateCopyp(randcStatep, localGenp));
     }
     AstNodeExpr* lowerStdRandomizeWith(AstNodeFTaskRef* nodep, AstFunc* randomizeFuncp,
                                        AstNode* capturedTreep, AstVar* stdrandp) override {

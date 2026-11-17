@@ -1843,9 +1843,9 @@ static VCastable computeCastableImp(const AstNodeDType* toDtp, const AstNodeDTyp
             return VCastable::INCOMPATIBLE;
         }
         // A type from a class parameter may carry only the modport name
-        const bool sameModport = toIfp->modportp() == fromIfp->modportp()
-                                 || (!toIfp->modportName().empty()
-                                     && toIfp->modportName() == fromIfp->modportName());
+        const bool sameModport
+            = toIfp->modportp() == fromIfp->modportp()
+              || (!toIfp->modportName().empty() && toIfp->modportName() == fromIfp->modportName());
         if (!checkIfaceArgCompat) {
             if (!toIfp->modportp() || sameModport) return VCastable::COMPATIBLE;
             return castable;

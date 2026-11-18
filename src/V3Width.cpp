@@ -1824,13 +1824,19 @@ class WidthVisitor final : public VNVisitor {
         const AstIfaceRefDType* const adtypep
             = VN_CAST(memberp->fromp()->dtypep()->skipRefp(), IfaceRefDType);
         if (!adtypep) return nullptr;
+        const AstNodeModule* const ifacep = adtypep->ifaceViaCellp();
+        if (!ifacep) return nullptr;
+        // Data members permit runtime indexing. Only an interface instance
+        // selection needs a constant index to identify an expanded cell.
+        if (memberp->varp() || VN_IS(m_memberMap.findMember(ifacep, memberp->name()), Var)) {
+            return nullptr;
+        }
         V3Const::constifyParamsEdit(nodep->bitp());
         const AstConst* const constp = VN_CAST(nodep->bitp(), Const);
-        const AstNodeModule* const ifacep = adtypep->ifaceViaCellp();
-        if (!constp || !ifacep) return nullptr;
+        if (!constp) return nullptr;
         const string elemName
             = memberp->name() + "__BRA__" + cvtToStr(constp->toSInt()) + "__KET__";
-        if (!ifacep->exists([&](const AstCell* cellp) { return cellp->name() == elemName; })) {
+        if (!VN_IS(m_memberMap.findMember(ifacep, elemName), Cell)) {
             return nullptr;
         }
         memberp->name(elemName);

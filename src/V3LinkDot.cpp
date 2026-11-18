@@ -4021,6 +4021,25 @@ class LinkDotResolveVisitor final : public VNVisitor {
         m_modulesToRevisit.insert(std::make_pair(m_modp->name(), m_modp));
     }
 
+    static bool isParsedDottedPath(const AstNode* nodep) {
+        if (VN_IS(nodep, ParseRef)) return true;
+        const AstDot* const dotp = VN_CAST(nodep, Dot);
+        return dotp && !dotp->colon() && isParsedDottedPath(dotp->lhsp())
+               && isParsedDottedPath(dotp->rhsp());
+    }
+
+    bool mayDeclareImplicit(const VSymEnt* scopep, const string& name) const {
+        for (; scopep; scopep = scopep->parentp()) {
+            if (const AstCell* const cellp = VN_CAST(scopep->nodep(), Cell)) {
+                return m_statep->implicitOk(cellp->modp(), name);
+            }
+            if (AstNodeModule* const modp = VN_CAST(scopep->nodep(), NodeModule)) {
+                return m_statep->implicitOk(modp, name);
+            }
+        }
+        return false;
+    }
+
     void updateVarUse(AstVar* nodep) {
         // Avoid dotted.PARAM false positive when in a parameter block
         // that is if ()'ed off by same dotted name as another block
@@ -4471,6 +4490,24 @@ class LinkDotResolveVisitor final : public VNVisitor {
         UINFO(8, indent() << m_ds.ascii());
         const DotStates lastStates = m_ds;
         const bool start = (m_ds.m_dotPos == DP_NONE);  // Save, as m_dotp will be changed
+        // Keep the full hierarchy intact until implicit declarations have been
+        // created and instance symbol tables rebuilt (IEEE 1800-2023 6.5, 6.10).
+        if (start && m_statep->forPrimary() && !nodep->colon()
+            && isParsedDottedPath(nodep->lhsp())) {
+            const AstParseRef* const refp = VN_CAST(nodep->rhsp(), ParseRef);
+            bool hasPartSelect = false;
+            const string path = extractDottedPath(nodep->lhsp(), hasPartSelect);
+            if (refp && !hasPartSelect && !path.empty()) {
+                string baddot;
+                VSymEnt* okSymp = nullptr;
+                VSymEnt* const scopep = m_statep->findDotted(
+                    nodep->fileline(), m_curSymp, path, baddot, okSymp, true);
+                if (scopep && !scopep->findIdFlat(refp->name())
+                    && mayDeclareImplicit(scopep, refp->name())) {
+                    return;
+                }
+            }
+        }
         const DotPosition initialDotPos = m_ds.m_dotPos;
         VL_RESTORER(m_randSymp);
         {

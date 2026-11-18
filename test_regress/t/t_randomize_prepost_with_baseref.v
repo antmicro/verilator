@@ -26,6 +26,19 @@ class Derived extends Base;
   endfunction
 endclass
 
+class Grandchild extends Derived;
+  rand bit [6:0] extra;
+endclass
+
+class Sibling extends Base;
+  function void pre_randomize;
+    m_pre = 8'd20;
+  endfunction
+  function void post_randomize;
+    m_post = a + 8'd2;
+  endfunction
+endclass
+
 class Base2;
   rand bit [7:0] b;
   bit [7:0] bp;
@@ -75,6 +88,26 @@ module t;
     `checkd(b.a, 8'h3c);
     `checkd(d.m_pre, 8'd10);
     `checkd(d.m_post, 8'h3d);
+
+    // Derived callbacks remain visible through grandchildren and sibling branches.
+    begin
+      Grandchild leaf;
+      Sibling sibling;
+      leaf = new;
+      b = leaf;
+      ok = b.randomize() with {a == 8'h17;};
+      `checkd(ok, 1);
+      `checkd(leaf.a, 8'h17);
+      `checkd(leaf.m_pre, 8'd10);
+      `checkd(leaf.m_post, 8'h18);
+      sibling = new;
+      b = sibling;
+      ok = b.randomize() with {a == 8'h29;};
+      `checkd(ok, 1);
+      `checkd(sibling.a, 8'h29);
+      `checkd(sibling.m_pre, 8'd20);
+      `checkd(sibling.m_post, 8'h2b);
+    end
 
     // randomize() with through a base handle that DOES define pre/post,
     // overridden by the derived class with super chaining

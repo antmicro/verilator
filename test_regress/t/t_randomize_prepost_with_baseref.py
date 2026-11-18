@@ -14,7 +14,10 @@ test.scenarios('simulator')
 if not test.have_solver:
     test.skip("No constraint solver installed")
 
-test.compile()
+test.compile(verilator_flags2=["--stats"])
+
+if test.vlt:
+    test.file_grep(test.stats, r'Randomize, class descendant entries\s+(\d+)', 5)
 
 test.execute()
 

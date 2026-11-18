@@ -44,6 +44,7 @@
 #include "V3Global.h"
 #include "V3MemberMap.h"
 #include "V3SolverBackend.h"
+#include "V3Stats.h"
 #include "V3UniqueNames.h"
 
 #include <queue>
@@ -1246,6 +1247,8 @@ class RandomizeVisitor final : public VNVisitor {
     AstConstraint* m_constraintp = nullptr;  // Current constraint
     // Per-handle-type pre/post virtual wrapper presence
     std::map<AstClass*, std::pair<bool, bool>> m_prePostWrap;
+    std::unordered_map<AstClass*, std::vector<AstClass*>> m_subclasses;  // Descendants in tree order
+    VDouble0 m_statDescendants;  // Number of indexed ancestor/descendant pairs
     ActiveSet m_activeClasses;  // Classes currently building randomize()
     ActiveSet m_globalConstraintOwners;  // Classes with a global constraint, with base classes
     RandModeVars m_modeVars;  // Static rand_mode/constraint_mode state vars per class
@@ -1388,6 +1391,13 @@ class RandomizeVisitor final : public VNVisitor {
         // super.new() runs Base ctor before Derived can resize the static array.
         std::map<AstClass*, uint32_t> rootStaticRandModeCount;
         netlistp->foreach([this, &rootStaticRandModeCount](AstClass* const classp) {
+            // Classes are fixed during this pass. Index descendants once instead
+            // of scanning the full design for each generated class method.
+            for (const AstClassExtends* basep = classp->extendsp(); basep;
+                 basep = basep->classp()->extendsp()) {
+                m_subclasses[basep->classp()].push_back(classp);
+                ++m_statDescendants;
+            }
             bool hasConstraints = false;
             uint32_t randModeCount = 0;
             uint32_t staticRandModeCount = 0;
@@ -1901,10 +1911,10 @@ class RandomizeVisitor final : public VNVisitor {
         const auto cachedIt = m_prePostWrap.find(classp);
         if (cachedIt != m_prePostWrap.end()) return cachedIt->second;
         std::vector<AstClass*> hierp{classp};
-        v3Global.rootp()->foreach([&](AstClass* subp) {
-            if (subp != classp && AstClass::isClassExtendedFrom(subp, classp))
-                hierp.push_back(subp);
-        });
+        const auto subclassesIt = m_subclasses.find(classp);
+        if (subclassesIt != m_subclasses.end()) {
+            hierp.insert(hierp.end(), subclassesIt->second.begin(), subclassesIt->second.end());
+        }
         bool hasPre = false;
         bool hasPost = false;
         for (AstClass* const cp : hierp) {
@@ -2087,12 +2097,9 @@ class RandomizeVisitor final : public VNVisitor {
                               new AstVarRef{fl, ownerClassp, memberVarp, VAccess::READ}}});
         });
         // Override in subclasses, so the call saves the members of the dynamic type
-        if (classp->isExtended()) {
-            v3Global.rootp()->foreach([&](AstClass* subp) {
-                if (subp != classp && AstClass::isClassExtendedFrom(subp, classp)) {
-                    getCreateSnapshotTask(subp);
-                }
-            });
+        const auto subclassesIt = m_subclasses.find(classp);
+        if (subclassesIt != m_subclasses.end()) {
+            for (AstClass* const subp : subclassesIt->second) getCreateSnapshotTask(subp);
         }
         return taskp;
     }
@@ -3012,7 +3019,9 @@ public:
             VL_DO_DANGLING(pushDeletep(constrp->unlinkFrBack()), constrp);
         });
     }
-    ~RandomizeVisitor() override = default;
+    ~RandomizeVisitor() override {
+        V3Stats::addStat("Randomize, class descendant entries", m_statDescendants);
+    }
 };
 
 //######################################################################

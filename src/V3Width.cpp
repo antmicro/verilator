@@ -5910,7 +5910,8 @@ class WidthVisitor final : public VNVisitor {
         if (AstCMethodHard* const ichildp = VN_CAST(childp, CMethodHard)) {
             if (ichildp->method().isDynElementAccess()) {
                 const AstNodeDType* const fromDtypep = ichildp->fromp()->dtypep()->skipRefp();
-                if (VN_IS(fromDtypep, QueueDType) || VN_IS(fromDtypep, DynArrayDType)) {
+                if (access.isWriteOrRW()
+                    && (VN_IS(fromDtypep, QueueDType) || VN_IS(fromDtypep, DynArrayDType))) {
                     // Change access methods to writable ones
                     if (ichildp->method() == VCMethod::ARRAY_AT) {
                         ichildp->method(VCMethod::ARRAY_AT_WRITE);

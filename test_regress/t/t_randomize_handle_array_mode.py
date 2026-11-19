@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# DESCRIPTION: Verilator: Skip randomizing the elements of a disabled class handle array
+# DESCRIPTION: Verilator: Randomization of class handles in arrays
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of either the GNU Lesser General Public License Version 3

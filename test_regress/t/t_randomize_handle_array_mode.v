@@ -1,4 +1,4 @@
-// DESCRIPTION: Verilator: Skip randomizing the elements of a disabled class handle array
+// DESCRIPTION: Verilator: Randomization of class handles in arrays
 //
 // This file ONLY is placed under the Creative Commons Public Domain.
 // SPDX-FileCopyrightText: 2026 The Verilator Authors
@@ -21,6 +21,8 @@ endclass
 class Holder;
   rand Leaf items[string];
   rand Leaf fixed_items[-3:0];
+  Leaf dynamic_items[int][];
+  Leaf queue_items[string][$];
 endclass
 
 module t;
@@ -50,6 +52,36 @@ module t;
     success = obj.randomize();
     `checkd(success, 1);
     `checkd(leaf.calls, 1);
+
+    // Randomizing an array element changes its object, not the stored handle.
+    for (int i = -1; i < 2; ++i) begin
+      obj.dynamic_items[i] = new[3];
+      for (int j = 0; j < 3; ++j) obj.dynamic_items[i][j] = new;
+    end
+    foreach (obj.dynamic_items[i, j]) begin
+      obj.dynamic_items[i][j].srandom(i * 3 + j);
+      `checkd(obj.dynamic_items[i][j].randomize(), 1);
+      `checkd(obj.dynamic_items[i][j].calls, 1);
+    end
+    `checkd(obj.dynamic_items[99][0].randomize(), 0);
+    `checkd(obj.dynamic_items.exists(99), 0);
+    `checkd(obj.dynamic_items[0][3].randomize(), 0);
+    `checkd(obj.dynamic_items[0].size(), 3);
+
+    for (int j = 0; j < 3; ++j) begin
+      automatic Leaf entry = new;
+      obj.queue_items["key"].push_back(entry);
+    end
+    foreach (obj.queue_items[key, j]) begin
+      `checkd(obj.queue_items[key][j].randomize(), 1);
+      `checkd(obj.queue_items[key][j].calls, 1);
+    end
+    obj.queue_items["key"][$].srandom(42);
+    `checkd(obj.queue_items["key"][$].randomize(), 1);
+    `checkd(obj.queue_items["key"][$].calls, 2);
+    `checkd(obj.queue_items["missing"][$].randomize(), 0);
+    `checkd(obj.queue_items.exists("missing"), 0);
+    `checkd(obj.queue_items["key"].size(), 3);
 
     $write("*-* All Finished *-*\n");
     $finish;

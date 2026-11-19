@@ -1,6 +1,6 @@
 // -*- mode: C++; c-file-style: "cc-mode" -*-
 //*************************************************************************
-// DESCRIPTION: Verilator: Outline parts of large coroutines into sub-functions
+// DESCRIPTION: Verilator: Outline parts of large functions into sub-functions
 //
 // Code available from: https://verilator.org
 //
@@ -20,9 +20,11 @@
 // process only between its top level statements, so when most of a coroutine is inside one
 // statement, such as the branches of an 'if' that call inlined tasks, the coroutine stays as
 // large as the whole process. This pass moves parts of such statements into sub-functions,
-// until each is no larger than --output-split-cfuncs.
+// until each is no larger than --output-split-cfuncs. Ordinary class methods can
+// also contain large compound statements after field automation is expanded, so
+// they are outlined without moving a return or a jump out of its function.
 //
-// For each coroutine:
+// For each selected function:
 //  1. Analysis: one traversal records the size of each statement in nodes, and whether it can
 //     move into another function: it cannot if it jumps out of itself, or tests the condition
 //     of a loop around it.
@@ -33,7 +35,7 @@
 //     move, until the statement is within the limit. Moved statements are within the limit,
 //     so groups never nest, and new functions need no further splitting.
 //  3. Rewrite: each group moves into a new function, called in its place, with co_await if it
-//     suspends. Local variables of the coroutine that the group references are passed by
+//     suspends. Local variables of the function that the group references are passed by
 //     reference. This runs before V3Localize, while most variables are module variables, so
 //     only the arguments and locals of tasks that are not inlined need passing.
 //
@@ -56,7 +58,7 @@
 VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
-// Pass to a new function the local variables of the coroutine that its statements reference
+// Pass to a new function the local variables of the function that its statements reference
 
 class OutlineArgsVisitor final : public VNVisitor {
     // STATE
@@ -113,17 +115,17 @@ public:
 };
 
 //######################################################################
-// Outline parts of large coroutines
+// Outline parts of large functions
 
 class OutlineVisitor final : public VNVisitor {
     // NODE STATE
-    //  AstNodeStmt::user1p()  -> StmtInfo. Analysis of statement in the current coroutine
+    //  AstNodeStmt::user1p()  -> StmtInfo. Analysis of statement in the current function
     const VNUser1InUse m_user1InUse;
 
     // TYPES
     struct StmtInfo final {
         size_t m_size = 0;  // Number of nodes in the statement
-        int m_depth = 0;  // Nesting depth of the statement in the coroutine
+        int m_depth = 0;  // Nesting depth of the statement in the function
         bool m_movable = false;  // Can move into another function
     };
     struct StmtRange final {
@@ -135,8 +137,8 @@ class OutlineVisitor final : public VNVisitor {
     // STATE
     VNUser1Allocator<AstNodeStmt, StmtInfo> m_info;
     const size_t m_limit = static_cast<size_t>(v3Global.opt.outputSplitCFuncs());
-    AstCFunc* m_funcp = nullptr;  // Current coroutine
-    size_t m_funcNum = 0;  // Number of functions outlined from the current coroutine
+    AstCFunc* m_funcp = nullptr;  // Current function
+    size_t m_funcNum = 0;  // Number of functions outlined from the current function
     std::vector<StmtRange> m_groups;  // Statements to move, each group into a new function
     size_t m_count = 0;  // Number of nodes analyzed
     int m_depth = 0;  // Nesting depth of the statement being analyzed
@@ -239,7 +241,7 @@ class OutlineVisitor final : public VNVisitor {
         subFuncp->addStmtsp(firstp);
         AstCCall* const callp = new AstCCall{flp, subFuncp};
         callp->dtypeSetVoid();
-        if (VN_IS(scopep->modp(), Class)) {
+        if (VN_IS(scopep->modp(), Class) && !m_funcp->argTypes().empty()) {
             subFuncp->argTypes(EmitCUtil::symClassVar());
             callp->argTypes("vlSymsp");
         }
@@ -275,7 +277,8 @@ class OutlineVisitor final : public VNVisitor {
     void visit(AstNodeStmt* nodep) override { analyze(nodep, std::numeric_limits<int>::max()); }
     void visit(AstJumpGo* nodep) override { analyze(nodep, m_info(nodep->blockp()).m_depth); }
     void visit(AstLoopTest* nodep) override { analyze(nodep, m_info(nodep->loopp()).m_depth); }
-    // Returns from the coroutine, so no statement containing it can move
+    // Returns from the function, so no statement containing it can move
+    void visit(AstCReturn* nodep) override { analyze(nodep, 0); }
     void visit(AstFinishFork* nodep) override { analyze(nodep, 0); }
     void visit(AstNode* nodep) override {
         ++m_count;
@@ -284,7 +287,7 @@ class OutlineVisitor final : public VNVisitor {
 
     // CONSTRUCTORS
     explicit OutlineVisitor(AstNetlist* netlistp) {
-        // Gather the coroutines first, as outlining adds functions
+        // Gather functions first, as outlining adds functions
         std::vector<AstCFunc*> funcps;
         for (AstNodeModule* const modp : netlistp->modulespList()) {
             for (AstNode* const nodep : modp->stmtspList()) {
@@ -293,7 +296,11 @@ class OutlineVisitor final : public VNVisitor {
                 if (!scopep) continue;
                 for (AstNode* const blockp : scopep->blockspList()) {
                     AstCFunc* const funcp = VN_AS(blockp, CFunc);
-                    if (funcp->isCoroutine()) funcps.push_back(funcp);
+                    if (funcp->isCoroutine()
+                        || (VN_IS(scopep->modp(), Class) && !funcp->isConstructor()
+                            && !funcp->isDestructor())) {
+                        funcps.push_back(funcp);
+                    }
                 }
             }
         }

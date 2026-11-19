@@ -3413,7 +3413,6 @@ class SolverSmtLowering final : public V3SolverLowering {
     std::set<std::string> m_writtenVars;  // Track write_var calls per class to avoid duplicates
     std::map<AstClass*, VInsertionSet<AstVar*>> m_sizeConstrainedArrays;  // Per-class arrays
     std::map<AstClass*, VInsertionSet<AstVar*>> m_resizedArrays;  // Resized by class constraints
-    std::set<const AstVar*> m_inlineSizedArrays;  // Arrays with a size variable from 'with'
     uint32_t m_uniqueConstraintId = 0;  // current ID of unique call
 
     // METHODS
@@ -3574,11 +3573,12 @@ class SolverSmtLowering final : public V3SolverLowering {
     }
     // Get or create a size variable for a constrained dynamic/queue/assoc array.
     // Returns the size variable. Sets wasCreated=true if a new variable was made.
-    AstVar* createOrGetSizeVar(AstClass* const classp, AstVar* const arrVarp, FileLine* const fl,
+    AstVar* createOrGetSizeVar(AstVar* const arrVarp, FileLine* const fl,
                                AstNodeDType* const signed32DTypep, bool& wasCreated) {
         AstVar* sizeVarp = VN_CAST(arrVarp->user4p(), Var);
         wasCreated = false;
         if (!sizeVarp) {
+            AstClass* const classp = VN_AS(arrVarp->user2p(), Class);
             sizeVarp
                 = new AstVar{fl, VVarType::MEMBER, SmtUtil::sizeVarName(arrVarp), signed32DTypep};
             classp->addMembersp(sizeVarp);
@@ -4446,27 +4446,26 @@ public:
             AstVar* const queueVarp = queueVarRefp->varp();
             bool wasCreated = false;
             AstVar* const sizeVarp
-                = createOrGetSizeVar(classp, queueVarp, fl, nodep->findIntDType(), wasCreated);
-            if (wasCreated) {
-                // Associative arrays have no resize(); only generate resize
-                // for dynamic arrays and queues
-                if (!VN_IS(queueVarp->dtypep()->skipRefp(), AssocArrayDType)) {
-                    AstTask* resizerTaskp = VN_AS(constrp->user3p(), Task);
-                    if (!resizerTaskp) {
-                        resizerTaskp = newResizeConstrainedArrayTask(classp, constrp->name());
-                        constrp->user3p(resizerTaskp);
-                    }
-                    AstVarRef* const sizeVarRefp = new AstVarRef{
-                        fl, VN_AS(sizeVarp->user2p(), NodeModule), sizeVarp, VAccess::READ};
-                    AstCMethodHard* const resizep = new AstCMethodHard{
-                        fl, nodep->fromp()->unlinkFrBack(), VCMethod::DYN_RESIZE, sizeVarRefp};
-                    resizep->dtypep(nodep->findVoidDType());
-                    resizerTaskp->addStmtsp(new AstStmtExpr{fl, resizep});
-                    m_resizedArrays[classp].insert(queueVarp);
+                = createOrGetSizeVar(queueVarp, fl, nodep->findIntDType(), wasCreated);
+            // Each constraining class needs its own resize operation, even when a sibling
+            // has already created the inherited array's shared size variable.
+            const bool needsResize = !VN_IS(queueVarp->dtypep()->skipRefp(), AssocArrayDType)
+                                     && m_resizedArrays[classp].insert(queueVarp);
+            if (needsResize) {
+                AstTask* resizerTaskp = VN_AS(constrp->user3p(), Task);
+                if (!resizerTaskp) {
+                    resizerTaskp = newResizeConstrainedArrayTask(classp, constrp->name());
+                    constrp->user3p(resizerTaskp);
                 }
-
-                // Since size variable is signed int, we need additional constraint
-                // to make sure it is always >= 0.
+                AstVarRef* const sizeVarRefp = new AstVarRef{
+                    fl, VN_AS(sizeVarp->user2p(), NodeModule), sizeVarp, VAccess::READ};
+                AstCMethodHard* const resizep = new AstCMethodHard{
+                    fl, nodep->fromp()->unlinkFrBack(), VCMethod::DYN_RESIZE, sizeVarRefp};
+                resizep->dtypep(nodep->findVoidDType());
+                resizerTaskp->addStmtsp(new AstStmtExpr{fl, resizep});
+            }
+            if (wasCreated || needsResize) {
+                // Since size variable is signed int, constrain it to non-negative values.
                 constrp->addItemsp(createSizeGteZeroConstraint(fl, sizeVarp));
             }
             AstVarRef* const sizeVarRefp = new AstVarRef{fl, VN_AS(sizeVarp->user2p(), NodeModule),
@@ -4770,16 +4769,14 @@ public:
                 if (VN_IS(arrVarp->dtypep()->skipRefp(), AssocArrayDType)) continue;
                 FileLine* const fl = methodp->fileline();
                 bool wasCreated = false;
-                AstClass* const varClassp = VN_AS(arrVarp->user2p(), Class);
-                AstVar* const sizeVarp = createOrGetSizeVar(varClassp, arrVarp, fl,
+                AstVar* const sizeVarp = createOrGetSizeVar(arrVarp, fl,
                                                             methodp->findIntDType(), wasCreated);
                 // arrVarp and sizeVarp may live in a base class when the
                 // array is inherited; route VarRefs through their declaring
                 // class so V3Scope can resolve them.
-                // No class constraint resizes the array, so each 'with' block that
-                // constrains the size does
-                if (wasCreated) m_inlineSizedArrays.insert(arrVarp);
-                if (m_inlineSizedArrays.count(arrVarp) && resizedArrays.insert(arrVarp)) {
+                // Every inline size constraint needs a resize, regardless of which class
+                // first created the inherited array's shared size variable.
+                if (resizedArrays.insert(arrVarp)) {
                     AstNodeExpr* const resizeVarRefp = buildMemberRefExprp(rootExprp, arrVarp);
                     AstNodeExpr* const sizeExprp = buildMemberRefExprp(rootExprp, sizeVarp);
                     // Append size >= 0 constraint so ConstraintExprVisitor processes it

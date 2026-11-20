@@ -21,6 +21,11 @@ module t (
   class Derived extends Base;
   endclass
 
+  class QueueMembers;
+    int q[int][$];
+    int w[*][$];
+  endclass
+
   integer cyc = 0;
 
   integer i;
@@ -385,6 +390,22 @@ module t (
       w4 = '{"a": c4 + 4'd2, default: c4 + 4'd3};
       `checkh(w4["a"], 4'h1);
       `checkh(w4["z"], 4'h2);
+    end
+
+    begin  // Queue methods on associative-array elements of a class member
+      QueueMembers m;
+      m = new;
+      `checkh(m.q[9].size(), 0);
+      `checkh(m.q.exists(9), 0);
+      m.q[4].push_back(21);
+      m.q[4].push_front(12);
+      `checkh(m.q.num(), 1);
+      `checkh(m.q[4].pop_back(), 21);
+      `checkh(m.q[4][0], 12);
+      m.q[4].delete();
+      `checkh(m.q.exists(4), 1);
+      m.w["k"].push_back(3);
+      `checkh(m.w["k"][0], 3);
     end
 
     $write("*-* All Finished *-*\n");

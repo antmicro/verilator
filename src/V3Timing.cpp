@@ -322,8 +322,9 @@ class TimingSuspendableVisitor final : public VNVisitor {
         if (nodep->needsVlProcess()) addFlags(nodep, T_FORCES_PROC | T_NEEDS_PROC);
         DepVtx* const sVxp = getSuspendDepVtx(nodep);
         DepVtx* const pVxp = getNeedsProcDepVtx(nodep);
-        if (nodep->dpiImportWrapper() || nodep->dpiExportImpl()) {
+        if ((nodep->dpiImportWrapper() && nodep->dpiContext()) || nodep->dpiExportImpl()) {
             // Assume C/C++ can call any export.
+            // Only context imports can call exports (IEEE 1800-2023 35.5.3).
             AstNetlist* const netlistp = v3Global.rootp();
             addFlags(nodep, T_NEEDS_PROC);
             DepVtx* const dpiVxp = getNeedsProcDepVtx(netlistp);

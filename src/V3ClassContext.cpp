@@ -44,9 +44,14 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 //######################################################################
 
-// Name of a static class member hoisted to the module
-static string hoistedName(const AstClass* classp, const AstNode* memberp) {
-    return classp->name() + "__Vstatic__" + memberp->name();
+// Qualify moved members by the lexical scopes between the class and its module.
+static string hoistedPrefix(const AstClass* classp, const AstNodeModule* modp) {
+    string prefix = classp->name();
+    for (const AstNode* parentp = classp->aboveLoopp(); parentp != modp;
+         parentp = parentp->aboveLoopp()) {
+        if (!parentp->name().empty()) prefix = parentp->name() + "__DOT__" + prefix;
+    }
+    return prefix + "__Vstatic__";
 }
 
 //######################################################################
@@ -131,7 +136,7 @@ class ClassContextMembersVisitor final : public VNVisitor {
         return varp;
     }
     // Hoist static class member to the module
-    void hoistStatic(AstNodeModule* modp, AstClass* classp, AstNode* memberp) {
+    void hoistStatic(AstNodeModule* modp, const string& prefix, AstNode* memberp) {
         UINFO(9, "Hoist static member " << memberp);
         // Leave a non-static declaration without body or value
         AstNode* const declp = memberp->cloneTree(false);
@@ -152,7 +157,7 @@ class ClassContextMembersVisitor final : public VNVisitor {
             ftaskp->fileline()->warnOff(V3ErrorCode::NORETURN, true);
         }
         memberp->replaceWith(declp);
-        memberp->name(hoistedName(classp, memberp));
+        memberp->name(prefix + memberp->name());
         if (AstVar* const varp = VN_CAST(memberp, Var)) {
             varp->varType(VVarType::VAR);
         } else {
@@ -169,6 +174,7 @@ class ClassContextMembersVisitor final : public VNVisitor {
     // Add __Vinstance to the class, hoist statics to the module
     void bindClass(AstNodeModule* modp, AstClass* classp) {
         UINFO(4, "Bind class " << classp << " to " << modp);
+        const string prefix = hoistedPrefix(classp, modp);
         AstVar* const instp = newInstVarp(modp, VVarType::MEMBER);
         AstVar* const argp = newInstVarp(modp, VVarType::PORT);
         argp->funcLocal(true);
@@ -184,7 +190,7 @@ class ClassContextMembersVisitor final : public VNVisitor {
                 modp->addStmtsp(stmtp->unlinkFrBack());
             } else if ((varp && varp->lifetime().isStatic() && !varp->isParam())
                        || (ftaskp && ftaskp->isStatic())) {
-                hoistStatic(modp, classp, stmtp);
+                hoistStatic(modp, prefix, stmtp);
             }
         }
         classp->prependMembersp(instp);
@@ -522,10 +528,11 @@ public:
             modp->foreach([&](AstClass* classp) {
                 if (!classp->instancep()) return;
                 classp->user2p(modp);
+                const string prefix = hoistedPrefix(classp, VN_AS(modp, NodeModule));
                 for (AstNode* stmtp = classp->membersp(); stmtp; stmtp = stmtp->nextp()) {
                     if (!VN_IS(stmtp, Var) && !VN_IS(stmtp, NodeFTask)) continue;
                     AstNode* const memberp
-                        = m_memberMap.findMember(modp, hoistedName(classp, stmtp));
+                        = m_memberMap.findMember(modp, prefix + stmtp->name());
                     if (!memberp) continue;
                     stmtp->user3p(memberp);
                     stmtp->user4p(classp);

@@ -25,6 +25,25 @@ module single;
 endmodule
 
 interface ifc;
+  class North;
+    class Leaf;
+      static int tag = 3;
+      static function int read_tag();
+        return tag;
+      endfunction
+    endclass
+  endclass
+  class South;
+    class Leaf;
+      static int tag = 7;
+      static function int read_tag();
+        return tag;
+      endfunction
+    endclass
+  endclass
+  function int tags();
+    return 10 * North::Leaf::read_tag() + South::Leaf::read_tag();
+  endfunction
   int x;
   virtual class A;
     static int an;
@@ -107,6 +126,7 @@ module t;
     i1.c.inc();
     if (i1.c.n != 6) $stop;
     if (v.c.n != 2) $stop;
+    if (i1.tags() != 37 || v.tags() != 37) $stop;
     $write("*-* All Finished *-*\n");
     $finish;
   end

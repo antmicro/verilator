@@ -79,8 +79,8 @@ module t;
                 $write("");
             end
             $display("%p", $_EXPRSTMT(
-                    __Venum_ha0f45658__0 = in;
-                    , __Venum_ha0f45658__0);
+                    __Venum_h0__0 = in;
+                    , __Venum_h0__0);
             );
             if ((| $value$plusargs("TEST=%d", i1))) begin
                 $display("value was %d", i1);
@@ -1544,7 +1544,7 @@ module t;
     enum logic [2:0] {
         ZERO = 3'h0,
         ONE = 3'h1
-    } __Venum_ha0f45658__0;
+    } __Venum_h0__0;
 endmodule
 class Cls;
     bit cg_clk;
@@ -1842,15 +1842,15 @@ module seq_event;
         begin
 
             ???? // EVENTCONTROL
-            @( __VseqEvent_h9d9f741d__0)end
+            @( __VseqEvent_h1__0)end
     end
-    event __VseqEvent_h9d9f741d__0;
+    event __VseqEvent_h1__0;
     cover property (@() @(posedge clk) a##1 b##1 c
 
     ) begin
 
         ???? // FIREEVENT
-        __VseqEvent_h9d9f741d__0end
+        __VseqEvent_h1__0end
 endmodule
 package escapes;
     typedef enum int{

@@ -7,6 +7,8 @@
 # SPDX-FileCopyrightText: 2024 Wilson Snyder
 # SPDX-License-Identifier: LGPL-3.0-only OR Artistic-2.0
 
+import re
+
 import vltest_bootstrap
 
 test.scenarios("vlt")
@@ -30,7 +32,18 @@ test.lint(
 output_vs = test.glob_some(test.obj_dir + "/" + test.vm_prefix + "_*_widthcommit.tree.v")
 
 for output_v in output_vs:
-    test.files_identical(output_v, test.golden_filename)
+    # The C++ standard library determines these hashes. Keep repeated references
+    # to each temporary distinguishable without tying the dump to one platform.
+    hashes = {}
+
+    def normalize_hash(match):
+        value = match.group(2)
+        return match.group(1) + str(hashes.setdefault(value, len(hashes)))
+
+    normalized = output_v + ".normalized"
+    test.file_sed(output_v, normalized, lambda s: re.sub(
+        r'(__V(?:enum|seqEvent)_h)([0-9a-f]{8})(?=__\d+)', normalize_hash, s))
+    test.files_identical(normalized, test.golden_filename)
 
 if test.verbose:
     # Print if that the output Verilog is clean

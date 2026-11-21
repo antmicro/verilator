@@ -339,7 +339,8 @@ public:
     };
     // Generates list of assignments that fills
     static AstAssign* createSenTrigVecAssignment(AstVarScope* const targetp,
-                                                 std::vector<AstNodeExpr*>& trigps);
+                                                 std::vector<AstNodeExpr*>& trigps,
+                                                 size_t wordOffset = 0);
 
     // Create a TriggerKit for the given AstSenTree vector
     static TriggerKit create(AstNetlist* netlistp,  //

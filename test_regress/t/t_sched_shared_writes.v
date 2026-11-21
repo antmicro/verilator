@@ -33,8 +33,27 @@ module t;
     end
   end
 
+  bit enable, write_status, other;
+  bit [1:0] status;
+  always @(enable) if (enable) status[1] = 0;
+  always @(posedge write_status) status[1] = 1;
+  always @(other) status[0] = other;
+
   initial begin
+    #1 enable = 1;
+    #1 write_status = 1;
     #1;
+    if (status != 2) $stop;
+    other = 1;
+    #1;
+    if (status != 3) $stop;
+    enable = 0;
+    #1;
+    if (status != 3) $stop;
+    enable = 1;
+    #1;
+    if (status != 1) $stop;
+
     if (all_a || all_b || seen_shared != '0) $stop;
     clk_a = 1;
     #1;

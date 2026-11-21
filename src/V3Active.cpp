@@ -450,6 +450,9 @@ class ActiveVisitor final : public VNVisitor {
     //   AstVarScope::user2()           bool: This VarScope is written in the current process
     //   AstNode::user4()               Used by V3Const::constify, called below
 
+    //  AstVarScope::user3p()          Sole writing block, or the VarScope for multiple writers
+    const VNUser3InUse m_user3InUse;
+
     // STATE
     ActiveNamer m_namer;  // Tracking of active names
     bool m_clockedProcess = false;  // Whether current process is a clocked process
@@ -609,6 +612,9 @@ class ActiveVisitor final : public VNVisitor {
 
     void visit(AstVarRef* nodep) override {
         AstVarScope* const vscp = nodep->varScopep();
+        // A combinational reevaluation could overwrite a value from another process
+        // even when no event in the sensitivity list occurred.
+        if (nodep->access().isWriteOrRW() && vscp->user3p() == vscp) m_canBeComb = false;
         if (nodep->access().isWriteOnly()) {
             vscp->user2(true);
         } else {
@@ -665,7 +671,23 @@ class ActiveVisitor final : public VNVisitor {
 
 public:
     // CONSTRUCTORS
-    explicit ActiveVisitor(AstNetlist* nodep) { iterate(nodep); }
+    explicit ActiveVisitor(AstNetlist* nodep) {
+        nodep->foreach([](AstScope* scopep) {
+            for (AstNode* const blockp : scopep->blockspList()) {
+                blockp->foreach([blockp](const AstVarRef* refp) {
+                    if (!refp->access().isWriteOrRW()) return;
+                    AstVarScope* const vscp = refp->varScopep();
+                    if (!vscp) return;
+                    if (!vscp->user3p()) {
+                        vscp->user3p(blockp);
+                    } else if (vscp->user3p() != blockp) {
+                        vscp->user3p(vscp);
+                    }
+                });
+            }
+        });
+        iterate(nodep);
+    }
     ~ActiveVisitor() override = default;
 };
 

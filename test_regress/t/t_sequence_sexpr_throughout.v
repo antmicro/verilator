@@ -62,6 +62,14 @@ module t (
   int count_fail21 = 0;
   int count_fail22 = 0;
 
+  int ranged_fails, conjunction_fails;
+  assert property (@(posedge clk) disable iff (cyc < 10)
+      $rose(a) |-> ##[0:4] ($rose(cond) throughout b))
+  else ranged_fails++;
+  assert property (@(posedge clk) disable iff (cyc < 10)
+      $rose(a) |-> ##[0:4] ($rose(cond) && b))
+  else conjunction_fails++;
+
   // Test: a |-> (cond throughout (1'b1 ##3 1'b1))
   // If a fires, cond must hold for 4 consecutive ticks (start + 3 delay ticks).
   assert property (@(posedge clk) disable iff (cyc < 10) a |-> (cond throughout (1'b1 ##3 1'b1)))
@@ -252,6 +260,8 @@ module t (
       `checkd(count_fail20_ref, 45);
       `checkd(count_fail21, 1);
       `checkd(count_fail22, 2);
+      `checkd(ranged_fails, conjunction_fails);
+      if (conjunction_fails == 0) `stop;
       $write("*-* All Finished *-*\n");
       $finish;
     end

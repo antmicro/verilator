@@ -317,6 +317,22 @@ class AssertElabVisitor final : public VNVisitor {
         // V3LinkResolve substituted every let, so this is a property instance
         inlineNestedProperty(nodep, VN_AS(nodep->schemap(), Property));
     }
+    void visit(AstSThroughout* nodep) override {
+        iterateChildren(nodep);
+        // A Boolean sequence has just one sampling tick (IEEE 1800-2023 16.9.9).
+        // Not lowered as an operand of a property 'and' or 'or': V3AssertNfa evaluates a
+        // Boolean operand there incorrectly.
+        if (VN_IS(nodep->backp(), SAnd) || VN_IS(nodep->backp(), SOr)) return;
+        if (nodep->rhsp()->exists([](const AstNodeExpr* exprp) {
+                return exprp->isMultiCycleSva() || VN_IS(exprp, Implication)
+                       || VN_IS(exprp, SchemaRef);
+            })) {
+            return;
+        }
+        nodep->replaceWith(new AstLogAnd{nodep->fileline(), nodep->lhsp()->unlinkFrBack(),
+                                         nodep->rhsp()->unlinkFrBack()});
+        VL_DO_DANGLING(pushDeletep(nodep), nodep);
+    }
     // Declarations are inlined at their instances
     void visit(AstProperty*) override {}
     void visit(AstSequence*) override {}

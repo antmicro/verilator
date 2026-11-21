@@ -4350,19 +4350,21 @@ class LinkDotResolveVisitor final : public VNVisitor {
         checkNoDot(nodep);
         if (AstParseRef* const refp
             = nodep->param() ? VN_CAST(nodep->exprp(), ParseRef) : nullptr) {
-            // A type parameter's value is a type, which a variable of the same name does not
-            // hide (IEEE 1800-2023 6.18), e.g. 'cls' in 'mailbox #(cls) fifo; cls cls;'. Other
-            // values keep the usual lookup, which also checks the declaration order.
+            // A variable declared after the pin does not hide an enclosing or inherited type
+            // (IEEE 1800-2023 6.18). A variable already in scope keeps the ordinary lookup.
             const VSymEnt* const paramp
                 = m_pinSymp ? m_pinSymp->findIdFlat(nodep->name()) : nullptr;
-            const VSymEnt* const typep
+            const VSymEnt* const visiblep
                 = paramp && VN_IS(paramp->nodep(), ParamTypeDType)
-                      ? findIdFallbackSkipMemberDType(m_curSymp, refp->name())
+                      ? m_curSymp->findIdFallback(refp->name())
                       : nullptr;
-            if (typep && isTypeDecl(typep->nodep())
-                && !isTypeDecl(m_curSymp->findIdFallback(refp->name())->nodep())) {
-                refp->replaceWith(new AstRefDType{refp->fileline(), refp->name()});
-                VL_DO_DANGLING(pushDeletep(refp), refp);
+            if (visiblep && VN_IS(visiblep->nodep(), Var)
+                && refp->fileline()->tokenNum() < visiblep->nodep()->fileline()->tokenNum()) {
+                const VSymEnt* const typep = findIdFallbackSkipMemberDType(m_curSymp, refp->name());
+                if (typep && isTypeDecl(typep->nodep())) {
+                    refp->replaceWith(new AstRefDType{refp->fileline(), refp->name()});
+                    VL_DO_DANGLING(pushDeletep(refp), refp);
+                }
             }
         }
         {

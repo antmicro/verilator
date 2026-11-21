@@ -192,10 +192,19 @@ class UdpVisitor final : public VNVisitor {
         }
 
         fl->warnOff(V3ErrorCode::LATCH, true);
-        // Edge-triggered lines are clocked logic, so update like a flop:
-        // other clocked logic reading the output sees the pre-edge value, regardless of ordering
+        // Sequential rows update the same stored output, whether the match is
+        // edge- or level-sensitive. Test levels on input changes, not output changes.
+        if (!nodep->udpIsCombo() && !edgetrigp) {
+            // A change sensitivity on a constant fires once at initialization.
+            edgetrigp = new AstSenTree{fl, new AstSenItem{
+                fl, VEdgeType::ET_CHANGED, new AstConst{fl, AstConst::BitTrue{}}}};
+            for (AstVar* const varp : m_inputVars) {
+                edgetrigp->addSensesp(new AstSenItem{
+                    fl, VEdgeType::ET_CHANGED, new AstVarRef{fl, varp, VAccess::READ}});
+            }
+        }
         AstNodeStmt* const assignp
-            = newOutputAssign(fl, getOutputNum(nodep, oValName), edgetrigp != nullptr);
+            = newOutputAssign(fl, getOutputNum(nodep, oValName), !nodep->udpIsCombo());
         AstIf* const ifp = new AstIf{fl, logandp, assignp};
         if (nodep->udpIsCombo()) {
             if (!isCombOutputSig(oValName)) {

@@ -1279,7 +1279,7 @@ class TristateVisitor final : public TristateBaseVisitor {
         // For interface tristate vars, store per-module contributions for later combining.
         // The interface module owns the contribution vars; resolution happens in
         // combineIfaceContribs() after all modules are processed.
-        if (isIfaceTri) {
+        if (isIfaceTri || (outvarp && VN_IS(nodep, Iface))) {
             // This net intentionally has multiple contributors; DFG should not emit
             // MULTIDRIVEN warnings for this lowered tristate pattern.
             invarp->setDfgAllowMultidriveTri();
@@ -2644,17 +2644,15 @@ class TristateVisitor final : public TristateBaseVisitor {
             UINFOTREE(9, enAssp, "", "iface-enAssp");
             ifaceModp->addStmtsp(new AstAlways{enAssp});
 
-            // Pull resolution
-            const AstPull* const pullp = m_varAux(invarp).pullp;
-            const bool pull1 = pullp && pullp->direction() == 1;  // Else default is down
-
+            // A split port receives the resolved net from its parent. Send this
+            // instance's combined driver back through the output and enable ports.
+            AstVar* const outvarp = m_varAux(invarp).outVarp;
             AstNodeExpr* undrivenp = new AstNot{fl, new AstVarRef{fl, envarp, VAccess::READ}};
-            undrivenp = new AstAnd{fl, undrivenp, newAllZerosOrOnes(invarp, pull1)};
+            undrivenp = new AstAnd{fl, undrivenp, createPerBitPullConst(invarp)};
             orp = new AstOr{fl, orp, undrivenp};
 
-            // Assign final value to invarp
-            AstAssignW* const assp
-                = new AstAssignW{fl, new AstVarRef{fl, invarp, VAccess::WRITE}, orp};
+            AstVarRef* const targetp = new AstVarRef{fl, outvarp ? outvarp : invarp, VAccess::WRITE};
+            AstAssignW* const assp = new AstAssignW{fl, targetp, orp};
             assp->user2Or(U2_BOTH);
             UINFOTREE(9, assp, "", "iface-lhsp-eqn");
             ifaceModp->addStmtsp(new AstAlways{assp});

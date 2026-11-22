@@ -426,6 +426,43 @@ bool isEligibleForChangeDetection(AstVarScope* vscp) {
     return !vscp->varp()->isSc();
 }
 
+// A VPI deposit lasts until the driver changes value (IEEE 1800-2023 38.34).
+// A combinational process can run repeatedly while its result stays the same.
+void guardVpiDrivers(AstNetlist* netlistp, LogicClasses& logic, AstCFunc* initp) {
+    AstTopScope* const scopep = netlistp->topScopep();
+    unsigned driverIndex = 0;
+    for (ProcessList* const processesp : {&logic.m_comb, &logic.m_hybrid}) {
+        for (Process& process : *processesp) {
+            AstAssignW* const assignp = VN_CAST(process.m_procp->stmtsp(), AssignW);
+            if (!assignp || assignp->nextp()) continue;
+            AstVarRef* const targetp = VN_CAST(assignp->lhsp(), VarRef);
+            if (!targetp || !targetp->varp()->isSigUserRWPublic()
+                || !targetp->dtypep()->skipRefp()->isIntegralOrPacked()) {
+                continue;
+            }
+            FileLine* const flp = assignp->fileline();
+            const string name = "__VvpiDriver" + cvtToStr(driverIndex++);
+            AstVarScope* const currentp = scopep->createTemp(name, targetp->dtypep());
+            AstVarScope* const previousp = scopep->createTemp(name + "__prev", targetp->dtypep());
+            AstVarScope* const validp = scopep->createTemp(name + "__valid", 1);
+            const auto rd = [flp](AstVarScope* vp) { return new AstVarRef{flp, vp, VAccess::READ}; };
+            const auto wr = [flp](AstVarScope* vp) { return new AstVarRef{flp, vp, VAccess::WRITE}; };
+            initp->addStmtsp(new AstAssign{flp, wr(validp), new AstConst{flp, AstConst::BitFalse{}}});
+
+            AstAssign* const evalp = new AstAssign{flp, wr(currentp), assignp->rhsp()->unlinkFrBack()};
+            assignp->rhsp(rd(currentp));
+            assignp->replaceWith(evalp);
+            AstIf* const changedp = new AstIf{
+                flp, new AstLogOr{flp, new AstLogNot{flp, rd(validp)},
+                                  new AstNeq{flp, rd(previousp), rd(currentp)}}};
+            evalp->addNextHere(changedp);
+            changedp->addThensp(new AstAssign{flp, wr(validp), new AstConst{flp, AstConst::BitTrue{}}});
+            changedp->addThensp(new AstAssign{flp, wr(previousp), rd(currentp)});
+            changedp->addThensp(assignp);
+        }
+    }
+}
+
 void createIcoRegion(AstNetlist* netlistp, AstCFunc* const initFuncp,
                      SenExprBuilder& senExprBuilder, ProcessList& logic,
                      const VirtIfaceTriggers& virtIfaceTriggers,
@@ -788,6 +825,7 @@ void schedule(AstNetlist* netlistp) {
 
     // Step 5: Break combinational cycles by introducing hybrid logic
     breakCycles(netlistp, logicClasses);
+    if (v3Global.opt.vpi()) guardVpiDrivers(netlistp, logicClasses, staticp);
     if (v3Global.opt.stats()) {
         addSizeStat("size of class: clocked", logicClasses.m_clocked);
         addSizeStat("size of class: combinational", logicClasses.m_comb);

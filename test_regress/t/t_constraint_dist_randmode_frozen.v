@@ -294,11 +294,12 @@ endclass
 
 class NonRandMember;
   rand Mixed m;
+  bit range_mode;
   constraint c {
-    m.nf dist {
-      5 := 9,
-      70 := 1
-    };
+    if (range_mode)
+      m.nf dist {[5:8] :/ 2, [20:24] := 1};
+    else
+      m.nf dist {5 := 9, 70 := 1};
   }
   function new();
     m = new;
@@ -923,6 +924,13 @@ module t;
       ok = nr.randomize();
       `checkd(ok, 1);
       `checkd(nr.m.nf, 5);
+      nr.range_mode = 1;
+      nr.m.nf = 7;
+      `checkd(nr.randomize(), 1);
+      `checkd(nr.m.nf, 7);
+      nr.m.nf = 10;
+      `checkd(nr.randomize(), 0);
+      `checkd(nr.m.nf, 10);
     end
 
     // Queue element member: draws both values, biased toward the heavy bucket.

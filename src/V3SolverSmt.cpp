@@ -3727,36 +3727,66 @@ class SolverSmtLowering final : public V3SolverLowering {
 
     struct DistBucket final {
         AstNodeExpr* rangep;  // A single value or an InsideRange
-        AstNodeExpr* weightExprp;  // Effective 64-bit weight (range weight scaled by size)
+        AstNodeExpr* weightExprp;  // Weight of all values in this bucket
     };
 
-    // Non-zero-weight buckets with each weight extended to 64 bits.
-    std::vector<DistBucket> collectDistBuckets(AstDist* const distp) {
+    static AstNodeExpr* distResize(FileLine* flp, AstNodeExpr* exprp, int width) {
+        if (exprp->width() < width) return new AstExtend{flp, exprp, width};
+        if (exprp->width() > width) return new AstSel{flp, exprp, 0, width};
+        return exprp;
+    }
+
+    // Subtract at the bounds' width, then widen before adding one. This also handles
+    // signed ranges crossing zero and the full domain, whose cardinality needs an extra bit.
+    static AstNodeExpr* newDistRangeSize(const AstInsideRange* irp, int width) {
+        FileLine* const flp = irp->fileline();
+        AstNodeExpr* const diffp = new AstSub{flp, irp->rhsp()->cloneTreePure(false),
+                                             irp->lhsp()->cloneTreePure(false)};
+        return new AstAdd{flp, new AstConst{flp, AstConst::WidthedValue{}, width, 1},
+                          distResize(flp, diffp, width)};
+    }
+
+    // The bucket draw must represent the sum of the weights, including every element
+    // of a per-value (:=) range. Keep the usual 64-bit draw for small distributions.
+    static int distWeightBits(const AstDist* distp) {
+        unsigned count = 0;
+        int maxBits = 1;
+        for (const AstDistItem* const itemp : distp->itemspList()) {
+            const AstConst* const weightp = VN_CAST(itemp->weightp(), Const);
+            if (weightp && weightp->isZero()) continue;
+            ++count;
+            int bits = weightp ? static_cast<int>(weightp->num().mostSetBitP1())
+                               : itemp->weightp()->width();
+            if (!itemp->isWhole() && VN_IS(itemp->rangep(), InsideRange)) {
+                bits += distp->exprp()->width();
+            }
+            maxBits = std::max(maxBits, bits);
+        }
+        return maxBits + (count > 1 ? V3Number::log2b(count - 1) + 1 : 0);
+    }
+
+    // Keep at least a word of excess randomness when reducing modulo a wide bound,
+    // just as $urandom_range uses a 64-bit draw for a 32-bit range.
+    static AstNodeExpr* newDistDraw(AstNodeExpr* boundp, int boundBits, int resultWidth) {
+        FileLine* const flp = boundp->fileline();
+        const int drawWidth = std::max(64, boundBits + 32);
+        AstNodeExpr* const randp = new AstRand{flp, nullptr, false};
+        randp->dtypeSetBitSized(drawWidth, VSigning::UNSIGNED);
+        return distResize(flp, new AstModDiv{flp, randp, distResize(flp, boundp, drawWidth)},
+                          resultWidth);
+    }
+
+    std::vector<DistBucket> collectDistBuckets(AstDist* const distp, int weightWidth) {
         FileLine* const fl = distp->fileline();
         std::vector<DistBucket> buckets;
         for (AstDistItem* const ditemp : distp->itemspList()) {
-            if (const AstConst* const constp = VN_CAST(ditemp->weightp(), Const)) {
-                if (constp->toUQuad() == 0) continue;
-            }
-            AstNodeExpr* weightExprp
-                = new AstExtend{fl, ditemp->weightp()->cloneTreePure(false), 64};
-            // := on a range weights every element, so scale by the range size.
+            const AstConst* const wp = VN_CAST(ditemp->weightp(), Const);
+            if (wp && wp->isZero()) continue;
+            AstNodeExpr* weightExprp = distResize(fl, ditemp->weightp()->cloneTreePure(false),
+                                                 weightWidth);
             if (!ditemp->isWhole()) {
                 if (const AstInsideRange* const irp = VN_CAST(ditemp->rangep(), InsideRange)) {
-                    const AstConst* const lop = VN_CAST(irp->lhsp(), Const);
-                    const AstConst* const hip = VN_CAST(irp->rhsp(), Const);
-                    AstNodeExpr* rangeSizep;
-                    if (lop && hip) {
-                        const uint64_t rangeSize = hip->toUQuad() - lop->toUQuad() + 1;
-                        rangeSizep = new AstConst{fl, AstConst::Unsized64{}, rangeSize};
-                    } else {
-                        rangeSizep = new AstAdd{
-                            fl, new AstConst{fl, AstConst::Unsized64{}, 1},
-                            new AstSub{fl,
-                                       new AstExtend{fl, irp->rhsp()->cloneTreePure(false), 64},
-                                       new AstExtend{fl, irp->lhsp()->cloneTreePure(false), 64}}};
-                    }
-                    weightExprp = new AstMul{fl, weightExprp, rangeSizep};
+                    weightExprp = new AstMul{fl, weightExprp, newDistRangeSize(irp, weightWidth)};
                 }
             }
             buckets.push_back({ditemp->rangep(), weightExprp});
@@ -3792,7 +3822,8 @@ class SolverSmtLowering final : public V3SolverLowering {
                        return refp->varp()->rand().isRandomizable();
                    })) {
                 AstNeq* const nzp = new AstNeq{fl, bucket.weightExprp->cloneTreePure(false),
-                                               new AstConst{fl, AstConst::Unsized64{}, 0}};
+                                               new AstConst{fl, AstConst::WidthedValue{},
+                                                           bucket.weightExprp->width(), 0}};
                 nzp->dtypeSetBit();
                 memberp = new AstLogAnd{fl, memberp, nzp};
                 memberp->user1(true);
@@ -3956,7 +3987,8 @@ class SolverSmtLowering final : public V3SolverLowering {
                 = bucket.weightExprp->exists([](const AstNodeVarRef*) { return true; });
             if (runtimeWeight) {
                 AstNeq* const nzp = new AstNeq{fl, bucket.weightExprp->cloneTreePure(false),
-                                               new AstConst{fl, AstConst::Unsized64{}, 0}};
+                                               new AstConst{fl, AstConst::WidthedValue{},
+                                                           bucket.weightExprp->width(), 0}};
                 nzp->user1(true);
                 termp = new AstLogAnd{fl, termp, nzp};
                 termp->user1(true);
@@ -3993,31 +4025,8 @@ class SolverSmtLowering final : public V3SolverLowering {
         AstNodeExpr* const distExprCopyp = distp->exprp()->cloneTreePure(false);
         distExprCopyp->user1(true);
         const int distWidth = distp->exprp()->width();
-        const AstConst* const lopCp = VN_CAST(irp->lhsp(), Const);
-        const AstConst* const hipCp = VN_CAST(irp->rhsp(), Const);
-        AstNodeExpr* rangeSzp;
-        if (lopCp && hipCp) {
-            const uint64_t rsz = hipCp->toUQuad() - lopCp->toUQuad() + 1;
-            rangeSzp = new AstConst{fl, AstConst::Unsized64{}, rsz};
-        } else {
-            const bool isSigned = irp->lhsp()->isSigned();
-            AstNodeExpr* const lo64p
-                = isSigned ? static_cast<AstNodeExpr*>(
-                                 new AstExtendS{fl, irp->lhsp()->cloneTreePure(false), 64})
-                           : static_cast<AstNodeExpr*>(
-                                 new AstExtend{fl, irp->lhsp()->cloneTreePure(false), 64});
-            AstNodeExpr* const hi64p
-                = isSigned ? static_cast<AstNodeExpr*>(
-                                 new AstExtendS{fl, irp->rhsp()->cloneTreePure(false), 64})
-                           : static_cast<AstNodeExpr*>(
-                                 new AstExtend{fl, irp->rhsp()->cloneTreePure(false), 64});
-            rangeSzp = new AstAdd{fl, new AstConst{fl, AstConst::Unsized64{}, 1ULL},
-                                  new AstSub{fl, hi64p, lo64p}};
-        }
-        AstNodeExpr* const rand64p = new AstRand{fl, nullptr, false};
-        rand64p->dtypeSetUInt64();
         AstNodeExpr* const offsetp
-            = new AstCCast{fl, new AstModDiv{fl, rand64p, rangeSzp}, distWidth};
+            = newDistDraw(newDistRangeSize(irp, distWidth + 1), distWidth + 1, distWidth);
         AstNodeExpr* const valuep = new AstAdd{fl, irp->lhsp()->cloneTreePure(false), offsetp};
         AstNodeExpr* const eqp = new AstEq{fl, distExprCopyp, valuep};
         eqp->user1(true);
@@ -4123,7 +4132,11 @@ class SolverSmtLowering final : public V3SolverLowering {
 
             FileLine* const fl = distp->fileline();
 
-            std::vector<DistBucket> buckets = collectDistBuckets(distp);
+            const int weightBits = distWeightBits(distp);
+            const int weightWidth = std::max(64, weightBits);
+            AstNodeDType* const weightDtp
+                = taskp->findBitDType(weightWidth, weightWidth, VSigning::UNSIGNED);
+            std::vector<DistBucket> buckets = collectDistBuckets(distp, weightWidth);
 
             if (buckets.empty()) {
                 // All weights are zero: dist is vacuously true (unconstrained)
@@ -4144,7 +4157,7 @@ class SolverSmtLowering final : public V3SolverLowering {
                 } else {
                     totalWeightExprp = new AstAdd{fl, totalWeightExprp,
                                                   bucket.weightExprp->cloneTreePure(false)};
-                    totalWeightExprp->dtypeSetUInt64();
+                    totalWeightExprp->dtypep(weightDtp);
                 }
             }
 
@@ -4152,7 +4165,7 @@ class SolverSmtLowering final : public V3SolverLowering {
             const int distId = m_distNum++;
             const std::string totalName = "__Vdist_total" + cvtToStr(distId);
             AstVar* const totalVarp
-                = new AstVar{fl, VVarType::BLOCKTEMP, totalName, taskp->findUInt64DType()};
+                = new AstVar{fl, VVarType::BLOCKTEMP, totalName, weightDtp};
             totalVarp->noSubst(true);
             totalVarp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
             totalVarp->funcLocal(true);
@@ -4161,23 +4174,23 @@ class SolverSmtLowering final : public V3SolverLowering {
             addStmt(
                 new AstAssign{fl, new AstVarRef{fl, totalVarp, VAccess::WRITE}, totalWeightExprp});
 
-            // bucketVar = (rand64() % totalWeight) + 1
+            // bucketVar = (random() % totalWeight) + 1
             const std::string bucketName = "__Vdist_bucket" + cvtToStr(distId);
             AstVar* const bucketVarp
-                = new AstVar{fl, VVarType::BLOCKTEMP, bucketName, taskp->findUInt64DType()};
+                = new AstVar{fl, VVarType::BLOCKTEMP, bucketName, weightDtp};
             bucketVarp->noSubst(true);
             bucketVarp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
             bucketVarp->funcLocal(true);
             bucketVarp->isInternal(true);
             taskp->addDeclsp(bucketVarp);
 
-            AstNodeExpr* const randp = new AstRand{fl, nullptr, false};
-            randp->dtypeSetUInt64();
+            AstNodeExpr* const drawp
+                = newDistDraw(new AstVarRef{fl, totalVarp, VAccess::READ}, weightBits, weightWidth);
             addStmt(new AstAssign{
                 fl, new AstVarRef{fl, bucketVarp, VAccess::WRITE},
                 new AstAdd{
-                    fl, new AstConst{fl, AstConst::Unsized64{}, 1},
-                    new AstModDiv{fl, randp, new AstVarRef{fl, totalVarp, VAccess::READ}}}});
+                    fl, new AstConst{fl, AstConst::WidthedValue{}, weightWidth, 1},
+                    drawp}});
 
             // Build cumulative sum expressions forward: cumSum[i] = w[0]+...+w[i]
             std::vector<AstNodeExpr*> cumSums;
@@ -4188,7 +4201,7 @@ class SolverSmtLowering final : public V3SolverLowering {
                 } else {
                     runningSump = new AstAdd{fl, runningSump,
                                              buckets[i].weightExprp->cloneTreePure(false)};
-                    runningSump->dtypeSetUInt64();
+                    runningSump->dtypep(weightDtp);
                 }
                 cumSums.push_back(runningSump->cloneTreePure(true));
             }

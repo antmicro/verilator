@@ -2863,7 +2863,7 @@ std::string V3Task::assignDpiToInternal(const std::string& lhsName, AstVar* varp
     return statements;
 }
 
-// A constructor cannot be wrapped (taskConnectWrap), so a non-constant default of an integral
+// A constructor cannot be wrapped (taskConnectWrap), so a non-constant default of a scalar
 // input port is evaluated in the constructor. A flag port tells if the argument is given.
 void V3Task::ctorDefaultsToFlags(AstFunc* funcp) {
     std::vector<AstVar*> portps;
@@ -2872,8 +2872,10 @@ void V3Task::ctorDefaultsToFlags(AstFunc* funcp) {
         AstVar* const portp = VN_CAST(declp, Var);
         if (!portp || !portp->isIO() || portp->isFuncReturn()) continue;
         pinNum = std::max(pinNum, portp->pinNum());
-        if (!portp->isReadOnly() || !portp->valuep()
-            || !portp->dtypep()->skipRefp()->isIntegralOrPacked()) {
+        if (!portp->isReadOnly() || !portp->valuep()) continue;
+        const AstNodeDType* const dtypep = portp->dtypep()->skipRefp();
+        if (!dtypep->isIntegralOrPacked() && !portp->isString() && !portp->isDouble()
+            && !VN_IS(dtypep, ClassRefDType)) {
             continue;
         }
         const AstNodeExpr* const valuep = V3Const::constifyEdit(VN_AS(portp->valuep(), NodeExpr));
@@ -2905,7 +2907,16 @@ void V3Task::ctorDefaultsToFlags(AstFunc* funcp) {
             const auto it = localps.find(refp->varp());
             if (it != localps.end()) refp->varp(it->second);
         });
-        AstConst* const zerop = new AstConst{fl, V3Number{fl, portp->width(), 0}};
+        AstConst* zerop;
+        if (portp->isString()) {
+            zerop = new AstConst{fl, AstConst::String{}, ""};
+        } else if (portp->isDouble()) {
+            zerop = new AstConst{fl, AstConst::RealDouble{}, 0.0};
+        } else if (VN_IS(portp->dtypep()->skipRefp(), ClassRefDType)) {
+            zerop = new AstConst{fl, AstConst::Null{}};
+        } else {
+            zerop = new AstConst{fl, V3Number{fl, portp->width(), 0}};
+        }
         zerop->dtypeFrom(portp);
         portp->valuep(zerop);
         AstCond* const condp = new AstCond{fl, new AstVarRef{fl, flagp, VAccess::READ},

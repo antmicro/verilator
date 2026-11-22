@@ -36,10 +36,42 @@ class Derived extends Base #(byte);
   endfunction
 endclass
 
+class Token;
+endclass
+
+class Defaults;
+  string prefix = "field";
+  string value;
+  real weight = 2.5;
+  real seen;
+  Token token = new;
+  Token chosen;
+  function new(string text = this.prefix, real bias = weight, Token handle_arg = token,
+               string label = {text, "!"});
+    value = label;
+    seen = bias;
+    chosen = handle_arg;
+  endfunction
+endclass
+
 module t;
   initial begin
     Base #(byte) first, second;
     Derived derived;
+    Defaults omitted, explicit_args, named_arg;
+    Token other;
+    other = new;
+    omitted = new;
+    `checkd(omitted.value == "field!", 1'b1)
+    `checkd(omitted.seen == 2.5, 1'b1)
+    `checkd(omitted.chosen == omitted.token && omitted.token != null, 1'b1)
+    explicit_args = new("given", 1.5, other);
+    `checkd(explicit_args.value == "given!", 1'b1)
+    `checkd(explicit_args.seen == 1.5, 1'b1)
+    `checkd(explicit_args.chosen == other, 1'b1)
+    named_arg = new(.label("named"), .handle_arg(null));
+    `checkd(named_arg.value == "named", 1'b1)
+    `checkd(named_arg.chosen == null, 1'b1)
     p::next_id = 5;
     first = new;
     `checkd(first.id, 6)

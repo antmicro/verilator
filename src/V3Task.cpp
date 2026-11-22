@@ -287,7 +287,12 @@ private:
                 const AstVar* const portp = itr.first;
                 const AstArg* const argp = itr.second;
                 if (const AstNodeExpr* const pinp = argp->exprp()) {
-                    if ((portp->isRef() || portp->isConstRef()) && !VN_IS(pinp, VarRef)) {
+                    const AstMemberRef* const memberp = VN_CAST(pinp, MemberRef);
+                    const bool classField
+                        = memberp && nodep->taskp()->verilogFunction()
+                          && VN_IS(memberp->fromp()->dtypep()->skipRefp(), ClassRefDType);
+                    if ((portp->isRef() || portp->isConstRef()) && !VN_IS(pinp, VarRef)
+                        && !classField) {
                         UINFO(9, "No function inline due to ref " << pinp);
                         taskVtxp->noInline(true);
                     }
@@ -478,7 +483,7 @@ class TaskVisitor final : public VNVisitor {
     //    AstNodeFTask::user1   // True if its been expanded
     // Each funccall
     //  to 'relink' function:
-    //    AstVar::user2p        // AstVarScope* to replace varref with
+    //    AstVar::user2p        // AstVarScope* or captured AstMemberRef* for an inline alias
     const VNUser1InUse m_inuser1;
     const VNUser2InUse m_inuser2;
 
@@ -565,8 +570,13 @@ class TaskVisitor final : public VNVisitor {
 
     // Replace varrefs with new var pointer
     void relink(AstNode* nodep) {
-        nodep->foreachAndNext([](AstVarRef* refp) {
-            if (refp->varp()->user2p()) {  // It's being converted to an alias.
+        nodep->foreachAndNext([this](AstVarRef* refp) {
+            if (AstMemberRef* const memberp = VN_CAST(refp->varp()->user2p(), MemberRef)) {
+                AstMemberRef* const aliasp = memberp->cloneTree(false);
+                aliasp->access(refp->access());
+                refp->replaceWith(aliasp);
+                VL_DO_DANGLING(pushDeletep(refp), refp);
+            } else if (refp->varp()->user2p()) {  // It's being converted to an alias.
                 AstVarScope* const newvscp = VN_AS(refp->varp()->user2p(), VarScope);
                 refp->varScopep(newvscp);
                 refp->varp(refp->varScopep()->varp());
@@ -742,6 +752,17 @@ class TaskVisitor final : public VNVisitor {
                         AstVarScope* const localVscp = varrefp->varScopep();
                         UASSERT_OBJ(localVscp, varrefp, "Null var scope");
                         portp->user2p(localVscp);
+                    } else if (AstMemberRef* const memberp = VN_CAST(pinp, MemberRef)) {
+                        // A ref designates the field of the object selected on entry, even if
+                        // the caller's handle is subsequently assigned a different object.
+                        AstNodeExpr* const ownerp = memberp->fromp();
+                        AstVarScope* const savedp = m_funcTmps.make(
+                            ownerp->fileline(), m_scopep, ownerp->dtypep(),
+                            refp->taskp()->shortName() + "__" + portp->shortName() + "_owner");
+                        beginp->addNextHere(connectPortMakeInAssign(ownerp, savedp, false));
+                        ownerp->replaceWith(new AstVarRef{pinp->fileline(), savedp, VAccess::READ});
+                        pushDeletep(ownerp);
+                        portp->user2p(memberp);
                     } else {
                         pinp->v3fatalSrc("ref argument should have caused non-inline of function");
                     }

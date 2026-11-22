@@ -4315,19 +4315,19 @@ void VerilatedEvalLoop::evalImpl() {
                     do {
                         checkConvergence(++actIterCount, "Active",
                                          &VerilatedModel::dumpTriggersAct);
-                    } while (m_model.evalAct());
+                    } while (!m_model.contextp()->gotFinish() && m_model.evalAct());
                     if VL_CONSTEXPR_CXX17 (Profiling) m_profilerp->sectionPop();  // loop act
-                } while (m_model.evalInact());
+                } while (!m_model.contextp()->gotFinish() && m_model.evalInact());
                 if VL_CONSTEXPR_CXX17 (Profiling) m_profilerp->sectionPop();  // loop inact
-            } while (m_model.evalNba());
+            } while (!m_model.contextp()->gotFinish() && m_model.evalNba());
             if VL_CONSTEXPR_CXX17 (Profiling) m_profilerp->sectionPop();  // loop nba
-        } while (m_model.evalObs());
+        } while (!m_model.contextp()->gotFinish() && m_model.evalObs());
         if VL_CONSTEXPR_CXX17 (Profiling) m_profilerp->sectionPop();  // loop obs
-    } while (m_model.evalReact());
+    } while (!m_model.contextp()->gotFinish() && m_model.evalReact());
     if VL_CONSTEXPR_CXX17 (Profiling) m_profilerp->sectionPop();  // loop react
 
     // The 'Postponed' region runs once, at the end of the time step
-    m_model.evalPostponed();
+    if (!m_model.contextp()->gotFinish()) m_model.evalPostponed();
 
     m_model.evalEnd();
 

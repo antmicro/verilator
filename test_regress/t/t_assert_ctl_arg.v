@@ -138,7 +138,8 @@ module t (
     $assertcontrol(On, CONCURRENT);
 
     $write("*-* All Finished *-*\n");
-    $finish;
+    // Let the enabled concurrent assertions run in Reactive at time 20.
+    #1 $finish;
   end
 endmodule
 

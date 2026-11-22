@@ -1524,19 +1524,16 @@ class RandomizeVisitor final : public VNVisitor {
         initFirstp->addNext(makeModeSetLoop(
             fl, new AstVarRef{fl, modeVarModp, modeVarp, VAccess::WRITE}, new AstConst{fl, 1},
             true, new AstVarRef{fl, oldSizeVarp, VAccess::READ}));
-        // Prepend init code before user statements in constructor body, but after
-        // super.new(). This ensures that user's constraint_mode() or rand_mode() calls in the
-        // constructor execute after mode arrays are initialized.
+        // Initialize this class's additional slots after the base constructor, which
+        // sizes the shared mode array and may override inherited modes.
         for (AstNode* const stmtp : ctorNewp->stmtspList()) {
-            if (const AstStmtExpr* const sep = VN_CAST(stmtp, StmtExpr)) {
-                if (VN_IS(sep->exprp(), New)) continue;  // Skip super.new()
+            const AstStmtExpr* const exprp = VN_CAST(stmtp, StmtExpr);
+            if (exprp && VN_IS(exprp->exprp(), New)) {
+                stmtp->addNextHere(initFirstp);
+                return;
             }
-            // Found first user statement - insert init code before it
-            stmtp->addHereThisAsNext(initFirstp);
-            return;
         }
-        // No user statements (empty constructor or only super.new)
-        ctorNewp->addStmtsp(initFirstp);
+        ctorNewp->prependStmtsp(initFirstp);
     }
     void makeStaticModeInit(AstVar* modeVarp, AstClass* classp, uint32_t modeCount) {
         // For static constraint mode, we need lazy initialization since it's shared across

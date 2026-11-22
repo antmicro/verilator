@@ -1116,8 +1116,9 @@ class LinkParseVisitor final : public VNVisitor {
                         break;
                 }
                 if (!VN_IS(scanp, NodeFTask)) {
-                    nodep->rhsp()->v3error(
-                        "'super.new' not first statement in new function (IEEE 1800-2023 8.15)\n"
+                    nodep->rhsp()->v3warn(
+                        SUPERNFIRST, "'super.new' must be first statement in a 'function new' "
+                                     "(IEEE 1800-2023 8.15)\n"
                         << nodep->rhsp()->warnContextPrimary() << scanp->warnOther()
                         << "... Location of earlier statement\n"
                         << scanp->warnContextSecondary());

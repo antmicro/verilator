@@ -16,8 +16,10 @@ endclass
 
 class spi_reg_block extends base_reg_block;
   function new();
-    int x = $random();
-    super.new(build_coverage(x), x);  // <--- BAD, must be first statement
+    int x;
+    // An assignment before super.new is illegal.
+    x = $random();
+    super.new(build_coverage(x), x);
   endfunction
 endclass
 

@@ -7749,28 +7749,6 @@ class WidthVisitor final : public VNVisitor {
         userIterateChildren(nodep, nullptr);
     }
 
-    bool firstNewStatementOkRecurse(AstNode* nodep) {
-        if (AstVar* const varp = VN_CAST(nodep, Var)) {
-            if (!varp->valuep() || VN_CAST(varp->valuep(), Const) || varp->isIO()) return true;
-        }
-        if (AstAssign* const aitemp = VN_CAST(nodep, Assign)) {
-            if (VN_IS(aitemp->rhsp(), Const) || VN_IS(aitemp->rhsp(), CReset)) return true;
-        }
-        if (AstInitialStaticStmt* const aitemp = VN_CAST(nodep, InitialStaticStmt)) {
-            for (AstNode* const stmtp : aitemp->stmtspList()) {
-                if (!firstNewStatementOkRecurse(stmtp)) return false;
-            }
-            return true;
-        }
-        if (AstInitialAutomaticStmt* const aitemp = VN_CAST(nodep, InitialAutomaticStmt)) {
-            for (AstNode* const stmtp : aitemp->stmtspList()) {
-                if (!firstNewStatementOkRecurse(stmtp)) return false;
-            }
-            return true;
-        }
-        return false;
-    }
-
     //--------------------
     // Top levels
 
@@ -8850,27 +8828,6 @@ class WidthVisitor final : public VNVisitor {
                 nodep->v3error("class 'new()' cannot be virual (IEEE 1800-2023 18.3)");
             if (nodep->isStatic())
                 nodep->v3error("class 'new()' cannot be static (IEEE 1800-2023 18.3)");
-            AstNode* firstp = nullptr;
-            for (AstNode* const itemp : nodep->stmtspList()) {
-                if (AstStmtExpr* const sep = VN_CAST(itemp, StmtExpr)) {
-                    if (AstNew* const newp = VN_CAST(sep->exprp(), New)) {
-                        if (firstp) {
-                            UINFOTREE(1, firstp, "", "-earlier");
-                            newp->v3warn(SUPERNFIRST,
-                                         "'super.new' must be first statement in a 'function "
-                                         "new' (IEEE 1800-2023 8.15)\n"
-                                             << newp->warnContextPrimary() << '\n'
-                                             << firstp->warnOther()
-                                             << "... Location of earlier statement\n"
-                                             << firstp->warnContextSecondary());
-                            break;
-                        }
-                    }
-                    continue;
-                }
-                if (firstNewStatementOkRecurse(itemp)) continue;
-                firstp = itemp;
-            }
         }
         // Function hasn't been widthed, so make it so.
         // Would use user1 etc, but V3Width called from too many places to spend a user

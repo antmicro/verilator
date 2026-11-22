@@ -44,6 +44,19 @@ package s_pkg;
   endclass
 endpackage
 
+class queue_owner;
+  protected static int values[$];
+endclass
+
+class queue_picker extends queue_owner;
+  function int choose(int value);
+    int index;
+    values = {value};
+    if (std::randomize(index) with { index >= 0; index < values.size(); } == 0) $stop;
+    return values[index];
+  endfunction
+endclass
+
 module t;
   import tlogy_m_pkg::*;
   import s_pkg::*;
@@ -53,6 +66,10 @@ module t;
     automatic tlogy_m tm = new;
     automatic v_cfg vc0 = new;
     automatic v_cfg vc1 = new;
+
+    automatic queue_picker picker = new;
+    if (picker.choose(42) != 42) $stop;
+    if (picker.choose(17) != 17) $stop;
 
     // Set up: push two entries in the queue and set num_of_ds = 3
     // so the constraint branch (num_of_ds > 1) is exercised.

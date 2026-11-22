@@ -925,7 +925,6 @@ class CaptureVisitor final : public VNVisitor {
     std::unordered_set<const AstVar*> m_constraintIterators;  // Enclosing foreach loop variables
     AstVar* m_thisp = nullptr;  // Variable for outer context's object, if necessary
     bool m_selfTarget;  // Inline class constraint randomizes the current object
-    bool m_staticContext = false;  // True when capturing from a static function context
     const bool m_randomizesThis;  // True for randomize() in class method
 
     // METHODS
@@ -1002,10 +1001,8 @@ class CaptureVisitor final : public VNVisitor {
         if (varIsParam) return CaptureMode::CAP_VALUE;
         // Static var in function (will not be inlined, because it's in class)
         if (callerIsClass && varIsFuncLocal) return CaptureMode::CAP_VALUE;
-        // Static class members in static context don't need 'this' capture;
-        // V3Class will move both the function and the member to __Vclpkg
-        if (m_staticContext && callerIsClass && varIsFieldOfCaller
-            && varRefp->varp()->lifetime().isStatic())
+        // Static fields use their declaring class's storage regardless of the calling method.
+        if (varIsFieldOfCaller && varRefp->varp()->lifetime().isStatic())
             return CaptureMode::CAP_NO;
         // A field on the object being randomized remains a solver variable.
         // Capturing it through the outer handle would freeze its pre-solve value.
@@ -1161,12 +1158,11 @@ class CaptureVisitor final : public VNVisitor {
 
 public:
     explicit CaptureVisitor(AstNode* const nodep, AstNodeModule* callerp, AstClass* const targetp,
-                            bool staticContext = false, bool randomizesThis = false,
+                            bool randomizesThis = false,
                             bool selfTarget = false)
         : m_callerp{callerp}
         , m_targetp{targetp}
         , m_selfTarget{selfTarget}
-        , m_staticContext{staticContext}
         , m_randomizesThis{randomizesThis} {
         iterateAndNextNull(nodep);
     }
@@ -2827,8 +2823,7 @@ class RandomizeVisitor final : public VNVisitor {
             if (basicStmtsp) randomizeFuncp->addStmtsp(basicStmtsp);
             if (withp) {
                 FileLine* const fl = nodep->fileline();
-                withCapturep = std::make_unique<CaptureVisitor>(withp->exprp(), m_modp, nullptr,
-                                                                inStaticContext);
+                withCapturep = std::make_unique<CaptureVisitor>(withp->exprp(), m_modp, nullptr);
                 withCapturep->addFunctionArguments(randomizeFuncp);
                 AstNodeExpr* const solverCallp = m_solverp->lowerStdRandomizeWith(
                     nodep, randomizeFuncp, withp->exprp()->unlinkFrBackWithNext(), stdrandp);
@@ -2918,7 +2913,7 @@ class RandomizeVisitor final : public VNVisitor {
         // (randomize() in class method is a FuncRef, not a MethodCall)
         const AstMethodCall* const callp = VN_CAST(nodep, MethodCall);
         const bool selfTarget = !callp || VN_IS(callp->fromp(), ThisRef);
-        const CaptureVisitor captured{withp->exprp(), m_modp, classp, false, !callp, selfTarget};
+        const CaptureVisitor captured{withp->exprp(), m_modp, classp, !callp, selfTarget};
         // Add function arguments
         captured.addFunctionArguments(randomizeFuncp);
 

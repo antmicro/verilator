@@ -24,6 +24,7 @@ endinterface
 interface parent_if;
   typedef bit [10:0] data_t;
   child_if children[2:1] ();
+  child_if negative[-1:-2] ();
   data_t packed_data;
   int unpacked_data[2:6];
   modport data_mp(inout packed_data, unpacked_data);
@@ -33,6 +34,13 @@ module t;
   parent_if a ();
   parent_if b ();
   virtual parent_if vif;
+  virtual parent_if parents[2];
+  int calls;
+
+  function automatic virtual parent_if selected(int index);
+    ++calls;
+    return parents[index];
+  endfunction
   virtual child_if child;
   virtual parent_if.data_mp data_vif;
 
@@ -47,6 +55,19 @@ module t;
     vif = b;
     `checkd(vif.children[2].leaf.value, 22);
     `checkd(child.leaf.value, 12);
+
+    parents[0] = a;
+    parents[1] = b;
+    foreach (parents[i]) begin
+      child = parents[i].children[2];
+      `checkd(child.leaf.value, (i == 0 ? 12 : 22));
+      child = selected(i).children[2];
+      `checkd(child.leaf.value, (i == 0 ? 12 : 22));
+    end
+    b.negative[-1].leaf.value = 31;
+    child = selected(1).negative[-1];
+    `checkd(child.leaf.value, 31);
+    `checkd(calls, 3);
 
     data_vif = b;
 

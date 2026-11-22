@@ -1830,9 +1830,6 @@ class WidthVisitor final : public VNVisitor {
     AstMemberRef* ifaceArrayElemMember(AstSelBit* nodep) {
         AstMemberRef* const memberp = VN_CAST(nodep->fromp(), MemberRef);
         if (!memberp || memberp->didWidth()) return nullptr;
-        if (!VN_IS(memberp->fromp(), NodeVarRef) && !VN_IS(memberp->fromp(), MemberRef)) {
-            return nullptr;
-        }
         userIterateAndNext(memberp->fromp(), WidthVP{SELF, BOTH}.p());
         const AstIfaceRefDType* const adtypep
             = VN_CAST(memberp->fromp()->dtypep()->skipRefp(), IfaceRefDType);
@@ -1848,7 +1845,7 @@ class WidthVisitor final : public VNVisitor {
         const AstConst* const constp = VN_CAST(nodep->bitp(), Const);
         if (!constp) return nullptr;
         const string elemName
-            = memberp->name() + "__BRA__" + cvtToStr(constp->toSInt()) + "__KET__";
+            = memberp->name() + "__BRA__" + AstNode::encodeNumber(constp->toSInt()) + "__KET__";
         if (!VN_IS(m_memberMap.findMember(ifacep, elemName), Cell)) {
             return nullptr;
         }

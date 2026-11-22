@@ -311,6 +311,17 @@ class LinkLValueVisitor final : public VNVisitor {
         m_setRefLvalue = VAccess::NOCHANGE;
         iterateAndNextNull(nodep->bitp());
     }
+    void visit(AstCMethodHard* nodep) override {
+        if (!nodep->method().isDynElementAccess()) {
+            iterateChildren(nodep);
+            return;
+        }
+        // A lowered dynamic selection forwards the access to its container. Its index is read.
+        VL_RESTORER(m_setRefLvalue);
+        iterateAndNextNull(nodep->fromp());
+        m_setRefLvalue = VAccess::NOCHANGE;
+        iterateAndNextNull(nodep->pinsp());
+    }
     void visit(AstNodeStream* nodep) override {
         VL_RESTORER(m_setRefLvalue);
         // Only set lvalues on the streamed value, not on the slice size

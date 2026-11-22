@@ -73,4 +73,22 @@ module t;
   main_typedef main2 ();
   Iface mod0 ();
   virtual Iface mod1 = mod0;
+
+  Iface port0 ();
+  Iface port1 ();
+  initial begin
+    virtual Iface ports[];
+    int index;
+    index = 1;
+    ports = new[2];
+    ports[0] = port0;
+    ports[1] = port1;
+    #6;
+    foreach (ports[i]) ports[i].cb.out <= 1'b1;
+    #10;
+    if (port0.out !== 1'b1 || port1.out !== 1'b1) $stop;
+    ports[index].cb.out <= 1'b0;
+    #10;
+    if (port0.out !== 1'b1 || port1.out !== 1'b0 || index != 1) $stop;
+  end
 endmodule

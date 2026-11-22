@@ -59,4 +59,8 @@ module t;
     q = {q, cw};  // Concatenation item is neither an element nor array of elements
     n2 = n3;  // Unmatched array sizes
   end
+
+  byte wild[*];
+  byte dynamic_values[];
+  initial dynamic_values = wild;
 endmodule

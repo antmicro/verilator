@@ -94,4 +94,10 @@
                                      : ... Right-hand data type: 'int$[0:2]$[*]'
    60 |     n2 = n3;   
       |        ^
+%Error: t/t_assoc_wildcard_bad.v:65:26: Illegal assignment: A wildcard-index associative array requires a wildcard-index associative array on both sides
+                                      : ... note: In instance 't'
+                                      : ... Left-hand data type: 'byte$[]'
+                                      : ... Right-hand data type: 'byte$[*]'
+   65 |   initial dynamic_values = wild;
+      |                          ^
 %Error: Exiting due to

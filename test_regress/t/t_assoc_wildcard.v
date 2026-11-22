@@ -32,6 +32,24 @@ module t (
     o["out"] = {32'h7, 63'h1};
   endtask
 
+  task automatic check_copy(input byte values[*]);
+    `checkh(values[40'h123456789a], 8'h5a);
+    values.delete();
+  endtask
+
+  task automatic update_ref(ref byte values[*]);
+    values[40'h123456789b] = 8'h36;
+  endtask
+
+  initial begin
+    byte values[*];
+    values[40'h123456789a] = 8'h5a;
+    check_copy(values);
+    `checkh(values.num(), 1);
+    update_ref(values);
+    `checkh(values[40'h123456789b], 8'h36);
+  end
+
   always @(posedge clk) begin
     cyc <= cyc + 1;
     begin

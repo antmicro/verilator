@@ -9835,6 +9835,10 @@ class WidthVisitor final : public VNVisitor {
         // e) Dynamic array, associative array, and queue types are equivalent if they are the same
         // kind of array (dynamic, associative, or queue), have equivalent index types (for
         // associative arrays), and have equivalent element types.
+        if (VN_IS(lhsp, WildcardArrayDType) || VN_IS(rhsp, WildcardArrayDType)) {
+            return lhsp->type() == rhsp->type()
+                   && isEquivalentDType(lhsp->subDTypep(), rhsp->subDTypep());
+        }
         const bool lhsIsDynArray = VN_IS(lhsp, DynArrayDType);
         const bool rhsIsDynArray = VN_IS(rhsp, DynArrayDType);
         const bool lhsIsQueue = VN_IS(lhsp, QueueDType);
@@ -10778,6 +10782,12 @@ class WidthVisitor final : public VNVisitor {
         const AstNodeDType* rhsDtpIterp = rhsDtp;
         for (uint32_t dim = 0; dim < rhsDim.second; dim++) {
             // Associative arrays are compatible only with each other
+            if (VN_IS(lhsDtpIterp, WildcardArrayDType) != VN_IS(rhsDtpIterp, WildcardArrayDType)) {
+                nodep->v3error("Illegal assignment: A wildcard-index associative array requires "
+                               "a wildcard-index associative array on both sides"
+                               << warnDTypes(nodep, lhsDtp, rhsDtp, lhsName, rhsName));
+                return;
+            }
             if (VN_IS(lhsDtpIterp, AssocArrayDType) ^ VN_IS(rhsDtpIterp, AssocArrayDType)) {
                 nodep->v3error("Illegal assignment: Associative arrays are assignment compatible "
                                "only with associative arrays (IEEE 1800-2023 7.6)"

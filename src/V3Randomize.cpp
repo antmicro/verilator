@@ -3056,10 +3056,42 @@ bool V3Randomize::argContainsVar(const AstNodeFTaskRef* callp, const AstVar* var
 
 void V3Randomize::randomizeNetlist(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ":");
+    // The solver and generated rollback fields need one name per declaration, even
+    // when a derived class hides a base member. Keep source-level names outside this pass.
+    std::unordered_map<AstVar*, std::string> shadowNames;
+    VMemberMap memberMap;
+    nodep->foreach([&](AstClass* classp) {
+        if (!classp->extendsp()) return;
+        for (AstNode* const declp : classp->memberspList()) {
+            AstVar* const varp = VN_CAST(declp, Var);
+            if (!varp || !varp->rand().isRandomizable()) continue;
+            for (AstClassExtends* basep = classp->extendsp(); basep;
+                 basep = basep->classp()->extendsp()) {
+                if (VN_IS(memberMap.findMember(basep->classp(), varp->name()), Var)) {
+                    shadowNames.emplace(varp, "__Vshadow_" + classp->name() + "__" + varp->name());
+                    break;
+                }
+            }
+        }
+    });
+    const auto swapShadowNames = [&]() {
+        if (shadowNames.empty()) return;
+        for (auto& it : shadowNames) {
+            const std::string name = it.first->name();
+            it.first->name(it.second);
+            it.second = name;
+        }
+        // Member references cache the spelling of their linked declaration.
+        nodep->foreach([&](AstMemberRef* refp) {
+            if (shadowNames.count(refp->varp())) refp->name(refp->varp()->name());
+        });
+    };
+    swapShadowNames();
     {
         const RandomizeMarkVisitor markVisitor{nodep};
         const RandomizeVisitor randomizeVisitor{nodep};
     }
+    swapShadowNames();
     V3Global::dumpCheckGlobalTree("randomize", 0, dumpTreeEitherLevel() >= 3);
 }
 

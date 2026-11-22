@@ -3055,7 +3055,7 @@ public:
     // properly widthed before any module that references those types.
     using WQKey = std::pair<bool, int>;
     std::multimap<WQKey, AstNodeModule*> m_workQueueNext;  // Modules left to process
-    // Map from AstNodeModule to set of all AstNodeModules that instantiates it.
+    // Modules that instantiate a module or depend on a package at link time.
     std::unordered_map<AstNodeModule*, std::unordered_set<AstNodeModule*>> m_parentps;
 };
 
@@ -4136,6 +4136,14 @@ class ParamVisitor final : public VNVisitor {
         VL_DO_DANGLING(nodep->deleteTree(), nodep);
     }
 
+    // Preserve package dependencies when specialization changes module levels.
+    // LinkDot rebuilds package symbols in the resulting netlist order.
+    void visit(AstPackageImport* nodep) override {
+        if (nodep->packagep()) m_state.m_parentps[nodep->packagep()].insert(m_modp);
+    }
+    void visit(AstPackageExport* nodep) override {
+        if (nodep->packagep()) m_state.m_parentps[nodep->packagep()].insert(m_modp);
+    }
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
 
 public:

@@ -614,28 +614,20 @@ const char* AstAnd::widthMismatch() const VL_MT_STABLE {
 }
 AstAssertCtl::AstAssertCtl(FileLine* fl, VAssertCtlType ctlType, uint32_t assertType,
                            uint32_t directiveType, AstNodeExpr* levelp, AstNodeExpr* itemsp)
-    : ASTGEN_SUPER_AssertCtl(fl)
-    , m_ctlType{VAssertCtlType::_TO_BE_EVALUATED}
-    , m_assertTypes{VAssertType::INTERNAL}
-    , m_directiveTypes{VAssertDirectiveType::INTERNAL} {
-    this->controlTypep(new AstConst{fl, ctlType});
-    this->assertTypesp(new AstConst{fl, assertType});
-    this->directiveTypesp(new AstConst{fl, directiveType});
-    // Parser creates these but are unused, nuke them
-    if (levelp) VL_DO_DANGLING(levelp->deleteTree(), levelp);
-    if (itemsp) VL_DO_DANGLING(itemsp->deleteTree(), itemsp);
-}
+    : AstAssertCtl{fl, new AstConst{fl, ctlType}, new AstConst{fl, assertType},
+                   new AstConst{fl, directiveType}, levelp, itemsp} {}
 AstAssertCtl::AstAssertCtl(FileLine* fl, AstNodeExpr* controlTypep, AstNodeExpr* assertTypesp,
                            AstNodeExpr* directiveTypep, AstNodeExpr* levelp, AstNodeExpr* itemsp)
     : ASTGEN_SUPER_AssertCtl(fl)
+    , m_hasScopeItems{itemsp != nullptr}
     , m_ctlType{VAssertCtlType::_TO_BE_EVALUATED}
     , m_assertTypes{VAssertType::INTERNAL}
     , m_directiveTypes{VAssertDirectiveType::INTERNAL} {
     this->controlTypep(controlTypep);
     this->assertTypesp(assertTypesp);
     this->directiveTypesp(directiveTypep);
-    // Parser creates these but are unused, nuke them
-    if (levelp) VL_DO_DANGLING(levelp->deleteTree(), levelp);
+    this->levelp(levelp);
+    // Until scoped controls are implemented, target names need no symbol resolution.
     if (itemsp) VL_DO_DANGLING(itemsp->deleteTree(), itemsp);
 }
 void AstAssertCtl::dump(std::ostream& str) const {

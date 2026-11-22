@@ -1667,6 +1667,12 @@ class AssertVisitor final : public VNVisitor {
     void visit(AstAssertCtl* nodep) override {
         iterateChildren(nodep);
 
+        if (nodep->hasScopeItems() || (nodep->levelp() && !nodep->levelp()->isZero())) {
+            nodep->v3warn(E_UNSUPPORTED, "Unsupported: scoped assertion control");
+            VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
+            return;
+        }
+
         bool assertTypeConst = true;
         if (!nodep->assertTypesp()) {
             nodep->assertTypes(VAssertType{ALL_ASSERT_TYPES});

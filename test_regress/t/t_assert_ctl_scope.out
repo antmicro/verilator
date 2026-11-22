@@ -1,0 +1,14 @@
+%Error-UNSUPPORTED: t/t_assert_ctl_scope.v:18:5: Unsupported: scoped assertion control
+                                               : ... note: In instance 't'
+   18 |     $assertoff(0, a.check_child);
+      |     ^~~~~~~~~~
+                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
+%Error-UNSUPPORTED: t/t_assert_ctl_scope.v:19:5: Unsupported: scoped assertion control
+                                               : ... note: In instance 't'
+   19 |     $assertcontrol(4, 15, 7, 0, a, b);
+      |     ^~~~~~~~~~~~~~
+%Error-UNSUPPORTED: t/t_assert_ctl_scope.v:20:5: Unsupported: scoped assertion control
+                                               : ... note: In instance 't'
+   20 |     $assertoff(1);
+      |     ^~~~~~~~~~
+%Error: Exiting due to

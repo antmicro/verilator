@@ -228,6 +228,8 @@ class AstAssertCtl final : public AstNodeStmt {
     // @astgen op1 := controlTypep : AstNodeExpr
     // @astgen op2 := assertTypesp : Optional[AstNodeExpr]
     // @astgen op3 := directiveTypesp : Optional[AstNodeExpr]
+    // @astgen op4 := levelp : Optional[AstNodeExpr]
+    const bool m_hasScopeItems;  // Explicit assertion or scope targets
     // Type of assertcontrol task; either known from parser or from evaluated
     // controlTypep expression.
     VAssertCtlType m_ctlType;  // $assert keyword type (control_type)
@@ -244,8 +246,9 @@ public:
     bool sameNode(const AstNode* samep) const override {
         const AstAssertCtl* const sp = VN_DBG_AS(samep, AssertCtl);
         return ctlType() == sp->ctlType() && assertTypes() == sp->assertTypes()
-               && directiveTypes() == sp->directiveTypes();
+               && directiveTypes() == sp->directiveTypes() && hasScopeItems() == sp->hasScopeItems();
     }
+    bool hasScopeItems() const { return m_hasScopeItems; }
     string verilogKwd() const override { return m_ctlType.ascii(); }
     bool isGateOptimizable() const override { return false; }
     bool isPredictOptimizable() const override { return false; }

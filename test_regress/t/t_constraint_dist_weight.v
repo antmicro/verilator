@@ -138,15 +138,18 @@ module t;
       `check_range(zw.x, 1, 2);
     end
 
-    // All-zero weights: dist constraint is effectively unconstrained, randomize succeeds
+    // All-zero weights leave no legal value (IEEE 1800-2023 18.5.3).
     azw = new;
-    repeat (20) begin
-      randomize_result = azw.randomize();
-      `checkd(randomize_result, 1);
-    end
+    randomize_result = azw.randomize();
+    `checkd(randomize_result, 0);
+    azw.c.constraint_mode(0);
+    randomize_result = azw.randomize();
+    `checkd(randomize_result, 1);
 
     // Variable := scalar weights: w1=1, w2=3 => expect ~75% for value 255
     vw = new;
+    randomize_result = vw.randomize();  // Both runtime weights initially zero
+    `checkd(randomize_result, 0);
     vw.w1 = 1;
     vw.w2 = 3;
     count_high = 0;

@@ -4139,10 +4139,9 @@ class SolverSmtLowering final : public V3SolverLowering {
             std::vector<DistBucket> buckets = collectDistBuckets(distp, weightWidth);
 
             if (buckets.empty()) {
-                // All weights are zero: dist is vacuously true (unconstrained)
-                AstConstraintExpr* const truep
-                    = new AstConstraintExpr{fl, new AstConst{fl, AstConst::BitTrue{}}};
-                constrExprp->replaceWith(truep);
+                // No value has a positive weight (IEEE 1800-2023 18.5.3).
+                constrExprp->replaceWith(
+                    new AstConstraintExpr{fl, new AstConst{fl, AstConst::BitFalse{}}});
                 VL_DO_DANGLING(pushDeletep(constrExprp), constrExprp);
                 continue;
             }

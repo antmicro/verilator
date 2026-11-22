@@ -17,6 +17,10 @@ endclass
 module t;
   initial begin
     Cls2 c;
-    c.meth3();  // Not found
+    bit [2:0] concatenated;
+    bit [1:0] repeated;
+    c.meth3();
+    concatenated = {c.missing.read(), c.missing.read(), c.missing.read()};
+    repeated = {2{c.missing.read()}};
   end
 endmodule

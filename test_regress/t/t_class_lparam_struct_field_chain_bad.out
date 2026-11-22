@@ -3,10 +3,6 @@
    41 |   Sub #(int'(CFG::cfg.tag.bogus)) u_nonstruct ();
       |                           ^~~~~
                     ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
-%Error-UNSUPPORTED: t/t_class_lparam_struct_field_chain_bad.v:41:12: Unsupported: static cast to 'int' from 'VOIDDTYPE'
-                                                                   : ... note: In instance 't.u'
-   41 |   Sub #(int'(CFG::cfg.tag.bogus)) u_nonstruct ();
-      |            ^
 %Error: t/t_class_lparam_struct_field_chain_bad.v:43:26: Member 'nosuchfield' not found in structure
                                                        : ... note: In instance 't.u'
    43 |   Sub #(int'(CFG::cfg.jt.nosuchfield)) u_nomember ();

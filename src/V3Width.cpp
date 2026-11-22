@@ -5176,7 +5176,7 @@ class WidthVisitor final : public VNVisitor {
                            << nodep->fromp()->dtypep()->prettyTypeNameQ() << "'");
         }
         // Error handling
-        nodep->replaceWith(new AstConst{nodep->fileline(), AstConst::BitFalse{}});
+        nodep->replaceWith(new AstConst{nodep->fileline(), AstConst::BitFalseErroring{}});
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
     bool memberRefClass(AstMemberRef* nodep, AstClassRefDType* adtypep) {
@@ -5521,11 +5521,18 @@ class WidthVisitor final : public VNVisitor {
         } else if (basicp && basicp->isString()) {
             methodCallString(nodep, basicp);
         } else {
-            nodep->v3warn(E_UNSUPPORTED,
-                          "Unsupported: Member call on object '"
-                              << nodep->fromp()->prettyTypeNameQ() << "' which is a '"
-                              << nodep->fromp()->dtypep()->prettyTypeNameQ() << "'");
-            nodep->dtypeSetVoid();
+            if (!nodep->fromp()->fileline()->erroringOn()) {
+                nodep->v3warn(E_UNSUPPORTED,
+                              "Unsupported: Member call on object '"
+                                  << nodep->fromp()->prettyTypeNameQ() << "' which is a '"
+                                  << nodep->fromp()->dtypep()->prettyTypeNameQ() << "'");
+            }
+            if (VN_IS(nodep->backp(), StmtExpr)) {
+                nodep->dtypeSetVoid();
+            } else {
+                nodep->replaceWith(new AstConst{nodep->fileline(), AstConst::BitFalseErroring{}});
+                VL_DO_DANGLING(pushDeletep(nodep), nodep);
+            }
         }
     }
     AstWith* methodWithClause(AstNodeFTaskRef* nodep, bool required, bool arbReturn,

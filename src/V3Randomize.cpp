@@ -2082,22 +2082,24 @@ class RandomizeVisitor final : public VNVisitor {
                     new AstArg{fl, "", new AstVarRef{fl, restorep, VAccess::READ}}};
                 callp->taskp(nestedp);
                 callp->dtypeSetVoid();
-                taskp->addStmtsp(new AstIf{
+                AstNodeStmt* const nestedSnapshotp = new AstIf{
                     fl,
                     new AstNeq{fl, new AstVarRef{fl, ownerClassp, memberVarp, VAccess::READ},
                                new AstConst{fl, AstConst::Null{}}},
-                    callp->makeStmt()});
+                    callp->makeStmt()};
+                taskp->addStmtsp(wrapIfRandMode(classp, memberVarp, nestedSnapshotp));
                 return;
             }
             AstVar* const savep = new AstVar{
                 fl, VVarType::MEMBER, "__Vsaved_" + memberVarp->name(), memberVarp->dtypep()};
             classp->addMembersp(savep);
-            taskp->addStmtsp(new AstIf{
+            AstNodeStmt* const snapshotp = new AstIf{
                 fl, new AstVarRef{fl, restorep, VAccess::READ},
                 new AstAssign{fl, new AstVarRef{fl, ownerClassp, memberVarp, VAccess::WRITE},
                               new AstVarRef{fl, classp, savep, VAccess::READ}},
                 new AstAssign{fl, new AstVarRef{fl, classp, savep, VAccess::WRITE},
-                              new AstVarRef{fl, ownerClassp, memberVarp, VAccess::READ}}});
+                              new AstVarRef{fl, ownerClassp, memberVarp, VAccess::READ}}};
+            taskp->addStmtsp(wrapIfRandMode(classp, memberVarp, snapshotp));
         });
         // Override in subclasses, so the call saves the members of the dynamic type
         const auto subclassesIt = m_subclasses.find(classp);

@@ -26,7 +26,20 @@ module t;
     return i;
   endfunction
 
+  int calls[3];
+  function automatic int unsigned weight(int i);
+    ++calls[i];
+    return (i == 1) ? 7 : 0;
+  endfunction
+
   initial begin
+    randcase
+      weight(0): $stop;
+      weight(1): v = 1;
+      weight(2): $stop;
+    endcase
+    if (v != 1 || calls != '{1, 1, 1}) $stop;
+
     if (randfunc() != 100) $stop;
 
     //

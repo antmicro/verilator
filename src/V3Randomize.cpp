@@ -38,6 +38,7 @@
 #include "V3Randomize.h"
 
 #include "V3Ast.h"
+#include "V3Const.h"
 #include "V3ConstPool.h"
 #include "V3Error.h"
 #include "V3FileLine.h"
@@ -2595,25 +2596,23 @@ class RandomizeVisitor final : public VNVisitor {
         m_activeClasses.erase(nodep);
     }
     void visit(AstRandCase* nodep) override {
-        // RANDCASE
-        //   CASEITEM expr1 : stmt1
-        //   CASEITEM expr2 : stmt2
-        // ->
-        //   tmp = URandomRange{0, num} + 1   // + 1 so weight 0 means never
-        //   if (tmp < expr1) stmt1;
-        //   else if (tmp < (expr2 + expr1)) stmt1;
-        //   else warning
-        // Note this code assumes that the expressions after V3Const are fast to compute
-        // Optimize: we would be better with a binary search tree to reduce ifs that execute
+        // Evaluate weights in source order. Draw once from the total and choose
+        // the first cumulative weight that reaches the draw.
         UINFOTREE(9, nodep, "", "rcin:");
         AstNodeDType* const sumDTypep = nodep->findUInt64DType();
 
         FileLine* const fl = nodep->fileline();
         const std::string name = "__Vrandcase" + cvtToStr(m_randCaseNum++);
-        AstVar* const randVarp = new AstVar{fl, VVarType::BLOCKTEMP, name, sumDTypep};
-        randVarp->noSubst(true);
-        randVarp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
-        addTempVarsp(randVarp);
+        const auto newTemp = [&](const std::string& varName) {
+            AstVar* const varp = new AstVar{fl, VVarType::BLOCKTEMP, varName, sumDTypep};
+            varp->noSubst(true);
+            varp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
+            addTempVarsp(varp);
+            return varp;
+        };
+        AstVar* const randVarp = newTemp(name);
+        AstNodeStmt* weightsp = nullptr;
+        unsigned itemIndex = 0;
         AstNodeExpr* sump = new AstConst{fl, AstConst::WidthedValue{}, 64, 0};
         AstIf* const firstIfsp
             = new AstIf{fl, new AstConst{fl, AstConst::BitFalse{}}, nullptr, nullptr};
@@ -2621,14 +2620,24 @@ class RandomizeVisitor final : public VNVisitor {
 
         for (AstCaseItem* const itemp : nodep->itemspList()) {
             AstNodeExpr* const condp = itemp->condsp()->unlinkFrBack();
-            sump
-                = new AstAdd{condp->fileline(), sump, new AstExtend{itemp->fileline(), condp, 64}};
+            FileLine* const itemFl = itemp->fileline();
+            const bool constant = VN_IS(sump, Const) && VN_IS(condp, Const);
+            sump = new AstAdd{itemFl, sump, new AstExtend{itemFl, condp, 64}};
+            if (constant) {
+                sump = V3Const::constifyEdit(sump);
+            } else {
+                AstVar* const prefixp = newTemp(name + "__sum" + cvtToStr(itemIndex));
+                AstVarRef* const destp = new AstVarRef{itemFl, prefixp, VAccess::WRITE};
+                weightsp = AstNode::addNextNull(weightsp, new AstAssign{itemFl, destp, sump});
+                sump = new AstVarRef{itemFl, prefixp, VAccess::READ};
+            }
+            ++itemIndex;
             AstNodeStmt* const stmtsp
                 = itemp->stmtsp() ? itemp->stmtsp()->unlinkFrBackWithNext() : nullptr;
-            AstVarRef* const randVarRefp = new AstVarRef{fl, randVarp, VAccess::WRITE};
+            AstVarRef* const randVarRefp = new AstVarRef{fl, randVarp, VAccess::READ};
             AstIf* const newifp
                 = new AstIf{itemp->fileline(),
-                            new AstLte{condp->fileline(), randVarRefp, sump->cloneTreePure(true)},
+                            new AstLte{itemFl, randVarRefp, sump->cloneTreePure(false)},
                             stmtsp, nullptr};
             ifsp->addElsesp(newifp);
             ifsp = newifp;
@@ -2649,7 +2658,7 @@ class RandomizeVisitor final : public VNVisitor {
                                        new AstModDiv{fl, randp, sump}}};
         newp->addNext(firstIfsp);
         if (debug() >= 9) newp->dumpTreeAndNext(cout, "-  rcnew: ");
-        nodep->replaceWith(newp);
+        nodep->replaceWith(AstNode::addNextNull<AstNode>(weightsp, newp));
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
     }
     void visit(AstNodeFTaskRef* nodep) override {

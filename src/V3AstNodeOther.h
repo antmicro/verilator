@@ -1888,6 +1888,7 @@ class AstPropSpec final : public AstNode {
     // @astgen op3 := propp : AstNodeExpr
     // @astgen op4 := matchCountp : Optional[AstNodeExpr] // Cover sequence matches this tick
     VPropStrength m_propStrength = VPropStrength::DEFAULT;
+    bool m_sequenceLowered = false;  // NFA supplies the match and action-replay logic
     bool m_fromInstanceChain = false;  // Body of a property instance whose body is an instance
 
 public:
@@ -1906,6 +1907,8 @@ public:
         return true;
     }  // Used under Cover, which expects a bool child
     VPropStrength propStrength() const { return m_propStrength; }
+    bool sequenceLowered() const { return m_sequenceLowered; }
+    void sequenceLowered(bool flag) { m_sequenceLowered = flag; }
     bool fromInstanceChain() const { return m_fromInstanceChain; }
     void fromInstanceChain(bool flag) { m_fromInstanceChain = flag; }
 };

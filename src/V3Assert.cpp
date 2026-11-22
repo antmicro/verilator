@@ -1070,6 +1070,29 @@ class AssertVisitor final : public VNVisitor {
             replaysp->addNext(loopp);
             passsp = replaysp;
         }
+        // Multi-cycle directives have their own match/replay machinery. For a
+        // single-cycle assertion, sample the predicate before its history advances,
+        // snapshot disable iff in Observed and execute its action in Reactive.
+        const AstPropSpec* const specp = VN_CAST(nodep->propp(), PropSpec);
+        const bool reactive = sentreep && VN_IS(nodep, Assert) && specp && !specp->sequenceLowered()
+                              && !VN_IS(propExprp, PExpr);
+        if (reactive) {
+            AstVar* const resultp
+                = newModuleTemp(flp, m_obsNames.get("Result"), nodep->findBitDType(), m_modp);
+            m_modp->addStmtsp(new AstAlways{
+                flp, VAlwaysKwd::ALWAYS, sentreep->cloneTree(false),
+                new AstAssign{flp, new AstVarRef{flp, resultp, VAccess::WRITE},
+                              VN_AS(propExprp, NodeExpr)}});
+            propExprp = new AstVarRef{flp, resultp, VAccess::READ};
+            if (disablep) {
+                AstVar* const offp
+                    = newModuleTemp(flp, m_obsNames.get("Disabled"), nodep->findBitDType(), m_modp);
+                m_modp->addStmtsp(new AstAlwaysObserved{
+                    flp, sentreep->cloneTree(false),
+                    new AstAssign{flp, new AstVarRef{flp, offp, VAccess::WRITE}, disablep}});
+                disablep = new AstVarRef{flp, offp, VAccess::READ};
+            }
+        }
         AstNodeStmt* bodysp = assertBody(nodep, propExprp, passsp, failsp);
         if (disablep) bodysp = new AstIf{flp, new AstLogNot{flp, disablep}, bodysp};
         // Add assertOn check last, for better combining
@@ -1088,6 +1111,10 @@ class AssertVisitor final : public VNVisitor {
             VL_DO_DANGLING(bodysp->deleteTree(), bodysp);
             if (sentreep) VL_DO_DANGLING(sentreep->deleteTree(), sentreep);
             nodep->unlinkFrBack();
+        } else if (reactive) {
+            UASSERT_OBJ(m_assertCoverp, nodep, "Concurrent assertion not in its process");
+            m_assertCoverp->sentreep(sentreep);
+            nodep->replaceWith(bodysp);
         } else {
             if (sentreep) {
                 // The process of the concurrent assertion is clocked by it
@@ -1741,6 +1768,21 @@ class AssertVisitor final : public VNVisitor {
         iterateChildren(nodep);
     }
     void visit(AstAlways* nodep) override {
+        // A procedure consisting solely of a concurrent assertion activates it once per
+        // enclosing edge. An identical explicit clock selects that same occurrence.
+        if (nodep->sentreep()) {
+            AstNode* stmtp = nodep->stmtsp();
+            while (const AstBegin* const beginp = VN_CAST(stmtp, Begin)) {
+                if (beginp->nextp() || beginp->declsp()) break;
+                stmtp = beginp->stmtsp();
+            }
+            const AstNodeCoverOrAssert* const assertp = VN_CAST(stmtp, NodeCoverOrAssert);
+            if (assertp && !assertp->nextp() && assertp->sentreep()
+                && nodep->sentreep()->sameTree(assertp->sentreep())) {
+                pushDeletep(nodep->sentreep()->unlinkFrBack());
+                nodep->keyword(VAlwaysKwd::ASSERT_COVER);
+            }
+        }
         if (nodep->keyword() != VAlwaysKwd::ASSERT_COVER) {
             visit(static_cast<AstNodeProcedure*>(nodep));
             return;
@@ -1751,7 +1793,14 @@ class AssertVisitor final : public VNVisitor {
         m_assertCoverp = nodep;
         iterateChildren(nodep);
         if (nodep->keyword() == VAlwaysKwd::ASSERT_COVER) {
-            VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
+            if (nodep->sentreep()) {
+                // Retain the assertion label and any enclosing named blocks for %m.
+                nodep->replaceWith(new AstAlwaysReactive{nodep->fileline(),
+                    nodep->sentreep()->unlinkFrBack(), nodep->stmtsp()->unlinkFrBackWithNext()});
+            } else {
+                nodep->unlinkFrBack();
+            }
+            VL_DO_DANGLING(pushDeletep(nodep), nodep);
         }
     }
     void visit(AstNodeProcedure* nodep) override {

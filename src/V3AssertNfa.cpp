@@ -3436,6 +3436,7 @@ class AssertNfaVisitor final : public VNVisitor {
         AstNodeExpr* const outputExprp = m_loweringp->assembleResult(
             assertp, negated, result.finalCondp, signals, needMatch ? &matchExprp : nullptr);
         if (result.finalCondp && !result.finalCondp->backp()) pushDeletep(result.finalCondp);
+        propp->sequenceLowered(true);
         finishDirective(assertp, parts, senTreep, outputExprp, matchExprp, signals.matchCountp,
                         signals.threadFailCountp);
         VL_DO_DANGLING(pushDeletep(senTreep), senTreep);

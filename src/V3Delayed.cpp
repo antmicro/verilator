@@ -245,7 +245,7 @@ protected:
             : CodeVertex{graphp}
             , m_senTreep{senTreep}
             , m_exclusive{isExclusive(procp)} {
-            if (procp->isSuspendable()) {
+            if (procp->isSuspendable() || VN_IS(procp, AlwaysReactive)) {
                 m_unordered = true;
             } else {
                 m_comb = senTreep->hasCombo();

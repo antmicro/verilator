@@ -38,7 +38,7 @@ module t (
 
   // One-arm property if: false condition is a vacuous pass.
   assert property (@(posedge clk) if (sel) a) begin
-    if (cyc != 0) ++vacuous_passes;
+    if ($sampled(cyc) != 0) ++vacuous_passes;
   end else
     $stop;
 

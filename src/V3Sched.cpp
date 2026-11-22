@@ -762,6 +762,11 @@ void createEval(AstNetlist* netlistp,  //
             if (reactKit.empty()) return nullptr;
             // Invoke the 'react' function
             AstNodeStmt* workp = util::callVoidFunc(reactKit.m_funcp);
+            // Apply nonblocking updates from Reactive after all of its actions have run.
+            if (AstVarScope* const queuep = netlistp->nbaQueuep()) {
+                workp = AstNode::addNext(workp, new AstNbaCommit{
+                    flp, new AstVarRef{flp, queuep, VAccess::READWRITE}});
+            }
             // Clear the 'react' triggers
             workp = AstNode::addNext(workp, trigKit.newClearCall(reactKit.m_vscp));
             return workp;

@@ -1613,7 +1613,14 @@ class WidthVisitor final : public VNVisitor {
             AstNodeDType* const selwidthDTypep = nodep->findBitOrLogicDType(
                 selwidth, selwidth, nodep->bitp()->dtypep()->numeric(),
                 nodep->bitp()->isFourstateOrNoDtype());
-            if (widthBad(nodep->bitp(), selwidthDTypep) && nodep->bitp()->width() != 32) {
+            // Keep the full select of an integral unpacked array for constraint solving.
+            // The solver must distinguish an invalid index from its in-range low bits.
+            const bool constraint = m_constraintp
+                                    || (m_withp && VN_IS(m_withp->exprp(), NodeConstraintItem));
+            const bool solverIndex
+                = constraint && fromDtp->elemDTypep()->isIntegralOrPacked();
+            if (!solverIndex && widthBad(nodep->bitp(), selwidthDTypep)
+                && nodep->bitp()->width() != 32) {
                 nodep->v3widthWarn(selwidth, nodep->bitp()->width(),
                                    "Bit extraction of array["
                                        << frommsb << ":" << fromlsb << "] requires " << selwidth
@@ -1648,8 +1655,10 @@ class WidthVisitor final : public VNVisitor {
                         }
                     }
                 }
-                widthCheckSized(nodep, "Extract Range", nodep->bitp(), selwidthDTypep, EXTEND_EXP,
-                                false /*NOWARN*/);
+                if (!solverIndex || nodep->bitp()->width() < selwidth) {
+                    widthCheckSized(nodep, "Extract Range", nodep->bitp(), selwidthDTypep,
+                                    EXTEND_EXP, false /*NOWARN*/);
+                }
             }
         }
     }

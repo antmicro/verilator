@@ -639,7 +639,7 @@ class ConstraintExprVisitor final : public VNVisitor {
         return selp;
     }
 
-    // Index of a queue or dynamic array extended to at least 32 bits
+    // Extend a solver array index to at least 32 bits for its bounds check
     static AstNodeExpr* newIndex32p(AstNodeExpr* indexp) {
         // A std::randomize() argument is referenced with write access
         indexp->foreach([](AstNodeVarRef* refp) { refp->access(VAccess::READ); });
@@ -657,6 +657,16 @@ class ConstraintExprVisitor final : public VNVisitor {
         const AstCMethodHard* const methodp = VN_CAST(nodep, CMethodHard);
         return methodp && methodp->method() == VCMethod::ARRAY_AT && !methodp->fromp()->user1()
                && methodp->dtypep()->skipRefp()->isIntegralOrPacked() && methodp->pinsp()->user1();
+    }
+    static bool isRandomIndex(const AstNodeExpr* indexp) {
+        return indexp->exists([](const AstNodeVarRef* refp) {
+            return refp->varp()->rand().isRandomizable() || refp->varp()->isStdRandomizeArg();
+        });
+    }
+    static const AstNodeExpr* fixedArrayBasep(const AstArraySel* selp) {
+        const AstNodeExpr* basep = selp->fromp();
+        while (const AstArraySel* const innerp = VN_CAST(basep, ArraySel)) basep = innerp->fromp();
+        return basep;
     }
     // New condition that the random indices of state array selects under nodep are in
     // bounds, or nullptr if there is no such select. A select in a branch that is not
@@ -700,6 +710,17 @@ class ConstraintExprVisitor final : public VNVisitor {
                 = mark(new AstLt{fl, indexp,
                                  indexp->width() > 32 ? new AstExtend{fl, sizep, indexp->width()}
                                                       : static_cast<AstNodeExpr*>(sizep)});
+        }
+        if (const AstArraySel* const selp = VN_CAST(nodep, ArraySel)) {
+            if (selp->fromp()->dtypep()->elemDTypep()->isIntegralOrPacked()
+                && isRandomIndex(selp->bitp())) {
+                AstNodeExpr* const indexp = newIndex32p(selp->bitp()->cloneTree(false));
+                const uint32_t count = VN_AS(selp->fromp()->dtypep()->skipRefp(), UnpackArrayDType)
+                                           ->elementsConst();
+                AstConst* const sizep
+                    = new AstConst{fl, AstConst::WidthedValue{}, indexp->width(), count};
+                validp = mark(new AstLt{fl, indexp, sizep});
+            }
         }
         for (AstNode* const childp :
              {nodep->op1p(), nodep->op2p(), nodep->op3p(), nodep->op4p()}) {
@@ -2059,6 +2080,35 @@ class ConstraintExprVisitor final : public VNVisitor {
             newp->exprsp()->nextp()->name("%x");
         }
     }
+    // Build a scalar state lookup. A state index can be evaluated directly in C++;
+    // a random index selects between the native element values in the solver.
+    static AstNodeExpr* newStateLookup(const std::vector<AstArraySel*>& dims, size_t dim,
+                                       AstNodeExpr* basep) {
+        if (dim == dims.size()) return basep;
+        AstArraySel* const selp = dims[dim];
+        AstNodeExpr* const indexp = selp->bitp();
+        FileLine* const fl = selp->fileline();
+        if (!isRandomIndex(indexp)) {
+            AstArraySel* const nextp = new AstArraySel{fl, basep, indexp->cloneTreePure(false)};
+            nextp->dtypeFrom(selp);
+            return newStateLookup(dims, dim + 1, nextp);
+        }
+        const int count
+            = VN_AS(selp->fromp()->dtypep()->skipRefp(), UnpackArrayDType)->elementsConst();
+        AstNodeExpr* resultp = new AstConst{fl, AstConst::WidthedValue{}, dims.back()->width(), 0};
+        for (int i = count - 1; i >= 0; --i) {
+            AstArraySel* const elemp = new AstArraySel{fl, basep->cloneTreePure(false), i};
+            AstNodeExpr* const eqp
+                = new AstEq{fl, indexp->cloneTreePure(false),
+                            new AstConst{fl, AstConst::WidthedValue{}, indexp->width(),
+                                         static_cast<uint32_t>(i)}};
+            eqp->user1(true);
+            resultp = new AstCond{fl, eqp, newStateLookup(dims, dim + 1, elemp), resultp};
+            resultp->user1(true);
+        }
+        VL_DO_DANGLING(basep->deleteTree(), basep);
+        return resultp;
+    }
     void visit(AstArraySel* nodep) override {
         if (editFormat(nodep)) return;
         FileLine* const fl = nodep->fileline();
@@ -2067,12 +2117,7 @@ class ConstraintExprVisitor final : public VNVisitor {
         // which can be over-marked in sum/with expansion contexts). A
         // std::randomize() with-clause argument carries no rand qualifier of
         // its own but is still part of the solve.
-        bool indexIsRand = false;
-        nodep->bitp()->foreach([&](const AstNodeVarRef* vrefp) {
-            if (vrefp->varp()->rand().isRandomizable() || vrefp->varp()->isStdRandomizeArg()) {
-                indexIsRand = true;
-            }
-        });
+        const bool indexIsRand = isRandomIndex(nodep->bitp());
         if (m_nestedAccessp) {
             AstNodeExpr* const bitp = nodep->bitp()->cloneTreePure(false);
             AstNodeExpr* const bitFormatp
@@ -2093,37 +2138,31 @@ class ConstraintExprVisitor final : public VNVisitor {
                 return;
             }
         }
-        AstUnpackArrayDType* const stateArrDtp
-            = VN_CAST(nodep->fromp()->dtypep()->skipRefp(), UnpackArrayDType);
-        if (indexIsRand && !m_nestedAccessp && !nodep->fromp()->user1() && stateArrDtp
+        if (!m_nestedAccessp && !fixedArrayBasep(nodep)->user1()
             && nodep->dtypep()->skipRefp()->isIntegralOrPacked()) {
-            // State array with a random index in the last dimension: select among the
-            // elements, zero when the index is out of bounds
-            AstNodeExpr* resultp = new AstConst{fl, AstConst::WidthedValue{}, nodep->width(), 0};
-            for (int i = stateArrDtp->elementsConst() - 1; i >= 0; --i) {
-                AstNodeExpr* const elemp
-                    = new AstArraySel{fl, nodep->fromp()->cloneTreePure(false), i};
-                AstNodeExpr* const eqp
-                    = new AstEq{fl, nodep->bitp()->cloneTreePure(false),
-                                new AstConst{fl, AstConst::WidthedValue{}, nodep->bitp()->width(),
-                                             static_cast<uint32_t>(i)}};
-                eqp->user1(true);
-                resultp = new AstCond{fl, eqp, elemp, resultp};
-                resultp->user1(true);
+            std::vector<AstArraySel*> dims;
+            for (AstArraySel* selp = nodep; selp; selp = VN_CAST(selp->fromp(), ArraySel)) {
+                dims.push_back(selp);
             }
-            nodep->replaceWith(resultp);
-            VL_DO_DANGLING(pushDeletep(nodep), nodep);
-            iterate(resultp);
-            return;
+            std::reverse(dims.begin(), dims.end());
+            if (std::any_of(dims.begin(), dims.end(), [](AstArraySel* selp) {
+                    return isRandomIndex(selp->bitp());
+                })) {
+                AstNodeExpr* const resultp
+                    = newStateLookup(dims, 0, dims.front()->fromp()->cloneTreePure(false));
+                nodep->replaceWith(resultp);
+                VL_DO_DANGLING(pushDeletep(nodep), nodep);
+                iterate(resultp);
+                return;
+            }
         }
         if (indexIsRand) {
             // Index depends on rand variable -- keep as SMT symbol.
-            // Array index sort is 32-bit, so zero-extend narrower indices.
+            // The bounds check uses the original width. SMT array indices are 32 bits.
             AstNodeExpr* indexp = nodep->bitp()->unlinkFrBack(&handle);
-            if (indexp->width() < 32) {
-                AstExtend* const extendp = new AstExtend{fl, indexp, 32};
-                extendp->user1(true);
-                indexp = extendp;
+            if (indexp->width() != 32) {
+                indexp = adjustWidth(fl, indexp, 32, VSigning::UNSIGNED);
+                indexp->user1(true);
             }
             handle.relink(indexp);
             AstSFormatF* const newp = editSMT(nodep, nodep->fromp(), indexp);

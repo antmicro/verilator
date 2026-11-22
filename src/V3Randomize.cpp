@@ -946,6 +946,7 @@ class CaptureVisitor final : public VNVisitor {
     std::set<AstNode*> m_ignore;  // Nodes to ignore for capturing
     std::unordered_set<const AstVar*> m_constraintIterators;  // Enclosing foreach loop variables
     AstVar* m_thisp = nullptr;  // Variable for outer context's object, if necessary
+    bool m_selfTarget;  // Inline class constraint randomizes the current object
     bool m_staticContext = false;  // True when capturing from a static function context
     const bool m_randomizesThis;  // True for randomize() in class method
 
@@ -1028,6 +1029,9 @@ class CaptureVisitor final : public VNVisitor {
         if (m_staticContext && callerIsClass && varIsFieldOfCaller
             && varRefp->varp()->lifetime().isStatic())
             return CaptureMode::CAP_NO;
+        // A field on the object being randomized remains a solver variable.
+        // Capturing it through the outer handle would freeze its pre-solve value.
+        if (m_selfTarget && varIsFieldOfCaller) return CaptureMode::CAP_NO;
         if (callerIsClass && varIsFieldOfCaller) return CaptureMode::CAP_THIS;
         // Static member of a different class: V3Width replaces AstMemberRef with a bare
         // AstVarRef (classOrPackagep set). Capture current value as a function argument.
@@ -1063,14 +1067,14 @@ class CaptureVisitor final : public VNVisitor {
     void captureRefByThis(AstNodeVarRef* nodep, CaptureMode /*capModeFlags*/) {
         AstVar* const thisp = importThisp(nodep->fileline());
         AstVarRef* const thisRefp = new AstVarRef{nodep->fileline(), thisp, nodep->access()};
-        thisRefp->user1(true);
+        thisRefp->user1(!m_targetp && nodep->user1());
         m_ignore.emplace(thisRefp);
         AstMemberRef* const memberRefp
             = new AstMemberRef{nodep->fileline(), thisRefp, nodep->varp()};
         // Propagate random-dependence marking only for randomize() in class method
         if (nodep->user1() && m_randomizesThis) memberRefp->user1(true);
         memberRefp->user2p(m_targetp);
-        if (m_targetp && VN_AS(nodep->varp()->user2p(), NodeModule) != m_targetp) {
+        if (m_targetp) {
             // Selects of a member of the outer object without a random index are state
             for (AstNode *childp = nodep, *parentp = nodep->backp();
                  parentp->op1p() == childp
@@ -1179,9 +1183,11 @@ class CaptureVisitor final : public VNVisitor {
 
 public:
     explicit CaptureVisitor(AstNode* const nodep, AstNodeModule* callerp, AstClass* const targetp,
-                            bool staticContext = false, bool randomizesThis = false)
+                            bool staticContext = false, bool randomizesThis = false,
+                            bool selfTarget = false)
         : m_callerp{callerp}
         , m_targetp{targetp}
+        , m_selfTarget{selfTarget}
         , m_staticContext{staticContext}
         , m_randomizesThis{randomizesThis} {
         iterateAndNextNull(nodep);
@@ -2930,8 +2936,9 @@ class RandomizeVisitor final : public VNVisitor {
 
         // Detach the expression and prepare variable copies
         // (randomize() in class method is a FuncRef, not a MethodCall)
-        const CaptureVisitor captured{withp->exprp(), m_modp, classp, false,
-                                      !VN_IS(nodep, MethodCall)};
+        const AstMethodCall* const callp = VN_CAST(nodep, MethodCall);
+        const bool selfTarget = !callp || VN_IS(callp->fromp(), ThisRef);
+        const CaptureVisitor captured{withp->exprp(), m_modp, classp, false, !callp, selfTarget};
         // Add function arguments
         captured.addFunctionArguments(randomizeFuncp);
 

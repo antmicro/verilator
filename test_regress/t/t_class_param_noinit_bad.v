@@ -19,4 +19,25 @@ module t;
     $finish;
   end
 
+  Other child();
+endmodule
+
+class Base #(type T = int);
+  function int get();
+    return 1;
+  endfunction
+endclass
+
+class Derived #(type K = int) extends Base #(K);
+  function int get();
+    return super.get();
+  endfunction
+endclass
+
+module Other;
+  Derived #(byte) d;
+  initial begin
+    d = new;
+    if (d.get() != 1) $stop;
+  end
 endmodule

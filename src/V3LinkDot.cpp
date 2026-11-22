@@ -6680,7 +6680,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
         }
     }
     void visit(AstClass* nodep) override {
-        if (nodep->user3SetOnce()) return;
+        if (nodep->dead() || nodep->user3SetOnce()) return;
         LINKDOT_VISIT_START();
         UINFO(5, indent() << "visit " << nodep);
         checkNoDot(nodep);

@@ -4286,10 +4286,12 @@ public:
         std::unordered_set<AstClass*> removedClassps;
         for (AstClass* const classp : m_state.m_paramClasses) {
             if (!classp->user3p()) {
-                // If there was an error, don't remove classes as they might
-                // have remained referenced, and  will crash in V3Broken or
-                // other locations. This is fine, we will abort imminently.
-                if (V3Error::errorCount()) continue;
+                // Keep referenced templates alive after an error. Their base classes
+                // and members may be unspecialized, so skip further name resolution.
+                if (V3Error::errorCount()) {
+                    classp->dead(true);
+                    continue;
+                }
                 removedClassps.emplace(classp);
                 VL_DO_DANGLING(pushDeletep(classp->unlinkFrBack()), classp);
             } else {

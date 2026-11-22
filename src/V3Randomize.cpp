@@ -273,29 +273,7 @@ class RandomizeMarkVisitor final : public VNVisitor {
     bool isVarInStdRandomizeArgs(const AstVar* varp) const {
         if (!m_inStdWith || !m_stdRandCallp) return false;
 
-        for (AstArg* const argp : m_stdRandCallp->argspList()) {
-            const AstNodeExpr* exprp = argp->exprp();
-            // Traverse through expression to find the base variable
-            while (exprp) {
-                if (const AstNodeVarRef* const varrefp = VN_CAST(exprp, NodeVarRef)) {
-                    if (varrefp->varp() == varp) return true;
-                    break;
-                }
-                if (const AstMemberRef* const memberRefp = VN_CAST(exprp, MemberRef)) {
-                    if (memberRefp->varp() == varp) return true;
-                    exprp = memberRefp->fromp();
-                } else if (const AstArraySel* const arrselp = VN_CAST(exprp, ArraySel)) {
-                    exprp = arrselp->fromp();
-                } else if (const AstStructSel* const strselp = VN_CAST(exprp, StructSel)) {
-                    exprp = strselp->fromp();
-                } else if (const AstCMethodHard* const methodp = VN_CAST(exprp, CMethodHard)) {
-                    exprp = methodp->fromp();
-                } else {
-                    break;
-                }
-            }
-        }
-        return false;
+        return V3Randomize::argContainsVar(m_stdRandCallp, varp);
     }
     // True if classp, or a class derived from it, reaches declClassp through rand handles
     bool hierarchyReaches(const AstClass* classp, const AstClass* declClassp,
@@ -3032,6 +3010,49 @@ public:
 
 //######################################################################
 // Randomize method class functions
+
+// At width resolution the original scope-randomize arguments are still present.
+// During solver lowering those arguments have been replaced by marked temporaries.
+bool V3Randomize::isRandomIndex(const AstNodeExpr* indexp, const AstNodeFTaskRef* scopeCallp) {
+    return indexp->exists([&](const AstNode* exprp) {
+        const AstVar* varp;
+        if (const AstNodeVarRef* const refp = VN_CAST(exprp, NodeVarRef)) {
+            varp = refp->varp();
+        } else if (const AstMemberRef* const refp = VN_CAST(exprp, MemberRef)) {
+            varp = refp->varp();
+        } else {
+            return false;
+        }
+        return scopeCallp ? argContainsVar(scopeCallp, varp)
+                          : varp->rand().isRandomizable() || varp->isStdRandomizeArg();
+    });
+}
+
+bool V3Randomize::argContainsVar(const AstNodeFTaskRef* callp, const AstVar* varp) {
+    for (AstArg* const argp : callp->argspList()) {
+        const AstNodeExpr* exprp = argp->exprp();
+        // Traverse through expression to find the base variable
+        while (exprp) {
+            if (const AstNodeVarRef* const varrefp = VN_CAST(exprp, NodeVarRef)) {
+                if (varrefp->varp() == varp) return true;
+                break;
+            }
+            if (const AstMemberRef* const memberRefp = VN_CAST(exprp, MemberRef)) {
+                if (memberRefp->varp() == varp) return true;
+                exprp = memberRefp->fromp();
+            } else if (const AstArraySel* const arrselp = VN_CAST(exprp, ArraySel)) {
+                exprp = arrselp->fromp();
+            } else if (const AstStructSel* const strselp = VN_CAST(exprp, StructSel)) {
+                exprp = strselp->fromp();
+            } else if (const AstCMethodHard* const methodp = VN_CAST(exprp, CMethodHard)) {
+                exprp = methodp->fromp();
+            } else {
+                break;
+            }
+        }
+    }
+    return false;
+}
 
 void V3Randomize::randomizeNetlist(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ":");

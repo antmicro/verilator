@@ -1613,12 +1613,16 @@ class WidthVisitor final : public VNVisitor {
             AstNodeDType* const selwidthDTypep = nodep->findBitOrLogicDType(
                 selwidth, selwidth, nodep->bitp()->dtypep()->numeric(),
                 nodep->bitp()->isFourstateOrNoDtype());
-            // Keep the full select of an integral unpacked array for constraint solving.
-            // The solver must distinguish an invalid index from its in-range low bits.
-            const bool constraint = m_constraintp
-                                    || (m_withp && VN_IS(m_withp->exprp(), NodeConstraintItem));
+            // Preserve random indices for the solver's bounds check. Keep the ordinary
+            // element-index width for native selects, including foreach loop variables.
+            const bool withConstraint = m_withp && VN_IS(m_withp->exprp(), NodeConstraintItem);
+            const AstNodeFTaskRef* const callp
+                = withConstraint ? VN_CAST(m_withp->backp(), NodeFTaskRef) : nullptr;
+            const bool scopeRandomize = callp && callp->classOrPackagep()
+                                        && callp->classOrPackagep()->name() == "std";
             const bool solverIndex
-                = constraint && fromDtp->elemDTypep()->isIntegralOrPacked();
+                = (m_constraintp || withConstraint) && fromDtp->elemDTypep()->isIntegralOrPacked()
+                  && V3Randomize::isRandomIndex(nodep->bitp(), scopeRandomize ? callp : nullptr);
             if (!solverIndex && widthBad(nodep->bitp(), selwidthDTypep)
                 && nodep->bitp()->width() != 32) {
                 nodep->v3widthWarn(selwidth, nodep->bitp()->width(),

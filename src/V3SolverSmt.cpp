@@ -658,11 +658,6 @@ class ConstraintExprVisitor final : public VNVisitor {
         return methodp && methodp->method() == VCMethod::ARRAY_AT && !methodp->fromp()->user1()
                && methodp->dtypep()->skipRefp()->isIntegralOrPacked() && methodp->pinsp()->user1();
     }
-    static bool isRandomIndex(const AstNodeExpr* indexp) {
-        return indexp->exists([](const AstNodeVarRef* refp) {
-            return refp->varp()->rand().isRandomizable() || refp->varp()->isStdRandomizeArg();
-        });
-    }
     static const AstNodeExpr* fixedArrayBasep(const AstArraySel* selp) {
         const AstNodeExpr* basep = selp->fromp();
         while (const AstArraySel* const innerp = VN_CAST(basep, ArraySel)) basep = innerp->fromp();
@@ -713,7 +708,7 @@ class ConstraintExprVisitor final : public VNVisitor {
         }
         if (const AstArraySel* const selp = VN_CAST(nodep, ArraySel)) {
             if (selp->fromp()->dtypep()->elemDTypep()->isIntegralOrPacked()
-                && isRandomIndex(selp->bitp())) {
+                && V3Randomize::isRandomIndex(selp->bitp())) {
                 AstNodeExpr* const indexp = newIndex32p(selp->bitp()->cloneTree(false));
                 const uint32_t count = VN_AS(selp->fromp()->dtypep()->skipRefp(), UnpackArrayDType)
                                            ->elementsConst();
@@ -2088,7 +2083,7 @@ class ConstraintExprVisitor final : public VNVisitor {
         AstArraySel* const selp = dims[dim];
         AstNodeExpr* const indexp = selp->bitp();
         FileLine* const fl = selp->fileline();
-        if (!isRandomIndex(indexp)) {
+        if (!V3Randomize::isRandomIndex(indexp)) {
             AstArraySel* const nextp = new AstArraySel{fl, basep, indexp->cloneTreePure(false)};
             nextp->dtypeFrom(selp);
             return newStateLookup(dims, dim + 1, nextp);
@@ -2117,7 +2112,7 @@ class ConstraintExprVisitor final : public VNVisitor {
         // which can be over-marked in sum/with expansion contexts). A
         // std::randomize() with-clause argument carries no rand qualifier of
         // its own but is still part of the solve.
-        const bool indexIsRand = isRandomIndex(nodep->bitp());
+        const bool indexIsRand = V3Randomize::isRandomIndex(nodep->bitp());
         if (m_nestedAccessp) {
             AstNodeExpr* const bitp = nodep->bitp()->cloneTreePure(false);
             AstNodeExpr* const bitFormatp
@@ -2146,7 +2141,7 @@ class ConstraintExprVisitor final : public VNVisitor {
             }
             std::reverse(dims.begin(), dims.end());
             if (std::any_of(dims.begin(), dims.end(), [](AstArraySel* selp) {
-                    return isRandomIndex(selp->bitp());
+                    return V3Randomize::isRandomIndex(selp->bitp());
                 })) {
                 AstNodeExpr* const resultp
                     = newStateLookup(dims, 0, dims.front()->fromp()->cloneTreePure(false));

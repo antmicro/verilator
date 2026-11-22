@@ -6754,16 +6754,22 @@ class WidthVisitor final : public VNVisitor {
     void visit(AstNewDynamic* nodep) override {
         if (nodep->didWidthAndSet()) return;
         AstDynArrayDType* const adtypep = VN_CAST(m_vup->dtypeNullSkipRefp(), DynArrayDType);
-        if (!adtypep) {  // e.g. int a = new;
-            nodep->v3error(
-                "dynamic new() not expected in this context (data type must be dynamic array)");
-            return;
-        }
-        // The AstNodeAssign visitor will be soon be replacing this node, make sure it gets it
-        if (!VN_IS(nodep->backp(), NodeAssign)) {
-            UINFO(1, "Got backp " << nodep->backp());
-            nodep->v3error(
-                "dynamic new() not expected in this context (expected under an assign)");
+        if (!adtypep || !VN_IS(nodep->backp(), NodeAssign)) {
+            if (!adtypep) {
+                nodep->v3error(
+                    "dynamic new() not expected in this context (data type must be dynamic array)");
+            } else {
+                nodep->v3error(
+                    "dynamic new() not expected in this context (expected under an assign)");
+            }
+            // Keep the context type during recovery so the enclosing expression can be checked.
+            AstConst* const errorp = new AstConst{nodep->fileline(), AstConst::BitFalseErroring{}};
+            if (m_vup->dtypeNullp()) {
+                errorp->dtypep(m_vup->dtypep());
+                errorp->didWidth(true);
+            }
+            nodep->replaceWith(errorp);
+            VL_DO_DANGLING(pushDeletep(nodep), nodep);
             return;
         }
         nodep->dtypep(adtypep);

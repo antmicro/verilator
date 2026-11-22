@@ -33,8 +33,12 @@
                                  : ... note: In instance 't'
    52 |     c1 = new[2];
       |          ^~~
-%Error: Internal Error: t/t_class_new_bad.v:52:10: ../V3Width.cpp:#: Node has no type
-                                                 : ... note: In instance 't'
-   52 |     c1 = new[2];
-      |          ^~~
-                        ... This fatal error may be caused by the earlier error(s); resolve those first.
+%Error: t/t_class_new_bad.v:56:15: dynamic new() not expected in this context (data type must be dynamic array)
+                                 : ... note: In instance 't'
+   56 |       queue = new[1];
+      |               ^~~
+%Error: t/t_class_new_bad.v:57:16: dynamic new() not expected in this context (data type must be dynamic array)
+                                 : ... note: In instance 't'
+   57 |       scalar = new[2];
+      |                ^~~
+%Error: Exiting due to

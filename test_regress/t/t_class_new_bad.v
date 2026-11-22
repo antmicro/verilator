@@ -50,6 +50,12 @@ module t;
     c2 = new(3);  // Bad, called with arg
     c3 = new();  // Bad, called without arg
     c1 = new[2];
+    begin
+      int queue[$];
+      int scalar;
+      queue = new[1];
+      scalar = new[2];
+    end
     $stop;
   end
 endmodule

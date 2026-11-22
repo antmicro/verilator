@@ -30,6 +30,22 @@ module t;
       q2.push_back(3);
       `check_ne(q1, q2)
     end
+    begin  // queue bounds do not affect equality
+      int small_q[$:1];
+      int large_q[$:3];
+      int unbounded_q[$];
+      `check_eq(small_q, large_q)
+      small_q.push_back(3);
+      large_q.push_back(3);
+      unbounded_q.push_back(3);
+      `check_eq(large_q, small_q)
+      `check_eq(unbounded_q, small_q)
+      `check_eq(small_q, unbounded_q)
+      large_q[0] = 4;
+      `check_ne(small_q, large_q)
+      unbounded_q.push_back(2);
+      `check_ne(unbounded_q, small_q)
+    end
     begin  // strings
       string q1[$];
       string q2[$];

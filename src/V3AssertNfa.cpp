@@ -284,29 +284,10 @@ static AstNodeExpr* assertPassOnCond(FileLine* flp, VAssertType type,
         1};
 }
 
-static AstNodeExpr* assertFailOnCond(FileLine* flp, VAssertType type,
-                                     VAssertDirectiveType directiveType) {
-    return new AstCExpr{
-        flp, AstCExpr::Pure{},
-        assertActionControlPrefix(directiveType)
-            + V3AssertCommon::assertCtlGetCall("ASSERT_CTL_FAIL_ON", type, directiveType) + "))"s,
-        1};
-}
-
 static AstIf* newPassOnIf(FileLine* flp, AstNodeExpr* firep, AstNodeStmt* bodyp, VAssertType type,
                           VAssertDirectiveType directiveType, bool vacuous) {
     AstNodeExpr* const condp
         = new AstLogAnd{flp, firep, assertPassOnCond(flp, type, directiveType, vacuous)};
-    AstIf* const ifp = new AstIf{flp, condp, bodyp};
-    ifp->isBoundsCheck(true);
-    ifp->user1(true);
-    return ifp;
-}
-
-static AstNodeStmt* newIfAssertFailOn(AstNodeStmt* bodyp, VAssertDirectiveType directiveType,
-                                      VAssertType type) {
-    FileLine* const flp = bodyp->fileline();
-    AstNodeExpr* const condp = assertFailOnCond(flp, type, directiveType);
     AstIf* const ifp = new AstIf{flp, condp, bodyp};
     ifp->isBoundsCheck(true);
     ifp->user1(true);
@@ -3106,7 +3087,6 @@ class AssertNfaVisitor final : public VNVisitor {
 
     // Install pass-action gating and replay simultaneous per-thread failures.
     void attachActionHandlers(AstAssert* const assertp, AstNodeExpr* matchExprp,
-                              AstSenTree* const threadFailReplaySenTreep,
                               AstNodeExpr* const threadFailCountp) {
         // Gate pass handler on match to prevent vacuous-pass firings.
         if (matchExprp) {
@@ -3125,35 +3105,31 @@ class AssertNfaVisitor final : public VNVisitor {
         }
 
         if (threadFailCountp) {
-            UASSERT_OBJ(threadFailReplaySenTreep, assertp,
-                        "Thread fail count missing sensitivity tree");
             AstNodeStmt* const failsp = assertp->failsp();
             FileLine* const flp = assertp->fileline();
-            // IEEE 1800-2023 16.12 requires one action-block evaluation per failed
-            // thread. AstAssert handles the first, so replay the rest here.
+            // IEEE 1800-2023 16.12 requires one action-block evaluation per failed thread. The
+            // fail action repeats itself for the rest, counted before any action can change it.
             AstVar* const remainingFailCountVarp
                 = new AstVar{flp, VVarType::MODULETEMP, m_failCountNames.get(""),
                              m_modp->findBasicDType(VBasicDTypeKwd::UINT32)};
             remainingFailCountVarp->lifetime(VLifetime::STATIC_EXPLICIT);
             m_modp->addStmtsp(remainingFailCountVarp);
-            AstNodeStmt* const replayStmtsp = new AstAssign{
-                flp, new AstVarRef{flp, remainingFailCountVarp, VAccess::WRITE}, threadFailCountp};
             AstLoop* const replayLoopp = new AstLoop{flp};
             replayLoopp->addStmtsp(new AstLoopTest{
                 flp, replayLoopp,
                 new AstGt{flp, new AstVarRef{flp, remainingFailCountVarp, VAccess::READ},
                           newTypedConstp(flp, remainingFailCountVarp->dtypep(), 1)}});
-            replayLoopp->addStmtsp(newIfAssertFailOn(failsp->cloneTree(true), assertp->directive(),
-                                                     assertp->userType()));
+            replayLoopp->addStmtsp(failsp->cloneTree(true));
             AstSub* const decrementedFailCountp
                 = new AstSub{flp, new AstVarRef{flp, remainingFailCountVarp, VAccess::READ},
                              newTypedConstp(flp, remainingFailCountVarp->dtypep(), 1)};
             replayLoopp->addStmtsp(
                 new AstAssign{flp, new AstVarRef{flp, remainingFailCountVarp, VAccess::WRITE},
                               decrementedFailCountp});
-            replayStmtsp->addNext(replayLoopp);
-            m_modp->addStmtsp(
-                newAssertAlways(flp, VAlwaysKwd::ALWAYS, threadFailReplaySenTreep, replayStmtsp));
+            assertp->prependFailsp(
+                new AstAssign{flp, new AstVarRef{flp, remainingFailCountVarp, VAccess::WRITE},
+                              threadFailCountp});
+            assertp->addFailsp(replayLoopp);
         }
     }
 
@@ -3166,8 +3142,8 @@ class AssertNfaVisitor final : public VNVisitor {
 
     // Takes ownership of outputp, and of matchp, matchCountp and threadFailCountp if non-null
     void finishDirective(AstNodeCoverOrAssert* assertp, const PropertyParts& parts,
-                         AstSenTree* senTreep, AstNodeExpr* outputp, AstNodeExpr* matchp,
-                         AstNodeExpr* matchCountp, AstNodeExpr* threadFailCountp) {
+                         AstNodeExpr* outputp, AstNodeExpr* matchp, AstNodeExpr* matchCountp,
+                         AstNodeExpr* threadFailCountp) {
         AstNodeExpr* outputExprp = outputp;
         FileLine* const flp = assertp->fileline();
         AstPropSpec* const propp = VN_AS(assertp->propp(), PropSpec);
@@ -3183,9 +3159,7 @@ class AssertNfaVisitor final : public VNVisitor {
         if (splitsImplicationPasssp(assertp, parts)) {
             splitImplicationPassActions(assertAssertp, parts, matchp);
         } else {
-            attachActionHandlers(assertAssertp, matchp,
-                                 threadFailCountp ? senTreep->cloneTree(false) : nullptr,
-                                 threadFailCountp);
+            attachActionHandlers(assertAssertp, matchp, threadFailCountp);
         }
 
         AstNode* const innerPropp = propp->propp();
@@ -3436,7 +3410,7 @@ class AssertNfaVisitor final : public VNVisitor {
         AstNodeExpr* const outputExprp = m_loweringp->assembleResult(
             assertp, negated, result.finalCondp, signals, needMatch ? &matchExprp : nullptr);
         if (result.finalCondp && !result.finalCondp->backp()) pushDeletep(result.finalCondp);
-        finishDirective(assertp, parts, senTreep, outputExprp, matchExprp, signals.matchCountp,
+        finishDirective(assertp, parts, outputExprp, matchExprp, signals.matchCountp,
                         signals.threadFailCountp);
         VL_DO_DANGLING(pushDeletep(senTreep), senTreep);
 

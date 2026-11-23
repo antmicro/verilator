@@ -16,8 +16,8 @@ module t;
   bit [6:0] mode;
   int fail[5];
   time fail_time[5];
-  bit clk2, reset2;
-  int fail2;
+  bit clk2, reset2, b = 1, stop;
+  int fail2, fail2_multi, fail2_stop;
   bit start, a, hi = 1, reset3, hold;
   int fail3[3];
   time fail3_time[3];
@@ -56,6 +56,15 @@ module t;
   end
   assert property (@(posedge clk2) disable iff (reset2) 0 ##1 1)
   else fail2++;
+  // Both the pending and the new attempt would fail at the tick where the disable rises.
+  assert property (@(posedge clk2) disable iff (reset2) b [* 2])
+  else fail2_multi++;
+  // Both attempts failing on the same tick report, though the first fail action disables them.
+  assert property (@(posedge clk2) disable iff (stop) b [* 2])
+  else begin
+    fail2_stop++;
+    stop = 1;
+  end
 
   assert property (@(posedge clk) disable iff (reset3) start |-> ##[1:3] 0)
   else begin
@@ -109,12 +118,15 @@ module t;
     #1;
     `checkd(fail2, 1);
     clk2 = 0;
+    b = 0;
     // The disable rises in the same time step as the clock edge.
     #1;
     reset2 = 1;
     clk2 = 1;
     #1;
     `checkd(fail2, 1);
+    `checkd(fail2_multi, 0);
+    `checkd(fail2_stop, 2);
     // Start one attempt, then abort it after the left-hand sides of the
     // and/intersect covers have matched.
     @(negedge clk);

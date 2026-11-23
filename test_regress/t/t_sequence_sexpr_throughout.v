@@ -242,8 +242,8 @@ module t (
       `checkd(count_fail15_ref, 7);
       `checkd(count_fail16, 6);
       `checkd(count_fail16_ref, 6);
-      `checkd(count_fail17, 50);
-      `checkd(count_fail17_ref, 50);
+      `checkd(count_fail17, 49);
+      `checkd(count_fail17_ref, 49);
       `checkd(count_fail18, 51);
       `checkd(count_fail18_ref, 51);
       `checkd(count_fail19, 45);

@@ -93,6 +93,7 @@ class EmitCImp final : public EmitCFunc {
                     putns(varp, "const ");
                     emitVarDefn(varp);
                     puts(";\n");
+                    splitSizeInc(varp);
                 }
             }
         }
@@ -239,6 +240,7 @@ class EmitCImp final : public EmitCFunc {
             puts("(void)first;  // Prevent unused variable warning\n");
             puts(modName + "__" + protect("_configure_coverage") + "(this, first);\n");
             puts("}\n");
+            splitSizeInc(AstNode::INSTR_COUNT_CALL);
         }
     }
     void emitCoverageImp() {
@@ -247,6 +249,7 @@ class EmitCImp final : public EmitCFunc {
         // arguments.
         if (v3Global.opt.coverage()) {
             openCommonImpFile();
+            splitSizeInc(AstNode::INSTR_COUNT_CALL);
             puts("\n// Coverage\n");
             puts("void " + EmitCUtil::prefixNameProtect(m_modp) + "::__vlCoverInsert(");
             puts(v3Global.opt.threads() > 1 ? "std::atomic<uint32_t>" : "uint32_t");
@@ -288,6 +291,7 @@ class EmitCImp final : public EmitCFunc {
         }
         if (v3Global.opt.coverageToggle()) {
             openCommonImpFile();
+            splitSizeInc(AstNode::INSTR_COUNT_CALL);
             puts("\n// Toggle Coverage\n");
             puts("void " + EmitCUtil::prefixNameProtect(m_modp) + "::__vlCoverToggleInsert(");
             puts("int begin, int end, bool ranged, ");
@@ -411,6 +415,7 @@ class EmitCImp final : public EmitCFunc {
                             for (int v = 0; v < vects; ++v) puts("[__Vi" + cvtToStr(v) + "]");
                             puts(";\n");
                             for (int v = 0; v < vects; ++v) puts("}\n");
+                            splitSizeInc(varp);
                         }
                     }
                 }

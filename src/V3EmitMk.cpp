@@ -77,6 +77,7 @@ private:
     const uint64_t m_totalScore;  // Sum of file scores
     const std::string m_groupFilePrefix;  // Prefix for output group filenames
     const uint64_t m_maxGroupBytes;  // Maximum sum of file sizes in an output group
+    int m_totalBucketsNum = v3Global.opt.outputGroups();  // Effective number of buckets
     std::vector<WorkList> m_workLists;  // Lists of small enough files
     std::unique_ptr<std::ofstream> m_logp;  // Dump file
     std::vector<WorkList*> m_concatenableListsByDescSize;  // Lists sorted by size, descending
@@ -189,20 +190,25 @@ private:
 
     // Called when the concatenation is aborted, creates an identity mapping
     bool fallbackNoGrouping(size_t inputFilesCount) {
-        const int totalBucketsNum = v3Global.opt.outputGroups();
         // Return early if there's nothing to do.
         bool groupingRedundant = false;
-        if (inputFilesCount < MIN_FILES_COUNT
-            && inputFilesCount <= static_cast<size_t>(totalBucketsNum)) {
-            UINFO(4, "File concatenation skipped: Too few files (" << m_inputFiles.size() << " < "
+        if (inputFilesCount < MIN_FILES_PER_BUCKET) {
+            UINFO(4, "File concatenation skipped: Too few files (" << inputFilesCount << " < "
+                                                                   << MIN_FILES_PER_BUCKET << ")");
+            groupingRedundant = true;
+        } else if (inputFilesCount < MIN_FILES_COUNT
+                   && inputFilesCount <= static_cast<size_t>(m_totalBucketsNum)) {
+            UINFO(4, "File concatenation skipped: Too few files (" << inputFilesCount << " < "
                                                                    << MIN_FILES_COUNT << ")");
             groupingRedundant = true;
-        }
-        if (inputFilesCount < (MIN_FILES_PER_BUCKET * totalBucketsNum)) {
-            UINFO(4, "File concatenation skipped: Too few files per bucket ("
-                         << m_inputFiles.size() << " < " << MIN_FILES_PER_BUCKET << " - "
-                         << totalBucketsNum << ")");
-            groupingRedundant = true;
+        } else if (inputFilesCount
+                   < (MIN_FILES_PER_BUCKET * static_cast<size_t>(m_totalBucketsNum))) {
+            const int clampedBuckets
+                = std::max(1, static_cast<int>(inputFilesCount / MIN_FILES_PER_BUCKET));
+            UINFO(4, "File concatenation: Clamping buckets from " << m_totalBucketsNum << " to "
+                                                                  << clampedBuckets << " for "
+                                                                  << inputFilesCount << " files");
+            m_totalBucketsNum = clampedBuckets;
         }
         if (!groupingRedundant) return false;
 
@@ -216,7 +222,7 @@ private:
     void createWorkLists() {
         // Create initial Work Lists.
 
-        const int totalBucketsNum = v3Global.opt.outputGroups();
+        const int totalBucketsNum = m_totalBucketsNum;
         // Input files with a score exceeding this value are excluded from concatenation.
         const uint64_t concatenableFileMaxScore = m_totalScore / totalBucketsNum / 2;
 
@@ -250,7 +256,7 @@ private:
     void assignBuckets(uint64_t concatenableFilesTotalScore) {
         // Assign buckets to lists
 
-        const size_t totalBucketsNum = v3Global.opt.outputGroups();
+        const size_t totalBucketsNum = static_cast<size_t>(m_totalBucketsNum);
 
         // More concatenable lists than buckets. Exclude lists with lowest number of files.
         // Does not happen very often due to files being already filtered out by comparison of
@@ -294,12 +300,19 @@ private:
         V3Stats::addStat("Concatenation ideal bucket score", idealBucketScore);
 
         if (m_logp) *m_logp << "Buckets assigned to Work Lists:\n";
-        int availableBuckets = v3Global.opt.outputGroups();
+        int availableBuckets = m_totalBucketsNum;
+        uint64_t remainingTotalScore = concatenableFilesTotalScore;
         for (WorkList* listp : m_concatenableListsByDescSize) {
-            if (availableBuckets > 0 && idealBucketScore > 0) {
-                listp->m_bucketsNum = std::min(
-                    availableBuckets, std::max<int>(1, listp->m_totalScore / idealBucketScore));
+            if (availableBuckets > 0 && remainingTotalScore > 0) {
+                const uint64_t targetBuckets
+                    = (listp->m_totalScore * availableBuckets + remainingTotalScore / 2)
+                      / remainingTotalScore;
+                listp->m_bucketsNum = std::min(availableBuckets,
+                                               std::max<int>(1, static_cast<int>(targetBuckets)));
                 availableBuckets -= listp->m_bucketsNum;
+                remainingTotalScore = (remainingTotalScore > listp->m_totalScore)
+                                          ? (remainingTotalScore - listp->m_totalScore)
+                                          : 0;
                 if (m_logp)
                     *m_logp << "+ [" << std::setw(2) << listp->m_bucketsNum << "] Work List #"
                             << listp->m_dbgId << '\n';
@@ -329,13 +342,17 @@ private:
                 continue;
             }
 
-            // Ideal bucket score limited to buckets and score of the current Work List.
-            const uint64_t listIdealBucketScore = list.m_totalScore / list.m_bucketsNum;
+            uint64_t remainingScore = list.m_totalScore;
 
             std::vector<std::vector<const FilenameWithScore*>> buckets;
             auto fileIt = list.m_files.cbegin();
             for (int i = 0; i < list.m_bucketsNum; ++i) {
                 std::vector<const FilenameWithScore*> bucket;
+                // Ideal bucket score recomputed from remaining score and remaining buckets so
+                // undershoots/overshoots do not accumulate into the final bucket.
+                const uint64_t listIdealBucketScore
+                    = remainingScore / static_cast<uint64_t>(list.m_bucketsNum - i);
+
                 uint64_t bucketScore = 0;
 
                 for (; fileIt != list.m_files.cend(); ++fileIt) {
@@ -352,6 +369,8 @@ private:
                         break;
                     }
                 }
+                remainingScore
+                    = (remainingScore > bucketScore) ? (remainingScore - bucketScore) : 0;
 
                 // Most likely no bucket will be empty in normal situations. If it happen the
                 // bucket will just be dropped, as it creates no output.
@@ -422,9 +441,8 @@ private:
         UINFO(5, "Number of input files: " << m_inputFiles.size());
         UINFO(5, "Total score: " << m_totalScore);
 
-        const int totalBucketsNum = v3Global.opt.outputGroups();
-        UINFO(5, "Number of buckets: " << totalBucketsNum);
-        UASSERT(totalBucketsNum > 0, "More than 0 buckets required");
+        UINFO(5, "Number of buckets: " << m_totalBucketsNum);
+        UASSERT(m_totalBucketsNum > 0, "More than 0 buckets required");
 
         if (fallbackNoGrouping(m_inputFiles.size())) return;
 

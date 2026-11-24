@@ -9,11 +9,10 @@
 
 import vltest_bootstrap
 
-test.scenarios('vlt')
+test.scenarios('simulator')
 
-test.lint(fails=True, expect_filename=test.golden_filename)
-test.lint(fails=True,
-          verilator_flags2=['+define+STATIC'],
-          expect_filename=test.golden_filename.replace('.out', '_static.out'))
+test.compile(verilator_flags2=['--binary'])
+
+test.execute()
 
 test.passes()

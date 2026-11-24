@@ -9,7 +9,9 @@
 
 import vltest_bootstrap
 
-test.scenarios('simulator')
-test.compile(verilator_flags2=['--binary'])
-test.execute()
+test.scenarios('vlt')
+test.top_filename = "t/t_class_owner_unsup.v"
+
+test.lint(fails=True, verilator_flags2=['+define+STATIC'], expect_filename=test.golden_filename)
+
 test.passes()

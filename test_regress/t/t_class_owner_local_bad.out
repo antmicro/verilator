@@ -1,0 +1,16 @@
+%Error-ENCAPSULATED: t/t_class_owner_local_bad.v:15:8: 'n' is hidden as 'local' within this context (IEEE 1800-2023 8.18)
+                                                     : ... note: In instance 't.u2'
+   15 |     C::n = 1;
+      |        ^
+                     t/t_class_owner_local_bad.v:15:8: ... Location of definition
+    9 |     local static int n;
+      |                      ^
+                     ... For error description see https://verilator.org/warn/ENCAPSULATED?v=latest
+%Error-ENCAPSULATED: t/t_class_owner_local_bad.v:16:24: 'f' is hidden as 'protected' within this context (IEEE 1800-2023 8.18)
+                                                      : ... note: In instance 't.u2'
+   16 |     $display("%0d", C::f());
+      |                        ^
+                     t/t_class_owner_local_bad.v:16:24: ... Location of definition
+   10 |     protected static function int f();
+      |                                   ^
+%Error: Exiting due to

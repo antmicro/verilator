@@ -9,7 +9,10 @@
 
 import vltest_bootstrap
 
-test.scenarios('vlt_all')
-test.compile(verilator_flags2=['--binary', '--hierarchical'])
+test.scenarios('simulator')
+
+test.compile(verilator_flags2=['--binary'])
+
 test.execute()
+
 test.passes()

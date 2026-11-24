@@ -1,0 +1,6 @@
+%Error-UNSUPPORTED: t/t_class_owner_xref_unsup.v:17:18: Unsupported: reference 'z' through 'g.s' in a class declared in a module with several instances
+                                                      : ... note: In instance 't.u2'
+   17 |       return g.s.z;
+      |                  ^
+                    ... For error description see https://verilator.org/warn/UNSUPPORTED?v=latest
+%Error: Exiting due to

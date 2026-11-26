@@ -184,10 +184,6 @@ public:
     };
 
 private:
-    // Baseline complexity score added to every emitted file to account for per-file
-    // compilation overhead when grouping files via --output-groups.
-    static constexpr size_t FILE_OVERHEAD_COMPLEXITY_SCORE = 250;
-
     // STATE
     V3OutCFile* m_ofp = nullptr;  // File handle to emit to
     AstCFile* m_cfilep = nullptr;  // Current AstCFile being emitted
@@ -261,7 +257,7 @@ public:
     void closeOutputFile() {
         UASSERT(m_ofp, "No currently open output file");
         VL_DO_CLEAR(delete m_ofp, m_ofp = nullptr);
-        m_cfilep->complexityScore(m_splitSize + FILE_OVERHEAD_COMPLEXITY_SCORE);
+        m_cfilep->complexityScore(m_splitSize);
         m_cfilep = nullptr;
     }
 

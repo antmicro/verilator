@@ -74,6 +74,49 @@ public:
 
 private:
     // METHODS
+    // Whether the process itself has a timing control, not counting forked processes
+    static bool hasTimingControl(const AstNode* nodep) {
+        for (; nodep; nodep = nodep->nextp()) {
+            if (nodep->isTimingControl()) return true;
+            if (VN_IS(nodep, Fork)) continue;
+            if (hasTimingControl(nodep->op1p()) || hasTimingControl(nodep->op2p())
+                || hasTimingControl(nodep->op3p()) || hasTimingControl(nodep->op4p())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Sensitivity of 'always @*' (IEEE 1800-2023 9.4.2.2): ET_CHANGED items for the variables
+    // read in the statement, excluding variables declared in it and identifiers only in event or
+    // wait expressions. Returns nullptr if there are none.
+    static AstSenItem* comboStarSenItems(AstAlways* nodep) {
+        std::unordered_set<const AstVar*> locals;
+        nodep->foreach([&](const AstVar* varp) { locals.insert(varp); });
+        std::unordered_set<const AstNodeVarRef*> excluded;
+        const auto exclude = [&](const AstNode* exprp) {
+            if (exprp) exprp->foreach([&](const AstNodeVarRef* refp) { excluded.insert(refp); });
+        };
+        nodep->foreach([&](const AstEventControl* ctrlp) { exclude(ctrlp->sentreep()); });
+        nodep->foreach([&](const AstWait* waitp) { exclude(waitp->condp()); });
+
+        AstSenItem* itemsp = nullptr;
+        std::set<std::pair<const AstVar*, std::string>> seen;
+        nodep->stmtsp()->foreachAndNext([&](AstNodeVarRef* refp) {
+            if (!refp->access().isReadOrRW() || locals.count(refp->varp())
+                || excluded.count(refp)) {
+                return;
+            }
+            const AstVarXRef* const xrefp = VN_CAST(refp, VarXRef);
+            if (!seen.emplace(refp->varp(), xrefp ? xrefp->dotted() : "").second) return;
+            AstNodeVarRef* const newp = refp->cloneTree(false);
+            newp->access(VAccess::READ);
+            itemsp = AstNode::addNext(
+                itemsp, new AstSenItem{refp->fileline(), VEdgeType::ET_CHANGED, newp});
+        });
+        return itemsp;
+    }
+
     void editDType(AstNode* nodep) {
         // Called by every visitor. Edit dtypes for this node, also check for some warnings
         nodep->dtypep(editOneDType(nodep->dtypep()));
@@ -262,8 +305,20 @@ private:
         // As have not optimized SenTrees yet, an 'always .*' will be on first and only SenItem
         if (nodep->sentreep() && nodep->sentreep()->sensesp()
             && nodep->sentreep()->sensesp()->isComboStar()) {
-            const bool noReads = nodep->forall(
-                [&](const AstNodeVarRef* refp) { return !refp->access().isReadOrRW(); });
+            // With timing controls it cannot be combinational logic, make the sensitivity
+            // explicit. Otherwise V3Active schedules it as combinational logic.
+            AstSenItem* itemsp = nullptr;
+            const bool timing
+                = v3Global.opt.timing().isSetTrue() && hasTimingControl(nodep->stmtsp());
+            if (timing) itemsp = comboStarSenItems(nodep);
+            const bool noReads
+                = timing ? !itemsp : nodep->forall([&](const AstNodeVarRef* refp) {
+                      return !refp->access().isReadOrRW();
+                  });
+            if (itemsp) {
+                pushDeletep(nodep->sentreep()->sensesp()->unlinkFrBack());
+                nodep->sentreep()->addSensesp(itemsp);
+            }
             if (noReads) {
                 nodep->v3warn(ALWNEVER, "'always @*' will never execute as expression list is "
                                         "empty (no variables read)\n"

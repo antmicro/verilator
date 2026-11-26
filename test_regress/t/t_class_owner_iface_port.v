@@ -13,23 +13,20 @@ interface ifc;
   modport mp(input v, output w, import getv);
 endinterface
 
-module sub;
-  int s;
-  function int gets();
-    return s;
-  endfunction
+module holder;
+  ifc concrete ();
 endmodule
 
 module m (
     ifc p,
     ifc.mp q
 );
-  sub child ();
+  holder child ();
+  ifc direct ();
+  if (1) begin : g
+    ifc inblk ();
+  end
   class C;
-    int at_new;
-    function new();
-      at_new = p.v;
-    endfunction
     function int get();
       return p.v;
     endfunction
@@ -45,9 +42,15 @@ module m (
     function int getf();
       return p.getv();
     endfunction
-    // Child instance
-    function int getc();
-      return child.s + child.gets();
+    // Interface instance in a child module
+    function virtual ifc getc();
+      return child.concrete;
+    endfunction
+    function virtual ifc getd();
+      return direct;
+    endfunction
+    function virtual ifc getg();
+      return g.inblk;
     endfunction
   endclass
   C c = new;
@@ -63,9 +66,14 @@ module t;
       .p(i2),
       .q(j2)
   );
+  virtual ifc vc;
   initial begin
-    u1.child.s = 5;
-    u2.child.s = 6;
+    u1.child.concrete.v = 5;
+    u2.child.concrete.v = 6;
+    u1.direct.v = 7;
+    u2.direct.v = 8;
+    u1.g.inblk.v = 9;
+    u2.g.inblk.v = 10;
     #1;
     i1.v = 1;
     i2.v = 2;
@@ -84,8 +92,18 @@ module t;
     if (j2.w != 21) $stop;
     if (u1.c.getf() != 1) $stop;
     if (u2.c.getf() != 2) $stop;
-    if (u1.c.getc() != 10) $stop;
-    if (u2.c.getc() != 12) $stop;
+    vc = u1.c.getc();
+    if (vc.v != 5) $stop;
+    vc = u2.c.getc();
+    if (vc.v != 6) $stop;
+    vc = u1.c.getd();
+    if (vc.v != 7) $stop;
+    vc = u2.c.getd();
+    if (vc.v != 8) $stop;
+    vc = u1.c.getg();
+    if (vc.v != 9) $stop;
+    vc = u2.c.getg();
+    if (vc.v != 10) $stop;
     $write("*-* All Finished *-*\n");
     $finish;
   end

@@ -51,6 +51,7 @@ class BeginVisitor final : public VNVisitor {
     std::vector<AstMemberRef*> m_paramMemberRefps;  // Member references to parameters
     std::vector<AstNodeFTaskRef*> m_ftaskRefps;  // References to tasks
     std::vector<AstIfaceRefDType*> m_ifaceRefDTypeps;  // Interface types of cells
+    std::vector<AstMemberRef*> m_ifaceMemberRefps;  // Member references to interface cells
 
     // STATE - for current visit position (use VL_RESTORER)
     AstNodeModule* m_modp = nullptr;  // Current module
@@ -357,6 +358,7 @@ class BeginVisitor final : public VNVisitor {
     void visit(AstMemberRef* nodep) override {
         if (nodep->user1SetOnce()) return;
         if (nodep->varp()->isParam()) m_paramMemberRefps.push_back(nodep);
+        if (nodep->varp()->isIfaceRef()) m_ifaceMemberRefps.push_back(nodep);
         iterateChildren(nodep);
     }
     void visit(AstNodeFTaskRef* nodep) override {
@@ -421,6 +423,12 @@ class BeginVisitor final : public VNVisitor {
         for (AstNodeFTaskRef* const refp : m_ftaskRefps) refp->name(refp->taskp()->name());
         for (AstIfaceRefDType* const dtypep : m_ifaceRefDTypeps) {
             dtypep->cellName(dtypep->cellp()->name());
+        }
+        // Linked to the __Viftop variable, named as the cell
+        for (AstMemberRef* const refp : m_ifaceMemberRefps) {
+            const AstIfaceRefDType* const dtypep
+                = VN_CAST(refp->varp()->dtypep()->skipRefp(), IfaceRefDType);
+            if (dtypep && dtypep->cellp()) refp->name(dtypep->cellp()->name());
         }
     }
 

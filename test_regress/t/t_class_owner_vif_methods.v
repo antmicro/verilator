@@ -4,11 +4,21 @@
 // SPDX-FileCopyrightText: 2026 Antmicro
 // SPDX-License-Identifier: CC0-1.0
 
+// Declared outside the module
+virtual class Ext;
+  int seen;
+  function new();
+    seen = get();  // Virtual call, reads x of the instance
+  endfunction
+  pure virtual function int get();
+endclass
+
 interface ifc;
   int x;
   int ctors;
   class Base;
     int b;
+    int init = x + 100;  // Initializer reads x
     function new(int arg);
       b = arg + x;
       ++ctors;
@@ -21,8 +31,18 @@ interface ifc;
     endfunction
   endclass
   class Derived extends Base;
+    // Nested class
+    class N;
+      function int get();
+        return x;
+      endfunction
+    endclass
+    int y = x;
+    int z;
+    N n = new;
     function new(int arg);
       super.new(arg + x);
+      z = y + init;
     endfunction
     function int helper(int k);
       int tmp;
@@ -43,16 +63,34 @@ interface ifc;
   endfunction
 endinterface
 
+module m;
+  int x;
+  class D extends Ext;
+    function int get();
+      return x;
+    endfunction
+  endclass
+  D d;
+  function void make();
+    d = new;
+  endfunction
+endmodule
+
 module t;
   ifc i1 (), i2 ();
+  m u1 (), u2 ();
   virtual ifc v;
   initial begin
     i1.x = 1;
     i2.x = 2;
+    u1.x = 1;
+    u2.x = 2;
     i1.d = new(5);
     i2.d = new(6);
     i1.make();
     i2.make();
+    u1.make();
+    u2.make();
     v = i2;
     #1;
     // b = arg + 2 * x
@@ -68,6 +106,16 @@ module t;
     if (v.d.calls() !== 102) $stop;
     if (i1.b.b !== 4) $stop;
     if (v.b.over() !== 20) $stop;
+    if (i1.d.init !== 101) $stop;
+    if (v.d.init !== 102) $stop;
+    if (i1.d.y !== 1) $stop;
+    if (v.d.y !== 2) $stop;
+    if (i1.d.z !== 102) $stop;
+    if (v.d.z !== 104) $stop;
+    if (i1.d.n.get() !== 1) $stop;
+    if (v.d.n.get() !== 2) $stop;
+    if (u1.d.seen !== 1) $stop;
+    if (u2.d.seen !== 2) $stop;
     $write("*-* All Finished *-*\n");
     $finish;
   end

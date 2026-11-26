@@ -17,6 +17,10 @@ package reg_pkg;
       T t = new;
       all.push_back(t);
     endfunction
+    static function T create();
+      T t = new;
+      return t;
+    endfunction
   endclass
 endpackage
 
@@ -44,6 +48,16 @@ module agent;
   end
 endmodule
 
+interface ifc;
+  int x;
+  class C;
+    function int get();
+      return x;
+    endfunction
+  endclass
+  typedef reg_pkg::registry#(C) reg_t;
+endinterface
+
 module t;
   int top_cfg = 7;
   class my_test extends reg_pkg::base_obj;
@@ -54,6 +68,7 @@ module t;
   // One instance: needs no instance reference
   typedef reg_pkg::registry#(my_test, "my_test") test_reg;
   agent a1 (), a2 ();
+  ifc i1 (), i2 ();
   initial begin
     a1.cfg = 11;
     a2.cfg = 22;
@@ -65,6 +80,11 @@ module t;
     if (reg_pkg::all[2].run() != 22) $stop;
     if (reg_pkg::all[3].run() != 22) $stop;
     if (reg_pkg::all[4].run() != 44) $stop;
+    i1.x = 1;
+    i2.x = 2;
+    // Static method of a specialization with C of each instance
+    if (i1.reg_t::create().get() != 1) $stop;
+    if (i2.reg_t::create().get() != 2) $stop;
     $write("*-* All Finished *-*\n");
     $finish;
   end

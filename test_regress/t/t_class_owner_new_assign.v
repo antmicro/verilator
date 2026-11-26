@@ -24,13 +24,23 @@ module leaf;
   C c;
 endmodule
 
+module consumer (
+    ifc p
+);
+  initial p.c = new;  // Constructed in the interface on the port
+  function int get();
+    return p.c.get();
+  endfunction
+endmodule
+
 module mid;
   leaf l ();
 endmodule
 
 module t;
   mid a (), b ();
-  ifc i1 (), i2 (), i3 (), i4 ();
+  ifc i1 (), i2 (), i3 (), i4 (), i5 (), i6 ();
+  consumer u1 (i5), u2 (i6);
   virtual ifc v;
   virtual ifc vs[2];
   initial begin
@@ -59,6 +69,12 @@ module t;
     vs[0].c = new;
     if (i3.c.get() != 13) $stop;
     if (i4.c.get() != 14) $stop;
+    // Through an interface port
+    i5.x = 15;
+    i6.x = 16;
+    #1;
+    if (u1.get() != 15) $stop;
+    if (u2.get() != 16) $stop;
     $write("*-* All Finished *-*\n");
     $finish;
   end

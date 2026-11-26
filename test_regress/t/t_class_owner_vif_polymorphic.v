@@ -11,7 +11,9 @@ package drv_pkg;
   endclass
 endpackage
 
-interface bus;
+interface bus (
+    input logic clk
+);
   int data;
   int writes;
   task write(int value);
@@ -26,6 +28,13 @@ interface bus;
     virtual function int sample();
       return data;
     endfunction
+    // Writes after suspensions
+    task send(int value);
+      @(posedge clk);
+      data = value;
+      @(posedge clk);
+      ++writes;
+    endtask
   endclass
   bus_driver drv = new;
   function drv_pkg::driver get_driver();
@@ -42,7 +51,9 @@ class agent;
 endclass
 
 module t;
-  bus b1 (), b2 ();
+  logic clk = 0;
+  always #5 clk = ~clk;
+  bus b1 (clk), b2 (clk);
   agent a1 = new, a2 = new;
   initial begin
     // Base class handles to objects of each interface instance
@@ -61,6 +72,14 @@ module t;
     if (a1.drv.sample() !== 10) $stop;
     if (a2.drv.sample() !== 21) $stop;
     if (a2.vif.drv.sample() !== 21) $stop;
+    fork
+      b1.drv.send(30);
+      b2.drv.send(40);
+    join
+    if (b1.data !== 30) $stop;
+    if (b1.writes !== 2) $stop;
+    if (b2.data !== 40) $stop;
+    if (b2.writes !== 3) $stop;
     $write("*-* All Finished *-*\n");
     $finish;
   end

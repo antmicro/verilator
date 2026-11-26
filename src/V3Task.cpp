@@ -760,7 +760,8 @@ class TaskVisitor final : public VNVisitor {
                             ownerp->fileline(), m_scopep, ownerp->dtypep(),
                             refp->taskp()->shortName() + "__" + portp->shortName() + "_owner");
                         beginp->addNextHere(connectPortMakeInAssign(ownerp, savedp, false));
-                        ownerp->replaceWith(new AstVarRef{pinp->fileline(), savedp, VAccess::READ});
+                        ownerp->replaceWith(
+                            new AstVarRef{pinp->fileline(), savedp, VAccess::READ});
                         pushDeletep(ownerp);
                         portp->user2p(memberp);
                     } else {

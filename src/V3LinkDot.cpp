@@ -4354,13 +4354,13 @@ class LinkDotResolveVisitor final : public VNVisitor {
             // (IEEE 1800-2023 6.18). A variable already in scope keeps the ordinary lookup.
             const VSymEnt* const paramp
                 = m_pinSymp ? m_pinSymp->findIdFlat(nodep->name()) : nullptr;
-            const VSymEnt* const visiblep
-                = paramp && VN_IS(paramp->nodep(), ParamTypeDType)
-                      ? m_curSymp->findIdFallback(refp->name())
-                      : nullptr;
+            const VSymEnt* const visiblep = paramp && VN_IS(paramp->nodep(), ParamTypeDType)
+                                                ? m_curSymp->findIdFallback(refp->name())
+                                                : nullptr;
             if (visiblep && VN_IS(visiblep->nodep(), Var)
                 && refp->fileline()->tokenNum() < visiblep->nodep()->fileline()->tokenNum()) {
-                const VSymEnt* const typep = findIdFallbackSkipMemberDType(m_curSymp, refp->name());
+                const VSymEnt* const typep
+                    = findIdFallbackSkipMemberDType(m_curSymp, refp->name());
                 if (typep && isTypeDecl(typep->nodep())) {
                     refp->replaceWith(new AstRefDType{refp->fileline(), refp->name()});
                     VL_DO_DANGLING(pushDeletep(refp), refp);
@@ -4502,8 +4502,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
             if (refp && !hasPartSelect && !path.empty()) {
                 string baddot;
                 VSymEnt* okSymp = nullptr;
-                VSymEnt* const scopep = m_statep->findDotted(
-                    nodep->fileline(), m_curSymp, path, baddot, okSymp, true);
+                VSymEnt* const scopep = m_statep->findDotted(nodep->fileline(), m_curSymp, path,
+                                                             baddot, okSymp, true);
                 if (scopep && !scopep->findIdFlat(refp->name())
                     && mayDeclareImplicit(scopep, refp->name())) {
                     return;

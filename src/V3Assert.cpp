@@ -1074,19 +1074,19 @@ class AssertVisitor final : public VNVisitor {
         // single-cycle assertion, sample the predicate before its history advances,
         // snapshot disable iff in Observed and execute its action in Reactive.
         const AstPropSpec* const specp = VN_CAST(nodep->propp(), PropSpec);
-        const bool reactive = sentreep && VN_IS(nodep, Assert) && specp && !specp->sequenceLowered()
-                              && !VN_IS(propExprp, PExpr);
+        const bool reactive = sentreep && VN_IS(nodep, Assert) && specp
+                              && !specp->sequenceLowered() && !VN_IS(propExprp, PExpr);
         if (reactive) {
             AstVar* const resultp
                 = newModuleTemp(flp, m_obsNames.get("Result"), nodep->findBitDType(), m_modp);
-            m_modp->addStmtsp(new AstAlways{
-                flp, VAlwaysKwd::ALWAYS, sentreep->cloneTree(false),
-                new AstAssign{flp, new AstVarRef{flp, resultp, VAccess::WRITE},
-                              VN_AS(propExprp, NodeExpr)}});
+            m_modp->addStmtsp(
+                new AstAlways{flp, VAlwaysKwd::ALWAYS, sentreep->cloneTree(false),
+                              new AstAssign{flp, new AstVarRef{flp, resultp, VAccess::WRITE},
+                                            VN_AS(propExprp, NodeExpr)}});
             propExprp = new AstVarRef{flp, resultp, VAccess::READ};
             if (disablep) {
-                AstVar* const offp
-                    = newModuleTemp(flp, m_obsNames.get("Disabled"), nodep->findBitDType(), m_modp);
+                AstVar* const offp = newModuleTemp(flp, m_obsNames.get("Disabled"),
+                                                   nodep->findBitDType(), m_modp);
                 m_modp->addStmtsp(new AstAlwaysObserved{
                     flp, sentreep->cloneTree(false),
                     new AstAssign{flp, new AstVarRef{flp, offp, VAccess::WRITE}, disablep}});
@@ -1802,7 +1802,8 @@ class AssertVisitor final : public VNVisitor {
             if (nodep->sentreep()) {
                 // Retain the assertion label and any enclosing named blocks for %m.
                 nodep->replaceWith(new AstAlwaysReactive{nodep->fileline(),
-                    nodep->sentreep()->unlinkFrBack(), nodep->stmtsp()->unlinkFrBackWithNext()});
+                                                         nodep->sentreep()->unlinkFrBack(),
+                                                         nodep->stmtsp()->unlinkFrBackWithNext()});
             } else {
                 nodep->unlinkFrBack();
             }

@@ -1107,8 +1107,8 @@ class ConstraintExprVisitor final : public VNVisitor {
 
     void createSolverArrayHandle(AstVar* const varp, AstClassRefDType* elemClassRefDtp,
                                  AstNodeModule* const classOrPackagep,
-                                 const bool isUnpackedClassRefArray,
-                                 const std::string& smtName, AstMemberRef* const memberRefp) const {
+                                 const bool isUnpackedClassRefArray, const std::string& smtName,
+                                 AstMemberRef* const memberRefp) const {
         FileLine* const fl = varp->fileline();
         AstClass* const elemClassp = elemClassRefDtp->classp();
         AstNodeModule* const varClassp = VN_AS(varp->user2p(), NodeModule);
@@ -1492,8 +1492,8 @@ class ConstraintExprVisitor final : public VNVisitor {
                 hasAssoc |= VN_IS(dtp, AssocArrayDType);
             }
             if (dtp && dtp->isCompound() && VN_IS(dtp, NodeUOrStructDType)) hasAssoc = false;
-            AstBegin* const initp = getInitp(varp, memberRefp,
-                                             structSelOrCMeth || foreignStatic || hasAssoc, classp);
+            AstBegin* const initp = getInitp(
+                varp, memberRefp, structSelOrCMeth || foreignStatic || hasAssoc, classp);
             if (m_nestedAccessp) {
                 AstStmtExpr* const writeVarStmtp = m_nestedAccessp->makeWriteVarStmt(varp, m_genp);
                 addRegistrationStmt(writeVarStmtp, initp);
@@ -3775,7 +3775,7 @@ class SolverSmtLowering final : public V3SolverLowering {
     static AstNodeExpr* newDistRangeSize(const AstInsideRange* irp, int width) {
         FileLine* const flp = irp->fileline();
         AstNodeExpr* const diffp = new AstSub{flp, irp->rhsp()->cloneTreePure(false),
-                                             irp->lhsp()->cloneTreePure(false)};
+                                              irp->lhsp()->cloneTreePure(false)};
         return new AstAdd{flp, new AstConst{flp, AstConst::WidthedValue{}, width, 1},
                           distResize(flp, diffp, width)};
     }
@@ -3816,8 +3816,8 @@ class SolverSmtLowering final : public V3SolverLowering {
         for (AstDistItem* const ditemp : distp->itemspList()) {
             const AstConst* const wp = VN_CAST(ditemp->weightp(), Const);
             if (wp && wp->isZero()) continue;
-            AstNodeExpr* weightExprp = distResize(fl, ditemp->weightp()->cloneTreePure(false),
-                                                 weightWidth);
+            AstNodeExpr* weightExprp
+                = distResize(fl, ditemp->weightp()->cloneTreePure(false), weightWidth);
             if (!ditemp->isWhole()) {
                 if (const AstInsideRange* const irp = VN_CAST(ditemp->rangep(), InsideRange)) {
                     weightExprp = new AstMul{fl, weightExprp, newDistRangeSize(irp, weightWidth)};
@@ -3854,9 +3854,9 @@ class SolverSmtLowering final : public V3SolverLowering {
                 && !bucket.weightExprp->exists([](const AstNodeVarRef* refp) {
                        return refp->varp()->rand().isRandomizable();
                    })) {
-                AstNeq* const nzp = new AstNeq{fl, bucket.weightExprp->cloneTreePure(false),
-                                               new AstConst{fl, AstConst::WidthedValue{},
-                                                           bucket.weightExprp->width(), 0}};
+                AstNeq* const nzp = new AstNeq{
+                    fl, bucket.weightExprp->cloneTreePure(false),
+                    new AstConst{fl, AstConst::WidthedValue{}, bucket.weightExprp->width(), 0}};
                 nzp->dtypeSetBit();
                 memberp = new AstLogAnd{fl, memberp, nzp};
                 memberp->user1(true);
@@ -4019,9 +4019,9 @@ class SolverSmtLowering final : public V3SolverLowering {
             const bool runtimeWeight
                 = bucket.weightExprp->exists([](const AstNodeVarRef*) { return true; });
             if (runtimeWeight) {
-                AstNeq* const nzp = new AstNeq{fl, bucket.weightExprp->cloneTreePure(false),
-                                               new AstConst{fl, AstConst::WidthedValue{},
-                                                           bucket.weightExprp->width(), 0}};
+                AstNeq* const nzp = new AstNeq{
+                    fl, bucket.weightExprp->cloneTreePure(false),
+                    new AstConst{fl, AstConst::WidthedValue{}, bucket.weightExprp->width(), 0}};
                 nzp->user1(true);
                 termp = new AstLogAnd{fl, termp, nzp};
                 termp->user1(true);
@@ -4194,8 +4194,7 @@ class SolverSmtLowering final : public V3SolverLowering {
             // Store totalWeight in temp var (evaluated once, used twice)
             const int distId = m_distNum++;
             const std::string totalName = "__Vdist_total" + cvtToStr(distId);
-            AstVar* const totalVarp
-                = new AstVar{fl, VVarType::BLOCKTEMP, totalName, weightDtp};
+            AstVar* const totalVarp = new AstVar{fl, VVarType::BLOCKTEMP, totalName, weightDtp};
             totalVarp->noSubst(true);
             totalVarp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
             totalVarp->funcLocal(true);
@@ -4206,21 +4205,19 @@ class SolverSmtLowering final : public V3SolverLowering {
 
             // bucketVar = (random() % totalWeight) + 1
             const std::string bucketName = "__Vdist_bucket" + cvtToStr(distId);
-            AstVar* const bucketVarp
-                = new AstVar{fl, VVarType::BLOCKTEMP, bucketName, weightDtp};
+            AstVar* const bucketVarp = new AstVar{fl, VVarType::BLOCKTEMP, bucketName, weightDtp};
             bucketVarp->noSubst(true);
             bucketVarp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
             bucketVarp->funcLocal(true);
             bucketVarp->isInternal(true);
             taskp->addDeclsp(bucketVarp);
 
-            AstNodeExpr* const drawp
-                = newDistDraw(new AstVarRef{fl, totalVarp, VAccess::READ}, weightBits, weightWidth);
+            AstNodeExpr* const drawp = newDistDraw(new AstVarRef{fl, totalVarp, VAccess::READ},
+                                                   weightBits, weightWidth);
             addStmt(new AstAssign{
                 fl, new AstVarRef{fl, bucketVarp, VAccess::WRITE},
-                new AstAdd{
-                    fl, new AstConst{fl, AstConst::WidthedValue{}, weightWidth, 1},
-                    drawp}});
+                new AstAdd{fl, new AstConst{fl, AstConst::WidthedValue{}, weightWidth, 1},
+                           drawp}});
 
             // Build cumulative sum expressions forward: cumSum[i] = w[0]+...+w[i]
             std::vector<AstNodeExpr*> cumSums;
@@ -4812,8 +4809,8 @@ public:
                 if (VN_IS(arrVarp->dtypep()->skipRefp(), AssocArrayDType)) continue;
                 FileLine* const fl = methodp->fileline();
                 bool wasCreated = false;
-                AstVar* const sizeVarp = createOrGetSizeVar(arrVarp, fl,
-                                                            methodp->findIntDType(), wasCreated);
+                AstVar* const sizeVarp
+                    = createOrGetSizeVar(arrVarp, fl, methodp->findIntDType(), wasCreated);
                 // arrVarp and sizeVarp may live in a base class when the
                 // array is inherited; route VarRefs through their declaring
                 // class so V3Scope can resolve them.

@@ -956,18 +956,18 @@ public:
             {
                 AstSenTree* const senTreep = beforeTrig.m_senTreep;
                 // Only touched words are read below; leave other words unmaterialized.
-                const auto emplaceAt
-                    = [&trigWordps, &usedTriggers](AstNodeExpr* const exprp, const size_t pos) {
-                          std::vector<AstNodeExpr*>& wordps
-                              = trigWordps[pos / TriggerKit::WORD_SIZE];
-                          if (wordps.empty()) wordps.resize(TriggerKit::WORD_SIZE);
-                          const size_t bit = pos % TriggerKit::WORD_SIZE;
-                          if (wordps[bit]) wordps[bit]->deleteTree();
-                          wordps[bit] = exprp;
-                          usedTriggers.insert(pos);
-                      };
+                const auto emplaceAt = [&trigWordps, &usedTriggers](AstNodeExpr* const exprp,
+                                                                    const size_t pos) {
+                    std::vector<AstNodeExpr*>& wordps = trigWordps[pos / TriggerKit::WORD_SIZE];
+                    if (wordps.empty()) wordps.resize(TriggerKit::WORD_SIZE);
+                    const size_t bit = pos % TriggerKit::WORD_SIZE;
+                    if (wordps[bit]) wordps[bit]->deleteTree();
+                    wordps[bit] = exprp;
+                    usedTriggers.insert(pos);
+                };
 
-                // Evaluate triggers in the sensitivity tree and others sharing their previous value.
+                // Evaluate triggers in the sensitivity tree and others sharing their previous
+                // value.
                 for (const AstSenItem* const itemp : senTreep->sensespList()) {
                     const size_t idx = m_trigKit.senItem2TrigIdx(itemp);
                     emplaceAt(m_senExprBuilder.build(itemp).first, idx);
@@ -1018,8 +1018,8 @@ public:
                 const auto& schedulers = schedIt->second;
                 m_statUsersVisited += schedulers.size();
                 for (AstNodeExpr* const schedp : schedulers) {
-                    AstCMethodHard* const callp = new AstCMethodHard{
-                        flp, schedp->cloneTree(false), VCMethod::SCHED_READY};
+                    AstCMethodHard* const callp
+                        = new AstCMethodHard{flp, schedp->cloneTree(false), VCMethod::SCHED_READY};
                     callp->dtypeSetVoid();
                     callp->addPinsp(new AstVarRef{flp, argpVscp, VAccess::READ});
                     ifp->addThensp(callp->makeStmt());

@@ -614,8 +614,12 @@ const char* AstAnd::widthMismatch() const VL_MT_STABLE {
 }
 AstAssertCtl::AstAssertCtl(FileLine* fl, VAssertCtlType ctlType, uint32_t assertType,
                            uint32_t directiveType, AstNodeExpr* levelp, AstNodeExpr* itemsp)
-    : AstAssertCtl{fl, new AstConst{fl, ctlType}, new AstConst{fl, assertType},
-                   new AstConst{fl, directiveType}, levelp, itemsp} {}
+    : AstAssertCtl{fl,
+                   new AstConst{fl, ctlType},
+                   new AstConst{fl, assertType},
+                   new AstConst{fl, directiveType},
+                   levelp,
+                   itemsp} {}
 AstAssertCtl::AstAssertCtl(FileLine* fl, AstNodeExpr* controlTypep, AstNodeExpr* assertTypesp,
                            AstNodeExpr* directiveTypep, AstNodeExpr* levelp, AstNodeExpr* itemsp)
     : ASTGEN_SUPER_AssertCtl(fl)

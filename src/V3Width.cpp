@@ -1618,8 +1618,8 @@ class WidthVisitor final : public VNVisitor {
             const bool withConstraint = m_withp && VN_IS(m_withp->exprp(), NodeConstraintItem);
             const AstNodeFTaskRef* const callp
                 = withConstraint ? VN_CAST(m_withp->backp(), NodeFTaskRef) : nullptr;
-            const bool scopeRandomize = callp && callp->classOrPackagep()
-                                        && callp->classOrPackagep()->name() == "std";
+            const bool scopeRandomize
+                = callp && callp->classOrPackagep() && callp->classOrPackagep()->name() == "std";
             const bool solverIndex
                 = (m_constraintp || withConstraint) && fromDtp->elemDTypep()->isIntegralOrPacked()
                   && V3Randomize::isRandomIndex(nodep->bitp(), scopeRandomize ? callp : nullptr);
@@ -1846,9 +1846,7 @@ class WidthVisitor final : public VNVisitor {
         if (!constp) return nullptr;
         const string elemName
             = memberp->name() + "__BRA__" + AstNode::encodeNumber(constp->toSInt()) + "__KET__";
-        if (!VN_IS(m_memberMap.findMember(ifacep, elemName), Cell)) {
-            return nullptr;
-        }
+        if (!VN_IS(m_memberMap.findMember(ifacep, elemName), Cell)) { return nullptr; }
         memberp->name(elemName);
         nodep->replaceWith(memberp->unlinkFrBack());
         VL_DO_DANGLING(pushDeletep(nodep), nodep);
@@ -6760,8 +6758,8 @@ class WidthVisitor final : public VNVisitor {
         AstDynArrayDType* const adtypep = VN_CAST(m_vup->dtypeNullSkipRefp(), DynArrayDType);
         if (!adtypep || !VN_IS(nodep->backp(), NodeAssign)) {
             if (!adtypep) {
-                nodep->v3error(
-                    "dynamic new() not expected in this context (data type must be dynamic array)");
+                nodep->v3error("dynamic new() not expected in this context (data type must be "
+                               "dynamic array)");
             } else {
                 nodep->v3error(
                     "dynamic new() not expected in this context (expected under an assign)");

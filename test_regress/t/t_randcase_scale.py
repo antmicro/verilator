@@ -18,12 +18,15 @@ test.top_filename = test.obj_dir + "/" + test.name + ".v"
 
 def generated_bytes(arms):
     with open(test.top_filename, "w", encoding="utf-8") as src:
-        src.write(f"module t(input bit clk, input int unsigned weights[{arms}], output int choice);\n")
+        src.write(
+            f"module t(input bit clk, input int unsigned weights[{arms}], output int choice);\n")
         src.write("  always @(posedge clk) randcase\n")
         for i in range(arms):
             src.write(f"    weights[{i}]: choice <= {i};\n")
         src.write("  endcase\nendmodule\n")
-    test.compile(verilator_flags2=['--output-split 0'], make_main=False, verilator_make_gmake=False)
+    test.compile(verilator_flags2=['--output-split 0'],
+                 make_main=False,
+                 verilator_make_gmake=False)
     return sum(os.path.getsize(name) for name in test.glob_some(test.obj_dir + "/*.cpp"))
 
 

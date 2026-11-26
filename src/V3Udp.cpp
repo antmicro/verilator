@@ -196,11 +196,11 @@ class UdpVisitor final : public VNVisitor {
         // edge- or level-sensitive. Test levels on input changes, not output changes.
         if (!nodep->udpIsCombo() && !edgetrigp) {
             // A change sensitivity on a constant fires once at initialization.
-            edgetrigp = new AstSenTree{fl, new AstSenItem{
-                fl, VEdgeType::ET_CHANGED, new AstConst{fl, AstConst::BitTrue{}}}};
+            edgetrigp = new AstSenTree{fl, new AstSenItem{fl, VEdgeType::ET_CHANGED,
+                                                          new AstConst{fl, AstConst::BitTrue{}}}};
             for (AstVar* const varp : m_inputVars) {
-                edgetrigp->addSensesp(new AstSenItem{
-                    fl, VEdgeType::ET_CHANGED, new AstVarRef{fl, varp, VAccess::READ}});
+                edgetrigp->addSensesp(new AstSenItem{fl, VEdgeType::ET_CHANGED,
+                                                     new AstVarRef{fl, varp, VAccess::READ}});
             }
         }
         AstNodeStmt* const assignp

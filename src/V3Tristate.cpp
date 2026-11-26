@@ -2651,7 +2651,8 @@ class TristateVisitor final : public TristateBaseVisitor {
             undrivenp = new AstAnd{fl, undrivenp, createPerBitPullConst(invarp)};
             orp = new AstOr{fl, orp, undrivenp};
 
-            AstVarRef* const targetp = new AstVarRef{fl, outvarp ? outvarp : invarp, VAccess::WRITE};
+            AstVarRef* const targetp
+                = new AstVarRef{fl, outvarp ? outvarp : invarp, VAccess::WRITE};
             AstAssignW* const assp = new AstAssignW{fl, targetp, orp};
             assp->user2Or(U2_BOTH);
             UINFOTREE(9, assp, "", "iface-lhsp-eqn");

@@ -445,18 +445,23 @@ void guardVpiDrivers(AstNetlist* netlistp, LogicClasses& logic, AstCFunc* initp)
             AstVarScope* const currentp = scopep->createTemp(name, targetp->dtypep());
             AstVarScope* const previousp = scopep->createTemp(name + "__prev", targetp->dtypep());
             AstVarScope* const validp = scopep->createTemp(name + "__valid", 1);
-            const auto rd = [flp](AstVarScope* vp) { return new AstVarRef{flp, vp, VAccess::READ}; };
-            const auto wr = [flp](AstVarScope* vp) { return new AstVarRef{flp, vp, VAccess::WRITE}; };
-            initp->addStmtsp(new AstAssign{flp, wr(validp), new AstConst{flp, AstConst::BitFalse{}}});
+            const auto rd
+                = [flp](AstVarScope* vp) { return new AstVarRef{flp, vp, VAccess::READ}; };
+            const auto wr
+                = [flp](AstVarScope* vp) { return new AstVarRef{flp, vp, VAccess::WRITE}; };
+            initp->addStmtsp(
+                new AstAssign{flp, wr(validp), new AstConst{flp, AstConst::BitFalse{}}});
 
-            AstAssign* const evalp = new AstAssign{flp, wr(currentp), assignp->rhsp()->unlinkFrBack()};
+            AstAssign* const evalp
+                = new AstAssign{flp, wr(currentp), assignp->rhsp()->unlinkFrBack()};
             assignp->rhsp(rd(currentp));
             assignp->replaceWith(evalp);
-            AstIf* const changedp = new AstIf{
-                flp, new AstLogOr{flp, new AstLogNot{flp, rd(validp)},
-                                  new AstNeq{flp, rd(previousp), rd(currentp)}}};
+            AstIf* const changedp
+                = new AstIf{flp, new AstLogOr{flp, new AstLogNot{flp, rd(validp)},
+                                              new AstNeq{flp, rd(previousp), rd(currentp)}}};
             evalp->addNextHere(changedp);
-            changedp->addThensp(new AstAssign{flp, wr(validp), new AstConst{flp, AstConst::BitTrue{}}});
+            changedp->addThensp(
+                new AstAssign{flp, wr(validp), new AstConst{flp, AstConst::BitTrue{}}});
             changedp->addThensp(new AstAssign{flp, wr(previousp), rd(currentp)});
             changedp->addThensp(assignp);
         }
@@ -764,8 +769,8 @@ void createEval(AstNetlist* netlistp,  //
             AstNodeStmt* workp = util::callVoidFunc(reactKit.m_funcp);
             // Apply nonblocking updates from Reactive after all of its actions have run.
             if (AstVarScope* const queuep = netlistp->nbaQueuep()) {
-                workp = AstNode::addNext(workp, new AstNbaCommit{
-                    flp, new AstVarRef{flp, queuep, VAccess::READWRITE}});
+                workp = AstNode::addNext(
+                    workp, new AstNbaCommit{flp, new AstVarRef{flp, queuep, VAccess::READWRITE}});
             }
             // Clear the 'react' triggers
             workp = AstNode::addNext(workp, trigKit.newClearCall(reactKit.m_vscp));

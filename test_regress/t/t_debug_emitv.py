@@ -41,8 +41,9 @@ for output_v in output_vs:
         return match.group(1) + str(hashes.setdefault(value, len(hashes)))
 
     normalized = output_v + ".normalized"
-    test.file_sed(output_v, normalized, lambda s: re.sub(
-        r'(__V(?:enum|seqEvent)_h)([0-9a-f]{8})(?=__\d+)', normalize_hash, s))
+    test.file_sed(
+        output_v, normalized,
+        lambda s: re.sub(r'(__V(?:enum|seqEvent)_h)([0-9a-f]{8})(?=__\d+)', normalize_hash, s))
     test.files_identical(normalized, test.golden_filename)
 
 if test.verbose:

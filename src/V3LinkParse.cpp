@@ -1119,9 +1119,10 @@ class LinkParseVisitor final : public VNVisitor {
                     nodep->rhsp()->v3warn(
                         SUPERNFIRST, "'super.new' must be first statement in a 'function new' "
                                      "(IEEE 1800-2023 8.15)\n"
-                        << nodep->rhsp()->warnContextPrimary() << scanp->warnOther()
-                        << "... Location of earlier statement\n"
-                        << scanp->warnContextSecondary());
+                                         << nodep->rhsp()->warnContextPrimary()
+                                         << scanp->warnOther()
+                                         << "... Location of earlier statement\n"
+                                         << scanp->warnContextSecondary());
                 }
             }
         }

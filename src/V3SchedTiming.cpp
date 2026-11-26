@@ -233,9 +233,9 @@ class TransformForksVisitor final : public VNVisitor {
                     = new AstVarScope{newvarp->fileline(), funcp->scopep(), newvarp};
                 funcp->scopep()->addVarsp(newvscp);
                 vscp->user2p(newvscp);
-                callp->addArgsp(
-                    new AstVarRef{refp->fileline(), vscp,
-                                  passByValue || varp->isConstRef() ? VAccess::READ : VAccess::READWRITE});
+                callp->addArgsp(new AstVarRef{
+                    refp->fileline(), vscp,
+                    passByValue || varp->isConstRef() ? VAccess::READ : VAccess::READWRITE});
             }
             AstVarScope* const newvscp = VN_AS(vscp->user2p(), VarScope);
             refp->varScopep(newvscp);

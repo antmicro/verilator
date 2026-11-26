@@ -32,7 +32,8 @@ class VMemberMap;
 
 class V3Randomize final {
 public:
-    static bool isRandomIndex(const AstNodeExpr* indexp, const AstNodeFTaskRef* scopeCallp = nullptr);
+    static bool isRandomIndex(const AstNodeExpr* indexp,
+                              const AstNodeFTaskRef* scopeCallp = nullptr);
     static bool argContainsVar(const AstNodeFTaskRef* callp, const AstVar* varp);
     static void randomizeNetlist(AstNetlist* nodep) VL_MT_DISABLED;
 

@@ -1159,8 +1159,7 @@ class CaptureVisitor final : public VNVisitor {
 
 public:
     explicit CaptureVisitor(AstNode* const nodep, AstNodeModule* callerp, AstClass* const targetp,
-                            bool randomizesThis = false,
-                            bool selfTarget = false)
+                            bool randomizesThis = false, bool selfTarget = false)
         : m_callerp{callerp}
         , m_targetp{targetp}
         , m_selfTarget{selfTarget}
@@ -1228,7 +1227,8 @@ class RandomizeVisitor final : public VNVisitor {
     AstConstraint* m_constraintp = nullptr;  // Current constraint
     // Per-handle-type pre/post virtual wrapper presence
     std::map<AstClass*, std::pair<bool, bool>> m_prePostWrap;
-    std::unordered_map<AstClass*, std::vector<AstClass*>> m_subclasses;  // Descendants in tree order
+    std::unordered_map<AstClass*, std::vector<AstClass*>>
+        m_subclasses;  // Descendants in tree order
     VDouble0 m_statDescendants;  // Number of indexed ancestor/descendant pairs
     ActiveSet m_activeClasses;  // Classes currently building randomize()
     ActiveSet m_globalConstraintOwners;  // Classes with a global constraint, with base classes
@@ -2635,10 +2635,9 @@ class RandomizeVisitor final : public VNVisitor {
             AstNodeStmt* const stmtsp
                 = itemp->stmtsp() ? itemp->stmtsp()->unlinkFrBackWithNext() : nullptr;
             AstVarRef* const randVarRefp = new AstVarRef{fl, randVarp, VAccess::READ};
-            AstIf* const newifp
-                = new AstIf{itemp->fileline(),
-                            new AstLte{itemFl, randVarRefp, sump->cloneTreePure(false)},
-                            stmtsp, nullptr};
+            AstIf* const newifp = new AstIf{
+                itemp->fileline(), new AstLte{itemFl, randVarRefp, sump->cloneTreePure(false)},
+                stmtsp, nullptr};
             ifsp->addElsesp(newifp);
             ifsp = newifp;
         }

@@ -311,10 +311,9 @@ private:
             const bool timing
                 = v3Global.opt.timing().isSetTrue() && hasTimingControl(nodep->stmtsp());
             if (timing) itemsp = comboStarSenItems(nodep);
-            const bool noReads
-                = timing ? !itemsp : nodep->forall([&](const AstNodeVarRef* refp) {
-                      return !refp->access().isReadOrRW();
-                  });
+            const bool noReads = timing ? !itemsp : nodep->forall([&](const AstNodeVarRef* refp) {
+                return !refp->access().isReadOrRW();
+            });
             if (itemsp) {
                 pushDeletep(nodep->sentreep()->sensesp()->unlinkFrBack());
                 nodep->sentreep()->addSensesp(itemsp);

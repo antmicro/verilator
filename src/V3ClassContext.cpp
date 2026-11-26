@@ -531,8 +531,7 @@ public:
                 const string prefix = hoistedPrefix(classp, VN_AS(modp, NodeModule));
                 for (AstNode* stmtp = classp->membersp(); stmtp; stmtp = stmtp->nextp()) {
                     if (!VN_IS(stmtp, Var) && !VN_IS(stmtp, NodeFTask)) continue;
-                    AstNode* const memberp
-                        = m_memberMap.findMember(modp, prefix + stmtp->name());
+                    AstNode* const memberp = m_memberMap.findMember(modp, prefix + stmtp->name());
                     if (!memberp) continue;
                     stmtp->user3p(memberp);
                     stmtp->user4p(classp);

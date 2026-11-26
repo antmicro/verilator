@@ -246,7 +246,8 @@ public:
     bool sameNode(const AstNode* samep) const override {
         const AstAssertCtl* const sp = VN_DBG_AS(samep, AssertCtl);
         return ctlType() == sp->ctlType() && assertTypes() == sp->assertTypes()
-               && directiveTypes() == sp->directiveTypes() && hasScopeItems() == sp->hasScopeItems();
+               && directiveTypes() == sp->directiveTypes()
+               && hasScopeItems() == sp->hasScopeItems();
     }
     bool hasScopeItems() const { return m_hasScopeItems; }
     string verilogKwd() const override { return m_ctlType.ascii(); }

@@ -645,15 +645,15 @@ The coroutines get resumed at trigger evaluation time, evaluate their local
 triggers, and if the trigger is set, await proper resumption in the 'act'
 eval step.
 
-Dynamic waits retain the event selected when the wait starts (IEEE 1800-2023
-Sections 15.5 and 15.5.5.1).
+Dynamic waits retain the event selected when the wait starts (IEEE
+1800-2023 Sections 15.5 and 15.5.5.1).
 
 Event triggers receive increasing fire tickets from a model-wide counter.
-Named-event sensitivities trigger when the event's ticket exceeds their saved
-counter. Dynamic waits save the counter at registration and after each check.
-Each static sensitivity updates its snapshot after every evaluation, including
-null references and false ``iff`` conditions, and shares it between regular and
-before-trigger evaluation.
+Named-event sensitivities trigger when the event's ticket exceeds their
+saved counter. Dynamic waits save the counter at registration and after
+each check. Each static sensitivity updates its snapshot after every
+evaluation, including null references and false ``iff`` conditions, and
+shares it between regular and before-trigger evaluation.
 
 ``VlForkSync``
 ~~~~~~~~~~~~~~

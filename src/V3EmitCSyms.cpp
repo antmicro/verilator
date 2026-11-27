@@ -1080,7 +1080,13 @@ void EmitCSyms::emitSymHdr() {
         } else {
             puts("std::vector<VlEvent*> __Vm_triggeredEvents;\n");
         }
-        puts("uint64_t __Vm_eventCounter = 0;  /// Last ticket given to a fired event\n");
+        if (v3Global.opt.mtasks()) {
+            puts("std::atomic<uint64_t> __Vm_eventCounter{0};"
+                 "  /// Last ticket given to a fired event\n");
+            puts("VerilatedMutex __Vm_eventMutex;  /// Serializes parallel fireEvent calls\n");
+        } else {
+            puts("uint64_t __Vm_eventCounter = 0;  /// Last ticket given to a fired event\n");
+        }
     }
     if (v3Global.hasClasses()) puts("VlDeleter __Vm_deleter;\n");
     puts("bool& __Vm_didInit;\n");
@@ -1151,6 +1157,10 @@ void EmitCSyms::emitSymHdr() {
         } else {
             puts("void fireEvent(VlEvent& event) {\n");
         }
+        // Parallel 'nba' mtasks may fire events concurrently. The other accesses to the
+        // triggered events run serially, after the mtasks complete. The counter is atomic,
+        // as a wait started immediately (e.g. by a covergroup) may read it in an mtask.
+        if (v3Global.opt.mtasks()) puts("const VerilatedLockGuard lock{__Vm_eventMutex};\n");
         puts("if (VL_LIKELY(!event.isTriggered())) {\n");
         if (v3Global.assignsEvents()) {
             puts("__Vm_triggeredEvents.push_back(event);\n");
@@ -1159,7 +1169,15 @@ void EmitCSyms::emitSymHdr() {
         }
         puts("}\n");
         puts("event.fire();\n");
-        puts("event.fireTicket(++__Vm_eventCounter);\n");
+        if (v3Global.opt.mtasks()) {
+            // Relaxed is enough, as the lock already serializes the writers
+            puts("const uint64_t ticket"
+                 " = __Vm_eventCounter.load(std::memory_order_relaxed) + 1;\n");
+            puts("__Vm_eventCounter.store(ticket, std::memory_order_relaxed);\n");
+            puts("event.fireTicket(ticket);\n");
+        } else {
+            puts("event.fireTicket(++__Vm_eventCounter);\n");
+        }
         puts("}\n");
         puts("void clearTriggeredEvents() {\n");
         if (v3Global.assignsEvents()) {
